@@ -7,10 +7,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Video, Clock, CheckCircle, AlertCircle, XCircle, Search, ExternalLink } from 'lucide-react';
+import { Loader2, Video, Clock, CheckCircle, AlertCircle, XCircle, Search, ExternalLink, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import { GenerateReviewLink } from '@/components/admin/GenerateReviewLink';
+import { BulkEmailDialog } from '@/components/admin/BulkEmailDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
@@ -48,6 +50,8 @@ export default function Submissions() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [eventFilter, setEventFilter] = useState<string>('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -128,6 +132,33 @@ export default function Submissions() {
     failed: submissions?.filter((s) => s.status === 'failed').length || 0,
   };
 
+  const toggleSelection = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllFiltered = () => {
+    if (!filteredSubmissions) return;
+    const allSelected = filteredSubmissions.every(s => selectedIds.has(s.id));
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredSubmissions.map(s => s.id)));
+    }
+  };
+
+  const selectedSubmissions = submissions?.filter(s => selectedIds.has(s.id)).map(s => ({
+    id: s.id,
+    teamName: s.team.name,
+    gymName: s.team.gym_name,
+    eventId: s.event.id,
+    eventName: s.event.name,
+  })) || [];
+
   return (
     <div className="p-8">
       <div className="mb-8">
@@ -171,45 +202,63 @@ export default function Submissions() {
         </Card>
       </div>
 
-      {/* Filters */}
+      {/* Filters & Bulk Actions */}
       <Card className="mb-6">
         <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by team or gym name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by team or gym name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full md:w-[180px]">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="uploaded">Uploaded</SelectItem>
+                  <SelectItem value="processing">Processing</SelectItem>
+                  <SelectItem value="ready">Ready</SelectItem>
+                  <SelectItem value="failed">Failed</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={eventFilter} onValueChange={setEventFilter}>
+                <SelectTrigger className="w-full md:w-[200px]">
+                  <SelectValue placeholder="Filter by event" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Events</SelectItem>
+                  {events?.map((event) => (
+                    <SelectItem key={event.id} value={event.id}>
+                      {event.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="uploaded">Uploaded</SelectItem>
-                <SelectItem value="processing">Processing</SelectItem>
-                <SelectItem value="ready">Ready</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={eventFilter} onValueChange={setEventFilter}>
-              <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="Filter by event" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Events</SelectItem>
-                {events?.map((event) => (
-                  <SelectItem key={event.id} value={event.id}>
-                    {event.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            
+            {/* Bulk Actions Bar */}
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <span className="text-sm font-medium">
+                  {selectedIds.size} team{selectedIds.size !== 1 ? 's' : ''} selected
+                </span>
+                <Button size="sm" onClick={() => setBulkEmailOpen(true)}>
+                  <Mail className="w-4 h-4 mr-2" />
+                  Send Review Links
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
+                  Clear Selection
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -225,6 +274,12 @@ export default function Submissions() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={filteredSubmissions.length > 0 && filteredSubmissions.every(s => selectedIds.has(s.id))}
+                      onCheckedChange={toggleAllFiltered}
+                    />
+                  </TableHead>
                   <TableHead>Team</TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Division / Level</TableHead>
@@ -237,7 +292,13 @@ export default function Submissions() {
                 {filteredSubmissions.map((submission) => {
                   const StatusIcon = statusConfig[submission.status].icon;
                   return (
-                    <TableRow key={submission.id}>
+                    <TableRow key={submission.id} className={selectedIds.has(submission.id) ? 'bg-primary/5' : ''}>
+                      <TableCell className="w-10">
+                        <Checkbox
+                          checked={selectedIds.has(submission.id)}
+                          onCheckedChange={() => toggleSelection(submission.id)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-3">
                           {submission.thumbnail_url ? (
@@ -319,6 +380,13 @@ export default function Submissions() {
           )}
         </CardContent>
       </Card>
+
+      {/* Bulk Email Dialog */}
+      <BulkEmailDialog
+        open={bulkEmailOpen}
+        onOpenChange={setBulkEmailOpen}
+        submissions={selectedSubmissions}
+      />
     </div>
   );
 }
