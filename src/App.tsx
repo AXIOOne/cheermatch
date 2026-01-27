@@ -20,6 +20,12 @@ import Settings from "./pages/admin/Settings";
 import ReviewRequests from "./pages/admin/ReviewRequests";
 import UserRoles from "./pages/admin/UserRoles";
 import Submissions from "./pages/admin/Submissions";
+import EventRegistrations from "./pages/admin/EventRegistrations";
+import EventScoring from "./pages/admin/EventScoring";
+import EventResults from "./pages/admin/EventResults";
+import EventParticipants from "./pages/admin/EventParticipants";
+import EventReports from "./pages/admin/EventReports";
+import EventsSummary from "./pages/admin/EventsSummary";
 
 // Judge imports
 import { JudgeLayout } from "./components/layout/JudgeLayout";
@@ -48,6 +54,12 @@ const App = () => (
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="events" element={<Events />} />
+              <Route path="events/summary" element={<EventsSummary />} />
+              <Route path="events/:eventId/registrations" element={<EventRegistrations />} />
+              <Route path="events/:eventId/scoring" element={<EventScoring />} />
+              <Route path="events/:eventId/results" element={<EventResults />} />
+              <Route path="events/:eventId/participants" element={<EventParticipants />} />
+              <Route path="events/:eventId/reports" element={<EventReports />} />
               <Route path="scoring" element={<ScoringTemplates />} />
               <Route path="divisions" element={<Divisions />} />
               <Route path="teams" element={<Teams />} />

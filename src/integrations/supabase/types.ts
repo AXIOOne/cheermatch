@@ -93,6 +93,7 @@ export type Database = {
       }
       events: {
         Row: {
+          broadcast_deadline: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -105,6 +106,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          broadcast_deadline?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -117,6 +119,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          broadcast_deadline?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
