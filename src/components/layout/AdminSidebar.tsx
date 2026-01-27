@@ -43,7 +43,7 @@ export function AdminSidebar() {
   const { signOut, user } = useAuth();
 
   return (
-    <aside className="w-64 min-h-screen bg-sidebar-background flex flex-col">
+    <aside className="w-64 min-h-screen bg-black flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
