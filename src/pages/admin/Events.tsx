@@ -53,6 +53,7 @@ const eventSchema = z.object({
   registration_deadline: z.string().min(1, 'Registration deadline is required'),
   broadcast_deadline: z.string().optional(),
   status: z.enum(['draft', 'registration_open', 'registration_closed', 'in_progress', 'completed', 'archived']),
+  default_template_id: z.string().optional(),
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
@@ -97,8 +98,29 @@ export default function Events() {
       registration_deadline: '',
       broadcast_deadline: '',
       status: 'draft',
+      default_template_id: '',
     },
   });
+
+  // Fetch all scoring templates for the template selector
+  const { data: allTemplates } = useQuery({
+    queryKey: ['all-scoring-templates'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('scoring_templates')
+        .select('id, name, event_id')
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Get templates available for selection (templates from this event or unassigned)
+  const getEventTemplates = (eventId: string | null) => {
+    if (!allTemplates) return [];
+    if (!eventId) return allTemplates.filter(t => !t.event_id);
+    return allTemplates.filter(t => t.event_id === eventId);
+  };
 
   const { data: events, isLoading } = useQuery({
     queryKey: ['events'],
@@ -181,6 +203,7 @@ export default function Events() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: EventFormData }) => {
+      // Update event
       const { error } = await supabase.from('events').update({
         name: data.name,
         description: data.description || null,
@@ -191,9 +214,25 @@ export default function Events() {
         status: data.status,
       }).eq('id', id);
       if (error) throw error;
+
+      // Update default template if changed
+      if (data.default_template_id) {
+        // First, unset is_default for all templates of this event
+        await supabase
+          .from('scoring_templates')
+          .update({ is_default: false })
+          .eq('event_id', id);
+        
+        // Then set the selected template as default
+        await supabase
+          .from('scoring_templates')
+          .update({ is_default: true })
+          .eq('id', data.default_template_id);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
+      queryClient.invalidateQueries({ queryKey: ['all-scoring-templates'] });
       toast({ title: 'Event updated successfully!' });
       setIsDialogOpen(false);
       setEditingEvent(null);
@@ -228,6 +267,7 @@ export default function Events() {
 
   const handleEdit = (event: any) => {
     setEditingEvent(event);
+    const defaultTemplate = getDefaultTemplate(event.scoring_templates);
     form.reset({
       name: event.name,
       description: event.description || '',
@@ -236,6 +276,7 @@ export default function Events() {
       registration_deadline: event.registration_deadline.split('T')[0],
       broadcast_deadline: event.broadcast_deadline || '',
       status: event.status,
+      default_template_id: defaultTemplate?.id || '',
     });
     setIsDialogOpen(true);
   };
@@ -392,6 +433,46 @@ export default function Events() {
                       </FormItem>
                     )}
                   />
+                  {editingEvent && (
+                    <FormField
+                      control={form.control}
+                      name="default_template_id"
+                      render={({ field }) => {
+                        const eventTemplates = getEventTemplates(editingEvent?.id);
+                        return (
+                          <FormItem>
+                            <FormLabel>Scoring Template</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ''}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select a template" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {eventTemplates.length > 0 ? (
+                                  eventTemplates.map((template) => (
+                                    <SelectItem key={template.id} value={template.id}>
+                                      {template.name}
+                                    </SelectItem>
+                                  ))
+                                ) : (
+                                  <SelectItem value="none" disabled>
+                                    No templates available
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                              {eventTemplates.length === 0 
+                                ? 'Create a scoring template for this event first.'
+                                : 'Choose the default template for scoring.'}
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  )}
                   <div className="flex justify-end gap-2 pt-4">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
