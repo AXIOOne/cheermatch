@@ -10,34 +10,34 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, ClipboardList, Loader2, Pencil, Trash2, GripVertical, Lock, Unlock } from 'lucide-react';
+import { Plus, ClipboardList, Loader2, Pencil, Trash2, Lock, Unlock, Eye, Layers } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-
-const categorySchema = z.object({
-  id: z.string().optional(), // For existing categories
-  name: z.string().min(1, 'Category name is required'),
-  max_points: z.coerce.number().min(0.01, 'Max points must be greater than 0'),
-  weight: z.coerce.number().min(0.01).max(1, 'Weight must be between 0.01 and 1'),
-  description: z.string().optional(),
-});
+import SectionTabs, { ScoringSection } from '@/components/admin/SectionTabs';
+import { CategoryItem } from '@/components/admin/ScoringCategoryTree';
+import { DeductionType } from '@/components/admin/DeductionTypeManager';
 
 const templateSchema = z.object({
   name: z.string().min(2, 'Template name must be at least 2 characters'),
   description: z.string().optional(),
   event_id: z.string().min(1, 'Please select an event'),
   is_default: z.boolean(),
-  categories: z.array(categorySchema).min(1, 'Add at least one scoring category'),
 });
 
 type TemplateFormData = z.infer<typeof templateSchema>;
+
+function generateTempId() {
+  return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
 
 export default function ScoringTemplates() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<any>(null);
   const [lockConfirmTemplate, setLockConfirmTemplate] = useState<any>(null);
+  const [sections, setSections] = useState<ScoringSection[]>([]);
+  const [deductions, setDeductions] = useState<DeductionType[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -48,13 +48,7 @@ export default function ScoringTemplates() {
       description: '',
       event_id: '',
       is_default: false,
-      categories: [{ name: '', max_points: 10, weight: 1, description: '' }],
     },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'categories',
   });
 
   const { data: events } = useQuery({
@@ -67,14 +61,16 @@ export default function ScoringTemplates() {
   });
 
   const { data: templates, isLoading } = useQuery({
-    queryKey: ['scoring-templates'],
+    queryKey: ['scoring-templates-full'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('scoring_templates')
         .select(`
           *,
           event:events(name, status),
-          categories:scoring_categories(*)
+          sections:scoring_sections(*),
+          categories:scoring_categories(*),
+          deduction_types:deduction_types(*)
         `)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -82,8 +78,37 @@ export default function ScoringTemplates() {
     },
   });
 
+  // Flatten categories tree for saving
+  const flattenCategories = (
+    categories: CategoryItem[],
+    sectionId: string,
+    parentId: string | null = null
+  ): any[] => {
+    const result: any[] = [];
+    categories.forEach((cat, index) => {
+      const catId = cat.id || generateTempId();
+      result.push({
+        temp_id: cat.temp_id,
+        id: cat.id,
+        name: cat.name,
+        max_points: cat.max_points,
+        category_type: cat.category_type,
+        section_id: sectionId,
+        parent_category_id: parentId,
+        display_order: index,
+        description: cat.description,
+        weight: 1,
+      });
+      if (cat.children.length > 0) {
+        result.push(...flattenCategories(cat.children, sectionId, catId));
+      }
+    });
+    return result;
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: TemplateFormData) => {
+      // 1. Create template
       const { data: template, error: templateError } = await supabase
         .from('scoring_templates')
         .insert({
@@ -94,30 +119,119 @@ export default function ScoringTemplates() {
         })
         .select()
         .single();
-      
+
       if (templateError) throw templateError;
 
-      const categoriesWithOrder = data.categories.map((cat, index) => ({
-        name: cat.name,
-        max_points: cat.max_points,
-        weight: cat.weight,
-        description: cat.description || null,
-        template_id: template.id,
-        display_order: index,
-      }));
+      // 2. Create sections
+      if (sections.length > 0) {
+        const sectionsToInsert = sections.map((section, index) => ({
+          template_id: template.id,
+          name: section.name,
+          abbreviation: section.abbreviation,
+          description: section.description,
+          max_points: section.max_points,
+          display_order: index,
+        }));
 
-      const { error: catError } = await supabase
-        .from('scoring_categories')
-        .insert(categoriesWithOrder);
-      
-      if (catError) throw catError;
+        const { data: insertedSections, error: sectionsError } = await supabase
+          .from('scoring_sections')
+          .insert(sectionsToInsert)
+          .select();
+
+        if (sectionsError) throw sectionsError;
+
+        // 3. Create categories for each section
+        const sectionIdMap = new Map<string, string>();
+        insertedSections.forEach((inserted, index) => {
+          sectionIdMap.set(sections[index].temp_id, inserted.id);
+        });
+
+        const allCategories: any[] = [];
+        sections.forEach((section) => {
+          const sectionId = sectionIdMap.get(section.temp_id)!;
+          const flattened = flattenCategories(section.categories, sectionId);
+          allCategories.push(...flattened);
+        });
+
+        if (allCategories.length > 0) {
+          // First pass: insert main categories (no parent)
+          const mainCategories = allCategories.filter((c) => !c.parent_category_id);
+          const categoriesToInsert = mainCategories.map((cat) => ({
+            template_id: template.id,
+            section_id: cat.section_id,
+            name: cat.name,
+            max_points: cat.max_points,
+            category_type: cat.category_type,
+            description: cat.description,
+            display_order: cat.display_order,
+            weight: cat.weight,
+          }));
+
+          const { data: insertedMainCats, error: mainCatError } = await supabase
+            .from('scoring_categories')
+            .insert(categoriesToInsert)
+            .select();
+
+          if (mainCatError) throw mainCatError;
+
+          // Map temp_ids to real ids
+          const catIdMap = new Map<string, string>();
+          insertedMainCats.forEach((inserted, index) => {
+            catIdMap.set(mainCategories[index].temp_id, inserted.id);
+          });
+
+          // Second pass: insert child categories
+          const childCategories = allCategories.filter((c) => c.parent_category_id);
+          if (childCategories.length > 0) {
+            const childCatsToInsert = childCategories.map((cat) => ({
+              template_id: template.id,
+              section_id: cat.section_id,
+              parent_category_id: catIdMap.get(cat.parent_category_id) || null,
+              name: cat.name,
+              max_points: cat.max_points,
+              category_type: cat.category_type,
+              description: cat.description,
+              display_order: cat.display_order,
+              weight: cat.weight,
+            }));
+
+            const { error: childCatError } = await supabase
+              .from('scoring_categories')
+              .insert(childCatsToInsert);
+
+            if (childCatError) throw childCatError;
+          }
+        }
+      }
+
+      // 4. Create deduction types
+      if (deductions.length > 0) {
+        const deductionsToInsert = deductions.map((ded, index) => ({
+          template_id: template.id,
+          name: ded.name,
+          points: ded.points,
+          description: ded.description,
+          category: ded.category,
+          display_order: index,
+        }));
+
+        const { error: dedError } = await supabase
+          .from('deduction_types')
+          .insert(deductionsToInsert);
+
+        if (dedError) throw dedError;
+      }
+
+      return template;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scoring-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['scoring-templates-full'] });
       toast({ title: 'Scoring template created successfully!' });
       setIsDialogOpen(false);
       setEditingTemplate(null);
       form.reset();
+      setSections([]);
+      setDeductions([]);
     },
     onError: (error: any) => {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -126,7 +240,7 @@ export default function ScoringTemplates() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: TemplateFormData }) => {
-      // Update template
+      // 1. Update template
       const { error: templateError } = await supabase
         .from('scoring_templates')
         .update({
@@ -136,38 +250,122 @@ export default function ScoringTemplates() {
           is_default: data.is_default,
         })
         .eq('id', id);
-      
+
       if (templateError) throw templateError;
 
-      // Delete existing categories and recreate
-      const { error: deleteError } = await supabase
-        .from('scoring_categories')
-        .delete()
-        .eq('template_id', id);
-      
-      if (deleteError) throw deleteError;
+      // 2. Delete existing sections (cascades to categories)
+      await supabase.from('scoring_sections').delete().eq('template_id', id);
 
-      const categoriesWithOrder = data.categories.map((cat, index) => ({
-        name: cat.name,
-        max_points: cat.max_points,
-        weight: cat.weight,
-        description: cat.description || null,
-        template_id: id,
-        display_order: index,
-      }));
+      // 3. Delete existing deduction types
+      await supabase.from('deduction_types').delete().eq('template_id', id);
 
-      const { error: catError } = await supabase
-        .from('scoring_categories')
-        .insert(categoriesWithOrder);
-      
-      if (catError) throw catError;
+      // 4. Delete remaining categories without sections
+      await supabase.from('scoring_categories').delete().eq('template_id', id);
+
+      // 5. Recreate sections and categories
+      if (sections.length > 0) {
+        const sectionsToInsert = sections.map((section, index) => ({
+          template_id: id,
+          name: section.name,
+          abbreviation: section.abbreviation,
+          description: section.description,
+          max_points: section.max_points,
+          display_order: index,
+        }));
+
+        const { data: insertedSections, error: sectionsError } = await supabase
+          .from('scoring_sections')
+          .insert(sectionsToInsert)
+          .select();
+
+        if (sectionsError) throw sectionsError;
+
+        const sectionIdMap = new Map<string, string>();
+        insertedSections.forEach((inserted, index) => {
+          sectionIdMap.set(sections[index].temp_id, inserted.id);
+        });
+
+        const allCategories: any[] = [];
+        sections.forEach((section) => {
+          const sectionId = sectionIdMap.get(section.temp_id)!;
+          const flattened = flattenCategories(section.categories, sectionId);
+          allCategories.push(...flattened);
+        });
+
+        if (allCategories.length > 0) {
+          const mainCategories = allCategories.filter((c) => !c.parent_category_id);
+          const categoriesToInsert = mainCategories.map((cat) => ({
+            template_id: id,
+            section_id: cat.section_id,
+            name: cat.name,
+            max_points: cat.max_points,
+            category_type: cat.category_type,
+            description: cat.description,
+            display_order: cat.display_order,
+            weight: cat.weight,
+          }));
+
+          const { data: insertedMainCats, error: mainCatError } = await supabase
+            .from('scoring_categories')
+            .insert(categoriesToInsert)
+            .select();
+
+          if (mainCatError) throw mainCatError;
+
+          const catIdMap = new Map<string, string>();
+          insertedMainCats.forEach((inserted, index) => {
+            catIdMap.set(mainCategories[index].temp_id, inserted.id);
+          });
+
+          const childCategories = allCategories.filter((c) => c.parent_category_id);
+          if (childCategories.length > 0) {
+            const childCatsToInsert = childCategories.map((cat) => ({
+              template_id: id,
+              section_id: cat.section_id,
+              parent_category_id: catIdMap.get(cat.parent_category_id) || null,
+              name: cat.name,
+              max_points: cat.max_points,
+              category_type: cat.category_type,
+              description: cat.description,
+              display_order: cat.display_order,
+              weight: cat.weight,
+            }));
+
+            const { error: childCatError } = await supabase
+              .from('scoring_categories')
+              .insert(childCatsToInsert);
+
+            if (childCatError) throw childCatError;
+          }
+        }
+      }
+
+      // 6. Recreate deduction types
+      if (deductions.length > 0) {
+        const deductionsToInsert = deductions.map((ded, index) => ({
+          template_id: id,
+          name: ded.name,
+          points: ded.points,
+          description: ded.description,
+          category: ded.category,
+          display_order: index,
+        }));
+
+        const { error: dedError } = await supabase
+          .from('deduction_types')
+          .insert(deductionsToInsert);
+
+        if (dedError) throw dedError;
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scoring-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['scoring-templates-full'] });
       toast({ title: 'Scoring template updated successfully!' });
       setIsDialogOpen(false);
       setEditingTemplate(null);
       form.reset();
+      setSections([]);
+      setDeductions([]);
     },
     onError: (error: any) => {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -183,7 +381,7 @@ export default function ScoringTemplates() {
       if (error) throw error;
     },
     onSuccess: (_, { isLocked }) => {
-      queryClient.invalidateQueries({ queryKey: ['scoring-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['scoring-templates-full'] });
       toast({ title: isLocked ? 'Template locked' : 'Template unlocked' });
       setLockConfirmTemplate(null);
     },
@@ -198,7 +396,7 @@ export default function ScoringTemplates() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['scoring-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['scoring-templates-full'] });
       toast({ title: 'Template deleted successfully!' });
     },
     onError: (error: any) => {
@@ -221,44 +419,86 @@ export default function ScoringTemplates() {
       description: '',
       event_id: '',
       is_default: false,
-      categories: [{ name: 'Stunts', max_points: 10, weight: 1, description: '' }],
     });
+    setSections([]);
+    setDeductions([]);
     setIsDialogOpen(true);
+  };
+
+  // Build hierarchical categories from flat list
+  const buildCategoryTree = (categories: any[], sectionId: string): CategoryItem[] => {
+    const sectionCats = categories.filter((c) => c.section_id === sectionId);
+    const mainCats = sectionCats.filter((c) => !c.parent_category_id);
+
+    return mainCats.map((cat) => ({
+      id: cat.id,
+      temp_id: cat.id,
+      name: cat.name,
+      max_points: Number(cat.max_points),
+      category_type: cat.category_type || 'main',
+      description: cat.description,
+      children: sectionCats
+        .filter((c) => c.parent_category_id === cat.id)
+        .map((child) => ({
+          id: child.id,
+          temp_id: child.id,
+          name: child.name,
+          max_points: Number(child.max_points),
+          category_type: child.category_type || 'difficulty',
+          description: child.description,
+          children: [],
+        })),
+    }));
   };
 
   const handleEdit = (template: any) => {
     if (template.is_locked) {
-      toast({ 
-        variant: 'destructive', 
-        title: 'Template Locked', 
-        description: 'This template is locked and cannot be edited. Unlock it first to make changes.' 
+      toast({
+        variant: 'destructive',
+        title: 'Template Locked',
+        description: 'This template is locked and cannot be edited. Unlock it first to make changes.',
       });
       return;
     }
-    
+
     setEditingTemplate(template);
     form.reset({
       name: template.name,
       description: template.description || '',
       event_id: template.event_id,
       is_default: template.is_default,
-      categories: template.categories?.map((cat: any) => ({
-        id: cat.id,
-        name: cat.name,
-        max_points: cat.max_points,
-        weight: cat.weight,
-        description: cat.description || '',
-      })) || [{ name: '', max_points: 10, weight: 1, description: '' }],
     });
+
+    // Load sections with categories
+    const loadedSections: ScoringSection[] = (template.sections || []).map((s: any) => ({
+      id: s.id,
+      temp_id: s.id,
+      name: s.name,
+      abbreviation: s.abbreviation,
+      description: s.description,
+      max_points: Number(s.max_points),
+      categories: buildCategoryTree(template.categories || [], s.id),
+    }));
+    setSections(loadedSections);
+
+    // Load deduction types
+    const loadedDeductions: DeductionType[] = (template.deduction_types || []).map((d: any) => ({
+      id: d.id,
+      temp_id: d.id,
+      name: d.name,
+      points: Number(d.points),
+      description: d.description,
+      category: d.category,
+    }));
+    setDeductions(loadedDeductions);
+
     setIsDialogOpen(true);
   };
 
   const handleLockToggle = (template: any) => {
     if (template.is_locked) {
-      // Unlock directly
       lockMutation.mutate({ id: template.id, isLocked: false });
     } else {
-      // Show confirmation for locking
       setLockConfirmTemplate(template);
     }
   };
@@ -267,12 +507,22 @@ export default function ScoringTemplates() {
     return template.event?.status === 'in_progress';
   };
 
+  const getTotalPoints = (template: any) => {
+    const categories = template.categories || [];
+    // Only count leaf categories (no children)
+    const catIds = categories.map((c: any) => c.id);
+    const leafCats = categories.filter(
+      (c: any) => !categories.some((other: any) => other.parent_category_id === c.id)
+    );
+    return leafCats.reduce((sum: number, c: any) => sum + Number(c.max_points), 0);
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Scoring Templates</h1>
-          <p className="text-muted-foreground mt-1">Create custom rubrics for judging performances</p>
+          <p className="text-muted-foreground mt-1">Create professional scoring rubrics with sections and deductions</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -281,12 +531,13 @@ export default function ScoringTemplates() {
               New Template
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingTemplate ? 'Edit Scoring Template' : 'Create Scoring Template'}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                {/* Basic Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -295,7 +546,7 @@ export default function ScoringTemplates() {
                       <FormItem>
                         <FormLabel>Template Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="All-Star Scoring 2026" {...field} />
+                          <Input placeholder="Level 6 Senior All Girl" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -333,87 +584,21 @@ export default function ScoringTemplates() {
                     <FormItem>
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Describe this scoring template..." {...field} />
+                        <Textarea placeholder="United Scoring System template for Level 6..." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
 
-                {/* Categories */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <FormLabel className="text-base">Scoring Categories</FormLabel>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => append({ name: '', max_points: 10, weight: 1, description: '' })}
-                    >
-                      <Plus className="w-4 h-4 mr-1" />
-                      Add Category
-                    </Button>
-                  </div>
-                  <div className="space-y-4">
-                    {fields.map((field, index) => (
-                      <Card key={field.id} className="p-4">
-                        <div className="flex items-start gap-2">
-                          <GripVertical className="w-5 h-5 text-muted-foreground mt-2 cursor-move" />
-                          <div className="flex-1 grid grid-cols-3 gap-3">
-                            <FormField
-                              control={form.control}
-                              name={`categories.${index}.name`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-xs">Name</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="Stunts" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name={`categories.${index}.max_points`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-xs">Max Points</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" step="0.1" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name={`categories.${index}.weight`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel className="text-xs">Weight</FormLabel>
-                                  <FormControl>
-                                    <Input type="number" step="0.01" max="1" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                          {fields.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => remove(index)}
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          )}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
+                {/* Sections & Categories */}
+                <div className="border rounded-lg p-4">
+                  <SectionTabs
+                    sections={sections}
+                    deductions={deductions}
+                    onSectionsChange={setSections}
+                    onDeductionsChange={setDeductions}
+                  />
                 </div>
 
                 <div className="flex justify-end gap-2 pt-4">
@@ -421,7 +606,9 @@ export default function ScoringTemplates() {
                     Cancel
                   </Button>
                   <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                    {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    {(createMutation.isPending || updateMutation.isPending) && (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    )}
                     {editingTemplate ? 'Update Template' : 'Create Template'}
                   </Button>
                 </div>
@@ -457,8 +644,8 @@ export default function ScoringTemplates() {
                     )}
                   </div>
                   <div className="flex gap-1">
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       size="icon"
                       onClick={() => handleLockToggle(template)}
                       title={template.is_locked ? 'Unlock template' : 'Lock template'}
@@ -469,9 +656,9 @@ export default function ScoringTemplates() {
                         <Lock className="w-4 h-4 text-muted-foreground" />
                       )}
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleEdit(template)}
                       disabled={template.is_locked}
                       title={template.is_locked ? 'Template is locked' : 'Edit template'}
@@ -483,10 +670,10 @@ export default function ScoringTemplates() {
                       size="icon"
                       onClick={() => {
                         if (template.is_locked) {
-                          toast({ 
-                            variant: 'destructive', 
-                            title: 'Template Locked', 
-                            description: 'Unlock this template before deleting.' 
+                          toast({
+                            variant: 'destructive',
+                            title: 'Template Locked',
+                            description: 'Unlock this template before deleting.',
                           });
                           return;
                         }
@@ -504,20 +691,48 @@ export default function ScoringTemplates() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">{template.description}</p>
-                <div className="space-y-2">
-                  <p className="text-sm font-medium">Categories ({template.categories?.length || 0})</p>
-                  {template.categories?.slice(0, 4).map((cat: any) => (
-                    <div key={cat.id} className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{cat.name}</span>
-                      <span className="font-medium">{cat.max_points} pts</span>
-                    </div>
-                  ))}
-                  {template.categories && template.categories.length > 4 && (
-                    <p className="text-xs text-muted-foreground">
-                      +{template.categories.length - 4} more...
-                    </p>
-                  )}
+
+                {/* Stats */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <Badge variant="outline" className="text-xs">
+                    <Layers className="w-3 h-3 mr-1" />
+                    {template.sections?.length || 0} Sections
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    <Eye className="w-3 h-3 mr-1" />
+                    {template.categories?.length || 0} Categories
+                  </Badge>
+                  <Badge variant="secondary" className="text-xs font-bold">
+                    {getTotalPoints(template).toFixed(1)} pts
+                  </Badge>
                 </div>
+
+                {/* Sections preview */}
+                {template.sections && template.sections.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Sections</p>
+                    {template.sections.slice(0, 4).map((section: any) => (
+                      <div key={section.id} className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {section.abbreviation} - {section.name}
+                        </span>
+                        <span className="font-medium">{Number(section.max_points).toFixed(1)} pts</span>
+                      </div>
+                    ))}
+                    {template.sections.length > 4 && (
+                      <p className="text-xs text-muted-foreground">+{template.sections.length - 4} more...</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Deductions preview */}
+                {template.deduction_types && template.deduction_types.length > 0 && (
+                  <div className="mt-3 pt-3 border-t">
+                    <p className="text-xs text-muted-foreground">
+                      {template.deduction_types.length} deduction type{template.deduction_types.length !== 1 ? 's' : ''} defined
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -537,7 +752,7 @@ export default function ScoringTemplates() {
           <AlertDialogHeader>
             <AlertDialogTitle>Lock Template?</AlertDialogTitle>
             <AlertDialogDescription>
-              Locking "{lockConfirmTemplate?.name}" will prevent any edits to this template. 
+              Locking "{lockConfirmTemplate?.name}" will prevent any edits to this template.
               This is recommended when an event is in progress to ensure scoring consistency.
               You can unlock it later if needed.
             </AlertDialogDescription>

@@ -14,6 +14,47 @@ export type Database = {
   }
   public: {
     Tables: {
+      deduction_types: {
+        Row: {
+          category: Database["public"]["Enums"]["deduction_category"]
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          name: string
+          points: number
+          template_id: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["deduction_category"]
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          name: string
+          points: number
+          template_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["deduction_category"]
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          name?: string
+          points?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deduction_types_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       divisions: {
         Row: {
           created_at: string
@@ -322,6 +363,48 @@ export type Database = {
         }
         Relationships: []
       }
+      score_deductions: {
+        Row: {
+          count: number
+          created_at: string
+          deduction_type_id: string
+          id: string
+          notes: string | null
+          score_id: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          deduction_type_id: string
+          id?: string
+          notes?: string | null
+          score_id: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          deduction_type_id?: string
+          id?: string
+          notes?: string | null
+          score_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_deductions_deduction_type_id_fkey"
+            columns: ["deduction_type_id"]
+            isOneToOne: false
+            referencedRelation: "deduction_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_deductions_score_id_fkey"
+            columns: ["score_id"]
+            isOneToOne: false
+            referencedRelation: "scores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       score_details: {
         Row: {
           category_id: string
@@ -433,36 +516,59 @@ export type Database = {
       }
       scoring_categories: {
         Row: {
+          category_type: Database["public"]["Enums"]["category_type"]
           created_at: string
           description: string | null
           display_order: number
           id: string
           max_points: number
           name: string
+          parent_category_id: string | null
+          section_id: string | null
           template_id: string
           weight: number
         }
         Insert: {
+          category_type?: Database["public"]["Enums"]["category_type"]
           created_at?: string
           description?: string | null
           display_order?: number
           id?: string
           max_points: number
           name: string
+          parent_category_id?: string | null
+          section_id?: string | null
           template_id: string
           weight?: number
         }
         Update: {
+          category_type?: Database["public"]["Enums"]["category_type"]
           created_at?: string
           description?: string | null
           display_order?: number
           id?: string
           max_points?: number
           name?: string
+          parent_category_id?: string | null
+          section_id?: string | null
           template_id?: string
           weight?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "scoring_categories_parent_category_id_fkey"
+            columns: ["parent_category_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scoring_categories_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_sections"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "scoring_categories_template_id_fkey"
             columns: ["template_id"]
@@ -518,6 +624,47 @@ export type Database = {
             columns: ["submission_id"]
             isOneToOne: false
             referencedRelation: "video_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scoring_sections: {
+        Row: {
+          abbreviation: string
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          max_points: number
+          name: string
+          template_id: string
+        }
+        Insert: {
+          abbreviation: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          max_points?: number
+          name: string
+          template_id: string
+        }
+        Update: {
+          abbreviation?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          max_points?: number
+          name?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scoring_sections_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -748,6 +895,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "judge" | "gym_coach"
+      category_type: "main" | "difficulty" | "execution" | "driver"
+      deduction_category: "athlete" | "building" | "rule_violation" | "legality"
       event_status:
         | "draft"
         | "registration_open"
@@ -890,6 +1039,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "judge", "gym_coach"],
+      category_type: ["main", "difficulty", "execution", "driver"],
+      deduction_category: ["athlete", "building", "rule_violation", "legality"],
       event_status: [
         "draft",
         "registration_open",
