@@ -31,9 +31,9 @@ const CATEGORY_TYPE_LABELS = {
 
 const CATEGORY_TYPE_COLORS = {
   main: 'border-l-primary',
-  difficulty: 'border-l-blue-500',
-  execution: 'border-l-green-500',
-  driver: 'border-l-amber-500',
+  difficulty: 'border-l-accent',
+  execution: 'border-l-secondary',
+  driver: 'border-l-muted',
 };
 
 function generateTempId() {
@@ -343,15 +343,15 @@ export default function ScoringCategoryTree({
           <span>Main</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 border-l-2 border-blue-500" />
+          <div className="w-3 h-3 border-l-2 border-accent" />
           <span>Difficulty</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 border-l-2 border-green-500" />
+          <div className="w-3 h-3 border-l-2 border-secondary" />
           <span>Execution</span>
         </div>
         <div className="flex items-center gap-1">
-          <div className="w-3 h-3 border-l-2 border-amber-500" />
+          <div className="w-3 h-3 border-l-2 border-muted" />
           <span>Driver (DoD)</span>
         </div>
       </div>

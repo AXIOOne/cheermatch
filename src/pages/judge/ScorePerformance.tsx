@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save, Send, Loader2, Play, Pause, RotateCcw } from 'lucide-react';
+import { calculateStructuredDeductions, getLeafCategories, sortByDisplayOrder } from '@/lib/scoring';
 
 interface CategoryScore {
   category_id: string;
@@ -27,7 +28,7 @@ export default function ScorePerformance() {
   const queryClient = useQueryClient();
 
   const [categoryScores, setCategoryScores] = useState<Record<string, CategoryScore>>({});
-  const [deductions, setDeductions] = useState(0);
+  const [deductionCounts, setDeductionCounts] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -63,7 +64,8 @@ export default function ScorePerformance() {
         .from('scoring_templates')
         .select(`
           *,
-          categories:scoring_categories(*)
+          categories:scoring_categories(*),
+          deduction_types:deduction_types(*)
         `)
         .eq('event_id', submission!.event_id)
         .order('created_at', { ascending: true })
@@ -83,7 +85,8 @@ export default function ScorePerformance() {
         .from('scores')
         .select(`
           *,
-          details:score_details(*)
+          details:score_details(*),
+          deduction_items:score_deductions(*)
         `)
         .eq('submission_id', submissionId!)
         .eq('judge_user_id', user!.id)
@@ -97,8 +100,9 @@ export default function ScorePerformance() {
   // Initialize scores from existing data or defaults
   useEffect(() => {
     if (template?.categories && !existingScore) {
+      const leafCategories = sortByDisplayOrder(getLeafCategories(template.categories as any[]));
       const initialScores: Record<string, CategoryScore> = {};
-      template.categories.forEach((cat: any) => {
+      leafCategories.forEach((cat: any) => {
         initialScores[cat.id] = {
           category_id: cat.id,
           points: 0,
@@ -106,6 +110,11 @@ export default function ScorePerformance() {
         };
       });
       setCategoryScores(initialScores);
+      const initialDedCounts: Record<string, number> = {};
+      (sortByDisplayOrder(template.deduction_types || []) as any[]).forEach((dt: any) => {
+        initialDedCounts[dt.id] = 0;
+      });
+      setDeductionCounts(initialDedCounts);
     } else if (existingScore) {
       const loadedScores: Record<string, CategoryScore> = {};
       existingScore.details?.forEach((detail: any) => {
@@ -116,7 +125,11 @@ export default function ScorePerformance() {
         };
       });
       setCategoryScores(loadedScores);
-      setDeductions(existingScore.deductions || 0);
+      const loadedDedCounts: Record<string, number> = {};
+      (existingScore as any).deduction_items?.forEach((item: any) => {
+        loadedDedCounts[item.deduction_type_id] = item.count || 0;
+      });
+      setDeductionCounts(loadedDedCounts);
       setComments(existingScore.comments || '');
     }
   }, [template, existingScore]);
@@ -137,12 +150,14 @@ export default function ScorePerformance() {
 
   const calculateTotalScore = () => {
     if (!template?.categories) return 0;
+    const leafCategories = getLeafCategories(template.categories as any[]);
+    const deductionsTotal = calculateStructuredDeductions(template.deduction_types as any[], deductionCounts);
     let total = 0;
-    template.categories.forEach((cat: any) => {
+    leafCategories.forEach((cat: any) => {
       const score = categoryScores[cat.id]?.points || 0;
-      total += score * (cat.weight || 1);
+      total += score * (Number(cat.weight) || 1);
     });
-    return Math.max(0, total - deductions);
+    return Math.max(0, total - deductionsTotal);
   };
 
   // Save score mutation
@@ -150,6 +165,7 @@ export default function ScorePerformance() {
     mutationFn: async (status: 'in_progress' | 'submitted') => {
       setIsSaving(true);
       const totalScore = calculateTotalScore();
+      const deductionsTotal = calculateStructuredDeductions(template?.deduction_types as any[], deductionCounts);
 
       if (existingScore) {
         // Update existing score
@@ -157,7 +173,7 @@ export default function ScorePerformance() {
           .from('scores')
           .update({
             total_score: totalScore,
-            deductions,
+            deductions: deductionsTotal,
             comments,
             status,
             submitted_at: status === 'submitted' ? new Date().toISOString() : null,
@@ -177,6 +193,20 @@ export default function ScorePerformance() {
             }, { onConflict: 'score_id,category_id' });
           if (detailError) throw detailError;
         }
+
+        // Replace structured deductions
+        await supabase.from('score_deductions').delete().eq('score_id', existingScore.id);
+        const deductionRows = Object.entries(deductionCounts)
+          .filter(([, count]) => (count || 0) > 0)
+          .map(([deduction_type_id, count]) => ({
+            score_id: existingScore.id,
+            deduction_type_id,
+            count,
+          }));
+        if (deductionRows.length > 0) {
+          const { error: dedErr } = await supabase.from('score_deductions').insert(deductionRows);
+          if (dedErr) throw dedErr;
+        }
       } else {
         // Create new score
         const { data: newScore, error: scoreError } = await supabase
@@ -186,7 +216,7 @@ export default function ScorePerformance() {
             judge_user_id: user!.id,
             template_id: template!.id,
             total_score: totalScore,
-            deductions,
+            deductions: deductionsTotal,
             comments,
             status,
             submitted_at: status === 'submitted' ? new Date().toISOString() : null,
@@ -207,6 +237,18 @@ export default function ScorePerformance() {
           .from('score_details')
           .insert(details);
         if (detailError) throw detailError;
+
+        const deductionRows = Object.entries(deductionCounts)
+          .filter(([, count]) => (count || 0) > 0)
+          .map(([deduction_type_id, count]) => ({
+            score_id: newScore.id,
+            deduction_type_id,
+            count,
+          }));
+        if (deductionRows.length > 0) {
+          const { error: dedErr } = await supabase.from('score_deductions').insert(deductionRows);
+          if (dedErr) throw dedErr;
+        }
       }
     },
     onSuccess: (_, status) => {
@@ -367,8 +409,7 @@ export default function ScorePerformance() {
             {template?.categories && template.categories.length > 0 ? (
               <>
                 {/* Category Scores */}
-                {template.categories
-                  .sort((a: any, b: any) => a.display_order - b.display_order)
+                {sortByDisplayOrder(getLeafCategories(template.categories as any[]))
                   .map((category: any) => (
                   <Card key={category.id}>
                     <CardHeader className="pb-2">
@@ -418,18 +459,44 @@ export default function ScorePerformance() {
                     <CardDescription>Safety violations, legality issues, etc.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center gap-4">
-                      <Input
-                        type="number"
-                        min={0}
-                        step={0.5}
-                        value={deductions}
-                        onChange={(e) => setDeductions(parseFloat(e.target.value) || 0)}
-                        className="w-24"
-                        disabled={isLocked}
-                      />
-                      <span className="text-sm text-muted-foreground">points</span>
-                    </div>
+                    {template.deduction_types && template.deduction_types.length > 0 ? (
+                      <div className="space-y-2">
+                        {sortByDisplayOrder(template.deduction_types as any[]).map((dt: any) => (
+                          <div key={dt.id} className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{dt.name}</p>
+                              <p className="text-xs text-muted-foreground">{Number(dt.points).toFixed(2)} each</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                step={1}
+                                value={deductionCounts[dt.id] || 0}
+                                onChange={(e) =>
+                                  setDeductionCounts((prev) => ({
+                                    ...prev,
+                                    [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0),
+                                  }))
+                                }
+                                className="w-20"
+                                disabled={isLocked}
+                              />
+                              <span className="text-xs text-muted-foreground">count</span>
+                            </div>
+                          </div>
+                        ))}
+
+                        <div className="pt-2 border-t flex items-center justify-between">
+                          <span className="text-sm font-medium text-destructive">Total deductions</span>
+                          <span className="text-sm font-bold text-destructive">
+                            {calculateStructuredDeductions(template.deduction_types as any[], deductionCounts).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No deduction types configured for this template.</p>
+                    )}
                   </CardContent>
                 </Card>
 

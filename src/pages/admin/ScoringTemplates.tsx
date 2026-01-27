@@ -82,28 +82,86 @@ export default function ScoringTemplates() {
   const flattenCategories = (
     categories: CategoryItem[],
     sectionId: string,
-    parentId: string | null = null
+    parentTempId: string | null = null
   ): any[] => {
     const result: any[] = [];
     categories.forEach((cat, index) => {
-      const catId = cat.id || generateTempId();
       result.push({
         temp_id: cat.temp_id,
-        id: cat.id,
+        parent_temp_id: parentTempId,
         name: cat.name,
         max_points: cat.max_points,
         category_type: cat.category_type,
         section_id: sectionId,
-        parent_category_id: parentId,
         display_order: index,
         description: cat.description,
         weight: 1,
       });
       if (cat.children.length > 0) {
-        result.push(...flattenCategories(cat.children, sectionId, catId));
+        result.push(...flattenCategories(cat.children, sectionId, cat.temp_id));
       }
     });
     return result;
+  };
+
+  const insertCategoriesForTemplate = async (
+    templateId: string,
+    allCategories: any[]
+  ) => {
+    if (allCategories.length === 0) return;
+
+    // Insert in dependency order: any category whose parent_temp_id is null or already inserted
+    const insertedIdByTempId = new Map<string, string>();
+    const remaining = [...allCategories];
+    let safety = 0;
+
+    while (remaining.length > 0) {
+      safety += 1;
+      if (safety > 20_000) {
+        throw new Error('Failed to insert categories (cycle or missing parent).');
+      }
+
+      const ready = remaining.filter(
+        (c) => !c.parent_temp_id || insertedIdByTempId.has(c.parent_temp_id)
+      );
+      if (ready.length === 0) {
+        const sample = remaining[0];
+        throw new Error(
+          `Failed to insert categories. Missing parent for ${sample.name} (${sample.temp_id}).`
+        );
+      }
+
+      const toInsert = ready.map((cat) => ({
+        template_id: templateId,
+        section_id: cat.section_id,
+        parent_category_id: cat.parent_temp_id
+          ? insertedIdByTempId.get(cat.parent_temp_id) || null
+          : null,
+        name: cat.name,
+        max_points: cat.max_points,
+        category_type: cat.category_type,
+        description: cat.description,
+        display_order: cat.display_order,
+        weight: cat.weight,
+      }));
+
+      const { data: inserted, error } = await supabase
+        .from('scoring_categories')
+        .insert(toInsert)
+        .select('id');
+      if (error) throw error;
+
+      inserted?.forEach((row, idx) => {
+        insertedIdByTempId.set(ready[idx].temp_id, row.id);
+      });
+
+      const readyTempIds = new Set(ready.map((r) => r.temp_id));
+      for (let i = remaining.length - 1; i >= 0; i -= 1) {
+        if (readyTempIds.has(remaining[i].temp_id)) {
+          remaining.splice(i, 1);
+        }
+      }
+    }
   };
 
   const createMutation = useMutation({
@@ -153,55 +211,7 @@ export default function ScoringTemplates() {
           allCategories.push(...flattened);
         });
 
-        if (allCategories.length > 0) {
-          // First pass: insert main categories (no parent)
-          const mainCategories = allCategories.filter((c) => !c.parent_category_id);
-          const categoriesToInsert = mainCategories.map((cat) => ({
-            template_id: template.id,
-            section_id: cat.section_id,
-            name: cat.name,
-            max_points: cat.max_points,
-            category_type: cat.category_type,
-            description: cat.description,
-            display_order: cat.display_order,
-            weight: cat.weight,
-          }));
-
-          const { data: insertedMainCats, error: mainCatError } = await supabase
-            .from('scoring_categories')
-            .insert(categoriesToInsert)
-            .select();
-
-          if (mainCatError) throw mainCatError;
-
-          // Map temp_ids to real ids
-          const catIdMap = new Map<string, string>();
-          insertedMainCats.forEach((inserted, index) => {
-            catIdMap.set(mainCategories[index].temp_id, inserted.id);
-          });
-
-          // Second pass: insert child categories
-          const childCategories = allCategories.filter((c) => c.parent_category_id);
-          if (childCategories.length > 0) {
-            const childCatsToInsert = childCategories.map((cat) => ({
-              template_id: template.id,
-              section_id: cat.section_id,
-              parent_category_id: catIdMap.get(cat.parent_category_id) || null,
-              name: cat.name,
-              max_points: cat.max_points,
-              category_type: cat.category_type,
-              description: cat.description,
-              display_order: cat.display_order,
-              weight: cat.weight,
-            }));
-
-            const { error: childCatError } = await supabase
-              .from('scoring_categories')
-              .insert(childCatsToInsert);
-
-            if (childCatError) throw childCatError;
-          }
-        }
+        await insertCategoriesForTemplate(template.id, allCategories);
       }
 
       // 4. Create deduction types
@@ -254,13 +264,22 @@ export default function ScoringTemplates() {
       if (templateError) throw templateError;
 
       // 2. Delete existing sections (cascades to categories)
-      await supabase.from('scoring_sections').delete().eq('template_id', id);
+      {
+        const { error } = await supabase.from('scoring_sections').delete().eq('template_id', id);
+        if (error) throw error;
+      }
 
       // 3. Delete existing deduction types
-      await supabase.from('deduction_types').delete().eq('template_id', id);
+      {
+        const { error } = await supabase.from('deduction_types').delete().eq('template_id', id);
+        if (error) throw error;
+      }
 
       // 4. Delete remaining categories without sections
-      await supabase.from('scoring_categories').delete().eq('template_id', id);
+      {
+        const { error } = await supabase.from('scoring_categories').delete().eq('template_id', id);
+        if (error) throw error;
+      }
 
       // 5. Recreate sections and categories
       if (sections.length > 0) {
@@ -292,52 +311,7 @@ export default function ScoringTemplates() {
           allCategories.push(...flattened);
         });
 
-        if (allCategories.length > 0) {
-          const mainCategories = allCategories.filter((c) => !c.parent_category_id);
-          const categoriesToInsert = mainCategories.map((cat) => ({
-            template_id: id,
-            section_id: cat.section_id,
-            name: cat.name,
-            max_points: cat.max_points,
-            category_type: cat.category_type,
-            description: cat.description,
-            display_order: cat.display_order,
-            weight: cat.weight,
-          }));
-
-          const { data: insertedMainCats, error: mainCatError } = await supabase
-            .from('scoring_categories')
-            .insert(categoriesToInsert)
-            .select();
-
-          if (mainCatError) throw mainCatError;
-
-          const catIdMap = new Map<string, string>();
-          insertedMainCats.forEach((inserted, index) => {
-            catIdMap.set(mainCategories[index].temp_id, inserted.id);
-          });
-
-          const childCategories = allCategories.filter((c) => c.parent_category_id);
-          if (childCategories.length > 0) {
-            const childCatsToInsert = childCategories.map((cat) => ({
-              template_id: id,
-              section_id: cat.section_id,
-              parent_category_id: catIdMap.get(cat.parent_category_id) || null,
-              name: cat.name,
-              max_points: cat.max_points,
-              category_type: cat.category_type,
-              description: cat.description,
-              display_order: cat.display_order,
-              weight: cat.weight,
-            }));
-
-            const { error: childCatError } = await supabase
-              .from('scoring_categories')
-              .insert(childCatsToInsert);
-
-            if (childCatError) throw childCatError;
-          }
-        }
+        await insertCategoriesForTemplate(id, allCategories);
       }
 
       // 6. Recreate deduction types

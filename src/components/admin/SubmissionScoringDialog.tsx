@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { calculateStructuredDeductions, getLeafCategories, sortByDisplayOrder } from '@/lib/scoring';
 import { 
   Play, Pause, RotateCcw, Volume2, VolumeX, Maximize2, 
   Save, Send, Loader2, CheckCircle, Clock, AlertCircle,
@@ -52,7 +53,7 @@ export default function SubmissionScoringDialog({
   
   const [selectedPanelId, setSelectedPanelId] = useState<string>('');
   const [categoryScores, setCategoryScores] = useState<Record<string, CategoryScore>>({});
-  const [deductions, setDeductions] = useState(0);
+  const [deductionCounts, setDeductionCounts] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -98,7 +99,8 @@ export default function SubmissionScoringDialog({
         .from('scoring_templates')
         .select(`
           *,
-          categories:scoring_categories(*)
+          categories:scoring_categories(*),
+          deduction_types:deduction_types(*)
         `)
         .eq('event_id', eventId)
         .eq('is_default', true)
@@ -110,7 +112,8 @@ export default function SubmissionScoringDialog({
           .from('scoring_templates')
           .select(`
             *,
-            categories:scoring_categories(*)
+              categories:scoring_categories(*),
+              deduction_types:deduction_types(*)
           `)
           .eq('event_id', eventId)
           .order('created_at')
@@ -134,6 +137,7 @@ export default function SubmissionScoringDialog({
         .select(`
           *,
           details:score_details(*),
+          deduction_items:score_deductions(*),
           judge:profiles!scores_judge_user_id_fkey(full_name, email)
         `)
         .eq('submission_id', submissionId!);
@@ -182,6 +186,8 @@ export default function SubmissionScoringDialog({
   // Initialize/reset scores when panel changes
   useEffect(() => {
     if (!template?.categories) return;
+
+    const leafCategories = sortByDisplayOrder(getLeafCategories(template.categories as any[]));
     
     const panelScore = allScores?.find(s => s.panel_id === selectedPanelId);
     
@@ -195,12 +201,18 @@ export default function SubmissionScoringDialog({
         };
       });
       setCategoryScores(loadedScores);
-      setDeductions(panelScore.deductions || 0);
+
+      const loadedDedCounts: Record<string, number> = {};
+      panelScore.deduction_items?.forEach((item: any) => {
+        loadedDedCounts[item.deduction_type_id] = item.count || 0;
+      });
+      setDeductionCounts(loadedDedCounts);
+
       setComments(panelScore.comments || '');
     } else {
       // Initialize empty scores
       const initialScores: Record<string, CategoryScore> = {};
-      template.categories.forEach((cat: any) => {
+      leafCategories.forEach((cat: any) => {
         initialScores[cat.id] = {
           category_id: cat.id,
           points: 0,
@@ -208,7 +220,11 @@ export default function SubmissionScoringDialog({
         };
       });
       setCategoryScores(initialScores);
-      setDeductions(0);
+      const initialDedCounts: Record<string, number> = {};
+      (sortByDisplayOrder(template.deduction_types || []) as any[]).forEach((dt: any) => {
+        initialDedCounts[dt.id] = 0;
+      });
+      setDeductionCounts(initialDedCounts);
       setComments('');
     }
   }, [selectedPanelId, allScores, template]);
@@ -229,12 +245,14 @@ export default function SubmissionScoringDialog({
 
   const calculateTotalScore = () => {
     if (!template?.categories) return 0;
+    const leafCategories = getLeafCategories(template.categories as any[]);
+    const deductionsTotal = calculateStructuredDeductions(template.deduction_types as any[], deductionCounts);
     let total = 0;
-    template.categories.forEach((cat: any) => {
+    leafCategories.forEach((cat: any) => {
       const score = categoryScores[cat.id]?.points || 0;
-      total += score * (cat.weight || 1);
+      total += score * (Number(cat.weight) || 1);
     });
-    return Math.max(0, total - deductions);
+    return Math.max(0, total - deductionsTotal);
   };
 
   // Video controls
@@ -283,6 +301,7 @@ export default function SubmissionScoringDialog({
 
       setIsSaving(true);
       const totalScore = calculateTotalScore();
+      const deductionsTotal = calculateStructuredDeductions(template.deduction_types as any[], deductionCounts);
 
       if (currentPanelScore) {
         // Update existing score
@@ -290,7 +309,7 @@ export default function SubmissionScoringDialog({
           .from('scores')
           .update({
             total_score: totalScore,
-            deductions,
+            deductions: deductionsTotal,
             comments,
             status,
             submitted_at: status === 'submitted' ? new Date().toISOString() : null,
@@ -315,6 +334,20 @@ export default function SubmissionScoringDialog({
           .from('score_details')
           .insert(details);
         if (detailError) throw detailError;
+
+        // Replace structured deductions
+        await supabase.from('score_deductions').delete().eq('score_id', currentPanelScore.id);
+        const deductionRows = Object.entries(deductionCounts)
+          .filter(([, count]) => (count || 0) > 0)
+          .map(([deduction_type_id, count]) => ({
+            score_id: currentPanelScore.id,
+            deduction_type_id,
+            count,
+          }));
+        if (deductionRows.length > 0) {
+          const { error: dedErr } = await supabase.from('score_deductions').insert(deductionRows);
+          if (dedErr) throw dedErr;
+        }
       } else {
         // Create new score
         const { data: newScore, error: scoreError } = await supabase
@@ -325,7 +358,7 @@ export default function SubmissionScoringDialog({
             template_id: template.id,
             panel_id: selectedPanelId,
             total_score: totalScore,
-            deductions,
+            deductions: deductionsTotal,
             comments,
             status,
             submitted_at: status === 'submitted' ? new Date().toISOString() : null,
@@ -346,6 +379,18 @@ export default function SubmissionScoringDialog({
           .from('score_details')
           .insert(details);
         if (detailError) throw detailError;
+
+        const deductionRows = Object.entries(deductionCounts)
+          .filter(([, count]) => (count || 0) > 0)
+          .map(([deduction_type_id, count]) => ({
+            score_id: newScore.id,
+            deduction_type_id,
+            count,
+          }));
+        if (deductionRows.length > 0) {
+          const { error: dedErr } = await supabase.from('score_deductions').insert(deductionRows);
+          if (dedErr) throw dedErr;
+        }
       }
     },
     onSuccess: (_, status) => {
@@ -614,28 +659,50 @@ export default function SubmissionScoringDialog({
                     <Separator />
 
                     {/* Deductions */}
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
                         <label className="text-sm font-medium text-destructive">Deductions</label>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Input
-                            type="number"
-                            min={0}
-                            step={0.5}
-                            value={deductions}
-                            onChange={(e) => setDeductions(parseFloat(e.target.value) || 0)}
-                            className="w-24"
-                            disabled={isCurrentPanelLocked}
-                          />
-                          <span className="text-sm text-muted-foreground">points</span>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">Total Score</p>
+                          <p className="text-3xl font-bold text-primary">{calculateTotalScore().toFixed(2)}</p>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">Total Score</p>
-                        <p className="text-3xl font-bold text-primary">
-                          {calculateTotalScore().toFixed(2)}
-                        </p>
-                      </div>
+
+                      {template.deduction_types && template.deduction_types.length > 0 ? (
+                        <div className="space-y-2">
+                          {sortByDisplayOrder(template.deduction_types as any[]).map((dt: any) => (
+                            <div key={dt.id} className="flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium truncate">{dt.name}</p>
+                                <p className="text-xs text-muted-foreground">{Number(dt.points).toFixed(2)} each</p>
+                              </div>
+                              <Input
+                                type="number"
+                                min={0}
+                                step={1}
+                                value={deductionCounts[dt.id] || 0}
+                                onChange={(e) =>
+                                  setDeductionCounts((prev) => ({
+                                    ...prev,
+                                    [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0),
+                                  }))
+                                }
+                                className="w-20"
+                                disabled={isCurrentPanelLocked}
+                              />
+                            </div>
+                          ))}
+
+                          <div className="pt-2 border-t flex items-center justify-between">
+                            <span className="text-sm font-medium text-destructive">Total deductions</span>
+                            <span className="text-sm font-bold text-destructive">
+                              {calculateStructuredDeductions(template.deduction_types as any[], deductionCounts).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No deduction types configured for this template.</p>
+                      )}
                     </div>
 
                     {/* Comments */}
