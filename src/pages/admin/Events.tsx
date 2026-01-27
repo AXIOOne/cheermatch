@@ -332,7 +332,7 @@ export default function Events() {
                       name="broadcast_deadline"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Broadcast Deadline</FormLabel>
+                          <FormLabel>Submission Deadline</FormLabel>
                           <FormControl>
                             <Input type="date" {...field} />
                           </FormControl>
@@ -448,7 +448,7 @@ export default function Events() {
                   <TableRow>
                     <TableHead>Event Name</TableHead>
                     <TableHead>Dates</TableHead>
-                    <TableHead>Broadcast Deadline</TableHead>
+                    <TableHead>Submission Deadline</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Scoring</TableHead>
                     <TableHead>Registrations</TableHead>
