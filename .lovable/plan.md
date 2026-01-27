@@ -1,229 +1,237 @@
 
 
-# Enhanced Events Listing Page
+# Plan: Comprehensive Scoring Template System Update
 
 ## Overview
 
-This plan enhances the Events listing page to match the functionality from your existing Cheermatch platform, including additional columns, filtering, search, pagination, and quick-action links to related functionality.
+After reviewing the United Scoring System documents, I will update the scoring template system to accurately reflect the professional cheerleading scoring methodology. This includes support for **multiple judge types**, **sub-categories with drivers**, **structured deductions**, and **level-appropriate skill tracking**.
 
-## Key Features to Add
+---
 
-### 1. Enhanced Table Columns
-The current Events page shows: Name, Dates, Registration Deadline, Status, Actions (edit/delete)
+## Current System Analysis
 
-We will add:
-- **Broadcast Deadline** - Video submission deadline (new database field)
-- **Score** - Link to scoring dashboard for the event  
-- **Registrations** - Link to view registered teams for the event
-- **Scoresheet Template** - Display assigned template name
-- **Actions** - Results, Participants, Average Report links
+The existing system has:
+- `scoring_templates` - Basic template with name, event, description
+- `scoring_categories` - Simple categories with name, max_points, weight, display_order
 
-### 2. Filtering and Search
-- **Status Filter Dropdown** - Filter events by status (Draft, Open, In Progress, etc.)
-- **Search Box** - Search events by name
-- **Show X Entries** - Control how many rows to display per page
+**Limitations:**
+- No support for judge-specific sections (Building Judge vs Tumbling Judge vs Overall Judge)
+- No sub-category/driver system for detailed scoring breakdowns
+- No structured deduction system with predefined types and point values
+- No distinction between Difficulty, Execution, and Degree of Difficulty
 
-### 3. Pagination
-- Page navigation with Previous/Next buttons
-- "Showing X to Y of Z entries" counter
+---
 
-### 4. Summary Report Link
-- Button to view full analytics dashboard with event metrics
+## United Scoring System Structure (from documents)
+
+```text
+TOTAL: 50.0 points
+
+BUILDING JUDGE (22 pts):
+├── STUNT: 10.0 pts
+│   ├── Difficulty: 4.5
+│   ├── Execution: 4.0
+│   └── Degree of Difficulty: 1.5
+├── PYRAMID: 8.0 pts
+│   ├── Difficulty: 4.0
+│   └── Execution: 4.0
+└── TOSSES: 4.0 pts
+    ├── Difficulty: 2.0
+    └── Execution: 2.0
+
+TUMBLING JUDGE (20 pts):
+├── STANDING TUMBLING: 8.0 pts
+│   ├── Difficulty: 3.0
+│   ├── Execution: 4.0
+│   └── Degree of Difficulty: 1.0
+├── RUNNING TUMBLING: 8.0 pts
+│   ├── Difficulty: 3.0
+│   ├── Execution: 4.0
+│   └── Degree of Difficulty: 1.0
+└── JUMPS: 4.0 pts
+    ├── Difficulty: 2.0
+    └── Execution: 2.0
+
+OVERALL JUDGE (4 pts):
+├── DANCE: 2.0 pts
+│   ├── Difficulty: 1.0
+│   └── Execution: 1.0
+└── FORMATIONS & TRANSITIONS: 2.0 pts
+    └── Execution: 2.0
+
+ALL CATEGORY JUDGES (4 pts):
+├── ROUTINE CREATIVITY: 2.0 pts
+└── SHOWMANSHIP: 2.0 pts
+
+DEDUCTIONS (separate tracking):
+├── Athlete Fall: -0.15
+├── Major Athlete Fall: -0.25
+├── Building Bobble: -0.25
+├── Building Fall: -0.75
+├── Major Building Fall: -1.25
+├── Boundary Violation: -0.05
+├── Time Limit Violation: -0.05
+├── Division Violation: -5.0
+└── Legality Infractions: -0.01 to -0.50
+```
+
+---
+
+## Database Schema Changes
+
+### 1. New Table: `scoring_sections`
+Groups categories by judge type (Building, Tumbling, Overall, All)
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| template_id | uuid | FK to scoring_templates |
+| name | text | "Building", "Tumbling", "Overall", "All Judges" |
+| abbreviation | text | "B", "T", "OV", "ALL" |
+| display_order | integer | Order in scoresheet |
+
+### 2. Update Table: `scoring_categories`
+Add section reference and parent category support
+
+| New Column | Type | Description |
+|------------|------|-------------|
+| section_id | uuid | FK to scoring_sections (nullable for backwards compatibility) |
+| parent_category_id | uuid | Self-reference for sub-categories |
+| category_type | text | 'main', 'difficulty', 'execution', 'driver' |
+
+### 3. New Table: `deduction_types`
+Predefined deduction categories per template
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| template_id | uuid | FK to scoring_templates |
+| name | text | "Athlete Fall", "Building Bobble", etc. |
+| points | numeric | Deduction value (negative) |
+| description | text | When to apply |
+| category | text | 'athlete', 'building', 'rule_violation', 'legality' |
+
+### 4. New Table: `score_deductions`
+Track individual deduction instances per score
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| score_id | uuid | FK to scores |
+| deduction_type_id | uuid | FK to deduction_types |
+| count | integer | Number of occurrences |
+| notes | text | Optional notes |
+
+---
+
+## UI Changes
+
+### 1. Enhanced Template Builder
+
+The template creation form will be restructured with:
+
+- **Section Tabs**: Building | Tumbling | Overall | All Judges | Deductions
+- **Category Tree Builder**: Main categories with nested sub-categories
+- **Predefined Deduction Manager**: Add/edit deduction types with point values
+- **Level Selector**: Associate level-appropriate requirements
+- **Preview Mode**: Live preview of how the scoresheet will appear to judges
+
+### 2. Template Form Fields
+
+Each category will have:
+- Name
+- Max Points
+- Category Type (Main / Difficulty / Execution / Driver)
+- Parent Category (if sub-category)
+- Description/Guidance Text
+
+### 3. Sample Data Population
+
+After schema updates, I'll create a complete "Level 6 Senior All Girl" template with:
+- All 50 points distributed correctly
+- All sub-categories and drivers
+- Complete deduction table matching the United system
 
 ---
 
 ## Implementation Steps
 
-### Phase 1: Database Changes
+### Phase 1: Database Schema (Migration)
+1. Create `scoring_sections` table
+2. Create `deduction_types` table
+3. Create `score_deductions` table
+4. Add new columns to `scoring_categories`
+5. Set up foreign keys and RLS policies
 
-**Add broadcast_deadline column to events table:**
-```sql
-ALTER TABLE public.events 
-ADD COLUMN broadcast_deadline date;
-```
+### Phase 2: Update ScoringTemplates.tsx
+1. Add section management (tabs/accordion for each judge type)
+2. Add hierarchical category builder with parent/child relationships
+3. Add deduction type management section
+4. Update form validation schema
+5. Update create/update mutations for new structure
 
-This field stores the video submission deadline for each event.
-
-### Phase 2: Update Event Form
-
-Modify the Create/Edit Event dialog to include:
-- Broadcast Deadline date picker field
-- Scoring Template selector (dropdown of templates for this event)
-
-Update the form schema and mutations to handle the new field.
-
-### Phase 3: Enhanced Events Table
-
-Replace the current simple table with an enhanced version featuring:
-
-**New Table Columns:**
-| Column | Description |
-|--------|-------------|
-| Event Name | Clickable link to event details |
-| Start Date | Event start date |
-| End Date | Event end date |
-| Broadcast Deadline | Video submission deadline |
-| Status | Color-coded status badge |
-| Score | Link to `/admin/events/{id}/scoring` |
-| Registrations | Link to `/admin/events/{id}/registrations` |
-| Scoresheet Template | Template name or "Not Assigned" |
-| Actions | Results / Participants / Average Report links |
-
-### Phase 4: Filtering and Search Controls
-
-Add a filter bar above the table:
-
-```text
-+------------------------------------------------------+
-| Status: [All Statuses ▼]    Search: [___________]    |
-| Show [25 ▼] entries                                   |
-+------------------------------------------------------+
-```
-
-**Filter Logic:**
-- Status dropdown filters by event_status enum values
-- Search filters by event name (case-insensitive)
-- Entries dropdown controls pagination size (10, 25, 50, 100)
-
-### Phase 5: Pagination Component
-
-Implement client-side pagination:
-- Track current page and page size in state
-- Calculate total pages from filtered results
-- Display "Showing 1 to 25 of 150 entries"
-- Previous/Next navigation buttons
-- Optional: Page number buttons for quick navigation
-
-### Phase 6: Action Links and Sub-Pages
-
-Create new event-specific pages/views:
-
-**1. Event Registrations Page** (`/admin/events/:eventId/registrations`)
-- List of teams registered for this specific event
-- Filter/search within registrations
-- Team details: name, gym, division, level, athlete count
-
-**2. Event Scoring Dashboard** (`/admin/events/:eventId/scoring`)
-- Overview of scoring progress for the event
-- Stats: teams scored, pending, average scores
-- List of submissions with scoring status
-- Quick links to assign judges
-
-**3. Event Results Page** (`/admin/events/:eventId/results`)
-- Final rankings by division/level
-- Option to publish/unpublish results
-- Export results functionality
-
-**4. Event Participants Page** (`/admin/events/:eventId/participants`)  
-- All teams and athletes for the event
-- Grouped by division and level
-- Exportable list
-
-**5. Event Average Report** (`/admin/events/:eventId/reports`)
-- Score analytics and averages
-- Charts showing score distribution
-- Judge comparison metrics
-
-### Phase 7: Summary Report Dashboard
-
-Add "View Summary Report" button in the header that links to a dashboard showing:
-- Total events by status
-- Registration counts across events
-- Upcoming deadlines
-- Scoring completion rates
-
----
-
-## File Changes Summary
-
-| File | Change Type | Description |
-|------|-------------|-------------|
-| `supabase/migrations/xxx_add_broadcast_deadline.sql` | Create | Add broadcast_deadline column |
-| `src/pages/admin/Events.tsx` | Modify | Enhanced table, filters, pagination, action links |
-| `src/pages/admin/EventRegistrations.tsx` | Create | Team registrations for specific event |
-| `src/pages/admin/EventScoring.tsx` | Create | Scoring dashboard for specific event |
-| `src/pages/admin/EventResults.tsx` | Create | Results/rankings for specific event |
-| `src/pages/admin/EventParticipants.tsx` | Create | All participants for specific event |
-| `src/pages/admin/EventReports.tsx` | Create | Analytics/average reports for event |
-| `src/pages/admin/EventsSummary.tsx` | Create | Cross-event summary dashboard |
-| `src/App.tsx` | Modify | Add new routes for event sub-pages |
+### Phase 3: Populate Sample Template
+1. Insert "United Scoring System - Level 6 Senior All Girl" template
+2. Create all sections (Building, Tumbling, Overall, All)
+3. Create all categories with proper hierarchy
+4. Create all deduction types
 
 ---
 
 ## Technical Details
 
-### Updated Events Query
-```typescript
-const { data: events } = useQuery({
-  queryKey: ['events', statusFilter, searchQuery],
-  queryFn: async () => {
-    let query = supabase
-      .from('events')
-      .select(`
-        *,
-        scoring_template:scoring_templates(id, name),
-        teams_count:teams(count),
-        submissions_count:video_submissions(count)
-      `)
-      .order('created_at', { ascending: false });
+### Form Schema Update
 
-    if (statusFilter !== 'all') {
-      query = query.eq('status', statusFilter);
-    }
-    if (searchQuery) {
-      query = query.ilike('name', `%${searchQuery}%`);
-    }
-    return query;
-  },
+```typescript
+const sectionSchema = z.object({
+  name: z.string().min(1),
+  abbreviation: z.string().min(1),
+  display_order: z.number(),
+});
+
+const categorySchema = z.object({
+  name: z.string().min(1),
+  max_points: z.number().min(0),
+  category_type: z.enum(['main', 'difficulty', 'execution', 'driver']),
+  parent_id: z.string().optional(),
+  description: z.string().optional(),
+});
+
+const deductionTypeSchema = z.object({
+  name: z.string().min(1),
+  points: z.number().max(0), // Negative values
+  description: z.string(),
+  category: z.enum(['athlete', 'building', 'rule_violation', 'legality']),
 });
 ```
 
-### Pagination State
-```typescript
-const [currentPage, setCurrentPage] = useState(1);
-const [pageSize, setPageSize] = useState(25);
+### Sample Template Data
 
-const paginatedEvents = useMemo(() => {
-  const start = (currentPage - 1) * pageSize;
-  return filteredEvents?.slice(start, start + pageSize);
-}, [filteredEvents, currentPage, pageSize]);
-
-const totalPages = Math.ceil((filteredEvents?.length || 0) / pageSize);
-```
-
-### New Route Structure
-```typescript
-// In App.tsx
-<Route path="events" element={<Events />} />
-<Route path="events/summary" element={<EventsSummary />} />
-<Route path="events/:eventId/registrations" element={<EventRegistrations />} />
-<Route path="events/:eventId/scoring" element={<EventScoring />} />
-<Route path="events/:eventId/results" element={<EventResults />} />
-<Route path="events/:eventId/participants" element={<EventParticipants />} />
-<Route path="events/:eventId/reports" element={<EventReports />} />
-```
+The Level 6 template will include:
+- 4 sections
+- 13 main categories
+- 20+ sub-categories (drivers)
+- 12 deduction types
 
 ---
 
-## UI Components Used
+## Files to Create/Modify
 
-The implementation will use existing UI components:
-- `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableCell` - Data display
-- `Select`, `SelectTrigger`, `SelectContent`, `SelectItem` - Status filter
-- `Input` - Search box
-- `Button` - Actions and navigation
-- `Badge` - Status indicators
-- `Card` - Container components
-- `Pagination` components - Page navigation
-- `Skeleton` - Loading states
+| File | Action |
+|------|--------|
+| `supabase/migrations/[timestamp]_scoring_system_update.sql` | Create - Schema changes |
+| `src/pages/admin/ScoringTemplates.tsx` | Modify - Enhanced builder UI |
+| `src/components/admin/ScoringCategoryTree.tsx` | Create - Hierarchical category component |
+| `src/components/admin/DeductionTypeManager.tsx` | Create - Deduction management |
+| `src/components/admin/SectionTabs.tsx` | Create - Section tab navigation |
 
 ---
 
-## Dependencies
+## Benefits
 
-No new dependencies required - all functionality can be built with existing packages:
-- `@tanstack/react-query` for data fetching
-- `react-router-dom` for navigation and URL params
-- `date-fns` for date formatting
-- `recharts` for analytics charts (already installed)
+1. **Professional-grade scoring**: Matches official United Scoring System exactly
+2. **Judge-specific views**: Each judge type sees only their relevant sections
+3. **Accurate deductions**: Structured tracking instead of single number field
+4. **Flexible hierarchy**: Sub-categories and drivers properly nested
+5. **Reusable templates**: Can duplicate and modify for different levels/divisions
 
