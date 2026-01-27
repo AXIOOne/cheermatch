@@ -141,6 +141,7 @@ export type Database = {
           id: string
           judge_user_id: string
           level_id: string | null
+          panel_id: string | null
         }
         Insert: {
           created_at?: string
@@ -149,6 +150,7 @@ export type Database = {
           id?: string
           judge_user_id: string
           level_id?: string | null
+          panel_id?: string | null
         }
         Update: {
           created_at?: string
@@ -157,6 +159,7 @@ export type Database = {
           id?: string
           judge_user_id?: string
           level_id?: string | null
+          panel_id?: string | null
         }
         Relationships: [
           {
@@ -178,6 +181,51 @@ export type Database = {
             columns: ["level_id"]
             isOneToOne: false
             referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_assignments_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "judge_panels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      judge_panels: {
+        Row: {
+          abbreviation: string
+          created_at: string
+          description: string | null
+          display_order: number
+          event_id: string
+          id: string
+          name: string
+        }
+        Insert: {
+          abbreviation: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          event_id: string
+          id?: string
+          name: string
+        }
+        Update: {
+          abbreviation?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          event_id?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "judge_panels_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -323,6 +371,7 @@ export type Database = {
           deductions: number | null
           id: string
           judge_user_id: string
+          panel_id: string | null
           status: Database["public"]["Enums"]["score_status"]
           submission_id: string
           submitted_at: string | null
@@ -336,6 +385,7 @@ export type Database = {
           deductions?: number | null
           id?: string
           judge_user_id: string
+          panel_id?: string | null
           status?: Database["public"]["Enums"]["score_status"]
           submission_id: string
           submitted_at?: string | null
@@ -349,6 +399,7 @@ export type Database = {
           deductions?: number | null
           id?: string
           judge_user_id?: string
+          panel_id?: string | null
           status?: Database["public"]["Enums"]["score_status"]
           submission_id?: string
           submitted_at?: string | null
@@ -357,6 +408,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "scores_panel_id_fkey"
+            columns: ["panel_id"]
+            isOneToOne: false
+            referencedRelation: "judge_panels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "scores_submission_id_fkey"
             columns: ["submission_id"]
