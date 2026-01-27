@@ -1,13 +1,50 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Loader2, BarChart3, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/hooks/use-toast';
+import { ArrowLeft, Loader2, BarChart3, CheckCircle, Clock, Settings, Send, AlertCircle } from 'lucide-react';
+import JudgePanelsManager from '@/components/admin/JudgePanelsManager';
+
+interface JudgePanel {
+  id: string;
+  name: string;
+  abbreviation: string;
+  display_order: number;
+}
+
+interface Score {
+  id: string;
+  status: string;
+  total_score: number | null;
+  panel_id: string | null;
+}
+
+interface Submission {
+  id: string;
+  status: string;
+  team: {
+    id: string;
+    name: string;
+    gym_name: string;
+    coach_user_id: string;
+    division: { id: string; name: string } | null;
+    level: { id: string; name: string } | null;
+  } | null;
+  scores: Score[];
+}
 
 export default function EventScoring() {
   const { eventId } = useParams<{ eventId: string }>();
+  const [isPanelsDialogOpen, setIsPanelsDialogOpen] = useState(false);
+  const [sendingScoreFor, setSendingScoreFor] = useState<string | null>(null);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ['event', eventId],
@@ -16,48 +53,154 @@ export default function EventScoring() {
         .from('events')
         .select('*')
         .eq('id', eventId)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
+    },
+  });
+
+  const { data: panels, isLoading: panelsLoading } = useQuery({
+    queryKey: ['judge-panels', eventId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('judge_panels')
+        .select('*')
+        .eq('event_id', eventId)
+        .order('display_order');
+      if (error) throw error;
+      return data as JudgePanel[];
     },
   });
 
   const { data: submissions, isLoading: submissionsLoading } = useQuery({
-    queryKey: ['event-submissions', eventId],
+    queryKey: ['event-submissions-scoring', eventId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('video_submissions')
         .select(`
-          *,
-          team:teams(id, name, gym_name),
-          scores:scores(id, status, total_score)
+          id,
+          status,
+          team:teams(
+            id, 
+            name, 
+            gym_name,
+            coach_user_id,
+            division:divisions(id, name),
+            level:levels(id, name)
+          ),
+          scores:scores(id, status, total_score, panel_id)
         `)
         .eq('event_id', eventId)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data;
+      return data as Submission[];
     },
   });
 
-  const isLoading = eventLoading || submissionsLoading;
+  const { data: coachProfiles } = useQuery({
+    queryKey: ['coach-profiles', eventId],
+    queryFn: async () => {
+      if (!submissions) return {};
+      const coachIds = [...new Set(submissions.map(s => s.team?.coach_user_id).filter(Boolean))];
+      if (coachIds.length === 0) return {};
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, email, full_name')
+        .in('user_id', coachIds);
+      if (error) throw error;
+      
+      return data.reduce((acc, p) => {
+        acc[p.user_id] = p;
+        return acc;
+      }, {} as Record<string, { email: string; full_name: string | null }>);
+    },
+    enabled: !!submissions && submissions.length > 0,
+  });
+
+  const sendScoreSheetMutation = useMutation({
+    mutationFn: async (submissionId: string) => {
+      const { data, error } = await supabase.functions.invoke('send-scoresheet-email', {
+        body: { submissionId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast({ title: 'Score sheet sent successfully!' });
+      setSendingScoreFor(null);
+    },
+    onError: (error: any) => {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Failed to send score sheet', 
+        description: error.message 
+      });
+      setSendingScoreFor(null);
+    },
+  });
+
+  const handleSendScoreSheet = (submissionId: string) => {
+    setSendingScoreFor(submissionId);
+    sendScoreSheetMutation.mutate(submissionId);
+  };
+
+  const isLoading = eventLoading || panelsLoading || submissionsLoading;
 
   // Calculate stats
   const stats = {
     total: submissions?.length || 0,
-    scored: submissions?.filter(s => s.scores && s.scores.some((sc: any) => sc.status === 'submitted')).length || 0,
-    pending: submissions?.filter(s => !s.scores || s.scores.length === 0 || s.scores.every((sc: any) => sc.status === 'in_progress')).length || 0,
+    fullyScored: submissions?.filter(s => {
+      if (!panels || panels.length === 0) return false;
+      return panels.every(p => 
+        s.scores.some(sc => sc.panel_id === p.id && sc.status === 'submitted')
+      );
+    }).length || 0,
+    pending: submissions?.filter(s => {
+      if (!panels || panels.length === 0) return s.scores.length === 0;
+      return !panels.every(p => 
+        s.scores.some(sc => sc.panel_id === p.id && sc.status === 'submitted')
+      );
+    }).length || 0,
   };
 
-  const getSubmissionStatus = (submission: any) => {
-    if (!submission.scores || submission.scores.length === 0) return 'pending';
-    if (submission.scores.some((s: any) => s.status === 'submitted')) return 'scored';
-    return 'in_progress';
+  // Get panel scoring status for a submission
+  const getPanelStatus = (submission: Submission, panelId: string): 'pending' | 'in_progress' | 'submitted' => {
+    const score = submission.scores.find(s => s.panel_id === panelId);
+    if (!score) return 'pending';
+    return score.status as 'pending' | 'in_progress' | 'submitted';
   };
 
-  const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline'; icon: any }> = {
-    pending: { label: 'Pending', variant: 'outline', icon: Clock },
-    in_progress: { label: 'In Progress', variant: 'secondary', icon: AlertCircle },
-    scored: { label: 'Scored', variant: 'default', icon: CheckCircle },
+  // Get overall scoring status text
+  const getOverallStatus = (submission: Submission): { text: string; allComplete: boolean } => {
+    if (!panels || panels.length === 0) {
+      const hasSubmitted = submission.scores.some(s => s.status === 'submitted');
+      return { text: hasSubmitted ? 'SCORED' : 'PENDING', allComplete: hasSubmitted };
+    }
+    
+    const completedPanels = panels.filter(p => 
+      submission.scores.some(s => s.panel_id === p.id && s.status === 'submitted')
+    ).length;
+    
+    if (completedPanels === panels.length) {
+      return { text: 'COMPLETE', allComplete: true };
+    }
+    return { text: 'PENDING', allComplete: false };
+  };
+
+  const StatusIndicator = ({ status }: { status: 'pending' | 'in_progress' | 'submitted' }) => {
+    const colors = {
+      pending: 'bg-destructive',
+      in_progress: 'bg-yellow-500',
+      submitted: 'bg-green-500',
+    };
+    
+    return (
+      <div 
+        className={`w-4 h-4 rounded-sm ${colors[status]}`}
+        title={status.replace('_', ' ')}
+      />
+    );
   };
 
   return (
@@ -67,10 +210,34 @@ export default function EventScoring() {
           <ArrowLeft className="w-4 h-4" />
           Back to Events
         </Link>
-        <h1 className="text-3xl font-bold text-foreground">
-          {eventLoading ? 'Loading...' : event?.name}
-        </h1>
-        <p className="text-muted-foreground mt-1">Scoring Dashboard</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              {eventLoading ? 'Loading...' : `Match: ${event?.name || 'Event'}`}
+            </h1>
+            <p className="text-muted-foreground mt-1">Scoring Control Panel</p>
+          </div>
+          <Dialog open={isPanelsDialogOpen} onOpenChange={setIsPanelsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Settings className="w-4 h-4 mr-2" />
+                Configure Panels
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Configure Judge Panels</DialogTitle>
+              </DialogHeader>
+              <JudgePanelsManager 
+                eventId={eventId!} 
+                onClose={() => {
+                  setIsPanelsDialogOpen(false);
+                  queryClient.invalidateQueries({ queryKey: ['judge-panels', eventId] });
+                }} 
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -95,8 +262,8 @@ export default function EventScoring() {
                 <CheckCircle className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Scored</p>
-                <p className="text-2xl font-bold">{stats.scored}</p>
+                <p className="text-sm text-muted-foreground">Fully Scored</p>
+                <p className="text-2xl font-bold">{stats.fullyScored}</p>
               </div>
             </div>
           </CardContent>
@@ -116,6 +283,29 @@ export default function EventScoring() {
         </Card>
       </div>
 
+      {/* Panel Legend */}
+      {panels && panels.length > 0 && (
+        <Card className="mb-4">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-6 flex-wrap">
+              <span className="text-sm font-medium text-muted-foreground">Status Legend:</span>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-sm bg-destructive" />
+                <span className="text-sm">Pending</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-sm bg-yellow-500" />
+                <span className="text-sm">In Progress</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-sm bg-green-500" />
+                <span className="text-sm">Complete</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Submissions</CardTitle>
@@ -129,40 +319,79 @@ export default function EventScoring() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-20">Sub #</TableHead>
                   <TableHead>Team</TableHead>
-                  <TableHead>Gym</TableHead>
-                  <TableHead>Submission Status</TableHead>
-                  <TableHead>Scoring Status</TableHead>
-                  <TableHead className="text-right">Score</TableHead>
+                  <TableHead>Team Level and Division</TableHead>
+                  <TableHead>Coach</TableHead>
+                  <TableHead>Action</TableHead>
+                  {panels?.map((panel) => (
+                    <TableHead key={panel.id} className="text-center w-12">
+                      {panel.abbreviation}
+                    </TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {submissions.map((submission) => {
-                  const scoringStatus = getSubmissionStatus(submission);
-                  const config = statusConfig[scoringStatus];
-                  const Icon = config.icon;
-                  const avgScore = submission.scores && submission.scores.length > 0
-                    ? submission.scores.reduce((sum: number, s: any) => sum + (s.total_score || 0), 0) / submission.scores.length
+                {submissions.map((submission, index) => {
+                  const coach = submission.team?.coach_user_id 
+                    ? coachProfiles?.[submission.team.coach_user_id] 
                     : null;
-
+                  const overallStatus = getOverallStatus(submission);
+                  
                   return (
                     <TableRow key={submission.id}>
-                      <TableCell className="font-medium">{submission.team?.name || '—'}</TableCell>
-                      <TableCell>{submission.team?.gym_name || '—'}</TableCell>
-                      <TableCell>
-                        <Badge variant={submission.status === 'ready' ? 'default' : 'outline'}>
-                          {submission.status}
-                        </Badge>
+                      <TableCell className="font-mono text-muted-foreground">
+                        {(index + 1).toString().padStart(4, '0')}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={config.variant} className="gap-1">
-                          <Icon className="w-3 h-3" />
-                          {config.label}
-                        </Badge>
+                        <div>
+                          <Link 
+                            to={`/admin/teams`} 
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {submission.team?.name || 'Unknown Team'}
+                          </Link>
+                          <p className="text-sm text-muted-foreground">
+                            {submission.team?.gym_name || '—'}
+                          </p>
+                        </div>
                       </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {avgScore !== null ? avgScore.toFixed(2) : '—'}
+                      <TableCell>
+                        {submission.team?.level?.name && submission.team?.division?.name
+                          ? `${submission.team.level.name} ${submission.team.division.name}`
+                          : '—'}
                       </TableCell>
+                      <TableCell>
+                        {coach?.full_name || coach?.email || '—'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-primary"
+                            onClick={() => handleSendScoreSheet(submission.id)}
+                            disabled={sendingScoreFor === submission.id || !overallStatus.allComplete}
+                          >
+                            {sendingScoreFor === submission.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                            ) : (
+                              <Send className="w-3 h-3 mr-1" />
+                            )}
+                            Send Score Sheet
+                          </Button>
+                          <span className={`text-xs font-medium ${overallStatus.allComplete ? 'text-green-600' : 'text-muted-foreground'}`}>
+                            [{overallStatus.text}]
+                          </span>
+                        </div>
+                      </TableCell>
+                      {panels?.map((panel) => (
+                        <TableCell key={panel.id} className="text-center">
+                          <div className="flex justify-center">
+                            <StatusIndicator status={getPanelStatus(submission, panel.id)} />
+                          </div>
+                        </TableCell>
+                      ))}
                     </TableRow>
                   );
                 })}
@@ -172,6 +401,12 @@ export default function EventScoring() {
             <div className="text-center py-12 text-muted-foreground">
               <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No submissions for this event yet.</p>
+              {(!panels || panels.length === 0) && (
+                <p className="mt-2 text-sm">
+                  <AlertCircle className="w-4 h-4 inline mr-1" />
+                  Configure judge panels to track scoring progress.
+                </p>
+              )}
             </div>
           )}
         </CardContent>
