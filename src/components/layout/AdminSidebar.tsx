@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Layers,
   UserCheck,
+  MessageSquareText,
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -51,7 +52,6 @@ export function AdminSidebar() {
         </div>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
         <NavItem to="/admin" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
         <NavItem to="/admin/events" icon={<Calendar className="w-5 h-5" />} label="Events" />
@@ -59,6 +59,7 @@ export function AdminSidebar() {
         <NavItem to="/admin/divisions" icon={<Layers className="w-5 h-5" />} label="Divisions & Levels" />
         <NavItem to="/admin/teams" icon={<Users className="w-5 h-5" />} label="Teams" />
         <NavItem to="/admin/judges" icon={<UserCheck className="w-5 h-5" />} label="Judges" />
+        <NavItem to="/admin/reviews" icon={<MessageSquareText className="w-5 h-5" />} label="Review Requests" />
         <NavItem to="/admin/settings" icon={<Settings className="w-5 h-5" />} label="Settings" />
       </nav>
 

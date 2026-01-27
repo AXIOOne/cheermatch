@@ -17,6 +17,7 @@ import Divisions from "./pages/admin/Divisions";
 import Teams from "./pages/admin/Teams";
 import Judges from "./pages/admin/Judges";
 import Settings from "./pages/admin/Settings";
+import ReviewRequests from "./pages/admin/ReviewRequests";
 
 // Judge imports
 import { JudgeLayout } from "./components/layout/JudgeLayout";
@@ -24,6 +25,9 @@ import JudgeDashboard from "./pages/judge/Dashboard";
 import ScoringQueue from "./pages/judge/ScoringQueue";
 import ScorePerformance from "./pages/judge/ScorePerformance";
 import ScoreHistory from "./pages/judge/ScoreHistory";
+
+// Public review
+import ScoreReview from "./pages/review/ScoreReview";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +50,7 @@ const App = () => (
               <Route path="divisions" element={<Divisions />} />
               <Route path="teams" element={<Teams />} />
               <Route path="judges" element={<Judges />} />
+              <Route path="reviews" element={<ReviewRequests />} />
               <Route path="settings" element={<Settings />} />
             </Route>
             
@@ -56,6 +61,9 @@ const App = () => (
               <Route path="score/:submissionId" element={<ScorePerformance />} />
               <Route path="history" element={<ScoreHistory />} />
             </Route>
+            
+            {/* Public Review Route (no auth required) */}
+            <Route path="/review/:token" element={<ScoreReview />} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
