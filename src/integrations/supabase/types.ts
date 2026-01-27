@@ -348,6 +348,56 @@ export type Database = {
           },
         ]
       }
+      scoring_review_tokens: {
+        Row: {
+          coach_email: string
+          coach_name: string | null
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          requested_at: string | null
+          review_notes: string | null
+          status: string
+          submission_id: string
+          token: string
+        }
+        Insert: {
+          coach_email: string
+          coach_name?: string | null
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          id?: string
+          requested_at?: string | null
+          review_notes?: string | null
+          status?: string
+          submission_id: string
+          token?: string
+        }
+        Update: {
+          coach_email?: string
+          coach_name?: string | null
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          requested_at?: string | null
+          review_notes?: string | null
+          status?: string
+          submission_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scoring_review_tokens_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "video_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scoring_templates: {
         Row: {
           created_at: string
@@ -533,6 +583,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_review_by_token: {
+        Args: { review_token: string }
+        Returns: {
+          coach_email: string
+          coach_name: string
+          division_name: string
+          event_name: string
+          expires_at: string
+          gym_name: string
+          level_name: string
+          scores: Json
+          submission_status: string
+          team_name: string
+          thumbnail_url: string
+          token_id: string
+          token_status: string
+          video_url: string
+        }[]
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
@@ -542,6 +611,11 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      mark_review_viewed: { Args: { review_token: string }; Returns: boolean }
+      submit_review_request: {
+        Args: { notes: string; review_token: string }
         Returns: boolean
       }
     }
