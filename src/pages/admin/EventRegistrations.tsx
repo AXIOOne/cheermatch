@@ -1,0 +1,140 @@
+import { useState, useMemo } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, Search, Loader2, Users } from 'lucide-react';
+
+export default function EventRegistrations() {
+  const { eventId } = useParams<{ eventId: string }>();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const { data: event, isLoading: eventLoading } = useQuery({
+    queryKey: ['event', eventId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', eventId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: teams, isLoading: teamsLoading } = useQuery({
+    queryKey: ['event-teams', eventId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('teams')
+        .select(`
+          *,
+          division:divisions(id, name),
+          level:levels(id, name)
+        `)
+        .eq('event_id', eventId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const filteredTeams = useMemo(() => {
+    if (!teams) return [];
+    if (!searchQuery) return teams;
+    
+    const query = searchQuery.toLowerCase();
+    return teams.filter(team => 
+      team.name.toLowerCase().includes(query) ||
+      team.gym_name.toLowerCase().includes(query)
+    );
+  }, [teams, searchQuery]);
+
+  const isLoading = eventLoading || teamsLoading;
+
+  return (
+    <div className="p-8">
+      <div className="mb-6">
+        <Link to="/admin/events" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm mb-4">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Events
+        </Link>
+        <h1 className="text-3xl font-bold text-foreground">
+          {eventLoading ? 'Loading...' : event?.name}
+        </h1>
+        <p className="text-muted-foreground mt-1">Team Registrations</p>
+      </div>
+
+      {/* Search */}
+      <Card className="mb-4">
+        <CardContent className="p-4">
+          <div className="relative w-full sm:w-[300px]">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by team or gym name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Registered Teams ({teams?.length || 0})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : filteredTeams.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Team Name</TableHead>
+                  <TableHead>Gym</TableHead>
+                  <TableHead>Division</TableHead>
+                  <TableHead>Level</TableHead>
+                  <TableHead className="text-right">Athletes</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTeams.map((team) => (
+                  <TableRow key={team.id}>
+                    <TableCell className="font-medium">{team.name}</TableCell>
+                    <TableCell>{team.gym_name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{team.division?.name || '—'}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{team.level?.name || '—'}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">{team.athlete_count}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>
+                {searchQuery
+                  ? 'No teams match your search.'
+                  : 'No teams registered for this event yet.'}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

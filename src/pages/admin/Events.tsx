@@ -1,20 +1,22 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Calendar, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Calendar, Loader2, Pencil, Trash2, Search, BarChart3, Users, Trophy, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 const eventSchema = z.object({
@@ -23,14 +25,38 @@ const eventSchema = z.object({
   start_date: z.string().min(1, 'Start date is required'),
   end_date: z.string().min(1, 'End date is required'),
   registration_deadline: z.string().min(1, 'Registration deadline is required'),
+  broadcast_deadline: z.string().optional(),
   status: z.enum(['draft', 'registration_open', 'registration_closed', 'in_progress', 'completed', 'archived']),
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
 
+const statusLabels: Record<string, string> = {
+  draft: 'Draft',
+  registration_open: 'Registration Open',
+  registration_closed: 'Registration Closed',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  archived: 'Archived',
+};
+
+const statusVariants: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+  draft: 'secondary',
+  registration_open: 'default',
+  registration_closed: 'outline',
+  in_progress: 'default',
+  completed: 'secondary',
+  archived: 'outline',
+};
+
 export default function Events() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -43,6 +69,7 @@ export default function Events() {
       start_date: '',
       end_date: '',
       registration_deadline: '',
+      broadcast_deadline: '',
       status: 'draft',
     },
   });
@@ -52,12 +79,54 @@ export default function Events() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select(`
+          *,
+          scoring_templates(id, name, is_default),
+          teams:teams(count)
+        `)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
   });
+
+  // Filter and search events
+  const filteredEvents = useMemo(() => {
+    if (!events) return [];
+    
+    return events.filter((event) => {
+      const matchesStatus = statusFilter === 'all' || event.status === statusFilter;
+      const matchesSearch = searchQuery === '' || 
+        event.name.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesStatus && matchesSearch;
+    });
+  }, [events, statusFilter, searchQuery]);
+
+  // Pagination
+  const paginatedEvents = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredEvents.slice(start, start + pageSize);
+  }, [filteredEvents, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredEvents.length / pageSize);
+  const startEntry = filteredEvents.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endEntry = Math.min(currentPage * pageSize, filteredEvents.length);
+
+  // Reset to page 1 when filters change
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (value: string) => {
+    setPageSize(Number(value));
+    setCurrentPage(1);
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: EventFormData) => {
@@ -67,6 +136,7 @@ export default function Events() {
         start_date: data.start_date,
         end_date: data.end_date,
         registration_deadline: data.registration_deadline,
+        broadcast_deadline: data.broadcast_deadline || null,
         status: data.status,
         created_by: user!.id,
       }]);
@@ -85,7 +155,15 @@ export default function Events() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: EventFormData }) => {
-      const { error } = await supabase.from('events').update(data).eq('id', id);
+      const { error } = await supabase.from('events').update({
+        name: data.name,
+        description: data.description || null,
+        start_date: data.start_date,
+        end_date: data.end_date,
+        registration_deadline: data.registration_deadline,
+        broadcast_deadline: data.broadcast_deadline || null,
+        status: data.status,
+      }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -130,6 +208,7 @@ export default function Events() {
       start_date: event.start_date,
       end_date: event.end_date,
       registration_deadline: event.registration_deadline.split('T')[0],
+      broadcast_deadline: event.broadcast_deadline || '',
       status: event.status,
     });
     setIsDialogOpen(true);
@@ -141,13 +220,16 @@ export default function Events() {
     setIsDialogOpen(true);
   };
 
-  const statusColors: Record<string, string> = {
-    draft: 'bg-muted text-muted-foreground',
-    registration_open: 'bg-green-100 text-green-700',
-    registration_closed: 'bg-yellow-100 text-yellow-700',
-    in_progress: 'bg-blue-100 text-blue-700',
-    completed: 'bg-purple-100 text-purple-700',
-    archived: 'bg-gray-100 text-gray-500',
+  const getDefaultTemplate = (templates: any[] | null) => {
+    if (!templates || templates.length === 0) return null;
+    return templates.find(t => t.is_default) || templates[0];
+  };
+
+  const getTeamsCount = (teams: any) => {
+    if (Array.isArray(teams) && teams.length > 0 && teams[0]?.count !== undefined) {
+      return teams[0].count;
+    }
+    return 0;
   };
 
   return (
@@ -157,54 +239,34 @@ export default function Events() {
           <h1 className="text-3xl font-bold text-foreground">Events</h1>
           <p className="text-muted-foreground mt-1">Manage your cheerleading competitions</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleNewEvent}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Event
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{editingEvent ? 'Edit Event' : 'Create New Event'}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Event Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Spring Championship 2026" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Event description..." {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/admin/events/summary">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Summary Report
+            </Link>
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleNewEvent}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Event
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{editingEvent ? 'Edit Event' : 'Create New Event'}</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                   <FormField
                     control={form.control}
-                    name="start_date"
+                    name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Start Date</FormLabel>
+                        <FormLabel>Event Name</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Input placeholder="Spring Championship 2026" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -212,72 +274,166 @@ export default function Events() {
                   />
                   <FormField
                     control={form.control}
-                    name="end_date"
+                    name="description"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>End Date</FormLabel>
+                        <FormLabel>Description</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Textarea placeholder="Event description..." {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="registration_deadline"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Registration Deadline</FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="draft">Draft</SelectItem>
-                          <SelectItem value="registration_open">Registration Open</SelectItem>
-                          <SelectItem value="registration_closed">Registration Closed</SelectItem>
-                          <SelectItem value="in_progress">In Progress</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
-                          <SelectItem value="archived">Archived</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                    {(createMutation.isPending || updateMutation.isPending) && (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="start_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="end_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>End Date</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="registration_deadline"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Registration Deadline</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="broadcast_deadline"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Broadcast Deadline</FormLabel>
+                          <FormControl>
+                            <Input type="date" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="status"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Status</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="draft">Draft</SelectItem>
+                            <SelectItem value="registration_open">Registration Open</SelectItem>
+                            <SelectItem value="registration_closed">Registration Closed</SelectItem>
+                            <SelectItem value="in_progress">In Progress</SelectItem>
+                            <SelectItem value="completed">Completed</SelectItem>
+                            <SelectItem value="archived">Archived</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
                     )}
-                    {editingEvent ? 'Update' : 'Create'} Event
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                  />
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                      {(createMutation.isPending || updateMutation.isPending) && (
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                      )}
+                      {editingEvent ? 'Update' : 'Create'} Event
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      {/* Filter Bar */}
+      <Card className="mb-4">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">Status:</span>
+                <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="draft">Draft</SelectItem>
+                    <SelectItem value="registration_open">Registration Open</SelectItem>
+                    <SelectItem value="registration_closed">Registration Closed</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="archived">Archived</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground whitespace-nowrap">Show:</span>
+                <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+                  <SelectTrigger className="w-[80px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-sm text-muted-foreground">entries</span>
+              </div>
+            </div>
+            <div className="relative w-full sm:w-auto">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search events..."
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-9 w-full sm:w-[250px]"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-0">
@@ -285,54 +441,148 @@ export default function Events() {
             <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
-          ) : events && events.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Dates</TableHead>
-                  <TableHead>Registration Deadline</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {events.map((event) => (
-                  <TableRow key={event.id}>
-                    <TableCell className="font-medium">{event.name}</TableCell>
-                    <TableCell>
-                      {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
-                    </TableCell>
-                    <TableCell>{format(new Date(event.registration_deadline), 'MMM d, yyyy')}</TableCell>
-                    <TableCell>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${statusColors[event.status]}`}>
-                        {event.status.replace('_', ' ')}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(event)}>
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete this event?')) {
-                            deleteMutation.mutate(event.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </TableCell>
+          ) : paginatedEvents && paginatedEvents.length > 0 ? (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Event Name</TableHead>
+                    <TableHead>Dates</TableHead>
+                    <TableHead>Broadcast Deadline</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Scoring</TableHead>
+                    <TableHead>Registrations</TableHead>
+                    <TableHead>Template</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedEvents.map((event) => {
+                    const template = getDefaultTemplate(event.scoring_templates);
+                    const teamsCount = getTeamsCount(event.teams);
+                    
+                    return (
+                      <TableRow key={event.id}>
+                        <TableCell className="font-medium">
+                          <Link to={`/admin/events/${event.id}/registrations`} className="text-primary hover:underline">
+                            {event.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
+                        </TableCell>
+                        <TableCell>
+                          {event.broadcast_deadline 
+                            ? format(new Date(event.broadcast_deadline), 'MMM d, yyyy')
+                            : <span className="text-muted-foreground">—</span>
+                          }
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusVariants[event.status]}>
+                            {statusLabels[event.status]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Link 
+                            to={`/admin/events/${event.id}/scoring`}
+                            className="text-primary hover:underline text-sm font-medium"
+                          >
+                            SCORING
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Link 
+                            to={`/admin/events/${event.id}/registrations`}
+                            className="text-primary hover:underline text-sm"
+                          >
+                            {teamsCount} teams
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {template ? (
+                            <span className="text-sm">{template.name}</span>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Not Assigned</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" asChild title="Results">
+                              <Link to={`/admin/events/${event.id}/results`}>
+                                <Trophy className="w-4 h-4" />
+                              </Link>
+                            </Button>
+                            <Button variant="ghost" size="sm" asChild title="Participants">
+                              <Link to={`/admin/events/${event.id}/participants`}>
+                                <Users className="w-4 h-4" />
+                              </Link>
+                            </Button>
+                            <Button variant="ghost" size="sm" asChild title="Average Report">
+                              <Link to={`/admin/events/${event.id}/reports`}>
+                                <FileText className="w-4 h-4" />
+                              </Link>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(event)} title="Edit">
+                              <Pencil className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                if (confirm('Are you sure you want to delete this event?')) {
+                                  deleteMutation.mutate(event.id);
+                                }
+                              }}
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+              
+              {/* Pagination */}
+              <div className="flex items-center justify-between px-4 py-3 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Showing {startEntry} to {endEntry} of {filteredEvents.length} entries
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    Page {currentPage} of {totalPages || 1}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            </>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No events yet. Create your first event to get started.</p>
+              <p>
+                {searchQuery || statusFilter !== 'all' 
+                  ? 'No events match your filters.'
+                  : 'No events yet. Create your first event to get started.'}
+              </p>
             </div>
           )}
         </CardContent>
