@@ -28,7 +28,7 @@ const createUserSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   fullName: z.string().min(1, 'Full name is required'),
-  role: z.enum(['admin', 'judge', 'gym_coach', ''] as const).optional(),
+  role: z.enum(['admin', 'judge', 'gym_coach', 'none'] as const).optional(),
   sendEmail: z.boolean().default(true),
 });
 
@@ -62,7 +62,7 @@ export default function UserRoles() {
       email: '',
       password: '',
       fullName: '',
-      role: '',
+      role: 'none',
       sendEmail: true,
     },
   });
@@ -148,7 +148,7 @@ export default function UserRoles() {
           email: data.email,
           password: data.password,
           fullName: data.fullName,
-          role: data.role || undefined,
+          role: data.role === 'none' ? undefined : data.role,
         },
       });
 
@@ -164,7 +164,7 @@ export default function UserRoles() {
             email: data.email,
             fullName: data.fullName,
             password: data.password,
-            role: data.role || undefined,
+            role: data.role === 'none' ? undefined : data.role,
             loginUrl,
           },
         });
@@ -319,7 +319,7 @@ export default function UserRoles() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">No role</SelectItem>
+                            <SelectItem value="none">No role</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
                             <SelectItem value="judge">Judge</SelectItem>
                             <SelectItem value="gym_coach">Gym Coach</SelectItem>
