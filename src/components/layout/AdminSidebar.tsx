@@ -13,6 +13,7 @@ import {
   Layers,
   UserCheck,
   MessageSquareText,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -60,6 +61,7 @@ export function AdminSidebar() {
         <NavItem to="/admin/teams" icon={<Users className="w-5 h-5" />} label="Teams" />
         <NavItem to="/admin/judges" icon={<UserCheck className="w-5 h-5" />} label="Judges" />
         <NavItem to="/admin/reviews" icon={<MessageSquareText className="w-5 h-5" />} label="Review Requests" />
+        <NavItem to="/admin/roles" icon={<ShieldCheck className="w-5 h-5" />} label="User Roles" />
         <NavItem to="/admin/settings" icon={<Settings className="w-5 h-5" />} label="Settings" />
       </nav>
 
