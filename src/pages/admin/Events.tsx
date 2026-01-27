@@ -606,19 +606,17 @@ export default function Events() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Link 
-                            to={`/admin/events/${event.id}/scoring`}
-                            className="text-primary hover:underline text-sm font-medium"
-                          >
-                            SCORING
+                          <Link to={`/admin/events/${event.id}/scoring`}>
+                            <Badge variant="default" className="hover:bg-primary/80 cursor-pointer">
+                              Scoring
+                            </Badge>
                           </Link>
                         </TableCell>
                         <TableCell>
-                          <Link 
-                            to={`/admin/events/${event.id}/registrations`}
-                            className="text-primary hover:underline text-sm"
-                          >
-                            {teamsCount} teams
+                          <Link to={`/admin/events/${event.id}/registrations`}>
+                            <Badge variant="default" className="hover:bg-primary/80 cursor-pointer">
+                              {teamsCount} teams
+                            </Badge>
                           </Link>
                         </TableCell>
                         <TableCell>
