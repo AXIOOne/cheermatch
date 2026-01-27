@@ -8,8 +8,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader2, BarChart3, CheckCircle, Clock, Settings, Send, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, BarChart3, CheckCircle, Clock, Settings, Send, AlertCircle, ClipboardList } from 'lucide-react';
 import JudgePanelsManager from '@/components/admin/JudgePanelsManager';
+import SubmissionScoringDialog from '@/components/admin/SubmissionScoringDialog';
 
 interface JudgePanel {
   id: string;
@@ -43,6 +44,7 @@ export default function EventScoring() {
   const { eventId } = useParams<{ eventId: string }>();
   const [isPanelsDialogOpen, setIsPanelsDialogOpen] = useState(false);
   const [sendingScoreFor, setSendingScoreFor] = useState<string | null>(null);
+  const [scoringSubmissionId, setScoringSubmissionId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -367,6 +369,15 @@ export default function EventScoring() {
                       <TableCell>
                         <div className="flex flex-col gap-1">
                           <Button
+                            variant="default"
+                            size="sm"
+                            className="h-7"
+                            onClick={() => setScoringSubmissionId(submission.id)}
+                          >
+                            <ClipboardList className="w-3 h-3 mr-1" />
+                            Score
+                          </Button>
+                          <Button
                             variant="link"
                             size="sm"
                             className="h-auto p-0 text-primary"
@@ -411,6 +422,15 @@ export default function EventScoring() {
           )}
         </CardContent>
       </Card>
+
+      {/* Scoring Dialog */}
+      <SubmissionScoringDialog
+        open={!!scoringSubmissionId}
+        onOpenChange={(open) => !open && setScoringSubmissionId(null)}
+        submissionId={scoringSubmissionId}
+        eventId={eventId!}
+        panels={panels || []}
+      />
     </div>
   );
 }
