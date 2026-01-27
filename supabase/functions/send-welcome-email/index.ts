@@ -3,7 +3,8 @@ import { Resend } from 'https://esm.sh/resend@4.0.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  // supabase-js may send additional x-supabase-* headers; include them to avoid CORS preflight failures
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-version',
 }
 
 interface SendWelcomeEmailRequest {
