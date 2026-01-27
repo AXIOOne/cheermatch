@@ -529,6 +529,7 @@ export type Database = {
           event_id: string
           id: string
           is_default: boolean
+          is_locked: boolean
           name: string
           updated_at: string
         }
@@ -538,6 +539,7 @@ export type Database = {
           event_id: string
           id?: string
           is_default?: boolean
+          is_locked?: boolean
           name: string
           updated_at?: string
         }
@@ -547,6 +549,7 @@ export type Database = {
           event_id?: string
           id?: string
           is_default?: boolean
+          is_locked?: boolean
           name?: string
           updated_at?: string
         }

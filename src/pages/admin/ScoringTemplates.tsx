@@ -8,13 +8,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, ClipboardList, Loader2, Pencil, Trash2, GripVertical } from 'lucide-react';
+import { Plus, ClipboardList, Loader2, Pencil, Trash2, GripVertical, Lock, Unlock } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const categorySchema = z.object({
+  id: z.string().optional(), // For existing categories
   name: z.string().min(1, 'Category name is required'),
   max_points: z.coerce.number().min(0.01, 'Max points must be greater than 0'),
   weight: z.coerce.number().min(0.01).max(1, 'Weight must be between 0.01 and 1'),
@@ -34,6 +37,7 @@ type TemplateFormData = z.infer<typeof templateSchema>;
 export default function ScoringTemplates() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<any>(null);
+  const [lockConfirmTemplate, setLockConfirmTemplate] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -56,7 +60,7 @@ export default function ScoringTemplates() {
   const { data: events } = useQuery({
     queryKey: ['events-select'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('events').select('id, name').order('name');
+      const { data, error } = await supabase.from('events').select('id, name, status').order('name');
       if (error) throw error;
       return data;
     },
@@ -69,7 +73,7 @@ export default function ScoringTemplates() {
         .from('scoring_templates')
         .select(`
           *,
-          event:events(name),
+          event:events(name, status),
           categories:scoring_categories(*)
         `)
         .order('created_at', { ascending: false });
@@ -80,7 +84,6 @@ export default function ScoringTemplates() {
 
   const createMutation = useMutation({
     mutationFn: async (data: TemplateFormData) => {
-      // Create template first
       const { data: template, error: templateError } = await supabase
         .from('scoring_templates')
         .insert({
@@ -94,7 +97,6 @@ export default function ScoringTemplates() {
       
       if (templateError) throw templateError;
 
-      // Create categories
       const categoriesWithOrder = data.categories.map((cat, index) => ({
         name: cat.name,
         max_points: cat.max_points,
@@ -114,7 +116,76 @@ export default function ScoringTemplates() {
       queryClient.invalidateQueries({ queryKey: ['scoring-templates'] });
       toast({ title: 'Scoring template created successfully!' });
       setIsDialogOpen(false);
+      setEditingTemplate(null);
       form.reset();
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: TemplateFormData }) => {
+      // Update template
+      const { error: templateError } = await supabase
+        .from('scoring_templates')
+        .update({
+          name: data.name,
+          description: data.description,
+          event_id: data.event_id,
+          is_default: data.is_default,
+        })
+        .eq('id', id);
+      
+      if (templateError) throw templateError;
+
+      // Delete existing categories and recreate
+      const { error: deleteError } = await supabase
+        .from('scoring_categories')
+        .delete()
+        .eq('template_id', id);
+      
+      if (deleteError) throw deleteError;
+
+      const categoriesWithOrder = data.categories.map((cat, index) => ({
+        name: cat.name,
+        max_points: cat.max_points,
+        weight: cat.weight,
+        description: cat.description || null,
+        template_id: id,
+        display_order: index,
+      }));
+
+      const { error: catError } = await supabase
+        .from('scoring_categories')
+        .insert(categoriesWithOrder);
+      
+      if (catError) throw catError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scoring-templates'] });
+      toast({ title: 'Scoring template updated successfully!' });
+      setIsDialogOpen(false);
+      setEditingTemplate(null);
+      form.reset();
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    },
+  });
+
+  const lockMutation = useMutation({
+    mutationFn: async ({ id, isLocked }: { id: string; isLocked: boolean }) => {
+      const { error } = await supabase
+        .from('scoring_templates')
+        .update({ is_locked: isLocked })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_, { isLocked }) => {
+      queryClient.invalidateQueries({ queryKey: ['scoring-templates'] });
+      toast({ title: isLocked ? 'Template locked' : 'Template unlocked' });
+      setLockConfirmTemplate(null);
     },
     onError: (error: any) => {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -136,7 +207,11 @@ export default function ScoringTemplates() {
   });
 
   const handleSubmit = (data: TemplateFormData) => {
-    createMutation.mutate(data);
+    if (editingTemplate) {
+      updateMutation.mutate({ id: editingTemplate.id, data });
+    } else {
+      createMutation.mutate(data);
+    }
   };
 
   const handleNewTemplate = () => {
@@ -149,6 +224,47 @@ export default function ScoringTemplates() {
       categories: [{ name: 'Stunts', max_points: 10, weight: 1, description: '' }],
     });
     setIsDialogOpen(true);
+  };
+
+  const handleEdit = (template: any) => {
+    if (template.is_locked) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Template Locked', 
+        description: 'This template is locked and cannot be edited. Unlock it first to make changes.' 
+      });
+      return;
+    }
+    
+    setEditingTemplate(template);
+    form.reset({
+      name: template.name,
+      description: template.description || '',
+      event_id: template.event_id,
+      is_default: template.is_default,
+      categories: template.categories?.map((cat: any) => ({
+        id: cat.id,
+        name: cat.name,
+        max_points: cat.max_points,
+        weight: cat.weight,
+        description: cat.description || '',
+      })) || [{ name: '', max_points: 10, weight: 1, description: '' }],
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleLockToggle = (template: any) => {
+    if (template.is_locked) {
+      // Unlock directly
+      lockMutation.mutate({ id: template.id, isLocked: false });
+    } else {
+      // Show confirmation for locking
+      setLockConfirmTemplate(template);
+    }
+  };
+
+  const isEventInProgress = (template: any) => {
+    return template.event?.status === 'in_progress';
   };
 
   return (
@@ -167,7 +283,7 @@ export default function ScoringTemplates() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Create Scoring Template</DialogTitle>
+              <DialogTitle>{editingTemplate ? 'Edit Scoring Template' : 'Create Scoring Template'}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -304,9 +420,9 @@ export default function ScoringTemplates() {
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit" disabled={createMutation.isPending}>
-                    {createMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                    Create Template
+                  <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                    {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    {editingTemplate ? 'Update Template' : 'Create Template'}
                   </Button>
                 </div>
               </form>
@@ -322,27 +438,66 @@ export default function ScoringTemplates() {
       ) : templates && templates.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {templates.map((template) => (
-            <Card key={template.id} className="relative">
+            <Card key={template.id} className={`relative ${template.is_locked ? 'border-warning/50' : ''}`}>
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{template.name}</CardTitle>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-lg">{template.name}</CardTitle>
+                      {template.is_locked && (
+                        <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/30">
+                          <Lock className="w-3 h-3 mr-1" />
+                          Locked
+                        </Badge>
+                      )}
+                    </div>
                     <CardDescription>{template.event?.name}</CardDescription>
+                    {isEventInProgress(template) && !template.is_locked && (
+                      <p className="text-xs text-warning mt-1">⚠️ Event in progress - consider locking</p>
+                    )}
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon">
-                      <Pencil className="w-4 h-4" />
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => handleLockToggle(template)}
+                      title={template.is_locked ? 'Unlock template' : 'Lock template'}
+                    >
+                      {template.is_locked ? (
+                        <Unlock className="w-4 h-4 text-warning" />
+                      ) : (
+                        <Lock className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => handleEdit(template)}
+                      disabled={template.is_locked}
+                      title={template.is_locked ? 'Template is locked' : 'Edit template'}
+                    >
+                      <Pencil className={`w-4 h-4 ${template.is_locked ? 'text-muted-foreground' : ''}`} />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => {
+                        if (template.is_locked) {
+                          toast({ 
+                            variant: 'destructive', 
+                            title: 'Template Locked', 
+                            description: 'Unlock this template before deleting.' 
+                          });
+                          return;
+                        }
                         if (confirm('Delete this template?')) {
                           deleteMutation.mutate(template.id);
                         }
                       }}
+                      disabled={template.is_locked}
+                      title={template.is_locked ? 'Template is locked' : 'Delete template'}
                     >
-                      <Trash2 className="w-4 h-4 text-destructive" />
+                      <Trash2 className={`w-4 h-4 ${template.is_locked ? 'text-muted-foreground' : 'text-destructive'}`} />
                     </Button>
                   </div>
                 </div>
@@ -375,6 +530,30 @@ export default function ScoringTemplates() {
           </CardContent>
         </Card>
       )}
+
+      {/* Lock Confirmation Dialog */}
+      <AlertDialog open={!!lockConfirmTemplate} onOpenChange={() => setLockConfirmTemplate(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Lock Template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Locking "{lockConfirmTemplate?.name}" will prevent any edits to this template. 
+              This is recommended when an event is in progress to ensure scoring consistency.
+              You can unlock it later if needed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => lockMutation.mutate({ id: lockConfirmTemplate.id, isLocked: true })}
+              className="bg-warning text-warning-foreground hover:bg-warning/90"
+            >
+              <Lock className="w-4 h-4 mr-2" />
+              Lock Template
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
