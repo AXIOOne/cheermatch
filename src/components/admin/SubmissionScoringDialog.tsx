@@ -502,8 +502,8 @@ export default function SubmissionScoringDialog({
                         const status = getPanelStatus(panel.id);
                         const statusColors = {
                           pending: 'bg-destructive text-destructive-foreground',
-                          in_progress: 'bg-yellow-500 text-white',
-                          submitted: 'bg-green-500 text-white',
+                          in_progress: 'bg-warning text-warning-foreground',
+                          submitted: 'bg-success text-success-foreground',
                         };
                         const score = allScores?.find(s => s.panel_id === panel.id);
                         
