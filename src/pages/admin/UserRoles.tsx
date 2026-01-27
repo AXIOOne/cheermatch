@@ -14,7 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus } from 'lucide-react';
+import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus, AlertTriangle } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -45,6 +46,7 @@ interface UserWithRoles {
 export default function UserRoles() {
   const [isAddRoleDialogOpen, setIsAddRoleDialogOpen] = useState(false);
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<UserWithRoles | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -220,6 +222,30 @@ export default function UserRoles() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
       toast({ title: 'Role removed successfully!' });
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) throw new Error('Not authenticated');
+
+      const response = await supabase.functions.invoke('delete-user', {
+        body: { userId },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data?.error) throw new Error(response.data.error);
+
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      toast({ title: 'User deleted successfully!' });
+      setUserToDelete(null);
     },
     onError: (error: any) => {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -515,17 +541,27 @@ export default function UserRoles() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          addRoleForm.setValue('email', user.email);
-                          setIsAddRoleDialogOpen(true);
-                        }}
-                      >
-                        <Plus className="w-4 h-4 mr-1" />
-                        Add Role
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            addRoleForm.setValue('email', user.email);
+                            setIsAddRoleDialogOpen(true);
+                          }}
+                        >
+                          <Plus className="w-4 h-4 mr-1" />
+                          Add Role
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setUserToDelete(user)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -539,6 +575,35 @@ export default function UserRoles() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={!!userToDelete} onOpenChange={(open) => !open && setUserToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Delete User
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to permanently delete{' '}
+              <span className="font-semibold">{userToDelete?.full_name || userToDelete?.email}</span>?
+              <br /><br />
+              This will remove their account, profile, and all assigned roles. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteUserMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteUserMutation.isPending}
+              onClick={() => userToDelete && deleteUserMutation.mutate(userToDelete.user_id)}
+            >
+              {deleteUserMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
