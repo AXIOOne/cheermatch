@@ -9,6 +9,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -28,6 +29,7 @@ const createUserSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters'),
   fullName: z.string().min(1, 'Full name is required'),
   role: z.enum(['admin', 'judge', 'gym_coach', ''] as const).optional(),
+  sendEmail: z.boolean().default(true),
 });
 
 type AddRoleFormData = z.infer<typeof addRoleSchema>;
@@ -61,6 +63,7 @@ export default function UserRoles() {
       password: '',
       fullName: '',
       role: '',
+      sendEmail: true,
     },
   });
 
@@ -151,11 +154,51 @@ export default function UserRoles() {
 
       if (response.error) throw new Error(response.error.message);
       if (response.data?.error) throw new Error(response.data.error);
-      return response.data;
+
+      // Send welcome email if requested
+      if (data.sendEmail) {
+        const loginUrl = `${window.location.origin}/auth`;
+        
+        const emailResponse = await supabase.functions.invoke('send-welcome-email', {
+          body: {
+            email: data.email,
+            fullName: data.fullName,
+            password: data.password,
+            role: data.role || undefined,
+            loginUrl,
+          },
+        });
+
+        if (emailResponse.error) {
+          console.error('Email error:', emailResponse.error);
+          return { ...response.data, emailSent: false, emailError: emailResponse.error.message };
+        }
+
+        if (emailResponse.data?.error) {
+          console.error('Email API error:', emailResponse.data.error);
+          return { ...response.data, emailSent: false, emailError: emailResponse.data.error };
+        }
+
+        return { ...response.data, emailSent: true };
+      }
+
+      return { ...response.data, emailSent: false };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
-      toast({ title: 'User created successfully!' });
+      
+      if (result.emailSent) {
+        toast({ title: 'User created and welcome email sent!' });
+      } else if (result.emailError) {
+        toast({ 
+          title: 'User created, but email failed',
+          description: result.emailError,
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: 'User created successfully!' });
+      }
+      
       setIsCreateUserDialogOpen(false);
       createUserForm.reset();
     },
@@ -286,13 +329,35 @@ export default function UserRoles() {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={createUserForm.control}
+                    name="sendEmail"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-3 space-y-0 rounded-lg border p-4">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel className="cursor-pointer">
+                            Send welcome email
+                          </FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            Email login credentials to the new user
+                          </p>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
                   <div className="flex justify-end gap-2 pt-4">
                     <Button type="button" variant="outline" onClick={() => setIsCreateUserDialogOpen(false)}>
                       Cancel
                     </Button>
                     <Button type="submit" disabled={createUserMutation.isPending}>
                       {createUserMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                      Create User
+                      {createUserForm.watch('sendEmail') ? 'Create & Send Email' : 'Create User'}
                     </Button>
                   </div>
                 </form>
