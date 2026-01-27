@@ -10,8 +10,11 @@ interface SendReviewEmailRequest {
   coachEmail: string;
   coachName?: string;
   teamName: string;
+  gymName?: string;
   eventName: string;
   reviewUrl: string;
+  customSubject?: string;
+  customBodyHtml?: string;
 }
 
 Deno.serve(async (req) => {
@@ -69,7 +72,16 @@ Deno.serve(async (req) => {
     }
 
     // Parse request body
-    const { coachEmail, coachName, teamName, eventName, reviewUrl }: SendReviewEmailRequest = await req.json()
+    const { 
+      coachEmail, 
+      coachName, 
+      teamName, 
+      gymName,
+      eventName, 
+      reviewUrl,
+      customSubject,
+      customBodyHtml
+    }: SendReviewEmailRequest = await req.json()
 
     if (!coachEmail || !teamName || !reviewUrl) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -80,80 +92,86 @@ Deno.serve(async (req) => {
 
     console.log(`Sending review email to ${coachEmail} for team ${teamName}`)
 
+    // Use custom subject if provided, otherwise use default
+    const emailSubject = customSubject || `Score Review Available: ${teamName} - ${eventName}`
+
+    // Use custom HTML body if provided, otherwise use default template
+    const emailHtml = customBodyHtml || `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <!-- Header -->
+                <tr>
+                  <td style="background-color: #000000; padding: 32px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">CheerMatch</h1>
+                  </td>
+                </tr>
+                
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 40px 32px;">
+                    <h2 style="margin: 0 0 16px; color: #18181b; font-size: 20px; font-weight: 600;">
+                      Hello${coachName ? ` ${coachName}` : ''},
+                    </h2>
+                    <p style="margin: 0 0 24px; color: #3f3f46; font-size: 16px; line-height: 1.6;">
+                      The scores for your team <strong>${teamName}</strong>${gymName ? ` from <strong>${gymName}</strong>` : ''} at <strong>${eventName}</strong> are now available for review.
+                    </p>
+                    
+                    <p style="margin: 0 0 32px; color: #3f3f46; font-size: 16px; line-height: 1.6;">
+                      You can view the detailed score breakdown and submit a review request if needed.
+                    </p>
+                    
+                    <!-- CTA Button -->
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center">
+                          <a href="${reviewUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px;">
+                            View Scores
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <p style="margin: 32px 0 0; color: #71717a; font-size: 14px; line-height: 1.6;">
+                      If the button doesn't work, copy and paste this link into your browser:
+                      <br>
+                      <a href="${reviewUrl}" style="color: #2563eb; word-break: break-all;">${reviewUrl}</a>
+                    </p>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background-color: #fafafa; padding: 24px 32px; text-align: center;">
+                    <p style="margin: 0; color: #a1a1aa; font-size: 12px;">
+                      This link will expire in 30 days.
+                      <br>
+                      © ${new Date().getFullYear()} CheerMatch. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `
+
     // Send email
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: 'CheerMatch <noreply@resend.dev>', // Replace with your verified domain
       to: [coachEmail],
-      subject: `Score Review Available: ${teamName} - ${eventName}`,
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
-            <tr>
-              <td align="center">
-                <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                  <!-- Header -->
-                  <tr>
-                    <td style="background-color: #000000; padding: 32px; text-align: center;">
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">CheerMatch</h1>
-                    </td>
-                  </tr>
-                  
-                  <!-- Content -->
-                  <tr>
-                    <td style="padding: 40px 32px;">
-                      <h2 style="margin: 0 0 16px; color: #18181b; font-size: 20px; font-weight: 600;">
-                        Hello${coachName ? ` ${coachName}` : ''},
-                      </h2>
-                      <p style="margin: 0 0 24px; color: #3f3f46; font-size: 16px; line-height: 1.6;">
-                        The scores for your team <strong>${teamName}</strong> at <strong>${eventName}</strong> are now available for review.
-                      </p>
-                      
-                      <p style="margin: 0 0 32px; color: #3f3f46; font-size: 16px; line-height: 1.6;">
-                        You can view the detailed score breakdown and submit a review request if needed.
-                      </p>
-                      
-                      <!-- CTA Button -->
-                      <table width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td align="center">
-                            <a href="${reviewUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px;">
-                              View Scores
-                            </a>
-                          </td>
-                        </tr>
-                      </table>
-                      
-                      <p style="margin: 32px 0 0; color: #71717a; font-size: 14px; line-height: 1.6;">
-                        If the button doesn't work, copy and paste this link into your browser:
-                        <br>
-                        <a href="${reviewUrl}" style="color: #2563eb; word-break: break-all;">${reviewUrl}</a>
-                      </p>
-                    </td>
-                  </tr>
-                  
-                  <!-- Footer -->
-                  <tr>
-                    <td style="background-color: #fafafa; padding: 24px 32px; text-align: center;">
-                      <p style="margin: 0; color: #a1a1aa; font-size: 12px;">
-                        This link will expire in 30 days.
-                        <br>
-                        © ${new Date().getFullYear()} CheerMatch. All rights reserved.
-                      </p>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-        </body>
-        </html>
-      `,
+      subject: emailSubject,
+      html: emailHtml,
     })
 
     if (emailError) {
