@@ -20,10 +20,10 @@ interface DeductionTypeManagerProps {
 }
 
 const DEDUCTION_CATEGORIES = {
-  athlete: { label: 'Athlete', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  building: { label: 'Building', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-  rule_violation: { label: 'Rule Violation', color: 'bg-red-100 text-red-800 border-red-200' },
-  legality: { label: 'Legality', color: 'bg-amber-100 text-amber-800 border-amber-200' },
+  athlete: { label: 'Athlete', badgeVariant: 'outline' as const },
+  building: { label: 'Building', badgeVariant: 'outline' as const },
+  rule_violation: { label: 'Rule Violation', badgeVariant: 'destructive' as const },
+  legality: { label: 'Legality', badgeVariant: 'secondary' as const },
 };
 
 function generateTempId() {
@@ -97,7 +97,7 @@ export default function DeductionTypeManager({
 
             return (
               <div key={catKey}>
-                <Badge variant="outline" className={`mb-2 ${catInfo.color}`}>
+                <Badge variant={catInfo.badgeVariant} className="mb-2">
                   {catInfo.label}
                 </Badge>
                 <div className="space-y-2">
