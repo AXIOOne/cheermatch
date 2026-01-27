@@ -8,8 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Settings as SettingsIcon, Users, Shield, Bell, Loader2 } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play } from 'lucide-react';
 import { useState } from 'react';
 
 interface SecuritySettings {
@@ -27,7 +30,28 @@ interface NotificationSettings {
 interface IntegrationSettings {
   brightcoveAccountId: string;
   brightcoveApiKey: string;
+  vimeoAccessToken: string;
+  vimeoClientId: string;
+  vimeoClientSecret: string;
+  awsAccessKeyId: string;
+  awsSecretAccessKey: string;
+  awsS3Bucket: string;
+  awsS3Region: string;
+  activeVideoProvider: 'brightcove' | 'vimeo' | 'aws_s3';
 }
+
+const AWS_REGIONS = [
+  { value: 'us-east-1', label: 'US East (N. Virginia)' },
+  { value: 'us-east-2', label: 'US East (Ohio)' },
+  { value: 'us-west-1', label: 'US West (N. California)' },
+  { value: 'us-west-2', label: 'US West (Oregon)' },
+  { value: 'eu-west-1', label: 'EU (Ireland)' },
+  { value: 'eu-west-2', label: 'EU (London)' },
+  { value: 'eu-central-1', label: 'EU (Frankfurt)' },
+  { value: 'ap-northeast-1', label: 'Asia Pacific (Tokyo)' },
+  { value: 'ap-southeast-1', label: 'Asia Pacific (Singapore)' },
+  { value: 'ap-southeast-2', label: 'Asia Pacific (Sydney)' },
+];
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -48,8 +72,19 @@ export default function Settings() {
   const [emailScoreComplete, setEmailScoreComplete] = useState(false);
 
   // Integration settings state
+  const [activeVideoProvider, setActiveVideoProvider] = useState<'brightcove' | 'vimeo' | 'aws_s3'>('brightcove');
+  // Brightcove
   const [brightcoveAccountId, setBrightcoveAccountId] = useState('');
   const [brightcoveApiKey, setBrightcoveApiKey] = useState('');
+  // Vimeo
+  const [vimeoAccessToken, setVimeoAccessToken] = useState('');
+  const [vimeoClientId, setVimeoClientId] = useState('');
+  const [vimeoClientSecret, setVimeoClientSecret] = useState('');
+  // AWS S3
+  const [awsAccessKeyId, setAwsAccessKeyId] = useState('');
+  const [awsSecretAccessKey, setAwsSecretAccessKey] = useState('');
+  const [awsS3Bucket, setAwsS3Bucket] = useState('');
+  const [awsS3Region, setAwsS3Region] = useState('us-east-1');
 
   // Fetch all settings from database
   const { data: settings, isLoading } = useQuery({
@@ -90,8 +125,16 @@ export default function Settings() {
       // Integration settings
       const integrations = settings.integrations as IntegrationSettings | undefined;
       if (integrations) {
+        setActiveVideoProvider(integrations.activeVideoProvider ?? 'brightcove');
         setBrightcoveAccountId(integrations.brightcoveAccountId ?? '');
         setBrightcoveApiKey(integrations.brightcoveApiKey ?? '');
+        setVimeoAccessToken(integrations.vimeoAccessToken ?? '');
+        setVimeoClientId(integrations.vimeoClientId ?? '');
+        setVimeoClientSecret(integrations.vimeoClientSecret ?? '');
+        setAwsAccessKeyId(integrations.awsAccessKeyId ?? '');
+        setAwsSecretAccessKey(integrations.awsSecretAccessKey ?? '');
+        setAwsS3Bucket(integrations.awsS3Bucket ?? '');
+        setAwsS3Region(integrations.awsS3Region ?? 'us-east-1');
       }
     }
   }, [settings]);
@@ -156,14 +199,38 @@ export default function Settings() {
       await saveMutation.mutateAsync({
         key: 'integrations',
         value: {
+          activeVideoProvider,
           brightcoveAccountId,
           brightcoveApiKey,
+          vimeoAccessToken,
+          vimeoClientId,
+          vimeoClientSecret,
+          awsAccessKeyId,
+          awsSecretAccessKey,
+          awsS3Bucket,
+          awsS3Region,
         },
       });
       toast({ title: 'Integration settings saved!' });
       setIntegrationsDialogOpen(false);
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
+    }
+  };
+
+  const getProviderStatus = (provider: string) => {
+    const integrations = settings?.integrations as IntegrationSettings | undefined;
+    if (!integrations) return false;
+    
+    switch (provider) {
+      case 'brightcove':
+        return !!(integrations.brightcoveAccountId && integrations.brightcoveApiKey);
+      case 'vimeo':
+        return !!(integrations.vimeoAccessToken);
+      case 'aws_s3':
+        return !!(integrations.awsAccessKeyId && integrations.awsSecretAccessKey && integrations.awsS3Bucket);
+      default:
+        return false;
     }
   };
 
@@ -252,15 +319,24 @@ export default function Settings() {
                 <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                   <SettingsIcon className="w-5 h-5 text-primary" />
                 </div>
-                <div>
-                  <CardTitle className="text-lg">Integrations</CardTitle>
-                  <CardDescription>Brightcove and external services</CardDescription>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-lg">Video Integrations</CardTitle>
+                    {settings?.integrations?.activeVideoProvider && (
+                      <Badge variant="secondary" className="text-xs">
+                        {settings.integrations.activeVideoProvider === 'brightcove' && 'Brightcove'}
+                        {settings.integrations.activeVideoProvider === 'vimeo' && 'Vimeo'}
+                        {settings.integrations.activeVideoProvider === 'aws_s3' && 'AWS S3'}
+                      </Badge>
+                    )}
+                  </div>
+                  <CardDescription>Brightcove, Vimeo, and AWS S3</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Configure Brightcove video integration and other services.
+                Configure video storage and streaming services.
               </p>
               <Button variant="outline" onClick={() => setIntegrationsDialogOpen(true)}>
                 Configure Integrations
@@ -375,36 +451,212 @@ export default function Settings() {
 
       {/* Integrations Settings Dialog */}
       <Dialog open={integrationsDialogOpen} onOpenChange={setIntegrationsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Integration Settings</DialogTitle>
-            <DialogDescription>Configure external service connections</DialogDescription>
+            <DialogTitle>Video Integration Settings</DialogTitle>
+            <DialogDescription>Configure video storage and streaming services</DialogDescription>
           </DialogHeader>
+          
           <div className="space-y-6 py-4">
-            <div className="space-y-4">
-              <h4 className="font-medium">Brightcove Video Platform</h4>
-              <div className="space-y-2">
-                <Label htmlFor="brightcoveAccountId">Account ID</Label>
-                <Input
-                  id="brightcoveAccountId"
-                  placeholder="Enter your Brightcove account ID"
-                  value={brightcoveAccountId}
-                  onChange={(e) => setBrightcoveAccountId(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="brightcoveApiKey">API Key</Label>
-                <Input
-                  id="brightcoveApiKey"
-                  type="password"
-                  placeholder="Enter your Brightcove API key"
-                  value={brightcoveApiKey}
-                  onChange={(e) => setBrightcoveApiKey(e.target.value)}
-                />
-              </div>
+            {/* Active Provider Selection */}
+            <div className="space-y-3">
+              <Label>Active Video Provider</Label>
+              <Select value={activeVideoProvider} onValueChange={(v) => setActiveVideoProvider(v as any)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="brightcove">
+                    <div className="flex items-center gap-2">
+                      <Video className="w-4 h-4" />
+                      <span>Brightcove</span>
+                      {getProviderStatus('brightcove') && (
+                        <Badge variant="secondary" className="ml-2 text-xs">Configured</Badge>
+                      )}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="vimeo">
+                    <div className="flex items-center gap-2">
+                      <Play className="w-4 h-4" />
+                      <span>Vimeo</span>
+                      {getProviderStatus('vimeo') && (
+                        <Badge variant="secondary" className="ml-2 text-xs">Configured</Badge>
+                      )}
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="aws_s3">
+                    <div className="flex items-center gap-2">
+                      <Cloud className="w-4 h-4" />
+                      <span>AWS S3</span>
+                      {getProviderStatus('aws_s3') && (
+                        <Badge variant="secondary" className="ml-2 text-xs">Configured</Badge>
+                      )}
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                Select which video service to use for video uploads and playback
+              </p>
             </div>
+
+            {/* Provider-specific Settings */}
+            <Tabs defaultValue="brightcove" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="brightcove" className="flex items-center gap-2">
+                  <Video className="w-4 h-4" />
+                  Brightcove
+                </TabsTrigger>
+                <TabsTrigger value="vimeo" className="flex items-center gap-2">
+                  <Play className="w-4 h-4" />
+                  Vimeo
+                </TabsTrigger>
+                <TabsTrigger value="aws_s3" className="flex items-center gap-2">
+                  <Cloud className="w-4 h-4" />
+                  AWS S3
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Brightcove Tab */}
+              <TabsContent value="brightcove" className="space-y-4 mt-4">
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <h4 className="font-medium mb-1">Brightcove Video Cloud</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Enterprise-grade video hosting with advanced analytics and monetization features.
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="brightcoveAccountId">Account ID</Label>
+                    <Input
+                      id="brightcoveAccountId"
+                      placeholder="Enter your Brightcove account ID"
+                      value={brightcoveAccountId}
+                      onChange={(e) => setBrightcoveAccountId(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="brightcoveApiKey">API Key</Label>
+                    <Input
+                      id="brightcoveApiKey"
+                      type="password"
+                      placeholder="Enter your Brightcove API key"
+                      value={brightcoveApiKey}
+                      onChange={(e) => setBrightcoveApiKey(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Vimeo Tab */}
+              <TabsContent value="vimeo" className="space-y-4 mt-4">
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <h4 className="font-medium mb-1">Vimeo</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Professional video hosting with customizable player, privacy controls, and team collaboration.
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="vimeoClientId">Client ID</Label>
+                    <Input
+                      id="vimeoClientId"
+                      placeholder="Enter your Vimeo Client ID"
+                      value={vimeoClientId}
+                      onChange={(e) => setVimeoClientId(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="vimeoClientSecret">Client Secret</Label>
+                    <Input
+                      id="vimeoClientSecret"
+                      type="password"
+                      placeholder="Enter your Vimeo Client Secret"
+                      value={vimeoClientSecret}
+                      onChange={(e) => setVimeoClientSecret(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="vimeoAccessToken">Access Token</Label>
+                    <Input
+                      id="vimeoAccessToken"
+                      type="password"
+                      placeholder="Enter your Vimeo Access Token"
+                      value={vimeoAccessToken}
+                      onChange={(e) => setVimeoAccessToken(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Generate an access token from your Vimeo Developer App settings
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* AWS S3 Tab */}
+              <TabsContent value="aws_s3" className="space-y-4 mt-4">
+                <div className="p-4 rounded-lg border bg-muted/30">
+                  <h4 className="font-medium mb-1">Amazon S3</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Scalable cloud storage with global distribution. Best for custom video processing workflows.
+                  </p>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="awsAccessKeyId">Access Key ID</Label>
+                      <Input
+                        id="awsAccessKeyId"
+                        placeholder="AKIAIOSFODNN7EXAMPLE"
+                        value={awsAccessKeyId}
+                        onChange={(e) => setAwsAccessKeyId(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="awsSecretAccessKey">Secret Access Key</Label>
+                      <Input
+                        id="awsSecretAccessKey"
+                        type="password"
+                        placeholder="Enter your AWS Secret Access Key"
+                        value={awsSecretAccessKey}
+                        onChange={(e) => setAwsSecretAccessKey(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="awsS3Bucket">S3 Bucket Name</Label>
+                      <Input
+                        id="awsS3Bucket"
+                        placeholder="my-video-bucket"
+                        value={awsS3Bucket}
+                        onChange={(e) => setAwsS3Bucket(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="awsS3Region">Region</Label>
+                      <Select value={awsS3Region} onValueChange={setAwsS3Region}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select region" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AWS_REGIONS.map((region) => (
+                            <SelectItem key={region.value} value={region.value}>
+                              {region.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Ensure your IAM user has s3:PutObject, s3:GetObject, and s3:DeleteObject permissions on the bucket
+                  </p>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
-          <div className="flex justify-end gap-2">
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
             <Button variant="outline" onClick={() => setIntegrationsDialogOpen(false)}>
               Cancel
             </Button>
