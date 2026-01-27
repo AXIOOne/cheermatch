@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, ClipboardList, Loader2, Pencil, Trash2, Lock, Unlock, Eye, Layers } from 'lucide-react';
+import { Plus, ClipboardList, Loader2, Pencil, Trash2, Lock, Unlock, Eye, Layers, Copy } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import SectionTabs, { ScoringSection } from '@/components/admin/SectionTabs';
 import { CategoryItem } from '@/components/admin/ScoringCategoryTree';
@@ -378,6 +378,136 @@ export default function ScoringTemplates() {
     },
   });
 
+  const duplicateMutation = useMutation({
+    mutationFn: async (sourceTemplate: any) => {
+      // 1. Create new template with "(Copy)" suffix
+      const { data: newTemplate, error: templateError } = await supabase
+        .from('scoring_templates')
+        .insert({
+          name: `${sourceTemplate.name} (Copy)`,
+          description: sourceTemplate.description,
+          event_id: sourceTemplate.event_id,
+          is_default: false,
+          is_locked: false,
+        })
+        .select()
+        .single();
+
+      if (templateError) throw templateError;
+
+      // 2. Clone sections
+      const sourceSections = sourceTemplate.sections || [];
+      if (sourceSections.length > 0) {
+        const sectionsToInsert = sourceSections.map((s: any, index: number) => ({
+          template_id: newTemplate.id,
+          name: s.name,
+          abbreviation: s.abbreviation,
+          description: s.description,
+          max_points: s.max_points,
+          display_order: s.display_order ?? index,
+        }));
+
+        const { data: insertedSections, error: sectionsError } = await supabase
+          .from('scoring_sections')
+          .insert(sectionsToInsert)
+          .select();
+
+        if (sectionsError) throw sectionsError;
+
+        // Map old section IDs to new section IDs
+        const sectionIdMap = new Map<string, string>();
+        sourceSections.forEach((oldSection: any, index: number) => {
+          sectionIdMap.set(oldSection.id, insertedSections![index].id);
+        });
+
+        // 3. Clone categories (handle parent-child relationships)
+        const sourceCategories = sourceTemplate.categories || [];
+        if (sourceCategories.length > 0) {
+          // First, insert categories without parent (root categories)
+          const oldIdToNewId = new Map<string, string>();
+          const remaining = [...sourceCategories];
+          let safety = 0;
+
+          while (remaining.length > 0) {
+            safety += 1;
+            if (safety > 20_000) {
+              throw new Error('Failed to clone categories (cycle or missing parent).');
+            }
+
+            // Find categories whose parent is null or already inserted
+            const ready = remaining.filter(
+              (c) => !c.parent_category_id || oldIdToNewId.has(c.parent_category_id)
+            );
+
+            if (ready.length === 0) {
+              throw new Error('Failed to clone categories - missing parent.');
+            }
+
+            const toInsert = ready.map((cat) => ({
+              template_id: newTemplate.id,
+              section_id: cat.section_id ? sectionIdMap.get(cat.section_id) || null : null,
+              parent_category_id: cat.parent_category_id
+                ? oldIdToNewId.get(cat.parent_category_id) || null
+                : null,
+              name: cat.name,
+              max_points: cat.max_points,
+              category_type: cat.category_type,
+              description: cat.description,
+              display_order: cat.display_order,
+              weight: cat.weight,
+            }));
+
+            const { data: inserted, error: catError } = await supabase
+              .from('scoring_categories')
+              .insert(toInsert)
+              .select('id');
+
+            if (catError) throw catError;
+
+            inserted?.forEach((row, idx) => {
+              oldIdToNewId.set(ready[idx].id, row.id);
+            });
+
+            const readyIds = new Set(ready.map((r) => r.id));
+            for (let i = remaining.length - 1; i >= 0; i -= 1) {
+              if (readyIds.has(remaining[i].id)) {
+                remaining.splice(i, 1);
+              }
+            }
+          }
+        }
+      }
+
+      // 4. Clone deduction types
+      const sourceDeductions = sourceTemplate.deduction_types || [];
+      if (sourceDeductions.length > 0) {
+        const deductionsToInsert = sourceDeductions.map((d: any, index: number) => ({
+          template_id: newTemplate.id,
+          name: d.name,
+          points: d.points,
+          description: d.description,
+          category: d.category,
+          display_order: d.display_order ?? index,
+        }));
+
+        const { error: dedError } = await supabase
+          .from('deduction_types')
+          .insert(deductionsToInsert);
+
+        if (dedError) throw dedError;
+      }
+
+      return newTemplate;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scoring-templates-full'] });
+      toast({ title: 'Template duplicated successfully!' });
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Error duplicating template', description: error.message });
+    },
+  });
+
   const handleSubmit = (data: TemplateFormData) => {
     if (editingTemplate) {
       updateMutation.mutate({ id: editingTemplate.id, data });
@@ -618,6 +748,15 @@ export default function ScoringTemplates() {
                     )}
                   </div>
                   <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => duplicateMutation.mutate(template)}
+                      disabled={duplicateMutation.isPending}
+                      title="Duplicate template"
+                    >
+                      <Copy className="w-4 h-4 text-muted-foreground" />
+                    </Button>
                     <Button
                       variant="ghost"
                       size="icon"
