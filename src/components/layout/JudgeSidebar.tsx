@@ -2,8 +2,8 @@ import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import logoWhite from '@/assets/logo-white.png';
 import {
-  Trophy,
   ClipboardList,
   LogOut,
   LayoutDashboard,
@@ -44,13 +44,7 @@ export function JudgeSidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg gradient-gold flex items-center justify-center">
-            <Trophy className="w-5 h-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-sidebar-foreground">CheerMatch</h1>
-            <p className="text-xs text-sidebar-foreground/50">Judge Portal</p>
-          </div>
+          <img src={logoWhite} alt="CheerMatch" className="h-8" />
         </div>
       </div>
 

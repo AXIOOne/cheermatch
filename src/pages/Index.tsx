@@ -4,6 +4,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Users, ClipboardCheck, Video, Loader2 } from 'lucide-react';
+import logoBlack from '@/assets/logo-black.png';
+import logoWhite from '@/assets/logo-white.png';
 
 export default function Index() {
   const { user, loading, isAdmin, isJudge, isGymCoach, roles } = useAuth();
@@ -36,17 +38,14 @@ export default function Index() {
       {/* Hero Section */}
       <div className="gradient-champion text-white">
         <div className="container mx-auto px-4 py-20 text-center">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <div className="w-16 h-16 rounded-2xl gradient-gold flex items-center justify-center shadow-xl">
-              <Trophy className="w-9 h-9 text-primary" />
-            </div>
+          <div className="flex items-center justify-center mb-6">
+            <img src={logoWhite} alt="CheerMatch" className="h-16" />
           </div>
-          <h1 className="text-5xl font-bold mb-4">CheerMatch</h1>
           <p className="text-xl text-white/80 max-w-2xl mx-auto mb-8">
             The complete virtual cheerleading competition platform. Manage events, score performances, and celebrate champions.
           </p>
           <div className="flex items-center justify-center gap-4">
-            <Button size="lg" className="gradient-gold text-primary font-semibold" asChild>
+            <Button size="lg" className="bg-white text-primary hover:bg-white/90 font-semibold" asChild>
               <Link to="/auth">Get Started</Link>
             </Button>
             <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10" asChild>

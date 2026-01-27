@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Trophy, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import logoBlack from '@/assets/logo-black.png';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -100,11 +101,8 @@ export default function Auth() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-xl gradient-champion flex items-center justify-center shadow-champion">
-            <Trophy className="w-7 h-7 text-secondary" />
-          </div>
-          <h1 className="text-3xl font-bold text-primary">CheerMatch</h1>
+        <div className="flex items-center justify-center mb-8">
+          <img src={logoBlack} alt="CheerMatch" className="h-12" />
         </div>
 
         <Card className="shadow-champion border-0">
