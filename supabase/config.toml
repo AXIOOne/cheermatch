@@ -1,13 +1,1 @@
 project_id = "qzckpzwhkevqhwywlrkf"
-
-[functions.create-user]
-verify_jwt = false
-
-[functions.send-review-email]
-verify_jwt = false
-
-[functions.send-scoresheet-email]
-verify_jwt = false
-
-[functions.send-welcome-email]
-verify_jwt = false
