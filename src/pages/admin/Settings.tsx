@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,31 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play, Mail } from 'lucide-react';
 import { EmailTemplateManager } from '@/components/admin/EmailTemplateManager';
-
-interface SecuritySettings {
-  minPasswordLength: number;
-  requireSpecialChars: boolean;
-  sessionTimeoutHours: number;
-}
-
-interface NotificationSettings {
-  emailOnSubmission: boolean;
-  emailOnReview: boolean;
-  emailOnScoring: boolean;
-}
-
-interface IntegrationSettings {
-  brightcoveAccountId: string;
-  brightcoveApiKey: string;
-  vimeoAccessToken: string;
-  vimeoClientId: string;
-  vimeoClientSecret: string;
-  awsAccessKeyId: string;
-  awsSecretAccessKey: string;
-  awsS3Bucket: string;
-  awsS3Region: string;
-  activeVideoProvider: 'brightcove' | 'vimeo' | 'aws_s3';
-}
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 
 const AWS_REGIONS = [
   { value: 'us-east-1', label: 'US East (N. Virginia)' },
@@ -62,6 +38,9 @@ export default function Settings() {
   const [notificationsDialogOpen, setNotificationsDialogOpen] = useState(false);
   const [integrationsDialogOpen, setIntegrationsDialogOpen] = useState(false);
   const [emailTemplatesOpen, setEmailTemplatesOpen] = useState(false);
+
+  // Use the reusable hook
+  const { security, notifications, integrations, isLoading } = usePlatformSettings();
 
   // Security settings state
   const [requireStrongPassword, setRequireStrongPassword] = useState(true);
@@ -87,58 +66,29 @@ export default function Settings() {
   const [awsS3Bucket, setAwsS3Bucket] = useState('');
   const [awsS3Region, setAwsS3Region] = useState('us-east-1');
 
-  // Fetch all settings from database
-  const { data: settings, isLoading } = useQuery({
-    queryKey: ['platform-settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('platform_settings')
-        .select('key, value');
-      
-      if (error) throw error;
-      
-      const settingsMap: Record<string, any> = {};
-      data?.forEach((item) => {
-        settingsMap[item.key] = item.value;
-      });
-      return settingsMap;
-    },
-  });
-
-  // Update local state when settings are loaded
+  // Update local state when settings are loaded from the hook
   useEffect(() => {
-    if (settings) {
-      // Security settings
-      const security = settings.security as SecuritySettings | undefined;
-      if (security) {
-        setRequireStrongPassword(security.requireSpecialChars ?? true);
-        setSessionTimeout(String(security.sessionTimeoutHours ?? 24));
-      }
+    // Security settings
+    setRequireStrongPassword(security.requireSpecialChars);
+    setSessionTimeout(String(security.sessionTimeoutHours));
 
-      // Notification settings
-      const notifications = settings.notifications as NotificationSettings | undefined;
-      if (notifications) {
-        setEmailNewSubmission(notifications.emailOnSubmission ?? true);
-        setEmailReviewRequest(notifications.emailOnReview ?? true);
-        setEmailScoreComplete(notifications.emailOnScoring ?? false);
-      }
+    // Notification settings
+    setEmailNewSubmission(notifications.emailOnSubmission);
+    setEmailReviewRequest(notifications.emailOnReview);
+    setEmailScoreComplete(notifications.emailOnScoring);
 
-      // Integration settings
-      const integrations = settings.integrations as IntegrationSettings | undefined;
-      if (integrations) {
-        setActiveVideoProvider(integrations.activeVideoProvider ?? 'brightcove');
-        setBrightcoveAccountId(integrations.brightcoveAccountId ?? '');
-        setBrightcoveApiKey(integrations.brightcoveApiKey ?? '');
-        setVimeoAccessToken(integrations.vimeoAccessToken ?? '');
-        setVimeoClientId(integrations.vimeoClientId ?? '');
-        setVimeoClientSecret(integrations.vimeoClientSecret ?? '');
-        setAwsAccessKeyId(integrations.awsAccessKeyId ?? '');
-        setAwsSecretAccessKey(integrations.awsSecretAccessKey ?? '');
-        setAwsS3Bucket(integrations.awsS3Bucket ?? '');
-        setAwsS3Region(integrations.awsS3Region ?? 'us-east-1');
-      }
-    }
-  }, [settings]);
+    // Integration settings
+    setActiveVideoProvider(integrations.activeVideoProvider);
+    setBrightcoveAccountId(integrations.brightcoveAccountId);
+    setBrightcoveApiKey(integrations.brightcoveApiKey);
+    setVimeoAccessToken(integrations.vimeoAccessToken);
+    setVimeoClientId(integrations.vimeoClientId);
+    setVimeoClientSecret(integrations.vimeoClientSecret);
+    setAwsAccessKeyId(integrations.awsAccessKeyId);
+    setAwsSecretAccessKey(integrations.awsSecretAccessKey);
+    setAwsS3Bucket(integrations.awsS3Bucket);
+    setAwsS3Region(integrations.awsS3Region);
+  }, [security, notifications, integrations]);
 
   // Mutation to save settings
   const saveMutation = useMutation({
@@ -220,9 +170,6 @@ export default function Settings() {
   };
 
   const getProviderStatus = (provider: string) => {
-    const integrations = settings?.integrations as IntegrationSettings | undefined;
-    if (!integrations) return false;
-    
     switch (provider) {
       case 'brightcove':
         return !!(integrations.brightcoveAccountId && integrations.brightcoveApiKey);
@@ -323,11 +270,11 @@ export default function Settings() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-lg">Video Integrations</CardTitle>
-                    {settings?.integrations?.activeVideoProvider && (
+                    {integrations.activeVideoProvider && (
                       <Badge variant="secondary" className="text-xs">
-                        {settings.integrations.activeVideoProvider === 'brightcove' && 'Brightcove'}
-                        {settings.integrations.activeVideoProvider === 'vimeo' && 'Vimeo'}
-                        {settings.integrations.activeVideoProvider === 'aws_s3' && 'AWS S3'}
+                        {integrations.activeVideoProvider === 'brightcove' && 'Brightcove'}
+                        {integrations.activeVideoProvider === 'vimeo' && 'Vimeo'}
+                        {integrations.activeVideoProvider === 'aws_s3' && 'AWS S3'}
                       </Badge>
                     )}
                   </div>
