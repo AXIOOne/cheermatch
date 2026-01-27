@@ -19,6 +19,7 @@ import Judges from "./pages/admin/Judges";
 import Settings from "./pages/admin/Settings";
 import ReviewRequests from "./pages/admin/ReviewRequests";
 import UserRoles from "./pages/admin/UserRoles";
+import Submissions from "./pages/admin/Submissions";
 
 // Judge imports
 import { JudgeLayout } from "./components/layout/JudgeLayout";
@@ -50,6 +51,7 @@ const App = () => (
               <Route path="scoring" element={<ScoringTemplates />} />
               <Route path="divisions" element={<Divisions />} />
               <Route path="teams" element={<Teams />} />
+              <Route path="submissions" element={<Submissions />} />
               <Route path="judges" element={<Judges />} />
               <Route path="reviews" element={<ReviewRequests />} />
               <Route path="roles" element={<UserRoles />} />
