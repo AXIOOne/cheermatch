@@ -208,6 +208,105 @@ export type Database = {
         }
         Relationships: []
       }
+      score_details: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          notes: string | null
+          points: number
+          score_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          points: number
+          score_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          points?: number
+          score_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_details_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_details_score_id_fkey"
+            columns: ["score_id"]
+            isOneToOne: false
+            referencedRelation: "scores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scores: {
+        Row: {
+          comments: string | null
+          created_at: string
+          deductions: number | null
+          id: string
+          judge_user_id: string
+          status: Database["public"]["Enums"]["score_status"]
+          submission_id: string
+          submitted_at: string | null
+          template_id: string
+          total_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          comments?: string | null
+          created_at?: string
+          deductions?: number | null
+          id?: string
+          judge_user_id: string
+          status?: Database["public"]["Enums"]["score_status"]
+          submission_id: string
+          submitted_at?: string | null
+          template_id: string
+          total_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          comments?: string | null
+          created_at?: string
+          deductions?: number | null
+          id?: string
+          judge_user_id?: string
+          status?: Database["public"]["Enums"]["score_status"]
+          submission_id?: string
+          submitted_at?: string | null
+          template_id?: string
+          total_score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scores_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "video_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scores_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scoring_categories: {
         Row: {
           created_at: string
@@ -369,6 +468,66 @@ export type Database = {
         }
         Relationships: []
       }
+      video_submissions: {
+        Row: {
+          brightcove_video_id: string | null
+          created_at: string
+          duration_seconds: number | null
+          event_id: string
+          id: string
+          status: Database["public"]["Enums"]["submission_status"]
+          submitted_at: string | null
+          submitted_by: string | null
+          team_id: string
+          thumbnail_url: string | null
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          brightcove_video_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          event_id: string
+          id?: string
+          status?: Database["public"]["Enums"]["submission_status"]
+          submitted_at?: string | null
+          submitted_by?: string | null
+          team_id: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          brightcove_video_id?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          event_id?: string
+          id?: string
+          status?: Database["public"]["Enums"]["submission_status"]
+          submitted_at?: string | null
+          submitted_by?: string | null
+          team_id?: string
+          thumbnail_url?: string | null
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_submissions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_submissions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -395,6 +554,13 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "archived"
+      score_status: "in_progress" | "submitted" | "locked"
+      submission_status:
+        | "pending"
+        | "uploaded"
+        | "processing"
+        | "ready"
+        | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -530,6 +696,14 @@ export const Constants = {
         "in_progress",
         "completed",
         "archived",
+      ],
+      score_status: ["in_progress", "submitted", "locked"],
+      submission_status: [
+        "pending",
+        "uploaded",
+        "processing",
+        "ready",
+        "failed",
       ],
     },
   },

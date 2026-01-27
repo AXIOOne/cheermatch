@@ -7,6 +7,8 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+
+// Admin imports
 import { AdminLayout } from "./components/layout/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Events from "./pages/admin/Events";
@@ -15,6 +17,13 @@ import Divisions from "./pages/admin/Divisions";
 import Teams from "./pages/admin/Teams";
 import Judges from "./pages/admin/Judges";
 import Settings from "./pages/admin/Settings";
+
+// Judge imports
+import { JudgeLayout } from "./components/layout/JudgeLayout";
+import JudgeDashboard from "./pages/judge/Dashboard";
+import ScoringQueue from "./pages/judge/ScoringQueue";
+import ScorePerformance from "./pages/judge/ScorePerformance";
+import ScoreHistory from "./pages/judge/ScoreHistory";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +47,14 @@ const App = () => (
               <Route path="teams" element={<Teams />} />
               <Route path="judges" element={<Judges />} />
               <Route path="settings" element={<Settings />} />
+            </Route>
+            
+            {/* Judge Routes */}
+            <Route path="/judge" element={<JudgeLayout />}>
+              <Route index element={<JudgeDashboard />} />
+              <Route path="queue" element={<ScoringQueue />} />
+              <Route path="score/:submissionId" element={<ScorePerformance />} />
+              <Route path="history" element={<ScoreHistory />} />
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
