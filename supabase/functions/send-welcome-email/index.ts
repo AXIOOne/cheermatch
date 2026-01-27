@@ -12,6 +12,8 @@ interface SendWelcomeEmailRequest {
   password: string;
   role?: string;
   loginUrl: string;
+  customSubject?: string;
+  customBodyHtml?: string;
 }
 
 const roleLabels: Record<string, string> = {
@@ -73,7 +75,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { email, fullName, password, role, loginUrl }: SendWelcomeEmailRequest = await req.json()
+    const { email, fullName, password, role, loginUrl, customSubject, customBodyHtml }: SendWelcomeEmailRequest = await req.json()
 
     if (!email || !password || !loginUrl) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -86,93 +88,99 @@ Deno.serve(async (req) => {
 
     const roleText = role ? roleLabels[role] || role : null
 
+    // Use custom subject if provided, otherwise use default
+    const emailSubject = customSubject || 'Welcome to CheerMatch - Your Account Details'
+
+    // Use custom HTML body if provided, otherwise use default template
+    const emailHtml = customBodyHtml || `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <!-- Header -->
+                <tr>
+                  <td style="background-color: #000000; padding: 32px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">CheerMatch</h1>
+                  </td>
+                </tr>
+                
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 40px 32px;">
+                    <h2 style="margin: 0 0 16px; color: #18181b; font-size: 20px; font-weight: 600;">
+                      Welcome${fullName ? ` ${fullName}` : ''}!
+                    </h2>
+                    <p style="margin: 0 0 24px; color: #3f3f46; font-size: 16px; line-height: 1.6;">
+                      Your CheerMatch account has been created${roleText ? ` as a <strong>${roleText}</strong>` : ''}. Here are your login credentials:
+                    </p>
+                    
+                    <!-- Credentials Box -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; border-radius: 8px; margin-bottom: 24px;">
+                      <tr>
+                        <td style="padding: 20px;">
+                          <p style="margin: 0 0 12px; color: #3f3f46; font-size: 14px;">
+                            <strong>Email:</strong> ${email}
+                          </p>
+                          <p style="margin: 0; color: #3f3f46; font-size: 14px;">
+                            <strong>Password:</strong> ${password}
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <p style="margin: 0 0 32px; color: #ef4444; font-size: 14px; line-height: 1.6;">
+                      ⚠️ For security, please change your password after your first login.
+                    </p>
+                    
+                    <!-- CTA Button -->
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center">
+                          <a href="${loginUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px;">
+                            Log In Now
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <p style="margin: 32px 0 0; color: #71717a; font-size: 14px; line-height: 1.6;">
+                      If the button doesn't work, copy and paste this link into your browser:
+                      <br>
+                      <a href="${loginUrl}" style="color: #2563eb; word-break: break-all;">${loginUrl}</a>
+                    </p>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background-color: #fafafa; padding: 24px 32px; text-align: center;">
+                    <p style="margin: 0; color: #a1a1aa; font-size: 12px;">
+                      This is an automated message. Please do not reply to this email.
+                      <br>
+                      © ${new Date().getFullYear()} CheerMatch. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `
+
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: 'CheerMatch <noreply@resend.dev>', // Replace with your verified domain
       to: [email],
-      subject: 'Welcome to CheerMatch - Your Account Details',
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        </head>
-        <body style="margin: 0; padding: 0; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
-            <tr>
-              <td align="center">
-                <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-                  <!-- Header -->
-                  <tr>
-                    <td style="background-color: #000000; padding: 32px; text-align: center;">
-                      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">CheerMatch</h1>
-                    </td>
-                  </tr>
-                  
-                  <!-- Content -->
-                  <tr>
-                    <td style="padding: 40px 32px;">
-                      <h2 style="margin: 0 0 16px; color: #18181b; font-size: 20px; font-weight: 600;">
-                        Welcome${fullName ? ` ${fullName}` : ''}!
-                      </h2>
-                      <p style="margin: 0 0 24px; color: #3f3f46; font-size: 16px; line-height: 1.6;">
-                        Your CheerMatch account has been created${roleText ? ` as a <strong>${roleText}</strong>` : ''}. Here are your login credentials:
-                      </p>
-                      
-                      <!-- Credentials Box -->
-                      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; border-radius: 8px; margin-bottom: 24px;">
-                        <tr>
-                          <td style="padding: 20px;">
-                            <p style="margin: 0 0 12px; color: #3f3f46; font-size: 14px;">
-                              <strong>Email:</strong> ${email}
-                            </p>
-                            <p style="margin: 0; color: #3f3f46; font-size: 14px;">
-                              <strong>Password:</strong> ${password}
-                            </p>
-                          </td>
-                        </tr>
-                      </table>
-                      
-                      <p style="margin: 0 0 32px; color: #ef4444; font-size: 14px; line-height: 1.6;">
-                        ⚠️ For security, please change your password after your first login.
-                      </p>
-                      
-                      <!-- CTA Button -->
-                      <table width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td align="center">
-                            <a href="${loginUrl}" style="display: inline-block; background-color: #000000; color: #ffffff; padding: 14px 32px; font-size: 16px; font-weight: 600; text-decoration: none; border-radius: 8px;">
-                              Log In Now
-                            </a>
-                          </td>
-                        </tr>
-                      </table>
-                      
-                      <p style="margin: 32px 0 0; color: #71717a; font-size: 14px; line-height: 1.6;">
-                        If the button doesn't work, copy and paste this link into your browser:
-                        <br>
-                        <a href="${loginUrl}" style="color: #2563eb; word-break: break-all;">${loginUrl}</a>
-                      </p>
-                    </td>
-                  </tr>
-                  
-                  <!-- Footer -->
-                  <tr>
-                    <td style="background-color: #fafafa; padding: 24px 32px; text-align: center;">
-                      <p style="margin: 0; color: #a1a1aa; font-size: 12px;">
-                        This is an automated message. Please do not reply to this email.
-                        <br>
-                        © ${new Date().getFullYear()} CheerMatch. All rights reserved.
-                      </p>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-        </body>
-        </html>
-      `,
+      subject: emailSubject,
+      html: emailHtml,
     })
 
     if (emailError) {
