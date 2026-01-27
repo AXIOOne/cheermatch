@@ -16,8 +16,34 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Calendar, Loader2, Pencil, Trash2, Search, BarChart3, Users, Trophy, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
+import { Plus, Calendar, Loader2, Pencil, Trash2, Search, BarChart3, Users, Trophy, FileText, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
+import { format, differenceInDays, isPast, isToday } from 'date-fns';
+
+// Helper to get deadline status info
+const getDeadlineStatus = (deadline: string | null) => {
+  if (!deadline) return null;
+  
+  const deadlineDate = new Date(deadline);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  deadlineDate.setHours(0, 0, 0, 0);
+  
+  const daysRemaining = differenceInDays(deadlineDate, today);
+  
+  if (isPast(deadlineDate) && !isToday(deadlineDate)) {
+    return { days: Math.abs(daysRemaining), label: 'Overdue', variant: 'destructive' as const, isPast: true };
+  }
+  if (isToday(deadlineDate)) {
+    return { days: 0, label: 'Today', variant: 'destructive' as const, isPast: false };
+  }
+  if (daysRemaining <= 3) {
+    return { days: daysRemaining, label: `${daysRemaining}d left`, variant: 'destructive' as const, isPast: false };
+  }
+  if (daysRemaining <= 7) {
+    return { days: daysRemaining, label: `${daysRemaining}d left`, variant: 'secondary' as const, isPast: false };
+  }
+  return { days: daysRemaining, label: `${daysRemaining}d left`, variant: 'outline' as const, isPast: false };
+};
 
 const eventSchema = z.object({
   name: z.string().min(2, 'Event name must be at least 2 characters'),
@@ -472,10 +498,26 @@ export default function Events() {
                           {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
                         </TableCell>
                         <TableCell>
-                          {event.broadcast_deadline 
-                            ? format(new Date(event.broadcast_deadline), 'MMM d, yyyy')
-                            : <span className="text-muted-foreground">—</span>
-                          }
+                          {event.broadcast_deadline ? (
+                            <div className="flex flex-col gap-1">
+                              <span>{format(new Date(event.broadcast_deadline), 'MMM d, yyyy')}</span>
+                              {(() => {
+                                const status = getDeadlineStatus(event.broadcast_deadline);
+                                if (!status) return null;
+                                return (
+                                  <Badge 
+                                    variant={status.variant} 
+                                    className={`text-xs w-fit ${status.isPast ? 'animate-pulse' : ''}`}
+                                  >
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    {status.label}
+                                  </Badge>
+                                );
+                              })()}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Badge variant={statusVariants[event.status]}>
