@@ -14,8 +14,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus, AlertTriangle } from 'lucide-react';
+import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus, AlertTriangle, Pencil } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -47,6 +48,7 @@ export default function UserRoles() {
   const [isAddRoleDialogOpen, setIsAddRoleDialogOpen] = useState(false);
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserWithRoles | null>(null);
+  const [userToEdit, setUserToEdit] = useState<UserWithRoles | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -545,6 +547,14 @@ export default function UserRoles() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => setUserToEdit(user)}
+                        >
+                          <Pencil className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             addRoleForm.setValue('email', user.email);
                             setIsAddRoleDialogOpen(true);
@@ -604,6 +614,13 @@ export default function UserRoles() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit User Dialog */}
+      <EditUserDialog
+        user={userToEdit}
+        open={!!userToEdit}
+        onOpenChange={(open) => !open && setUserToEdit(null)}
+      />
     </div>
   );
 }
