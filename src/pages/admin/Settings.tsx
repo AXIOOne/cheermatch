@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,8 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play } from 'lucide-react';
-import { useState } from 'react';
+import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play, Mail } from 'lucide-react';
+import { EmailTemplateManager } from '@/components/admin/EmailTemplateManager';
 
 interface SecuritySettings {
   minPasswordLength: number;
@@ -61,6 +61,7 @@ export default function Settings() {
   const [securityDialogOpen, setSecurityDialogOpen] = useState(false);
   const [notificationsDialogOpen, setNotificationsDialogOpen] = useState(false);
   const [integrationsDialogOpen, setIntegrationsDialogOpen] = useState(false);
+  const [emailTemplatesOpen, setEmailTemplatesOpen] = useState(false);
 
   // Security settings state
   const [requireStrongPassword, setRequireStrongPassword] = useState(true);
@@ -340,6 +341,28 @@ export default function Settings() {
               </p>
               <Button variant="outline" onClick={() => setIntegrationsDialogOpen(true)}>
                 Configure Integrations
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Email Templates</CardTitle>
+                  <CardDescription>Customize review and welcome emails</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Create and manage email templates for notifications.
+              </p>
+              <Button variant="outline" onClick={() => setEmailTemplatesOpen(true)}>
+                Manage Templates
               </Button>
             </CardContent>
           </Card>
@@ -667,6 +690,12 @@ export default function Settings() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Email Templates Manager */}
+      <EmailTemplateManager
+        open={emailTemplatesOpen}
+        onOpenChange={setEmailTemplatesOpen}
+      />
     </div>
   );
 }
