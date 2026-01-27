@@ -13,8 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Loader2, Trash2, Shield, UserPlus } from 'lucide-react';
-import { format } from 'date-fns';
+import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -24,7 +23,15 @@ const addRoleSchema = z.object({
   role: z.enum(['admin', 'judge', 'gym_coach'] as const),
 });
 
+const createUserSchema = z.object({
+  email: z.string().email('Please enter a valid email'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  fullName: z.string().min(1, 'Full name is required'),
+  role: z.enum(['admin', 'judge', 'gym_coach', ''] as const).optional(),
+});
+
 type AddRoleFormData = z.infer<typeof addRoleSchema>;
+type CreateUserFormData = z.infer<typeof createUserSchema>;
 
 interface UserWithRoles {
   user_id: string;
@@ -34,15 +41,26 @@ interface UserWithRoles {
 }
 
 export default function UserRoles() {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAddRoleDialogOpen, setIsAddRoleDialogOpen] = useState(false);
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const form = useForm<AddRoleFormData>({
+  const addRoleForm = useForm<AddRoleFormData>({
     resolver: zodResolver(addRoleSchema),
     defaultValues: {
       email: '',
       role: 'judge',
+    },
+  });
+
+  const createUserForm = useForm<CreateUserFormData>({
+    resolver: zodResolver(createUserSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+      fullName: '',
+      role: '',
     },
   });
 
@@ -81,7 +99,6 @@ export default function UserRoles() {
 
   const addRoleMutation = useMutation({
     mutationFn: async (data: AddRoleFormData) => {
-      // First find the user by email
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('user_id')
@@ -95,7 +112,6 @@ export default function UserRoles() {
         throw profileError;
       }
 
-      // Add the role
       const { error } = await supabase.from('user_roles').insert({
         user_id: profile.user_id,
         role: data.role,
@@ -111,8 +127,37 @@ export default function UserRoles() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
       toast({ title: 'Role added successfully!' });
-      setIsDialogOpen(false);
-      form.reset();
+      setIsAddRoleDialogOpen(false);
+      addRoleForm.reset();
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    },
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (data: CreateUserFormData) => {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) throw new Error('Not authenticated');
+
+      const response = await supabase.functions.invoke('create-user', {
+        body: {
+          email: data.email,
+          password: data.password,
+          fullName: data.fullName,
+          role: data.role || undefined,
+        },
+      });
+
+      if (response.error) throw new Error(response.error.message);
+      if (response.data?.error) throw new Error(response.data.error);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      toast({ title: 'User created successfully!' });
+      setIsCreateUserDialogOpen(false);
+      createUserForm.reset();
     },
     onError: (error: any) => {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -138,8 +183,12 @@ export default function UserRoles() {
     },
   });
 
-  const handleSubmit = (data: AddRoleFormData) => {
+  const handleAddRole = (data: AddRoleFormData) => {
     addRoleMutation.mutate(data);
+  };
+
+  const handleCreateUser = (data: CreateUserFormData) => {
+    createUserMutation.mutate(data);
   };
 
   const roleColors: Record<AppRole, string> = {
@@ -161,67 +210,158 @@ export default function UserRoles() {
           <h1 className="text-3xl font-bold text-foreground">User Roles</h1>
           <p className="text-muted-foreground mt-1">Manage user permissions and access levels</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="w-4 h-4 mr-2" />
-              Add Role
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add Role to User</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>User Email</FormLabel>
-                      <FormControl>
-                        <Input placeholder="user@example.com" type="email" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+        <div className="flex gap-2">
+          <Dialog open={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <UserRoundPlus className="w-4 h-4 mr-2" />
+                Create User
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New User</DialogTitle>
+              </DialogHeader>
+              <Form {...createUserForm}>
+                <form onSubmit={createUserForm.handleSubmit(handleCreateUser)} className="space-y-4">
+                  <FormField
+                    control={createUserForm.control}
+                    name="fullName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Full Name</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
+                          <Input placeholder="John Doe" {...field} />
                         </FormControl>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="judge">Judge</SelectItem>
-                          <SelectItem value="gym_coach">Gym Coach</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={addRoleMutation.isPending}>
-                    {addRoleMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                    Add Role
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createUserForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="user@example.com" type="email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createUserForm.control}
+                    name="password"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                          <Input placeholder="••••••••" type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createUserForm.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Initial Role (Optional)</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="No role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">No role</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="judge">Judge</SelectItem>
+                            <SelectItem value="gym_coach">Gym Coach</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setIsCreateUserDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={createUserMutation.isPending}>
+                      {createUserMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                      Create User
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={isAddRoleDialogOpen} onOpenChange={setIsAddRoleDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add Role
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Role to User</DialogTitle>
+              </DialogHeader>
+              <Form {...addRoleForm}>
+                <form onSubmit={addRoleForm.handleSubmit(handleAddRole)} className="space-y-4">
+                  <FormField
+                    control={addRoleForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>User Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="user@example.com" type="email" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={addRoleForm.control}
+                    name="role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="judge">Judge</SelectItem>
+                            <SelectItem value="gym_coach">Gym Coach</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button type="button" variant="outline" onClick={() => setIsAddRoleDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit" disabled={addRoleMutation.isPending}>
+                      {addRoleMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                      Add Role
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -314,8 +454,8 @@ export default function UserRoles() {
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          form.setValue('email', user.email);
-                          setIsDialogOpen(true);
+                          addRoleForm.setValue('email', user.email);
+                          setIsAddRoleDialogOpen(true);
                         }}
                       >
                         <Plus className="w-4 h-4 mr-1" />
