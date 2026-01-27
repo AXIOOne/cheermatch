@@ -193,8 +193,8 @@ export default function EventScoring() {
   const StatusIndicator = ({ status }: { status: 'pending' | 'in_progress' | 'submitted' }) => {
     const colors = {
       pending: 'bg-destructive',
-      in_progress: 'bg-yellow-500',
-      submitted: 'bg-green-500',
+      in_progress: 'bg-warning',
+      submitted: 'bg-success',
     };
     
     return (
@@ -260,8 +260,8 @@ export default function EventScoring() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-full">
-                <CheckCircle className="w-6 h-6 text-green-600" />
+              <div className="p-3 bg-success/10 rounded-full">
+                <CheckCircle className="w-6 h-6 text-success" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Fully Scored</p>
@@ -273,8 +273,8 @@ export default function EventScoring() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 rounded-full">
-                <Clock className="w-6 h-6 text-yellow-600" />
+              <div className="p-3 bg-warning/10 rounded-full">
+                <Clock className="w-6 h-6 text-warning" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Pending</p>
@@ -296,11 +296,11 @@ export default function EventScoring() {
                 <span className="text-sm">Pending</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-sm bg-yellow-500" />
+                <div className="w-4 h-4 rounded-sm bg-warning" />
                 <span className="text-sm">In Progress</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-sm bg-green-500" />
+                <div className="w-4 h-4 rounded-sm bg-success" />
                 <span className="text-sm">Complete</span>
               </div>
             </div>
@@ -391,7 +391,7 @@ export default function EventScoring() {
                             )}
                             Send Score Sheet
                           </Button>
-                          <span className={`text-xs font-medium ${overallStatus.allComplete ? 'text-green-600' : 'text-muted-foreground'}`}>
+                          <span className={`text-xs font-medium ${overallStatus.allComplete ? 'text-success' : 'text-muted-foreground'}`}>
                             [{overallStatus.text}]
                           </span>
                         </div>
