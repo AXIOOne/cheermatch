@@ -15,9 +15,11 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, ClipboardList, Loader2, Pencil, Trash2, Lock, Unlock, Eye, Layers, Copy } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SectionTabs, { ScoringSection } from '@/components/admin/SectionTabs';
 import { CategoryItem } from '@/components/admin/ScoringCategoryTree';
 import { DeductionType } from '@/components/admin/DeductionTypeManager';
+import TemplatePreview from '@/components/admin/TemplatePreview';
 
 const templateSchema = z.object({
   name: z.string().min(2, 'Template name must be at least 2 characters'),
@@ -695,15 +697,38 @@ export default function ScoringTemplates() {
                   )}
                 />
 
-                {/* Sections & Categories */}
-                <div className="border rounded-lg p-4">
-                  <SectionTabs
-                    sections={sections}
-                    deductions={deductions}
-                    onSectionsChange={setSections}
-                    onDeductionsChange={setDeductions}
-                  />
-                </div>
+                {/* Sections & Categories with Preview */}
+                <Tabs defaultValue="editor" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="editor">
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Editor
+                    </TabsTrigger>
+                    <TabsTrigger value="preview">
+                      <Eye className="w-4 h-4 mr-2" />
+                      Judge Preview
+                    </TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="editor" className="mt-4">
+                    <div className="border rounded-lg p-4">
+                      <SectionTabs
+                        sections={sections}
+                        deductions={deductions}
+                        onSectionsChange={setSections}
+                        onDeductionsChange={setDeductions}
+                      />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="preview" className="mt-4">
+                    <div className="border rounded-lg p-4 max-h-[500px] overflow-y-auto">
+                      <TemplatePreview
+                        templateName={form.watch('name')}
+                        sections={sections}
+                        deductions={deductions}
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
 
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
