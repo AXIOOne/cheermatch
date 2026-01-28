@@ -1,10 +1,32 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { UserCheck, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { UserCheck, Loader2, Pencil, CalendarPlus } from 'lucide-react';
+import { EditUserDialog } from '@/components/admin/EditUserDialog';
+import { JudgeAssignmentDialog } from '@/components/admin/JudgeAssignmentDialog';
+
+interface JudgeWithProfile {
+  id: string;
+  user_id: string;
+  role: string;
+  profile: {
+    user_id: string;
+    email: string;
+    full_name: string | null;
+  } | null;
+}
 
 export default function Judges() {
+  const [editingJudge, setEditingJudge] = useState<{
+    user_id: string;
+    email: string;
+    full_name: string | null;
+  } | null>(null);
+  const [assigningJudge, setAssigningJudge] = useState<JudgeWithProfile | null>(null);
+
   const { data: judges, isLoading } = useQuery({
     queryKey: ['judges'],
     queryFn: async () => {
@@ -30,7 +52,7 @@ export default function Judges() {
       return roleData.map(role => ({
         ...role,
         profile: profileData?.find(p => p.user_id === role.user_id) || null,
-      }));
+      })) as JudgeWithProfile[];
     },
   });
 
@@ -49,6 +71,16 @@ export default function Judges() {
       return data;
     },
   });
+
+  const handleEditJudge = (judge: JudgeWithProfile) => {
+    if (judge.profile) {
+      setEditingJudge({
+        user_id: judge.user_id,
+        email: judge.profile.email,
+        full_name: judge.profile.full_name,
+      });
+    }
+  };
 
   return (
     <div className="p-8">
@@ -70,6 +102,7 @@ export default function Judges() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Assigned Events</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -99,6 +132,26 @@ export default function Judges() {
                           <span className="text-muted-foreground text-sm">No assignments</span>
                         )}
                       </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditJudge(judge)}
+                            title="Edit judge"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setAssigningJudge(judge)}
+                            title="Manage assignments"
+                          >
+                            <CalendarPlus className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -113,6 +166,18 @@ export default function Judges() {
           )}
         </CardContent>
       </Card>
+
+      <EditUserDialog
+        user={editingJudge}
+        open={!!editingJudge}
+        onOpenChange={(open) => !open && setEditingJudge(null)}
+      />
+
+      <JudgeAssignmentDialog
+        judge={assigningJudge}
+        open={!!assigningJudge}
+        onOpenChange={(open) => !open && setAssigningJudge(null)}
+      />
     </div>
   );
 }
