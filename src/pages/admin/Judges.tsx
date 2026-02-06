@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { UserCheck, Loader2, Pencil, CalendarPlus } from 'lucide-react';
+import { UserCheck, Loader2, Pencil, CalendarPlus, Users } from 'lucide-react';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import { JudgeAssignmentDialog } from '@/components/admin/JudgeAssignmentDialog';
+import { BulkJudgeAssignmentDialog } from '@/components/admin/BulkJudgeAssignmentDialog';
 
 interface JudgeWithProfile {
   id: string;
@@ -26,6 +27,7 @@ export default function Judges() {
     full_name: string | null;
   } | null>(null);
   const [assigningJudge, setAssigningJudge] = useState<JudgeWithProfile | null>(null);
+  const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
 
   const { data: judges, isLoading } = useQuery({
     queryKey: ['judges'],
@@ -84,9 +86,15 @@ export default function Judges() {
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Judges</h1>
-        <p className="text-muted-foreground mt-1">Manage judge accounts and assignments</p>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Judges</h1>
+          <p className="text-muted-foreground mt-1">Manage judge accounts and assignments</p>
+        </div>
+        <Button onClick={() => setBulkAssignOpen(true)}>
+          <Users className="w-4 h-4 mr-2" />
+          Bulk Assign
+        </Button>
       </div>
 
       <Card>
@@ -177,6 +185,11 @@ export default function Judges() {
         judge={assigningJudge}
         open={!!assigningJudge}
         onOpenChange={(open) => !open && setAssigningJudge(null)}
+      />
+
+      <BulkJudgeAssignmentDialog
+        open={bulkAssignOpen}
+        onOpenChange={setBulkAssignOpen}
       />
     </div>
   );
