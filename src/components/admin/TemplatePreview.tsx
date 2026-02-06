@@ -77,7 +77,7 @@ export default function TemplatePreview({ templateName, sections, deductions }: 
         </div>
       </div>
 
-      {/* Scoring Categories by Section */}
+      {/* Scoring Categories Table by Section */}
       {categoriesBySection.map(({ section, categories }) => (
         <div key={section.temp_id} className="space-y-3">
           <div className="flex items-center gap-2">
@@ -97,44 +97,50 @@ export default function TemplatePreview({ templateName, sections, deductions }: 
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-3">
-              {categories.map((category) => (
-                <Card key={category.temp_id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">{category.name}</CardTitle>
-                      <div className="text-right">
-                        <span className="text-2xl font-bold text-primary">0</span>
-                        <span className="text-sm text-muted-foreground"> / {category.max_points}</span>
-                      </div>
-                    </div>
-                    {category.description && (
-                      <CardDescription>{category.description}</CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <ScoreInput
-                        value={0}
-                        onChange={() => {}}
-                        max={category.max_points}
-                        step={0.5}
-                        disabled
-                      />
-                      <div className="flex-1 flex justify-between text-xs text-muted-foreground">
-                        <span>Min: 0</span>
-                        <span>Max: {category.max_points}</span>
-                      </div>
-                    </div>
-                    <Input
-                      placeholder="Notes for this category..."
-                      disabled
-                      className="opacity-60"
-                    />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <Card>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="text-left py-3 px-4 font-medium text-sm">Judge Criteria</th>
+                        <th className="text-center py-3 px-4 font-medium text-sm whitespace-nowrap">Min - Max</th>
+                        <th className="text-right py-3 px-4 font-medium text-sm w-32">Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {categories.map((category, index) => (
+                        <tr key={category.temp_id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                          <td className="py-3 px-4">
+                            <div>
+                              <span className="font-medium text-sm">{category.name}</span>
+                              {category.description && (
+                                <p className="text-xs text-muted-foreground mt-0.5">{category.description}</p>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-center text-sm text-muted-foreground whitespace-nowrap">
+                            0 - {category.max_points}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex justify-end">
+                              <ScoreInput
+                                value={0}
+                                onChange={() => {}}
+                                max={category.max_points}
+                                step={0.5}
+                                disabled
+                                className="w-24"
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       ))}

@@ -408,119 +408,147 @@ export default function ScorePerformance() {
           <div className="space-y-4">
             {template?.categories && template.categories.length > 0 ? (
               <>
-                {/* Category Scores */}
-                {sortByDisplayOrder(getLeafCategories(template.categories as any[]))
-                  .map((category: any) => (
-                  <Card key={category.id}>
+                {/* Category Scores Table */}
+                <Card>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b bg-muted/50">
+                            <th className="text-left py-3 px-4 font-medium text-sm">Judge Criteria</th>
+                            <th className="text-center py-3 px-4 font-medium text-sm whitespace-nowrap">Min - Max</th>
+                            <th className="text-right py-3 px-4 font-medium text-sm w-32">Score</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {sortByDisplayOrder(getLeafCategories(template.categories as any[]))
+                            .map((category: any, index: number) => (
+                            <tr key={category.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                              <td className="py-3 px-4">
+                                <div>
+                                  <span className="font-medium text-sm">{category.name}</span>
+                                  {category.description && (
+                                    <p className="text-xs text-muted-foreground mt-0.5">{category.description}</p>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-center text-sm text-muted-foreground whitespace-nowrap">
+                                0 - {category.max_points}
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex justify-end">
+                                  <ScoreInput
+                                    value={categoryScores[category.id]?.points || 0}
+                                    onChange={(value) => updateCategoryScore(category.id, value)}
+                                    max={category.max_points}
+                                    step={0.5}
+                                    disabled={isLocked}
+                                    className="w-24"
+                                  />
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                          {/* Total Row */}
+                          <tr className="border-t-2 bg-muted/50 font-semibold">
+                            <td className="py-3 px-4 text-sm" colSpan={2}>Subtotal (before deductions)</td>
+                            <td className="py-3 px-4 text-right text-primary font-bold">
+                              {(() => {
+                                const leafCategories = getLeafCategories(template.categories as any[]);
+                                let total = 0;
+                                leafCategories.forEach((cat: any) => {
+                                  const score = categoryScores[cat.id]?.points || 0;
+                                  total += score * (Number(cat.weight) || 1);
+                                });
+                                return total.toFixed(2);
+                              })()}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Deductions Table */}
+                {template.deduction_types && template.deduction_types.length > 0 && (
+                  <Card>
                     <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">{category.name}</CardTitle>
-                        <div className="text-right">
-                          <span className="text-2xl font-bold text-primary">
-                            {categoryScores[category.id]?.points || 0}
-                          </span>
-                          <span className="text-sm text-muted-foreground"> / {category.max_points}</span>
-                        </div>
-                      </div>
-                      {category.description && (
-                        <CardDescription>{category.description}</CardDescription>
-                      )}
+                      <CardTitle className="text-base text-destructive">Deductions</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="flex items-center gap-4">
-                        <ScoreInput
-                          value={categoryScores[category.id]?.points || 0}
-                          onChange={(value) => updateCategoryScore(category.id, value)}
-                          max={category.max_points}
-                          step={0.5}
-                          disabled={isLocked}
-                        />
-                        <div className="flex-1 flex justify-between text-xs text-muted-foreground">
-                          <span>Min: 0</span>
-                          <span>Max: {category.max_points}</span>
-                        </div>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b bg-muted/50">
+                              <th className="text-left py-2 px-4 font-medium text-sm">Deduction Type</th>
+                              <th className="text-center py-2 px-4 font-medium text-sm">Points Each</th>
+                              <th className="text-center py-2 px-4 font-medium text-sm w-24">Count</th>
+                              <th className="text-right py-2 px-4 font-medium text-sm w-24">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {sortByDisplayOrder(template.deduction_types as any[]).map((dt: any, index: number) => (
+                              <tr key={dt.id} className={index % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                                <td className="py-2 px-4 text-sm">{dt.name}</td>
+                                <td className="py-2 px-4 text-center text-sm text-muted-foreground">
+                                  {Number(dt.points).toFixed(2)}
+                                </td>
+                                <td className="py-2 px-4">
+                                  <div className="flex justify-center">
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      step={1}
+                                      value={deductionCounts[dt.id] || 0}
+                                      onChange={(e) =>
+                                        setDeductionCounts((prev) => ({
+                                          ...prev,
+                                          [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0),
+                                        }))
+                                      }
+                                      className="w-16 text-center"
+                                      disabled={isLocked}
+                                    />
+                                  </div>
+                                </td>
+                                <td className="py-2 px-4 text-right text-sm text-destructive font-medium">
+                                  {((deductionCounts[dt.id] || 0) * Math.abs(Number(dt.points))).toFixed(2)}
+                                </td>
+                              </tr>
+                            ))}
+                            <tr className="border-t bg-muted/50 font-semibold">
+                              <td className="py-2 px-4 text-sm text-destructive" colSpan={3}>Total Deductions</td>
+                              <td className="py-2 px-4 text-right text-destructive font-bold">
+                                -{calculateStructuredDeductions(template.deduction_types as any[], deductionCounts).toFixed(2)}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
                       </div>
-                      <Input
-                        placeholder="Notes for this category..."
-                        value={categoryScores[category.id]?.notes || ''}
-                        onChange={(e) => updateCategoryNotes(category.id, e.target.value)}
-                        disabled={isLocked}
-                      />
                     </CardContent>
                   </Card>
-                ))}
-
-                <Separator />
-
-                {/* Deductions */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base text-destructive">Deductions</CardTitle>
-                    <CardDescription>Safety violations, legality issues, etc.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {template.deduction_types && template.deduction_types.length > 0 ? (
-                      <div className="space-y-2">
-                        {sortByDisplayOrder(template.deduction_types as any[]).map((dt: any) => (
-                          <div key={dt.id} className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium truncate">{dt.name}</p>
-                              <p className="text-xs text-muted-foreground">{Number(dt.points).toFixed(2)} each</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                min={0}
-                                step={1}
-                                value={deductionCounts[dt.id] || 0}
-                                onChange={(e) =>
-                                  setDeductionCounts((prev) => ({
-                                    ...prev,
-                                    [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0),
-                                  }))
-                                }
-                                className="w-20"
-                                disabled={isLocked}
-                              />
-                              <span className="text-xs text-muted-foreground">count</span>
-                            </div>
-                          </div>
-                        ))}
-
-                        <div className="pt-2 border-t flex items-center justify-between">
-                          <span className="text-sm font-medium text-destructive">Total deductions</span>
-                          <span className="text-sm font-bold text-destructive">
-                            {calculateStructuredDeductions(template.deduction_types as any[], deductionCounts).toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No deduction types configured for this template.</p>
-                    )}
-                  </CardContent>
-                </Card>
+                )}
 
                 {/* Comments */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Feedback & Comments</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Textarea
-                      placeholder="Overall feedback for the team..."
-                      value={comments}
-                      onChange={(e) => setComments(e.target.value)}
-                      rows={4}
-                      disabled={isLocked}
-                    />
-                  </CardContent>
-                </Card>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Comments:</Label>
+                  <Textarea
+                    placeholder="Overall feedback for the team..."
+                    value={comments}
+                    onChange={(e) => setComments(e.target.value)}
+                    rows={3}
+                    disabled={isLocked}
+                  />
+                </div>
 
                 {/* Total Score */}
-                <Card className="gradient-champion text-white">
-                  <CardContent className="py-6 text-center">
-                    <p className="text-sm opacity-80 mb-1">Total Score</p>
-                    <p className="text-5xl font-bold">{calculateTotalScore().toFixed(2)}</p>
+                <Card className="border-2 border-primary">
+                  <CardContent className="py-4">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-lg">Final Score</span>
+                      <span className="text-3xl font-bold text-primary">{calculateTotalScore().toFixed(2)}</span>
+                    </div>
                   </CardContent>
                 </Card>
               </>
