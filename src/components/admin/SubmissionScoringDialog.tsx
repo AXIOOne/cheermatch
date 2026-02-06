@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { ScoreInput } from '@/components/ui/score-input';
 import { Slider } from '@/components/ui/slider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -636,14 +637,16 @@ export default function SubmissionScoringDialog({
                             </div>
                           </CardHeader>
                           <CardContent className="py-2 space-y-2">
-                            <Slider
-                              value={[categoryScores[category.id]?.points || 0]}
-                              min={0}
-                              max={category.max_points}
-                              step={0.5}
-                              onValueChange={([value]) => updateCategoryScore(category.id, value)}
-                              disabled={isCurrentPanelLocked}
-                            />
+                            <div className="flex items-center gap-3">
+                              <ScoreInput
+                                value={categoryScores[category.id]?.points || 0}
+                                onChange={(value) => updateCategoryScore(category.id, value)}
+                                max={category.max_points}
+                                step={0.5}
+                                disabled={isCurrentPanelLocked}
+                              />
+                              <span className="text-xs text-muted-foreground">Range: 0 - {category.max_points}</span>
+                            </div>
                             <Input
                               placeholder="Notes..."
                               value={categoryScores[category.id]?.notes || ''}

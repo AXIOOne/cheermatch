@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Slider } from '@/components/ui/slider';
+import { ScoreInput } from '@/components/ui/score-input';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -113,17 +113,18 @@ export default function TemplatePreview({ templateName, sections, deductions }: 
                     )}
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <Slider
-                      value={[0]}
-                      min={0}
-                      max={category.max_points}
-                      step={0.5}
-                      disabled
-                      className="py-2 opacity-60"
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>0</span>
-                      <span>{category.max_points}</span>
+                    <div className="flex items-center gap-4">
+                      <ScoreInput
+                        value={0}
+                        onChange={() => {}}
+                        max={category.max_points}
+                        step={0.5}
+                        disabled
+                      />
+                      <div className="flex-1 flex justify-between text-xs text-muted-foreground">
+                        <span>Min: 0</span>
+                        <span>Max: {category.max_points}</span>
+                      </div>
                     </div>
                     <Input
                       placeholder="Notes for this category..."
