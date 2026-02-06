@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Slider } from '@/components/ui/slider';
+import { ScoreInput } from '@/components/ui/score-input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
@@ -427,18 +427,18 @@ export default function ScorePerformance() {
                       )}
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <Slider
-                        value={[categoryScores[category.id]?.points || 0]}
-                        min={0}
-                        max={category.max_points}
-                        step={0.5}
-                        onValueChange={([value]) => updateCategoryScore(category.id, value)}
-                        disabled={isLocked}
-                        className="py-2"
-                      />
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>0</span>
-                        <span>{category.max_points}</span>
+                      <div className="flex items-center gap-4">
+                        <ScoreInput
+                          value={categoryScores[category.id]?.points || 0}
+                          onChange={(value) => updateCategoryScore(category.id, value)}
+                          max={category.max_points}
+                          step={0.5}
+                          disabled={isLocked}
+                        />
+                        <div className="flex-1 flex justify-between text-xs text-muted-foreground">
+                          <span>Min: 0</span>
+                          <span>Max: {category.max_points}</span>
+                        </div>
                       </div>
                       <Input
                         placeholder="Notes for this category..."
