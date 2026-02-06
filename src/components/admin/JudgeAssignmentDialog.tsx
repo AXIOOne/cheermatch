@@ -121,9 +121,9 @@ export function JudgeAssignmentDialog({ judge, open, onOpenChange }: JudgeAssign
       const { error } = await supabase.from('judge_assignments').insert({
         judge_user_id: judge.user_id,
         event_id: selectedEvent,
-        division_id: selectedDivision || null,
-        level_id: selectedLevel || null,
-        panel_id: selectedPanel || null,
+        division_id: selectedDivision === '__all__' ? null : selectedDivision || null,
+        level_id: selectedLevel === '__all__' ? null : selectedLevel || null,
+        panel_id: selectedPanel === '__all__' ? null : selectedPanel || null,
       });
 
       if (error) throw error;
@@ -242,13 +242,12 @@ export function JudgeAssignmentDialog({ judge, open, onOpenChange }: JudgeAssign
                         <SelectValue placeholder="All panels" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All panels</SelectItem>
+                        <SelectItem value="__all__">All panels</SelectItem>
                         {panels?.map((panel) => (
                           <SelectItem key={panel.id} value={panel.id}>
                             {panel.name} ({panel.abbreviation})
                           </SelectItem>
-                        ))
-                        }
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -260,13 +259,12 @@ export function JudgeAssignmentDialog({ judge, open, onOpenChange }: JudgeAssign
                         <SelectValue placeholder="All divisions" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All divisions</SelectItem>
+                        <SelectItem value="__all__">All divisions</SelectItem>
                         {divisions?.map((div) => (
                           <SelectItem key={div.id} value={div.id}>
                             {div.name}
                           </SelectItem>
-                        ))
-                        }
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -278,13 +276,12 @@ export function JudgeAssignmentDialog({ judge, open, onOpenChange }: JudgeAssign
                         <SelectValue placeholder="All levels" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">All levels</SelectItem>
+                        <SelectItem value="__all__">All levels</SelectItem>
                         {levels?.map((level) => (
                           <SelectItem key={level.id} value={level.id}>
                             {level.name}
                           </SelectItem>
-                        ))
-                        }
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
