@@ -39,6 +39,7 @@ interface SubmissionScoringDialogProps {
   submissionId: string | null;
   eventId: string;
   panels: JudgePanel[];
+  initialPanelId?: string | null;
 }
 
 export default function SubmissionScoringDialog({
@@ -47,6 +48,7 @@ export default function SubmissionScoringDialog({
   submissionId,
   eventId,
   panels,
+  initialPanelId,
 }: SubmissionScoringDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -56,18 +58,26 @@ export default function SubmissionScoringDialog({
   const [categoryScores, setCategoryScores] = useState<Record<string, CategoryScore>>({});
   const [deductionCounts, setDeductionCounts] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
+  const [needsReview, setNeedsReview] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Apply initial panel when dialog opens
+  useEffect(() => {
+    if (open && initialPanelId) {
+      setSelectedPanelId(initialPanelId);
+    }
+  }, [open, initialPanelId]);
+
   // Set default panel when panels load
   useEffect(() => {
     if (panels.length > 0 && !selectedPanelId) {
-      setSelectedPanelId(panels[0].id);
+      setSelectedPanelId(initialPanelId || panels[0].id);
     }
-  }, [panels, selectedPanelId]);
+  }, [panels, selectedPanelId, initialPanelId]);
 
   // Fetch submission details
   const { data: submission, isLoading: submissionLoading } = useQuery({
