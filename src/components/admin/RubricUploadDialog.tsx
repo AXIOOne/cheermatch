@@ -68,26 +68,23 @@ export function RubricUploadDialog({ open, onOpenChange, rubric }: Props) {
   });
 
   const { data: divisions } = useQuery({
-    queryKey: ['rubric-divisions', eventId],
+    queryKey: ['rubric-divisions'],
     queryFn: async () => {
-      let q = supabase.from('divisions').select('id, name').order('name');
-      if (eventId !== NONE) q = q.eq('event_id', eventId);
-      const { data, error } = await q;
+      const { data, error } = await supabase.from('divisions').select('id, name').order('name');
       if (error) throw error;
       return data;
     },
   });
 
   const { data: levels } = useQuery({
-    queryKey: ['rubric-levels', eventId],
+    queryKey: ['rubric-levels'],
     queryFn: async () => {
-      let q = supabase.from('levels').select('id, name, level_number').order('level_number');
-      if (eventId !== NONE) q = q.eq('event_id', eventId);
-      const { data, error } = await q;
+      const { data, error } = await supabase.from('levels').select('id, name, level_number').order('level_number');
       if (error) throw error;
       return data;
     },
   });
+
 
   const saveMutation = useMutation({
     mutationFn: async () => {

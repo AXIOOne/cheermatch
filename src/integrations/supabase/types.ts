@@ -59,7 +59,6 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
-          event_id: string
           id: string
           max_age: number | null
           min_age: number | null
@@ -68,7 +67,6 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
-          event_id: string
           id?: string
           max_age?: number | null
           min_age?: number | null
@@ -77,21 +75,12 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
-          event_id?: string
           id?: string
           max_age?: number | null
           min_age?: number | null
           name?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "divisions_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       email_templates: {
         Row: {
@@ -275,7 +264,6 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
-          event_id: string
           id: string
           level_number: number
           name: string
@@ -283,7 +271,6 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
-          event_id: string
           id?: string
           level_number: number
           name: string
@@ -291,20 +278,11 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
-          event_id?: string
           id?: string
           level_number?: number
           name?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "levels_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       platform_settings: {
         Row: {

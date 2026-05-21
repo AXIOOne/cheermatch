@@ -86,32 +86,29 @@ export function BulkJudgeAssignmentDialog({ open, onOpenChange }: BulkJudgeAssig
   });
 
   const { data: divisions } = useQuery({
-    queryKey: ['divisions-for-bulk-assignment', selectedEvent],
+    queryKey: ['divisions-for-bulk-assignment'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('divisions')
         .select('id, name')
-        .eq('event_id', selectedEvent)
         .order('name');
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedEvent,
   });
 
   const { data: levels } = useQuery({
-    queryKey: ['levels-for-bulk-assignment', selectedEvent],
+    queryKey: ['levels-for-bulk-assignment'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('levels')
         .select('id, name, level_number')
-        .eq('event_id', selectedEvent)
         .order('level_number');
       if (error) throw error;
       return data;
     },
-    enabled: !!selectedEvent,
   });
+
 
   const { data: panels } = useQuery({
     queryKey: ['panels-for-bulk-assignment', selectedEvent],
