@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save, Send, Loader2, Play, Pause, RotateCcw } from 'lucide-react';
 import { calculateStructuredDeductions, getLeafCategories, sortByDisplayOrder } from '@/lib/scoring';
+import { RubricReferenceSheet } from '@/components/judge/RubricReferenceSheet';
 
 interface CategoryScore {
   category_id: string;
