@@ -737,6 +737,24 @@ export default function SubmissionScoringDialog({
                       />
                     </div>
 
+                    {/* Needs Review Flag */}
+                    <div className="flex items-center justify-between p-3 rounded-lg border bg-warning/5 border-warning/30">
+                      <div>
+                        <label htmlFor="needs-review-switch" className="text-sm font-medium cursor-pointer">
+                          Flag for review
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Mark this panel's score as needing review (shown as yellow).
+                        </p>
+                      </div>
+                      <Switch
+                        id="needs-review-switch"
+                        checked={needsReview}
+                        onCheckedChange={setNeedsReview}
+                        disabled={isCurrentPanelLocked}
+                      />
+                    </div>
+
                     {/* Action Buttons */}
                     <div className="flex gap-2 pt-2">
                       {isCurrentPanelLocked ? (
