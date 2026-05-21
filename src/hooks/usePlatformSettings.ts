@@ -76,20 +76,20 @@ export function usePlatformSettings() {
     },
   });
 
-  const security: SecuritySettings = {
+  const security: SecuritySettings = useMemo(() => ({
     ...DEFAULT_SECURITY,
     ...(query.data?.security as Partial<SecuritySettings> | undefined),
-  };
+  }), [query.data]);
 
-  const notifications: NotificationSettings = {
+  const notifications: NotificationSettings = useMemo(() => ({
     ...DEFAULT_NOTIFICATIONS,
     ...(query.data?.notifications as Partial<NotificationSettings> | undefined),
-  };
+  }), [query.data]);
 
-  const integrations: IntegrationSettings = {
+  const integrations: IntegrationSettings = useMemo(() => ({
     ...DEFAULT_INTEGRATIONS,
     ...(query.data?.integrations as Partial<IntegrationSettings> | undefined),
-  };
+  }), [query.data]);
 
   return {
     ...query,
