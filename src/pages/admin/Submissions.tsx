@@ -361,7 +361,7 @@ export default function Submissions() {
                           ? format(new Date(submission.submitted_at), 'MMM d, yyyy')
                           : '-'}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           {submission.video_url && (
                             <Button variant="ghost" size="sm" asChild>
