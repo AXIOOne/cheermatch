@@ -454,6 +454,7 @@ export type Database = {
           deductions: number | null
           id: string
           judge_user_id: string
+          needs_review: boolean
           panel_id: string | null
           status: Database["public"]["Enums"]["score_status"]
           submission_id: string
@@ -468,6 +469,7 @@ export type Database = {
           deductions?: number | null
           id?: string
           judge_user_id: string
+          needs_review?: boolean
           panel_id?: string | null
           status?: Database["public"]["Enums"]["score_status"]
           submission_id: string
@@ -482,6 +484,7 @@ export type Database = {
           deductions?: number | null
           id?: string
           judge_user_id?: string
+          needs_review?: boolean
           panel_id?: string | null
           status?: Database["public"]["Enums"]["score_status"]
           submission_id?: string

@@ -24,6 +24,7 @@ interface Score {
   status: string;
   total_score: number | null;
   panel_id: string | null;
+  needs_review?: boolean;
 }
 
 interface Submission {
@@ -45,6 +46,7 @@ export default function EventScoring() {
   const [isPanelsDialogOpen, setIsPanelsDialogOpen] = useState(false);
   const [sendingScoreFor, setSendingScoreFor] = useState<string | null>(null);
   const [scoringSubmissionId, setScoringSubmissionId] = useState<string | null>(null);
+  const [scoringPanelId, setScoringPanelId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -90,7 +92,7 @@ export default function EventScoring() {
             division:divisions(id, name),
             level:levels(id, name)
           ),
-          scores:scores(id, status, total_score, panel_id)
+          scores:scores(id, status, total_score, panel_id, needs_review)
         `)
         .eq('event_id', eventId)
         .order('created_at', { ascending: false });
@@ -167,9 +169,13 @@ export default function EventScoring() {
   };
 
   // Get panel scoring status for a submission
-  const getPanelStatus = (submission: Submission, panelId: string): 'pending' | 'in_progress' | 'submitted' => {
+  const getPanelStatus = (
+    submission: Submission,
+    panelId: string
+  ): 'pending' | 'in_progress' | 'submitted' | 'needs_review' => {
     const score = submission.scores.find(s => s.panel_id === panelId);
     if (!score) return 'pending';
+    if (score.needs_review) return 'needs_review';
     return score.status as 'pending' | 'in_progress' | 'submitted';
   };
 
@@ -190,17 +196,34 @@ export default function EventScoring() {
     return { text: 'PENDING', allComplete: false };
   };
 
-  const StatusIndicator = ({ status }: { status: 'pending' | 'in_progress' | 'submitted' }) => {
+  const StatusIndicator = ({
+    status,
+    onClick,
+    label,
+  }: {
+    status: 'pending' | 'in_progress' | 'submitted' | 'needs_review';
+    onClick?: () => void;
+    label?: string;
+  }) => {
     const colors = {
-      pending: 'bg-destructive',
-      in_progress: 'bg-warning',
-      submitted: 'bg-success',
+      pending: 'bg-destructive hover:bg-destructive/80',
+      in_progress: 'bg-destructive hover:bg-destructive/80',
+      submitted: 'bg-success hover:bg-success/80',
+      needs_review: 'bg-warning hover:bg-warning/80',
     };
-    
+    const titles = {
+      pending: 'Not started — click to score',
+      in_progress: 'In progress — click to continue',
+      submitted: 'Complete — click to view/edit',
+      needs_review: 'Needs review — click to view/edit',
+    };
     return (
-      <div 
-        className={`w-4 h-4 rounded-sm ${colors[status]}`}
-        title={status.replace('_', ' ')}
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={label ? `${label}: ${titles[status]}` : titles[status]}
+        title={titles[status]}
+        className={`w-5 h-5 rounded-sm transition-colors cursor-pointer ${colors[status]}`}
       />
     );
   };
@@ -292,17 +315,20 @@ export default function EventScoring() {
             <div className="flex items-center gap-6 flex-wrap">
               <span className="text-sm font-medium text-muted-foreground">Status Legend:</span>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-sm bg-destructive" />
-                <span className="text-sm">Pending</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-sm bg-warning" />
-                <span className="text-sm">In Progress</span>
-              </div>
-              <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-sm bg-success" />
                 <span className="text-sm">Complete</span>
               </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-sm bg-warning" />
+                <span className="text-sm">Needs Review</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-sm bg-destructive" />
+                <span className="text-sm">Not Started</span>
+              </div>
+              <span className="text-xs text-muted-foreground ml-auto">
+                Click any panel cell to view and edit that judge's scoresheet.
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -372,7 +398,10 @@ export default function EventScoring() {
                             variant="default"
                             size="sm"
                             className="h-7"
-                            onClick={() => setScoringSubmissionId(submission.id)}
+                            onClick={() => {
+                              setScoringPanelId(null);
+                              setScoringSubmissionId(submission.id);
+                            }}
                           >
                             <ClipboardList className="w-3 h-3 mr-1" />
                             Score
@@ -399,7 +428,14 @@ export default function EventScoring() {
                       {panels?.map((panel) => (
                         <TableCell key={panel.id} className="text-center">
                           <div className="flex justify-center">
-                            <StatusIndicator status={getPanelStatus(submission, panel.id)} />
+                            <StatusIndicator
+                              status={getPanelStatus(submission, panel.id)}
+                              label={`${submission.team?.name || 'Team'} ${panel.abbreviation}`}
+                              onClick={() => {
+                                setScoringPanelId(panel.id);
+                                setScoringSubmissionId(submission.id);
+                              }}
+                            />
                           </div>
                         </TableCell>
                       ))}
@@ -426,10 +462,16 @@ export default function EventScoring() {
       {/* Scoring Dialog */}
       <SubmissionScoringDialog
         open={!!scoringSubmissionId}
-        onOpenChange={(open) => !open && setScoringSubmissionId(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setScoringSubmissionId(null);
+            setScoringPanelId(null);
+          }
+        }}
         submissionId={scoringSubmissionId}
         eventId={eventId!}
         panels={panels || []}
+        initialPanelId={scoringPanelId}
       />
     </div>
   );

@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { calculateStructuredDeductions, getLeafCategories, sortByDisplayOrder } from '@/lib/scoring';
 import { 
@@ -39,6 +40,7 @@ interface SubmissionScoringDialogProps {
   submissionId: string | null;
   eventId: string;
   panels: JudgePanel[];
+  initialPanelId?: string | null;
 }
 
 export default function SubmissionScoringDialog({
@@ -47,6 +49,7 @@ export default function SubmissionScoringDialog({
   submissionId,
   eventId,
   panels,
+  initialPanelId,
 }: SubmissionScoringDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -56,18 +59,26 @@ export default function SubmissionScoringDialog({
   const [categoryScores, setCategoryScores] = useState<Record<string, CategoryScore>>({});
   const [deductionCounts, setDeductionCounts] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
+  const [needsReview, setNeedsReview] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Apply initial panel when dialog opens
+  useEffect(() => {
+    if (open && initialPanelId) {
+      setSelectedPanelId(initialPanelId);
+    }
+  }, [open, initialPanelId]);
+
   // Set default panel when panels load
   useEffect(() => {
     if (panels.length > 0 && !selectedPanelId) {
-      setSelectedPanelId(panels[0].id);
+      setSelectedPanelId(initialPanelId || panels[0].id);
     }
-  }, [panels, selectedPanelId]);
+  }, [panels, selectedPanelId, initialPanelId]);
 
   // Fetch submission details
   const { data: submission, isLoading: submissionLoading } = useQuery({
@@ -210,6 +221,7 @@ export default function SubmissionScoringDialog({
       setDeductionCounts(loadedDedCounts);
 
       setComments(panelScore.comments || '');
+      setNeedsReview(Boolean((panelScore as any).needs_review));
     } else {
       // Initialize empty scores
       const initialScores: Record<string, CategoryScore> = {};
@@ -227,6 +239,7 @@ export default function SubmissionScoringDialog({
       });
       setDeductionCounts(initialDedCounts);
       setComments('');
+      setNeedsReview(false);
     }
   }, [selectedPanelId, allScores, template]);
 
@@ -313,8 +326,9 @@ export default function SubmissionScoringDialog({
             deductions: deductionsTotal,
             comments,
             status,
+            needs_review: needsReview,
             submitted_at: status === 'submitted' ? new Date().toISOString() : null,
-          })
+          } as any)
           .eq('id', currentPanelScore.id);
         if (scoreError) throw scoreError;
 
@@ -362,8 +376,9 @@ export default function SubmissionScoringDialog({
             deductions: deductionsTotal,
             comments,
             status,
+            needs_review: needsReview,
             submitted_at: status === 'submitted' ? new Date().toISOString() : null,
-          }])
+          } as any])
           .select()
           .single();
         if (scoreError) throw scoreError;
@@ -409,9 +424,10 @@ export default function SubmissionScoringDialog({
     },
   });
 
-  const getPanelStatus = (panelId: string): 'pending' | 'in_progress' | 'submitted' => {
+  const getPanelStatus = (panelId: string): 'pending' | 'in_progress' | 'submitted' | 'needs_review' => {
     const score = allScores?.find(s => s.panel_id === panelId);
     if (!score) return 'pending';
+    if ((score as any).needs_review) return 'needs_review';
     return score.status as 'pending' | 'in_progress' | 'submitted';
   };
 
@@ -548,8 +564,9 @@ export default function SubmissionScoringDialog({
                         const status = getPanelStatus(panel.id);
                         const statusColors = {
                           pending: 'bg-destructive text-destructive-foreground',
-                          in_progress: 'bg-warning text-warning-foreground',
+                          in_progress: 'bg-destructive text-destructive-foreground',
                           submitted: 'bg-success text-success-foreground',
+                          needs_review: 'bg-warning text-warning-foreground',
                         };
                         const score = allScores?.find(s => s.panel_id === panel.id);
                         
@@ -718,6 +735,24 @@ export default function SubmissionScoringDialog({
                         rows={3}
                         disabled={isCurrentPanelLocked}
                         className="mt-1"
+                      />
+                    </div>
+
+                    {/* Needs Review Flag */}
+                    <div className="flex items-center justify-between p-3 rounded-lg border bg-warning/5 border-warning/30">
+                      <div>
+                        <label htmlFor="needs-review-switch" className="text-sm font-medium cursor-pointer">
+                          Flag for review
+                        </label>
+                        <p className="text-xs text-muted-foreground">
+                          Mark this panel's score as needing review (shown as yellow).
+                        </p>
+                      </div>
+                      <Switch
+                        id="needs-review-switch"
+                        checked={needsReview}
+                        onCheckedChange={setNeedsReview}
+                        disabled={isCurrentPanelLocked}
                       />
                     </div>
 
