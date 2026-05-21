@@ -331,7 +331,7 @@ export default function Submissions() {
                           <p className="text-muted-foreground">{submission.team.level.name}</p>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Select
                           value={submission.status}
                           onValueChange={(value) =>
