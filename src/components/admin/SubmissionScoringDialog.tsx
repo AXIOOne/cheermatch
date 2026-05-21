@@ -220,6 +220,7 @@ export default function SubmissionScoringDialog({
       setDeductionCounts(loadedDedCounts);
 
       setComments(panelScore.comments || '');
+      setNeedsReview(Boolean((panelScore as any).needs_review));
     } else {
       // Initialize empty scores
       const initialScores: Record<string, CategoryScore> = {};
@@ -237,6 +238,7 @@ export default function SubmissionScoringDialog({
       });
       setDeductionCounts(initialDedCounts);
       setComments('');
+      setNeedsReview(false);
     }
   }, [selectedPanelId, allScores, template]);
 
