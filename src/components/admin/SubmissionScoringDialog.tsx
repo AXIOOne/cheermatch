@@ -325,8 +325,9 @@ export default function SubmissionScoringDialog({
             deductions: deductionsTotal,
             comments,
             status,
+            needs_review: needsReview,
             submitted_at: status === 'submitted' ? new Date().toISOString() : null,
-          })
+          } as any)
           .eq('id', currentPanelScore.id);
         if (scoreError) throw scoreError;
 
@@ -374,8 +375,9 @@ export default function SubmissionScoringDialog({
             deductions: deductionsTotal,
             comments,
             status,
+            needs_review: needsReview,
             submitted_at: status === 'submitted' ? new Date().toISOString() : null,
-          }])
+          } as any])
           .select()
           .single();
         if (scoreError) throw scoreError;
