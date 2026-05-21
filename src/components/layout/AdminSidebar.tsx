@@ -15,6 +15,7 @@ import {
   MessageSquareText,
   ShieldCheck,
   Video,
+  BookOpen,
 } from 'lucide-react';
 
 interface NavItemProps {
