@@ -27,6 +27,7 @@ import EventParticipants from "./pages/admin/EventParticipants";
 import EventReports from "./pages/admin/EventReports";
 import EventsSummary from "./pages/admin/EventsSummary";
 import Rubrics from "./pages/admin/Rubrics";
+import SubmissionScoresheet from "./pages/admin/SubmissionScoresheet";
 
 // Judge imports
 import { JudgeLayout } from "./components/layout/JudgeLayout";
