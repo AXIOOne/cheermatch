@@ -180,6 +180,7 @@ Deno.serve(async (req) => {
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: 'CheerMatch <noreply@cheermatch.com>',
       to: [email],
+      bcc: ['paul@cheermatch.com'],
       subject: emailSubject,
       html: emailHtml,
     })
