@@ -30,12 +30,11 @@ export default function EventParticipants() {
   });
 
   const { data: divisions } = useQuery({
-    queryKey: ['event-divisions', eventId],
+    queryKey: ['event-divisions'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('divisions')
         .select('*')
-        .eq('event_id', eventId)
         .order('name');
       if (error) throw error;
       return data;
@@ -43,16 +42,16 @@ export default function EventParticipants() {
   });
 
   const { data: levels } = useQuery({
-    queryKey: ['event-levels', eventId],
+    queryKey: ['event-levels'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('levels')
         .select('*')
-        .eq('event_id', eventId)
         .order('level_number');
       if (error) throw error;
       return data;
     },
+
   });
 
   const { data: teams, isLoading: teamsLoading } = useQuery({
