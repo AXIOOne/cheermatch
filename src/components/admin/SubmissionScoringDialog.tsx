@@ -423,9 +423,10 @@ export default function SubmissionScoringDialog({
     },
   });
 
-  const getPanelStatus = (panelId: string): 'pending' | 'in_progress' | 'submitted' => {
+  const getPanelStatus = (panelId: string): 'pending' | 'in_progress' | 'submitted' | 'needs_review' => {
     const score = allScores?.find(s => s.panel_id === panelId);
     if (!score) return 'pending';
+    if ((score as any).needs_review) return 'needs_review';
     return score.status as 'pending' | 'in_progress' | 'submitted';
   };
 
@@ -562,8 +563,9 @@ export default function SubmissionScoringDialog({
                         const status = getPanelStatus(panel.id);
                         const statusColors = {
                           pending: 'bg-destructive text-destructive-foreground',
-                          in_progress: 'bg-warning text-warning-foreground',
+                          in_progress: 'bg-destructive text-destructive-foreground',
                           submitted: 'bg-success text-success-foreground',
+                          needs_review: 'bg-warning text-warning-foreground',
                         };
                         const score = allScores?.find(s => s.panel_id === panel.id);
                         
