@@ -55,6 +55,7 @@ export default function Submissions() {
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['admin-submissions'],
