@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -54,6 +55,7 @@ export default function Submissions() {
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['admin-submissions'],
@@ -292,8 +294,12 @@ export default function Submissions() {
                 {filteredSubmissions.map((submission) => {
                   const StatusIcon = statusConfig[submission.status].icon;
                   return (
-                    <TableRow key={submission.id} className={selectedIds.has(submission.id) ? 'bg-primary/5' : ''}>
-                      <TableCell className="w-10">
+                    <TableRow
+                      key={submission.id}
+                      className={`cursor-pointer hover:bg-muted/50 ${selectedIds.has(submission.id) ? 'bg-primary/5' : ''}`}
+                      onClick={() => navigate(`/admin/submissions/${submission.id}`)}
+                    >
+                      <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedIds.has(submission.id)}
                           onCheckedChange={() => toggleSelection(submission.id)}
@@ -325,7 +331,7 @@ export default function Submissions() {
                           <p className="text-muted-foreground">{submission.team.level.name}</p>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Select
                           value={submission.status}
                           onValueChange={(value) =>
@@ -355,7 +361,7 @@ export default function Submissions() {
                           ? format(new Date(submission.submitted_at), 'MMM d, yyyy')
                           : '-'}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           {submission.video_url && (
                             <Button variant="ghost" size="sm" asChild>
