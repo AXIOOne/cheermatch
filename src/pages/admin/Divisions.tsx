@@ -3,10 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
@@ -16,7 +15,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Layers, Loader2, Trash2 } from 'lucide-react';
 
 const divisionSchema = z.object({
-  event_id: z.string().min(1, 'Please select an event'),
   name: z.string().min(1, 'Division name is required'),
   min_age: z.coerce.number().optional(),
   max_age: z.coerce.number().optional(),
@@ -24,7 +22,6 @@ const divisionSchema = z.object({
 });
 
 const levelSchema = z.object({
-  event_id: z.string().min(1, 'Please select an event'),
   name: z.string().min(1, 'Level name is required'),
   level_number: z.coerce.number().min(1, 'Level number must be at least 1'),
   description: z.string().optional(),
@@ -41,21 +38,12 @@ export default function Divisions() {
 
   const divisionForm = useForm<DivisionFormData>({
     resolver: zodResolver(divisionSchema),
-    defaultValues: { event_id: '', name: '', description: '' },
+    defaultValues: { name: '', description: '' },
   });
 
   const levelForm = useForm<LevelFormData>({
     resolver: zodResolver(levelSchema),
-    defaultValues: { event_id: '', name: '', level_number: 1, description: '' },
-  });
-
-  const { data: events } = useQuery({
-    queryKey: ['events-select'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('events').select('id, name').order('name');
-      if (error) throw error;
-      return data;
-    },
+    defaultValues: { name: '', level_number: 1, description: '' },
   });
 
   const { data: divisions, isLoading: divisionsLoading } = useQuery({
@@ -63,8 +51,8 @@ export default function Divisions() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('divisions')
-        .select('*, event:events(name)')
-        .order('created_at', { ascending: false });
+        .select('*')
+        .order('name');
       if (error) throw error;
       return data;
     },
@@ -75,7 +63,7 @@ export default function Divisions() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('levels')
-        .select('*, event:events(name)')
+        .select('*')
         .order('level_number');
       if (error) throw error;
       return data;
@@ -85,7 +73,6 @@ export default function Divisions() {
   const createDivisionMutation = useMutation({
     mutationFn: async (data: DivisionFormData) => {
       const { error } = await supabase.from('divisions').insert([{
-        event_id: data.event_id,
         name: data.name,
         min_age: data.min_age || null,
         max_age: data.max_age || null,
@@ -107,7 +94,6 @@ export default function Divisions() {
   const createLevelMutation = useMutation({
     mutationFn: async (data: LevelFormData) => {
       const { error } = await supabase.from('levels').insert([{
-        event_id: data.event_id,
         name: data.name,
         level_number: data.level_number,
         description: data.description || null,
@@ -151,7 +137,9 @@ export default function Divisions() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground">Divisions & Levels</h1>
-        <p className="text-muted-foreground mt-1">Configure competition categories and skill levels</p>
+        <p className="text-muted-foreground mt-1">
+          Universal divisions and skill levels shared across all events
+        </p>
       </div>
 
       <Tabs defaultValue="divisions">
@@ -175,28 +163,6 @@ export default function Divisions() {
                 </DialogHeader>
                 <Form {...divisionForm}>
                   <form onSubmit={divisionForm.handleSubmit((d) => createDivisionMutation.mutate(d))} className="space-y-4">
-                    <FormField
-                      control={divisionForm.control}
-                      name="event_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Event</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select event" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {events?.map((e) => (
-                                <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                     <FormField
                       control={divisionForm.control}
                       name="name"
@@ -262,7 +228,6 @@ export default function Divisions() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      <TableHead>Event</TableHead>
                       <TableHead>Age Range</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -271,7 +236,6 @@ export default function Divisions() {
                     {divisions.map((div) => (
                       <TableRow key={div.id}>
                         <TableCell className="font-medium">{div.name}</TableCell>
-                        <TableCell>{div.event?.name}</TableCell>
                         <TableCell>
                           {div.min_age || div.max_age
                             ? `${div.min_age || '?'} - ${div.max_age || '?'} years`
@@ -319,28 +283,6 @@ export default function Divisions() {
                 </DialogHeader>
                 <Form {...levelForm}>
                   <form onSubmit={levelForm.handleSubmit((d) => createLevelMutation.mutate(d))} className="space-y-4">
-                    <FormField
-                      control={levelForm.control}
-                      name="event_id"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Event</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select event" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {events?.map((e) => (
-                                <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={levelForm.control}
@@ -396,7 +338,6 @@ export default function Divisions() {
                     <TableRow>
                       <TableHead>Level</TableHead>
                       <TableHead>Name</TableHead>
-                      <TableHead>Event</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -409,7 +350,6 @@ export default function Divisions() {
                           </span>
                         </TableCell>
                         <TableCell className="font-medium">{level.name}</TableCell>
-                        <TableCell>{level.event?.name}</TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="ghost"
@@ -430,7 +370,7 @@ export default function Divisions() {
               ) : (
                 <div className="text-center py-12 text-muted-foreground">
                   <Layers className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No levels yet. Create skill levels for your competitions.</p>
+                  <p>No levels yet. Create one to define skill tiers.</p>
                 </div>
               )}
             </CardContent>
