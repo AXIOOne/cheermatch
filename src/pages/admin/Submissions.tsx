@@ -294,8 +294,12 @@ export default function Submissions() {
                 {filteredSubmissions.map((submission) => {
                   const StatusIcon = statusConfig[submission.status].icon;
                   return (
-                    <TableRow key={submission.id} className={selectedIds.has(submission.id) ? 'bg-primary/5' : ''}>
-                      <TableCell className="w-10">
+                    <TableRow
+                      key={submission.id}
+                      className={`cursor-pointer hover:bg-muted/50 ${selectedIds.has(submission.id) ? 'bg-primary/5' : ''}`}
+                      onClick={() => navigate(`/admin/submissions/${submission.id}`)}
+                    >
+                      <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedIds.has(submission.id)}
                           onCheckedChange={() => toggleSelection(submission.id)}
