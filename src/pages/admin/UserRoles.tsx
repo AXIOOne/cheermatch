@@ -598,6 +598,7 @@ export default function UserRoles() {
                             <Mail className="w-4 h-4 mr-1" />
                           )}
                           Resend Invite
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
