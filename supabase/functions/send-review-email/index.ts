@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
 
     // Send email
     const { data: emailData, error: emailError } = await resend.emails.send({
-      from: 'CheerMatch <noreply@resend.dev>', // Replace with your verified domain
+      from: 'CheerMatch <noreply@cheermatch.com>',
       to: [coachEmail],
       subject: emailSubject,
       html: emailHtml,
