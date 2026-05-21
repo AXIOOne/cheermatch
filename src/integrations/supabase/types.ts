@@ -628,6 +628,79 @@ export type Database = {
           },
         ]
       }
+      scoring_rubrics: {
+        Row: {
+          created_at: string
+          description: string | null
+          division_id: string | null
+          event_id: string | null
+          file_name: string
+          file_path: string
+          file_size_bytes: number | null
+          id: string
+          level_id: string | null
+          mime_type: string | null
+          season: string | null
+          title: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          division_id?: string | null
+          event_id?: string | null
+          file_name: string
+          file_path: string
+          file_size_bytes?: number | null
+          id?: string
+          level_id?: string | null
+          mime_type?: string | null
+          season?: string | null
+          title: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          division_id?: string | null
+          event_id?: string | null
+          file_name?: string
+          file_path?: string
+          file_size_bytes?: number | null
+          id?: string
+          level_id?: string | null
+          mime_type?: string | null
+          season?: string | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scoring_rubrics_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "divisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scoring_rubrics_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scoring_rubrics_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scoring_sections: {
         Row: {
           abbreviation: string

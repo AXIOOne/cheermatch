@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save, Send, Loader2, Play, Pause, RotateCcw } from 'lucide-react';
 import { calculateStructuredDeductions, getLeafCategories, sortByDisplayOrder } from '@/lib/scoring';
+import { RubricReferenceSheet } from '@/components/judge/RubricReferenceSheet';
 
 interface CategoryScore {
   category_id: string;
@@ -42,7 +43,7 @@ export default function ScorePerformance() {
         .select(`
           *,
           team:teams(
-            id, name, gym_name, athlete_count,
+            id, name, gym_name, athlete_count, division_id, level_id,
             division:divisions(name),
             level:levels(name, level_number)
           ),
@@ -310,6 +311,11 @@ export default function ScorePerformance() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <RubricReferenceSheet
+              eventId={submission.event_id}
+              divisionId={(submission.team as any)?.division_id}
+              levelId={(submission.team as any)?.level_id}
+            />
             {!isLocked && (
               <>
                 <Button 

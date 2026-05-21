@@ -15,6 +15,7 @@ import {
   MessageSquareText,
   ShieldCheck,
   Video,
+  BookOpen,
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -58,6 +59,7 @@ export function AdminSidebar() {
         <NavItem to="/admin" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
         <NavItem to="/admin/events" icon={<Calendar className="w-5 h-5" />} label="Events" />
         <NavItem to="/admin/scoring" icon={<ClipboardList className="w-5 h-5" />} label="Scoring Templates" />
+        <NavItem to="/admin/rubrics" icon={<BookOpen className="w-5 h-5" />} label="Rubrics" />
         <NavItem to="/admin/divisions" icon={<Layers className="w-5 h-5" />} label="Divisions & Levels" />
         <NavItem to="/admin/teams" icon={<Users className="w-5 h-5" />} label="Teams" />
         <NavItem to="/admin/submissions" icon={<Video className="w-5 h-5" />} label="Submissions" />
