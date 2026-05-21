@@ -311,6 +311,11 @@ export default function ScorePerformance() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <RubricReferenceSheet
+              eventId={submission.event_id}
+              divisionId={(submission.team as any)?.division_id}
+              levelId={(submission.team as any)?.level_id}
+            />
             {!isLocked && (
               <>
                 <Button 
