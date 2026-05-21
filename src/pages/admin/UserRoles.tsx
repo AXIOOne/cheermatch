@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus, AlertTriangle, Pencil } from 'lucide-react';
+import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus, AlertTriangle, Pencil, Mail } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import type { Database } from '@/integrations/supabase/types';
@@ -253,6 +253,25 @@ export default function UserRoles() {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     },
   });
+
+  const resendInviteMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const loginUrl = `${window.location.origin}/auth`;
+      const response = await supabase.functions.invoke('resend-user-invite', {
+        body: { userId, loginUrl },
+      });
+      if (response.error) throw new Error(response.error.message);
+      if (response.data?.error) throw new Error(response.data.error);
+      return response.data;
+    },
+    onSuccess: () => {
+      toast({ title: 'Invite resent', description: 'A new temporary password has been emailed.' });
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Failed to resend invite', description: error.message });
+    },
+  });
+
 
   const handleAddRole = (data: AddRoleFormData) => {
     addRoleMutation.mutate(data);
@@ -562,6 +581,23 @@ export default function UserRoles() {
                         >
                           <Plus className="w-4 h-4 mr-1" />
                           Add Role
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={resendInviteMutation.isPending && resendInviteMutation.variables === user.user_id}
+                          onClick={() => {
+                            if (confirm(`Resend invite email to ${user.email}? This generates a new temporary password.`)) {
+                              resendInviteMutation.mutate(user.user_id);
+                            }
+                          }}
+                        >
+                          {resendInviteMutation.isPending && resendInviteMutation.variables === user.user_id ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Mail className="w-4 h-4 mr-1" />
+                          )}
+                          Resend Invite
                         </Button>
                         <Button
                           variant="ghost"

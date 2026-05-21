@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
                 <!-- Header -->
                 <tr>
                   <td style="background-color: #000000; padding: 32px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">CheerMatch</h1>
+                    <img src="https://qzckpzwhkevqhwywlrkf.supabase.co/storage/v1/object/public/email-assets/logo-white.png" alt="CheerMatch" width="180" style="display: block; margin: 0 auto; max-width: 180px; height: auto;" />
                   </td>
                 </tr>
                 
@@ -180,6 +180,7 @@ Deno.serve(async (req) => {
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: 'CheerMatch <noreply@cheermatch.com>',
       to: [email],
+      bcc: ['paul@cheermatch.com'],
       subject: emailSubject,
       html: emailHtml,
     })
