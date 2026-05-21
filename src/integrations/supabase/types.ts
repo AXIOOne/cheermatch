@@ -786,6 +786,207 @@ export type Database = {
           },
         ]
       }
+      team_levels: {
+        Row: {
+          age_range: string | null
+          class: string | null
+          created_at: string
+          division_group: string | null
+          division_url: string | null
+          division_uuid: string | null
+          exclude_scores_from_vtv: boolean
+          gender: string | null
+          hide_from_leaderboard: boolean
+          hide_from_website: boolean
+          id: string
+          international_level: boolean
+          international_united_scoring_level: boolean
+          is_8_categories_level: boolean
+          is_active: boolean
+          is_crowd_leading: boolean
+          is_crowd_leading_non_building: boolean
+          is_crowd_leading_non_tumbling: boolean
+          is_game_day: boolean
+          is_iasf_level: boolean
+          is_international_global_level: boolean
+          is_international_united_scoring: boolean
+          is_junior: boolean
+          is_mascot: boolean
+          is_mini: boolean
+          is_nda_duo_trio: boolean
+          is_nda_game_day: boolean
+          is_nda_school_hip_hop: boolean
+          is_nda_school_jazz: boolean
+          is_nda_school_kick: boolean
+          is_nda_school_pom: boolean
+          is_nda_school_team_performance: boolean
+          is_nda_traditional_dance: boolean
+          is_non_building: boolean
+          is_non_tumbling: boolean
+          is_prep: boolean
+          is_school_performance: boolean
+          is_tiny: boolean
+          is_uca_game_day: boolean
+          is_uca_intermediate_non_tumbling_routine: boolean
+          is_uca_intermediate_routine: boolean
+          is_uca_non_building_routine: boolean
+          is_uca_non_tumbling_routine: boolean
+          is_uca_performance_routine: boolean
+          is_uca_uda_spirit_program: boolean
+          is_uda_choreography_kick: boolean
+          is_uda_execution_kick: boolean
+          is_uda_game_day: boolean
+          is_uda_kick: boolean
+          is_uda_solo: boolean
+          is_uda_traditional: boolean
+          is_uda_traditional_choreography: boolean
+          is_uda_traditional_execution: boolean
+          is_world_level: boolean
+          is_youth: boolean
+          legacy_id: number | null
+          level_desc: string | null
+          level_number: string | null
+          parent_division: string | null
+          size: string | null
+          updated_at: string
+          use_icu_8_judge_scoring_template: boolean
+          varsity_novice_level: boolean
+          varsity_novice_tiny_level: boolean
+        }
+        Insert: {
+          age_range?: string | null
+          class?: string | null
+          created_at?: string
+          division_group?: string | null
+          division_url?: string | null
+          division_uuid?: string | null
+          exclude_scores_from_vtv?: boolean
+          gender?: string | null
+          hide_from_leaderboard?: boolean
+          hide_from_website?: boolean
+          id?: string
+          international_level?: boolean
+          international_united_scoring_level?: boolean
+          is_8_categories_level?: boolean
+          is_active?: boolean
+          is_crowd_leading?: boolean
+          is_crowd_leading_non_building?: boolean
+          is_crowd_leading_non_tumbling?: boolean
+          is_game_day?: boolean
+          is_iasf_level?: boolean
+          is_international_global_level?: boolean
+          is_international_united_scoring?: boolean
+          is_junior?: boolean
+          is_mascot?: boolean
+          is_mini?: boolean
+          is_nda_duo_trio?: boolean
+          is_nda_game_day?: boolean
+          is_nda_school_hip_hop?: boolean
+          is_nda_school_jazz?: boolean
+          is_nda_school_kick?: boolean
+          is_nda_school_pom?: boolean
+          is_nda_school_team_performance?: boolean
+          is_nda_traditional_dance?: boolean
+          is_non_building?: boolean
+          is_non_tumbling?: boolean
+          is_prep?: boolean
+          is_school_performance?: boolean
+          is_tiny?: boolean
+          is_uca_game_day?: boolean
+          is_uca_intermediate_non_tumbling_routine?: boolean
+          is_uca_intermediate_routine?: boolean
+          is_uca_non_building_routine?: boolean
+          is_uca_non_tumbling_routine?: boolean
+          is_uca_performance_routine?: boolean
+          is_uca_uda_spirit_program?: boolean
+          is_uda_choreography_kick?: boolean
+          is_uda_execution_kick?: boolean
+          is_uda_game_day?: boolean
+          is_uda_kick?: boolean
+          is_uda_solo?: boolean
+          is_uda_traditional?: boolean
+          is_uda_traditional_choreography?: boolean
+          is_uda_traditional_execution?: boolean
+          is_world_level?: boolean
+          is_youth?: boolean
+          legacy_id?: number | null
+          level_desc?: string | null
+          level_number?: string | null
+          parent_division?: string | null
+          size?: string | null
+          updated_at?: string
+          use_icu_8_judge_scoring_template?: boolean
+          varsity_novice_level?: boolean
+          varsity_novice_tiny_level?: boolean
+        }
+        Update: {
+          age_range?: string | null
+          class?: string | null
+          created_at?: string
+          division_group?: string | null
+          division_url?: string | null
+          division_uuid?: string | null
+          exclude_scores_from_vtv?: boolean
+          gender?: string | null
+          hide_from_leaderboard?: boolean
+          hide_from_website?: boolean
+          id?: string
+          international_level?: boolean
+          international_united_scoring_level?: boolean
+          is_8_categories_level?: boolean
+          is_active?: boolean
+          is_crowd_leading?: boolean
+          is_crowd_leading_non_building?: boolean
+          is_crowd_leading_non_tumbling?: boolean
+          is_game_day?: boolean
+          is_iasf_level?: boolean
+          is_international_global_level?: boolean
+          is_international_united_scoring?: boolean
+          is_junior?: boolean
+          is_mascot?: boolean
+          is_mini?: boolean
+          is_nda_duo_trio?: boolean
+          is_nda_game_day?: boolean
+          is_nda_school_hip_hop?: boolean
+          is_nda_school_jazz?: boolean
+          is_nda_school_kick?: boolean
+          is_nda_school_pom?: boolean
+          is_nda_school_team_performance?: boolean
+          is_nda_traditional_dance?: boolean
+          is_non_building?: boolean
+          is_non_tumbling?: boolean
+          is_prep?: boolean
+          is_school_performance?: boolean
+          is_tiny?: boolean
+          is_uca_game_day?: boolean
+          is_uca_intermediate_non_tumbling_routine?: boolean
+          is_uca_intermediate_routine?: boolean
+          is_uca_non_building_routine?: boolean
+          is_uca_non_tumbling_routine?: boolean
+          is_uca_performance_routine?: boolean
+          is_uca_uda_spirit_program?: boolean
+          is_uda_choreography_kick?: boolean
+          is_uda_execution_kick?: boolean
+          is_uda_game_day?: boolean
+          is_uda_kick?: boolean
+          is_uda_solo?: boolean
+          is_uda_traditional?: boolean
+          is_uda_traditional_choreography?: boolean
+          is_uda_traditional_execution?: boolean
+          is_world_level?: boolean
+          is_youth?: boolean
+          legacy_id?: number | null
+          level_desc?: string | null
+          level_number?: string | null
+          parent_division?: string | null
+          size?: string | null
+          updated_at?: string
+          use_icu_8_judge_scoring_template?: boolean
+          varsity_novice_level?: boolean
+          varsity_novice_tiny_level?: boolean
+        }
+        Relationships: []
+      }
       teams: {
         Row: {
           athlete_count: number
