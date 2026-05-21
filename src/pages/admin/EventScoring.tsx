@@ -315,17 +315,20 @@ export default function EventScoring() {
             <div className="flex items-center gap-6 flex-wrap">
               <span className="text-sm font-medium text-muted-foreground">Status Legend:</span>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-sm bg-destructive" />
-                <span className="text-sm">Pending</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 rounded-sm bg-warning" />
-                <span className="text-sm">In Progress</span>
-              </div>
-              <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-sm bg-success" />
                 <span className="text-sm">Complete</span>
               </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-sm bg-warning" />
+                <span className="text-sm">Needs Review</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-sm bg-destructive" />
+                <span className="text-sm">Not Started</span>
+              </div>
+              <span className="text-xs text-muted-foreground ml-auto">
+                Click any panel cell to view and edit that judge's scoresheet.
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -395,7 +398,10 @@ export default function EventScoring() {
                             variant="default"
                             size="sm"
                             className="h-7"
-                            onClick={() => setScoringSubmissionId(submission.id)}
+                            onClick={() => {
+                              setScoringPanelId(null);
+                              setScoringSubmissionId(submission.id);
+                            }}
                           >
                             <ClipboardList className="w-3 h-3 mr-1" />
                             Score
@@ -422,7 +428,14 @@ export default function EventScoring() {
                       {panels?.map((panel) => (
                         <TableCell key={panel.id} className="text-center">
                           <div className="flex justify-center">
-                            <StatusIndicator status={getPanelStatus(submission, panel.id)} />
+                            <StatusIndicator
+                              status={getPanelStatus(submission, panel.id)}
+                              label={`${submission.team?.name || 'Team'} ${panel.abbreviation}`}
+                              onClick={() => {
+                                setScoringPanelId(panel.id);
+                                setScoringSubmissionId(submission.id);
+                              }}
+                            />
                           </div>
                         </TableCell>
                       ))}
@@ -449,10 +462,16 @@ export default function EventScoring() {
       {/* Scoring Dialog */}
       <SubmissionScoringDialog
         open={!!scoringSubmissionId}
-        onOpenChange={(open) => !open && setScoringSubmissionId(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setScoringSubmissionId(null);
+            setScoringPanelId(null);
+          }
+        }}
         submissionId={scoringSubmissionId}
         eventId={eventId!}
         panels={panels || []}
+        initialPanelId={scoringPanelId}
       />
     </div>
   );
