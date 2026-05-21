@@ -170,7 +170,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     `;
 
     const { data: emailData, error: emailError } = await resend.emails.send({
-      from: "CheerMatch <noreply@resend.dev>",
+      from: "CheerMatch <noreply@cheermatch.com>",
       to: [coachProfile.email],
       subject: `Score Sheet - ${team.name || "Team"} | ${event?.name || "Event"}`,
       html: emailHtml,
