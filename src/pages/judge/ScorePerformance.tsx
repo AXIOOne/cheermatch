@@ -43,7 +43,7 @@ export default function ScorePerformance() {
         .select(`
           *,
           team:teams(
-            id, name, gym_name, athlete_count,
+            id, name, gym_name, athlete_count, division_id, level_id,
             division:divisions(name),
             level:levels(name, level_number)
           ),
