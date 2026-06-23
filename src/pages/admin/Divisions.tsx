@@ -222,6 +222,29 @@ export default function Divisions() {
                         )}
                       />
                     </div>
+                    <FormField
+                      control={divisionForm.control}
+                      name="scoring_template_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Scoring Template</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || UNASSIGNED_TEMPLATE}>
+                            <FormControl>
+                              <SelectTrigger><SelectValue placeholder="Use default template" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value={UNASSIGNED_TEMPLATE}>Use default template</SelectItem>
+                              {scoringTemplates?.map((t: any) => (
+                                <SelectItem key={t.id} value={t.id}>
+                                  {t.name}{t.is_default ? ' (default)' : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <div className="flex justify-end gap-2 pt-4">
                       <Button type="button" variant="outline" onClick={() => setIsDivisionDialogOpen(false)}>
                         Cancel
