@@ -165,8 +165,13 @@ export default function EventRegistrations() {
         </CardContent>
       </Card>
 
+      {eventId && <CoachAccountsPanel eventId={eventId} />}
+
       {eventId && (
         <AddTeamDialog open={addOpen} onOpenChange={setAddOpen} eventId={eventId} />
+      )}
+      {eventId && (
+        <BulkImportTeamsDialog open={importOpen} onOpenChange={setImportOpen} eventId={eventId} />
       )}
       {editTeam && (
         <EditRegistrationDialog
