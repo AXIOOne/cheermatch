@@ -538,13 +538,6 @@ export default function Events() {
                           </Link>
                         </TableCell>
                         <TableCell>
-                          {template ? (
-                            <span className="text-sm">{template.name}</span>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">Not Assigned</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
                           <div className="flex items-center justify-end gap-1">
                             <Button variant="ghost" size="sm" asChild title="Results">
                               <Link to={`/admin/events/${event.id}/results`}>
