@@ -265,7 +265,7 @@ export default function EventsSummary() {
                 </div>
               ) : (
                 <p className="text-center py-8 text-muted-foreground">
-                  No upcoming deadlines in the next 30 days.
+                  No upcoming events in the next 30 days.
                 </p>
               )}
             </CardContent>
