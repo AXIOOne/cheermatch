@@ -230,7 +230,14 @@ export default function SubmissionScoresheet() {
       <div className="mb-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">{submission.team?.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-foreground">{submission.team?.name}</h1>
+              {isAdmin && (
+                <Button variant="ghost" size="sm" onClick={() => setEditTeamOpen(true)}>
+                  <Pencil className="w-4 h-4 mr-1" /> Edit Team
+                </Button>
+              )}
+            </div>
             <p className="text-lg text-muted-foreground mt-1">{submission.team?.gym_name}</p>
           </div>
           {submittedScores.length > 0 && (
