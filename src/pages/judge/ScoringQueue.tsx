@@ -12,6 +12,21 @@ import { Play, CheckCircle, Clock, Video, Loader2 } from 'lucide-react';
 const sb = supabase as any;
 const OPEN_STATUSES = new Set(['open_for_scoring', 'in_progress']);
 
+const single = (value: any) => Array.isArray(value) ? value[0] : value;
+
+const getAssignmentPanelAbbrev = (assignment: any): string | null => {
+  const panel = single(assignment?.panel);
+  const section = single(assignment?.section);
+  const abbreviation = panel?.abbreviation || section?.default_panel_abbreviation || section?.abbreviation;
+  return abbreviation ? String(abbreviation).toUpperCase() : null;
+};
+
+const getAssignmentPanelLabel = (assignment: any): string | null => {
+  const panel = single(assignment?.panel);
+  const section = single(assignment?.section);
+  return panel?.name || section?.name || null;
+};
+
 export default function ScoringQueue() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -27,9 +42,12 @@ export default function ScoringQueue() {
         .select(`
           event_id,
           division_id,
+          level_id,
           panel_id,
+          section_id,
           event:events(id, name, status),
-          panel:judge_panels(id, abbreviation, name)
+          panel:judge_panels(id, abbreviation, name),
+          section:scoring_sections(id, name, abbreviation, default_panel_abbreviation)
         `)
         .eq('judge_user_id', user!.id);
       if (error) throw error;
@@ -38,39 +56,40 @@ export default function ScoringQueue() {
     enabled: !!user,
   });
 
-  // event_id -> { divisions: Set, panelAbbrev: string|null, panelName: string|null }
-  const eventMeta = useMemo(() => {
-    const m = new Map<string, { divisions: Set<string>; panelAbbrev: string | null; panelName: string | null }>();
-    (assignments || []).forEach((a: any) => {
-      if (!a.event_id) return;
-      const cur = m.get(a.event_id) || { divisions: new Set<string>(), panelAbbrev: null, panelName: null };
-      if (a.division_id) cur.divisions.add(a.division_id);
-      const panel = Array.isArray(a.panel) ? a.panel[0] : a.panel;
-      if (panel?.abbreviation && !cur.panelAbbrev) {
-        cur.panelAbbrev = String(panel.abbreviation).toUpperCase();
-        cur.panelName = panel.name || null;
-      }
-      m.set(a.event_id, cur);
-    });
-    return m;
-  }, [assignments]);
-
-  const openEventIds = useMemo(() => {
-    const ids = new Set<string>();
-    (assignments || []).forEach((a: any) => {
-      if (a.event_id && OPEN_STATUSES.has(a.event?.status)) ids.add(a.event_id);
-    });
-    return ids;
+  const openAssignments = useMemo(() => {
+    return (assignments || []).filter((assignment: any) =>
+      assignment.event_id && OPEN_STATUSES.has(single(assignment.event)?.status)
+    );
   }, [assignments]);
 
   const assignedEventIds = useMemo(
-    () => [...eventMeta.keys()].filter((id) => openEventIds.has(id)),
-    [eventMeta, openEventIds]
+    () => [...new Set(openAssignments.map((assignment: any) => assignment.event_id).filter(Boolean))],
+    [openAssignments]
   );
+
+  const assignmentSignature = useMemo(() => {
+    return openAssignments
+      .map((assignment: any) => [
+        assignment.event_id,
+        assignment.division_id || '*',
+        assignment.level_id || '*',
+        assignment.panel_id || '',
+        assignment.section_id || '',
+      ].join(':'))
+      .sort()
+      .join('|');
+  }, [openAssignments]);
+
+  const getSubmissionAssignments = (submission: any) => openAssignments.filter((assignment: any) => {
+    const team = submission?.team;
+    return assignment.event_id === submission.event_id
+      && (!assignment.division_id || assignment.division_id === team?.division_id)
+      && (!assignment.level_id || assignment.level_id === team?.level_id);
+  });
 
   // Submissions for the judge's open events + assigned divisions
   const { data: submissions, isLoading } = useQuery({
-    queryKey: ['judge-submissions', user?.id, selectedEvent, assignedEventIds.join(',')],
+    queryKey: ['judge-submissions', user?.id, selectedEvent, assignmentSignature],
     queryFn: async () => {
       if (assignedEventIds.length === 0) return [];
 
@@ -79,7 +98,7 @@ export default function ScoringQueue() {
         .select(`
           *,
           team:teams(
-            id, name, gym_name, athlete_count, division_id,
+            id, name, gym_name, athlete_count, division_id, level_id,
             division:divisions(id, name, scoring_template_id),
             level:levels(name, level_number)
           ),
@@ -96,11 +115,7 @@ export default function ScoringQueue() {
       const { data, error } = await query;
       if (error) throw error;
 
-      return (data || []).filter((sub: any) => {
-        const meta = eventMeta.get(sub.event_id);
-        if (!meta || meta.divisions.size === 0) return false;
-        return sub.team?.division_id && meta.divisions.has(sub.team.division_id);
-      });
+      return (data || []).filter((sub: any) => getSubmissionAssignments(sub).length > 0);
     },
     enabled: !!user && !!assignments,
   });
@@ -164,16 +179,18 @@ export default function ScoringQueue() {
   const visibleSubmissions = useMemo(() => {
     return (submissions || []).filter((sub: any) => {
       const tid = sub.team?.division?.scoring_template_id;
-      const meta = eventMeta.get(sub.event_id);
-      const judgePanel = meta?.panelAbbrev;
+      const matchingAssignments = getSubmissionAssignments(sub);
+      if (matchingAssignments.length === 0) return false;
       if (!tid) return true; // no template info yet — don't hide
       const cov = templatePanelCoverage.get(tid);
       if (!cov) return true; // template not loaded yet — show optimistically
       if (cov.hasUnrestricted) return true;
-      if (!judgePanel) return cov.hasUnrestricted; // judge has no panel: only unrestricted fields visible
-      return cov.panels.has(judgePanel);
+      return matchingAssignments.some((assignment: any) => {
+        const judgePanel = getAssignmentPanelAbbrev(assignment);
+        return judgePanel ? cov.panels.has(judgePanel) : false;
+      });
     });
-  }, [submissions, templatePanelCoverage, eventMeta]);
+  }, [submissions, templatePanelCoverage, openAssignments]);
 
   // Existing scores by this judge
   const { data: existingScores } = useQuery({
@@ -228,7 +245,16 @@ export default function ScoringQueue() {
         <div className="grid gap-4">
           {visibleSubmissions.map((submission: any) => {
             const scoreStatus = getScoreStatus(submission.id);
-            const meta = eventMeta.get(submission.event_id);
+            const panelBadges = [...new Map(
+              getSubmissionAssignments(submission)
+                .map((assignment: any) => {
+                  const abbreviation = getAssignmentPanelAbbrev(assignment);
+                  if (!abbreviation) return null;
+                  const label = getAssignmentPanelLabel(assignment);
+                  return [abbreviation, label ? `${abbreviation} · ${label}` : abbreviation];
+                })
+                .filter(Boolean) as [string, string][]
+            ).values()];
             return (
               <Card key={submission.id} className="overflow-hidden">
                 <div className="flex">
@@ -244,9 +270,9 @@ export default function ScoringQueue() {
                     <div>
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="font-semibold text-lg">{submission.team?.name}</h3>
-                        {meta?.panelAbbrev && (
-                          <Badge variant="outline">Panel: {meta.panelAbbrev}</Badge>
-                        )}
+                        {panelBadges.map((panel) => (
+                          <Badge key={panel} variant="outline">Panel: {panel}</Badge>
+                        ))}
                         {scoreStatus === 'submitted' && (
                           <Badge variant="secondary" className="bg-green-100 text-green-700">
                             <CheckCircle className="w-3 h-3 mr-1" />
