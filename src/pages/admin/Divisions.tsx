@@ -88,11 +88,15 @@ export default function Divisions() {
 
   const createDivisionMutation = useMutation({
     mutationFn: async (data: DivisionFormData) => {
-      const { error } = await supabase.from('divisions').insert([{
+      const tplId = data.scoring_template_id && data.scoring_template_id !== UNASSIGNED_TEMPLATE
+        ? data.scoring_template_id
+        : null;
+      const { error } = await (supabase as any).from('divisions').insert([{
         name: data.name,
         min_age: data.min_age || null,
         max_age: data.max_age || null,
         description: data.description || null,
+        scoring_template_id: tplId,
       }]);
       if (error) throw error;
     },
