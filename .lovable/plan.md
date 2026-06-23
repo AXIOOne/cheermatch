@@ -1,41 +1,42 @@
+# Workflow Audit — Fixes
 
-## Goal
+The 8-step workflow is mostly wired up. Two gaps remain:
 
-Make the existing **Scoring Queue** tab actually show each judge only the submissions they've been assigned to, and change **Assign Panels** so admin assignments are staged and committed via a **Save** button (which then makes those teams appear in each assigned judge's queue).
-
-## Current state
-
-- The `/judge/queue` route and sidebar item already exist (`src/pages/judge/ScoringQueue.tsx`). It returns no rows because it filters `video_submissions` by `status = 'ready'`, but submissions actually use `approved` / `assigned` / `complete`.
-- `AssignPanelsDialog` writes every combobox change to the database immediately — there is no Save button and no way to review pending changes.
-- A DB trigger (`set_submissions_assigned_on_judge_assignment`) already flips matching submissions from `approved` → `assigned` when a `judge_assignments` row is inserted, so once assignments save, queue visibility follows.
+- **Step 5** — there is no `open_for_scoring` event status, so judges can score the moment they're assigned.
+- **Step 8** — Send / Download scoresheet unlocks once all panels have *submitted*, not once all panels have been *reviewed*.
 
 ## Changes
 
-### 1. `src/components/admin/AssignPanelsDialog.tsx` — stage edits + Save
+### A. Add `open_for_scoring` event status (Step 5)
 
-- Hold pending edits in local state keyed by `division_id:section_id` → `judge_user_id | null`, seeded from existing assignments.
-- The judge combobox updates local state only (no immediate DB write).
-- Show a "Modified" indicator on changed rows and a footer with **Cancel** and **Save Assignments** buttons. Save is disabled when there are no pending changes.
-- On Save: diff against existing assignments and run inserts / updates / deletes in one batch, then invalidate `section-assignments`, `judge-assignments`, and `judge-submissions` queries; toast success; close dialog.
+1. **Migration** — add `'open_for_scoring'` value to the `event_status` enum (placed after `registration_closed`, before `in_progress`).
+2. **Admin Events UI** (`src/pages/admin/Events.tsx`)
+   - Add `open_for_scoring` to the zod schema and the status `Select` options.
+   - Show it as a distinct badge color.
+3. **Judge gating**
+   - `src/pages/judge/ScoringQueue.tsx`: only show submissions whose event status is `open_for_scoring` (continue to include `in_progress` for backward compat).
+   - `src/pages/judge/ScorePerformance.tsx`: block save/submit mutations when the event is not `open_for_scoring` / `in_progress`; show inline notice.
+4. **Template auto-lock** — the existing template-locking flow keys off `in_progress`; extend it to also lock when an event moves to `open_for_scoring`.
 
-### 2. `src/pages/judge/ScoringQueue.tsx` — show only assigned submissions
+### B. Gate scoresheet on full review (Step 8)
 
-- Fetch the judge's `judge_assignments` rows (event_id + division_id, section-level).
-- Fetch `video_submissions` for those event_ids whose team's `division_id` matches one of the judge's assignments for that event, with `status IN ('assigned','complete')` so judges can still view what they've already scored.
-- Keep the existing event filter, thumbnail/card layout, and score-status badges.
-- Empty state copy: "No submissions assigned to you yet."
+In `src/pages/admin/EventScoring.tsx`:
+- Compute `allReviewed` = every expected panel score row has `reviewed_at IS NOT NULL`.
+- Use `allReviewed` (not `allComplete`) to enable **Send Score Sheet** and **Download PDF**.
+- Add a per-submission "Reviewed" rollup badge next to the existing per-panel indicators.
 
-### 3. Judge Dashboard (`src/pages/judge/Dashboard.tsx`) — minor
+### C. Optional polish
 
-- No schema change; the existing "Assigned Events" count already derives from `judge_assignments`. Leave behavior as-is so it stays consistent with the new queue.
+- When the last panel score is marked reviewed, update `video_submissions.status` to `complete` (today this only happens when the event itself closes).
 
 ## Technical notes
 
-- No schema or RLS changes — `judge_assignments` already has admin-write + judge-read-own policies, and the assignment→submission status trigger is in place.
-- Save runs one Supabase call per diffed row inside a `Promise.all`. On any failure, show a destructive toast and keep the dialog open with state intact.
-- Submission visibility for a judge is computed client-side by intersecting `judge_assignments(event_id, division_id)` with `teams.division_id` on each submission — no new RPC.
+- Enum change is additive — no data backfill needed; existing events keep their current status.
+- No new tables, no RLS changes. `judge_assignments` policies already restrict judge reads.
+- Judge gating is enforced both in the UI (hide / disable) and on write (mutation refuses if event status is wrong) so it's safe even if a judge has a stale page open.
+- `allReviewed` is derivable from the data `EventScoring` already fetches — no new queries.
 
 ## Out of scope
 
-- Level- or panel-scoped filtering of the queue (assignments today are section-level per division).
-- Any change to the submission status workflow beyond what the existing trigger already does.
+- Renaming `in_progress` (kept for compatibility with existing close-out trigger `set_submissions_complete_on_event_close`).
+- Coach-portal changes — results publishing flow already documented separately.
