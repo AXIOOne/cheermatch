@@ -59,6 +59,8 @@ const eventSchema = z.object({
   discipline: z.enum(['allstar_cheer','allstar_dance','nca_cheer','nca_dance','uca_cheer','uca_dance','usa_cheer','usa_dance']),
   accuscore_end_at: z.string().optional(),
   status: z.enum(['draft', 'registration_open', 'registration_closed', 'open_for_scoring', 'in_progress', 'completed', 'archived']),
+  duration_of_capture: z.coerce.number().int().min(15, 'Must be at least 15 seconds').max(900, 'Must be 900 seconds or less'),
+  screen_capture_cnt: z.coerce.number().int().min(1, 'At least 1 attempt').max(5, 'At most 5 attempts'),
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
@@ -106,6 +108,8 @@ export default function Events() {
       discipline: 'allstar_cheer',
       accuscore_end_at: '',
       status: 'draft',
+      duration_of_capture: 150,
+      screen_capture_cnt: 2,
     },
   });
 
@@ -174,6 +178,8 @@ export default function Events() {
         discipline: data.discipline,
         accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
         status: data.status,
+        duration_of_capture: data.duration_of_capture,
+        screen_capture_cnt: data.screen_capture_cnt,
         created_by: user!.id,
       } as any]);
       if (error) throw error;
@@ -201,6 +207,8 @@ export default function Events() {
         discipline: data.discipline,
         accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
         status: data.status,
+        duration_of_capture: data.duration_of_capture,
+        screen_capture_cnt: data.screen_capture_cnt,
       } as any).eq('id', id);
       if (error) throw error;
 
@@ -253,6 +261,8 @@ export default function Events() {
         ? new Date(event.accuscore_end_at).toISOString().slice(0, 16)
         : '',
       status: event.status,
+      duration_of_capture: event.duration_of_capture ?? 150,
+      screen_capture_cnt: event.screen_capture_cnt ?? 2,
     });
     setIsDialogOpen(true);
   };
@@ -416,6 +426,40 @@ export default function Events() {
                       </FormItem>
                     )}
                   />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="duration_of_capture"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Capture Duration (seconds)</FormLabel>
+                          <FormControl>
+                            <Input type="number" min={15} max={900} {...field} />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground">
+                            Recording auto-stops after this many seconds. Default 150 (2:30).
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="screen_capture_cnt"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Capture Attempts</FormLabel>
+                          <FormControl>
+                            <Input type="number" min={1} max={5} {...field} />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground">
+                            Number of takes each team can record before choosing one to submit.
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                   <FormField
                     control={form.control}
                     name="status"

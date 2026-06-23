@@ -1,13 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Camera, Square, Upload, RotateCcw, CheckCircle2 } from "lucide-react";
+import { Camera, Square, Upload, RotateCcw, CheckCircle2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { mobileApi } from "@/lib/mobile-api";
 
-type Phase = "ready" | "recording" | "preview" | "uploading" | "done";
+type Phase = "ready" | "recording" | "preview" | "choose" | "uploading" | "done";
+type Attempt = { id: number; blob: Blob; url: string; durationSec: number };
+
+const DEFAULT_DURATION = 150; // 2:30
+const DEFAULT_ATTEMPTS = 2;
+
+function fmt(s: number) {
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
 
 export default function MobileRecord() {
   const { eventId = "", teamId = "" } = useParams();
@@ -18,12 +26,39 @@ export default function MobileRecord() {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  const autoStopRef = useRef<number | null>(null);
 
   const [phase, setPhase] = useState<Phase>("ready");
   const [elapsed, setElapsed] = useState(0);
-  const [blob, setBlob] = useState<Blob | null>(null);
+  const [attempts, setAttempts] = useState<Attempt[]>([]);
+  const [previewAttemptId, setPreviewAttemptId] = useState<number | null>(null);
+  const [selectedAttemptId, setSelectedAttemptId] = useState<number | null>(null);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  // Event-driven capture settings
+  const [maxDuration, setMaxDuration] = useState<number>(DEFAULT_DURATION);
+  const [maxAttempts, setMaxAttempts] = useState<number>(DEFAULT_ATTEMPTS);
+
+  // Load capture settings from the event
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await mobileApi.events();
+        if (res.status && Array.isArray(res.data)) {
+          const ev = (res.data as Array<Record<string, unknown>>).find((e) => String(e.id) === eventId);
+          if (ev) {
+            const dur = Number(ev.duration_of_capture);
+            const cnt = Number(ev.screen_capture_cnt);
+            if (Number.isFinite(dur) && dur > 0) setMaxDuration(dur);
+            if (Number.isFinite(cnt) && cnt > 0) setMaxAttempts(cnt);
+          }
+        }
+      } catch {
+        /* fall back to defaults */
+      }
+    })();
+  }, [eventId]);
 
   // Initialize camera on mount
   useEffect(() => {
@@ -47,6 +82,7 @@ export default function MobileRecord() {
     return () => {
       cancelled = true;
       streamRef.current?.getTracks().forEach(t => t.stop());
+      if (autoStopRef.current) window.clearTimeout(autoStopRef.current);
     };
   }, []);
 
@@ -59,70 +95,104 @@ export default function MobileRecord() {
 
   function startRecording() {
     if (!streamRef.current) { toast.error("Camera not ready"); return; }
+    if (attempts.length >= maxAttempts) {
+      toast.error(`Maximum ${maxAttempts} attempts reached`);
+      return;
+    }
     chunksRef.current = [];
     const mimeCandidates = ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=h264", "video/webm"];
     const mimeType = mimeCandidates.find((t) => MediaRecorder.isTypeSupported?.(t)) ?? "";
     const rec = new MediaRecorder(streamRef.current, mimeType ? { mimeType } : undefined);
+    const startedAt = Date.now();
     rec.ondataavailable = (e) => e.data && e.data.size > 0 && chunksRef.current.push(e.data);
     rec.onstop = () => {
       const out = new Blob(chunksRef.current, { type: rec.mimeType || "video/mp4" });
-      setBlob(out);
+      const durationSec = Math.min(maxDuration, Math.round((Date.now() - startedAt) / 1000));
+      const id = Date.now();
+      const url = URL.createObjectURL(out);
+      const next: Attempt = { id, blob: out, url, durationSec };
+      setAttempts((prev) => [...prev, next]);
+      setPreviewAttemptId(id);
       setPhase("preview");
+      if (autoStopRef.current) { window.clearTimeout(autoStopRef.current); autoStopRef.current = null; }
     };
     recorderRef.current = rec;
     setElapsed(0);
     rec.start(1000);
     setPhase("recording");
+    // Auto-stop at event's configured duration
+    autoStopRef.current = window.setTimeout(() => {
+      try { rec.state === "recording" && rec.stop(); } catch { /* noop */ }
+      toast.message(`Recording auto-stopped at ${fmt(maxDuration)}`);
+    }, maxDuration * 1000);
   }
 
   function stopRecording() {
-    recorderRef.current?.stop();
+    try { recorderRef.current?.stop(); } catch { /* noop */ }
     recorderRef.current = null;
   }
 
-  function retake() {
-    setBlob(null);
+  function discardCurrentPreview() {
+    if (previewAttemptId == null) return;
+    setAttempts((prev) => {
+      const found = prev.find((a) => a.id === previewAttemptId);
+      if (found) URL.revokeObjectURL(found.url);
+      return prev.filter((a) => a.id !== previewAttemptId);
+    });
+    setPreviewAttemptId(null);
     setProgress(0);
     setPhase("ready");
   }
 
-  useEffect(() => {
-    if (phase === "preview" && blob && videoPreviewRef.current) {
-      videoPreviewRef.current.src = URL.createObjectURL(blob);
-    }
-  }, [phase, blob]);
+  function recordAnother() {
+    setPreviewAttemptId(null);
+    setProgress(0);
+    setPhase("ready");
+  }
 
-  async function uploadToBrightcove() {
-    if (!blob) return;
+  function goChoose() {
+    setPreviewAttemptId(null);
+    setSelectedAttemptId(attempts[attempts.length - 1]?.id ?? null);
+    setPhase("choose");
+  }
+
+  // Bind preview video to current attempt
+  useEffect(() => {
+    if (phase === "preview" && previewAttemptId != null && videoPreviewRef.current) {
+      const att = attempts.find((a) => a.id === previewAttemptId);
+      if (att) videoPreviewRef.current.src = att.url;
+    }
+  }, [phase, previewAttemptId, attempts]);
+
+  async function uploadSelected() {
+    const chosen = attempts.find((a) => a.id === selectedAttemptId);
+    if (!chosen) { toast.error("Pick an attempt to submit"); return; }
     setPhase("uploading");
     setProgress(2);
     try {
-      // 1. Init
-      const ext = blob.type.includes("mp4") ? "mp4" : "webm";
+      const ext = chosen.blob.type.includes("mp4") ? "mp4" : "webm";
       const fileName = `team-${teamId}-${Date.now()}.${ext}`;
       const initRes = await mobileApi.uploadInit(teamId, eventId, fileName);
       if (!initRes.status) throw new Error(initRes.message);
       const { video_id, signed_url, api_request_url } = initRes.data!;
 
-      // 2. PUT bytes to Brightcove's signed S3 URL with progress
-      await putWithProgress(signed_url, blob, (p) => setProgress(2 + Math.round(p * 90)));
+      await putWithProgress(signed_url, chosen.blob, (p) => setProgress(2 + Math.round(p * 90)));
 
-      // 3. Tell our backend the upload is done → triggers Brightcove ingest + writes submission
       setProgress(95);
-      const duration = videoPreviewRef.current?.duration && Number.isFinite(videoPreviewRef.current.duration)
-        ? Math.round(videoPreviewRef.current.duration) : null;
       const completeRes = await mobileApi.uploadComplete({
         team_id: teamId, event_id: eventId, video_id, api_request_url,
-        duration_seconds: duration ?? 0,
+        duration_seconds: chosen.durationSec,
         captured_at: new Date().toISOString(),
         device_info: { user_agent: navigator.userAgent, platform: navigator.platform },
       });
       if (!completeRes.status) throw new Error(completeRes.message);
       setProgress(100);
+      // Free remaining preview URLs
+      attempts.forEach((a) => URL.revokeObjectURL(a.url));
       setPhase("done");
     } catch (e) {
       toast.error((e as Error).message);
-      setPhase("preview");
+      setPhase("choose");
       setProgress(0);
     }
   }
@@ -146,7 +216,7 @@ export default function MobileRecord() {
         <CheckCircle2 className="h-16 w-16 mx-auto text-primary" />
         <h1 className="text-2xl font-bold">Submitted!</h1>
         <p className="text-muted-foreground">
-          Your video is uploading to Brightcove and will appear in the admin portal once ingest completes.
+          Your video is uploading and will appear in the admin portal once ingest completes.
         </p>
         <Button className="w-full h-12" onClick={() => navigate(`/m/events/${eventId}`, { replace: true })}>
           Back to teams
@@ -154,6 +224,60 @@ export default function MobileRecord() {
       </div>
     );
   }
+
+  // Choose-attempt screen
+  if (phase === "choose" || phase === "uploading") {
+    return (
+      <div className="min-h-[calc(100vh-3.5rem)] bg-background px-4 py-4 space-y-4 max-w-xl mx-auto">
+        <div>
+          <h1 className="text-xl font-bold">Choose attempt to submit</h1>
+          <p className="text-sm text-muted-foreground">
+            You recorded {attempts.length} of {maxAttempts} attempts. Only the one you pick will be sent for judging.
+          </p>
+        </div>
+        <div className="space-y-3">
+          {attempts.map((a, idx) => {
+            const active = selectedAttemptId === a.id;
+            return (
+              <Card
+                key={a.id}
+                onClick={() => phase === "choose" && setSelectedAttemptId(a.id)}
+                className={`p-3 cursor-pointer border-2 transition ${active ? "border-primary" : "border-transparent"}`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="font-medium">Attempt {idx + 1}</div>
+                  <div className="text-xs text-muted-foreground font-mono">{fmt(a.durationSec)}</div>
+                </div>
+                <video src={a.url} controls playsInline className="w-full rounded bg-black aspect-video" />
+              </Card>
+            );
+          })}
+        </div>
+
+        {phase === "uploading" ? (
+          <div className="space-y-2">
+            <div className="text-sm text-center">Uploading… {progress}%</div>
+            <Progress value={progress} className="h-2" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sticky bottom-0 pt-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] bg-background">
+            {attempts.length < maxAttempts ? (
+              <Button variant="secondary" onClick={recordAnother} className="h-12">
+                <Plus className="h-4 w-4 mr-2" /> Record again
+              </Button>
+            ) : (
+              <Button variant="secondary" disabled className="h-12">Max attempts reached</Button>
+            )}
+            <Button onClick={uploadSelected} disabled={selectedAttemptId == null} className="h-12">
+              <Upload className="h-4 w-4 mr-2" /> Submit selected
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const remaining = Math.max(0, maxDuration - elapsed);
 
   return (
     <div className="bg-black text-white min-h-[calc(100vh-3.5rem)] flex flex-col">
@@ -167,7 +291,12 @@ export default function MobileRecord() {
         {phase === "recording" && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-destructive/90 px-3 py-1.5 rounded-full text-sm font-mono">
             <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
-            REC {String(Math.floor(elapsed / 60)).padStart(2, "0")}:{String(elapsed % 60).padStart(2, "0")}
+            REC {fmt(elapsed)} / {fmt(maxDuration)}
+          </div>
+        )}
+        {phase === "ready" && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/60 px-3 py-1.5 rounded-full text-xs">
+            Attempt {attempts.length + 1} of {maxAttempts} · Limit {fmt(maxDuration)}
           </div>
         )}
       </div>
@@ -180,23 +309,17 @@ export default function MobileRecord() {
         )}
         {phase === "recording" && (
           <Button onClick={stopRecording} className="w-full h-14 text-base bg-destructive hover:bg-destructive/90">
-            <Square className="h-5 w-5 mr-2 fill-white" /> Stop recording
+            <Square className="h-5 w-5 mr-2 fill-white" /> Stop · {fmt(remaining)} left
           </Button>
         )}
         {phase === "preview" && (
           <div className="grid grid-cols-2 gap-3">
-            <Button variant="secondary" onClick={retake} className="h-14">
+            <Button variant="secondary" onClick={discardCurrentPreview} className="h-14">
               <RotateCcw className="h-5 w-5 mr-2" /> Retake
             </Button>
-            <Button onClick={uploadToBrightcove} className="h-14">
-              <Upload className="h-5 w-5 mr-2" /> Submit
+            <Button onClick={goChoose} className="h-14">
+              {attempts.length < maxAttempts ? "Keep & continue" : "Choose submission"}
             </Button>
-          </div>
-        )}
-        {phase === "uploading" && (
-          <div className="space-y-2">
-            <div className="text-sm text-white/80 text-center">Uploading… {progress}%</div>
-            <Progress value={progress} className="h-2" />
           </div>
         )}
       </div>
