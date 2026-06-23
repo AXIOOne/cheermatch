@@ -353,6 +353,13 @@ export default function Divisions() {
                           <Button
                             variant="ghost"
                             size="icon"
+                            onClick={() => openEditDivision(div)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             onClick={() => {
                               if (confirm('Delete this division?')) {
                                 deleteDivisionMutation.mutate(div.id);
