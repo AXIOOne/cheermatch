@@ -252,7 +252,6 @@ export default function Events() {
 
   const handleEdit = (event: any) => {
     setEditingEvent(event);
-    const defaultTemplate = getDefaultTemplate(event.scoring_templates);
     form.reset({
       name: event.name,
       description: event.description || '',
@@ -261,7 +260,6 @@ export default function Events() {
       registration_deadline: event.registration_deadline.split('T')[0],
       broadcast_deadline: event.broadcast_deadline || '',
       status: event.status,
-      default_template_id: defaultTemplate?.id || '',
     });
     setIsDialogOpen(true);
   };
