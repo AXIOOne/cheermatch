@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,25 @@ export function CoachAccountsPanel({ eventId }: Props) {
     },
     enabled: !!eventId,
   });
+
+  const [highlightedEmail, setHighlightedEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = window.location.hash;
+      const prefix = '#coach-';
+      if (hash.startsWith(prefix)) {
+        const email = decodeURIComponent(hash.slice(prefix.length));
+        setHighlightedEmail(email);
+        const el = document.getElementById(`coach-row-${email}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.setTimeout(() => setHighlightedEmail(null), 2500);
+      }
+    };
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
+    return () => window.removeEventListener('hashchange', applyHash);
+  }, [rows]);
 
   const inviteMutation = useMutation({
     mutationFn: async ({ email, fullName }: { email: string; fullName: string | null }) => {
@@ -87,8 +107,13 @@ export function CoachAccountsPanel({ eventId }: Props) {
             <TableBody>
               {rows.map((r) => {
                 const ok = r.user_exists && r.has_gym_coach_role;
+                const isHighlighted = highlightedEmail === r.coach_email;
                 return (
-                  <TableRow key={r.coach_email}>
+                  <TableRow
+                    key={r.coach_email}
+                    id={`coach-row-${r.coach_email}`}
+                    className={isHighlighted ? 'bg-primary/10 transition-colors' : 'transition-colors'}
+                  >
                     <TableCell>
                       <div className="font-medium">{r.coach_name || '—'}</div>
                       <div className="text-xs text-muted-foreground">{r.coach_email}</div>
