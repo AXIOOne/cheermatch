@@ -17,3 +17,16 @@ verify_jwt = false
 
 [functions.send-review-email]
 verify_jwt = false
+
+[functions.competitionList]
+verify_jwt = false
+
+[functions.getMobileAppVersion]
+verify_jwt = false
+
+[functions.getDropboxSetting]
+verify_jwt = false
+
+[functions.uniqueTeamName]
+verify_jwt = false
+
