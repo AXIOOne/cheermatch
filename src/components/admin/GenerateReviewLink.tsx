@@ -162,12 +162,13 @@ export function GenerateReviewLink({ submissionId, teamName }: GenerateReviewLin
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Link2 className="w-4 h-4 mr-2" />
-          Generate Review Link
+          Send Score Sheet to Coach
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Generate Review Link for {teamName}</DialogTitle>
+          <DialogTitle>Send Score Sheet to Coach for {teamName}</DialogTitle>
+
         </DialogHeader>
 
         {generatedLink ? (
