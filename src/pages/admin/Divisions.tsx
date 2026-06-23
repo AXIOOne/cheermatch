@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Layers, Loader2, Trash2 } from 'lucide-react';
+import { Plus, Layers, Loader2, Trash2, Pencil } from 'lucide-react';
 
 const UNASSIGNED_TEMPLATE = '__none__';
 
@@ -36,6 +36,7 @@ type LevelFormData = z.infer<typeof levelSchema>;
 
 export default function Divisions() {
   const [isDivisionDialogOpen, setIsDivisionDialogOpen] = useState(false);
+  const [editingDivision, setEditingDivision] = useState<any | null>(null);
   const [isLevelDialogOpen, setIsLevelDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -49,6 +50,29 @@ export default function Divisions() {
     resolver: zodResolver(levelSchema),
     defaultValues: { name: '', level_number: 1, description: '' },
   });
+
+  const openCreateDivision = () => {
+    setEditingDivision(null);
+    divisionForm.reset({ name: '', description: '', scoring_template_id: UNASSIGNED_TEMPLATE, min_age: undefined, max_age: undefined });
+    setIsDivisionDialogOpen(true);
+  };
+
+  const openEditDivision = (div: any) => {
+    setEditingDivision(div);
+    divisionForm.reset({
+      name: div.name ?? '',
+      description: div.description ?? '',
+      min_age: div.min_age ?? undefined,
+      max_age: div.max_age ?? undefined,
+      scoring_template_id: div.scoring_template_id ?? UNASSIGNED_TEMPLATE,
+    });
+    setIsDivisionDialogOpen(true);
+  };
+
+  const handleDivisionDialogChange = (open: boolean) => {
+    setIsDivisionDialogOpen(open);
+    if (!open) setEditingDivision(null);
+  };
 
   const { data: divisions, isLoading: divisionsLoading } = useQuery({
     queryKey: ['divisions'],
@@ -131,6 +155,33 @@ export default function Divisions() {
     },
   });
 
+  const updateDivisionMutation = useMutation({
+    mutationFn: async (data: DivisionFormData) => {
+      if (!editingDivision) throw new Error('No division selected');
+      const tplId = data.scoring_template_id && data.scoring_template_id !== UNASSIGNED_TEMPLATE
+        ? data.scoring_template_id
+        : null;
+      const { error } = await (supabase as any).from('divisions').update({
+        name: data.name,
+        min_age: data.min_age || null,
+        max_age: data.max_age || null,
+        description: data.description || null,
+        scoring_template_id: tplId,
+      }).eq('id', editingDivision.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['divisions'] });
+      toast({ title: 'Division updated successfully!' });
+      setIsDivisionDialogOpen(false);
+      setEditingDivision(null);
+      divisionForm.reset();
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    },
+  });
+
   const deleteDivisionMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('divisions').delete().eq('id', id);
@@ -170,19 +221,24 @@ export default function Divisions() {
 
         <TabsContent value="divisions">
           <div className="flex justify-end mb-4">
-            <Dialog open={isDivisionDialogOpen} onOpenChange={setIsDivisionDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Division
-                </Button>
-              </DialogTrigger>
+            <Dialog open={isDivisionDialogOpen} onOpenChange={handleDivisionDialogChange}>
+              <Button onClick={openCreateDivision}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Division
+              </Button>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Create Division</DialogTitle>
+                  <DialogTitle>{editingDivision ? 'Edit Division' : 'Create Division'}</DialogTitle>
                 </DialogHeader>
                 <Form {...divisionForm}>
-                  <form onSubmit={divisionForm.handleSubmit((d) => createDivisionMutation.mutate(d))} className="space-y-4">
+                  <form
+                    onSubmit={divisionForm.handleSubmit((d) =>
+                      editingDivision
+                        ? updateDivisionMutation.mutate(d)
+                        : createDivisionMutation.mutate(d)
+                    )}
+                    className="space-y-4"
+                  >
                     <FormField
                       control={divisionForm.control}
                       name="name"
@@ -204,7 +260,7 @@ export default function Divisions() {
                           <FormItem>
                             <FormLabel>Min Age</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="5" {...field} />
+                              <Input type="number" placeholder="5" {...field} value={field.value ?? ''} />
                             </FormControl>
                           </FormItem>
                         )}
@@ -216,7 +272,7 @@ export default function Divisions() {
                           <FormItem>
                             <FormLabel>Max Age</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="18" {...field} />
+                              <Input type="number" placeholder="18" {...field} value={field.value ?? ''} />
                             </FormControl>
                           </FormItem>
                         )}
@@ -246,12 +302,17 @@ export default function Divisions() {
                       )}
                     />
                     <div className="flex justify-end gap-2 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setIsDivisionDialogOpen(false)}>
+                      <Button type="button" variant="outline" onClick={() => handleDivisionDialogChange(false)}>
                         Cancel
                       </Button>
-                      <Button type="submit" disabled={createDivisionMutation.isPending}>
-                        {createDivisionMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                        Create
+                      <Button
+                        type="submit"
+                        disabled={createDivisionMutation.isPending || updateDivisionMutation.isPending}
+                      >
+                        {(createDivisionMutation.isPending || updateDivisionMutation.isPending) && (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        )}
+                        {editingDivision ? 'Save Changes' : 'Create'}
                       </Button>
                     </div>
                   </form>
@@ -289,6 +350,13 @@ export default function Divisions() {
                           {div.template?.name || <span className="text-muted-foreground italic">Default</span>}
                         </TableCell>
                         <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDivision(div)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
