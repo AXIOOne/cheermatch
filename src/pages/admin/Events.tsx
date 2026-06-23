@@ -261,6 +261,8 @@ export default function Events() {
         ? new Date(event.accuscore_end_at).toISOString().slice(0, 16)
         : '',
       status: event.status,
+      duration_of_capture: event.duration_of_capture ?? 150,
+      screen_capture_cnt: event.screen_capture_cnt ?? 2,
     });
     setIsDialogOpen(true);
   };
