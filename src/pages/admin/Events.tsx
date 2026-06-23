@@ -196,6 +196,12 @@ export default function Events() {
         status: data.status,
         duration_of_capture: data.duration_of_capture,
         screen_capture_cnt: data.screen_capture_cnt,
+        registration_open_at: toIso(data.registration_open_at),
+        registration_close_at: toIso(data.registration_close_at),
+        submission_open_at: toIso(data.submission_open_at),
+        submission_close_at: toIso(data.submission_close_at),
+        scoring_open_at: toIso(data.scoring_open_at),
+        scoring_close_at: toIso(data.scoring_close_at),
         created_by: user!.id,
       } as any]);
       if (error) throw error;
