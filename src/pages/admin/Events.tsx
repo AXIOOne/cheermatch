@@ -546,26 +546,10 @@ export default function Events() {
                           {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
                         </TableCell>
                         <TableCell>
-                          {event.broadcast_deadline ? (
-                            <div className="flex flex-col gap-1">
-                              <span>{format(new Date(event.broadcast_deadline), 'MMM d, yyyy')}</span>
-                              {(() => {
-                                const status = getDeadlineStatus(event.broadcast_deadline);
-                                if (!status) return null;
-                                return (
-                                  <Badge 
-                                    variant={status.variant} 
-                                    className={`text-xs w-fit ${status.isPast ? 'animate-pulse' : ''}`}
-                                  >
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    {status.label}
-                                  </Badge>
-                                );
-                              })()}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
+                          <Badge variant="outline">{disciplineLabel(event.discipline)}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {event.time_zone || '—'}
                         </TableCell>
                         <TableCell>
                           <Badge variant={statusVariants[event.status]}>
