@@ -300,7 +300,18 @@ export default function ScorePerformance() {
   });
 
   const isLoading = submissionLoading || templateLoading;
-  const isLocked = existingScore?.status === 'locked' || !eventOpenForScoring;
+  const isLocked = existingScore?.status === 'locked' || existingScore?.status === 'submitted' || !eventOpenForScoring;
+
+  useEffect(() => {
+    if (existingScore && (existingScore.status === 'submitted' || existingScore.status === 'locked')) {
+      toast({
+        title: 'Score already submitted',
+        description: 'This score has already been submitted. Contact an admin to make changes.',
+      });
+      navigate('/judge/queue');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingScore?.status]);
 
   if (isLoading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
