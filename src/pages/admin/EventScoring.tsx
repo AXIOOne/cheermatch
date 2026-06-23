@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import JudgePanelsManager from '@/components/admin/JudgePanelsManager';
+import AssignPanelsDialog from '@/components/admin/AssignPanelsDialog';
 import SubmissionScoringDialog from '@/components/admin/SubmissionScoringDialog';
 import { downloadSubmissionScoresheet } from '@/lib/download-submission-scoresheet';
 
@@ -266,19 +266,19 @@ export default function EventScoring() {
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Settings className="w-4 h-4 mr-2" />
-                Configure Panels
+                Assign Panels
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Configure Judge Panels</DialogTitle>
+                <DialogTitle>Assign Panels</DialogTitle>
               </DialogHeader>
-              <JudgePanelsManager 
-                eventId={eventId!} 
+              <AssignPanelsDialog
+                eventId={eventId!}
                 onClose={() => {
                   setIsPanelsDialogOpen(false);
                   queryClient.invalidateQueries({ queryKey: ['judge-panels', eventId] });
-                }} 
+                }}
               />
             </DialogContent>
           </Dialog>

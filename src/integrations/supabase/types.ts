@@ -192,6 +192,7 @@ export type Database = {
           judge_user_id: string
           level_id: string | null
           panel_id: string | null
+          section_id: string | null
         }
         Insert: {
           created_at?: string
@@ -201,6 +202,7 @@ export type Database = {
           judge_user_id: string
           level_id?: string | null
           panel_id?: string | null
+          section_id?: string | null
         }
         Update: {
           created_at?: string
@@ -210,6 +212,7 @@ export type Database = {
           judge_user_id?: string
           level_id?: string | null
           panel_id?: string | null
+          section_id?: string | null
         }
         Relationships: [
           {
@@ -238,6 +241,13 @@ export type Database = {
             columns: ["panel_id"]
             isOneToOne: false
             referencedRelation: "judge_panels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "judge_assignments_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_sections"
             referencedColumns: ["id"]
           },
         ]
