@@ -36,6 +36,7 @@ type LevelFormData = z.infer<typeof levelSchema>;
 
 export default function Divisions() {
   const [isDivisionDialogOpen, setIsDivisionDialogOpen] = useState(false);
+  const [editingDivision, setEditingDivision] = useState<any | null>(null);
   const [isLevelDialogOpen, setIsLevelDialogOpen] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -49,6 +50,29 @@ export default function Divisions() {
     resolver: zodResolver(levelSchema),
     defaultValues: { name: '', level_number: 1, description: '' },
   });
+
+  const openCreateDivision = () => {
+    setEditingDivision(null);
+    divisionForm.reset({ name: '', description: '', scoring_template_id: UNASSIGNED_TEMPLATE, min_age: undefined, max_age: undefined });
+    setIsDivisionDialogOpen(true);
+  };
+
+  const openEditDivision = (div: any) => {
+    setEditingDivision(div);
+    divisionForm.reset({
+      name: div.name ?? '',
+      description: div.description ?? '',
+      min_age: div.min_age ?? undefined,
+      max_age: div.max_age ?? undefined,
+      scoring_template_id: div.scoring_template_id ?? UNASSIGNED_TEMPLATE,
+    });
+    setIsDivisionDialogOpen(true);
+  };
+
+  const handleDivisionDialogChange = (open: boolean) => {
+    setIsDivisionDialogOpen(open);
+    if (!open) setEditingDivision(null);
+  };
 
   const { data: divisions, isLoading: divisionsLoading } = useQuery({
     queryKey: ['divisions'],
