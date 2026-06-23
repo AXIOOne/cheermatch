@@ -108,6 +108,8 @@ export default function Events() {
       discipline: 'allstar_cheer',
       accuscore_end_at: '',
       status: 'draft',
+      duration_of_capture: 150,
+      screen_capture_cnt: 2,
     },
   });
 
