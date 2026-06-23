@@ -190,11 +190,7 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
       </TabsList>
 
       <TabsContent value="assignments" className="mt-4">
-        {!template ? (
-          <p className="text-center py-12 text-muted-foreground">
-            No default scoring template found for this event. Configure a template first.
-          </p>
-        ) : isLoading ? (
+        {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
@@ -202,19 +198,28 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
           <p className="text-center py-12 text-muted-foreground">
             No divisions with submitted teams yet.
           </p>
-        ) : !sections || sections.length === 0 ? (
-          <p className="text-center py-12 text-muted-foreground">
-            The scoring template has no sections.
-          </p>
         ) : (
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-            {divisions.map(div => (
-              <Card key={div.id}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">{div.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {sections.map(section => {
+            {divisions.map(div => {
+              const divisionSections = div.scoring_template_id
+                ? sectionsByTemplate.get(div.scoring_template_id) || []
+                : [];
+
+              return (
+                <Card key={div.id}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">{div.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {!div.scoring_template_id ? (
+                      <p className="text-sm text-muted-foreground">
+                        No scoring template is assigned to this division.
+                      </p>
+                    ) : divisionSections.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        This division's scoring template has no judging sections.
+                      </p>
+                    ) : divisionSections.map(section => {
                     const key = `${div.id}:${section.id}`;
                     const current = assignmentMap.get(key)?.judge_user_id ?? '';
                     return (
@@ -251,10 +256,11 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
                         </div>
                       </div>
                     );
-                  })}
-                </CardContent>
-              </Card>
-            ))}
+                    })}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </TabsContent>
