@@ -139,6 +139,19 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
               </Select>
             </div>
             <div>
+              <Label>Score Type</Label>
+              <Select
+                value={draft.score_type}
+                onValueChange={(v) => setDraft(d => ({ ...d, score_type: v as ScoreType }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="difficulty">Difficulty</SelectItem>
+                  <SelectItem value="execution">Execution</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2">
               <Label>Max Points (contributes to row total)</Label>
               <Input
                 type="number"
@@ -147,7 +160,7 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
                 onChange={(e) => setDraft(d => ({ ...d, max_points: parseFloat(e.target.value) || 0 }))}
               />
             </div>
-          </div>
+
 
           {draft.field_type === 'number' && (
             <div className="grid grid-cols-3 gap-3 bg-muted/30 p-3 rounded-md">
