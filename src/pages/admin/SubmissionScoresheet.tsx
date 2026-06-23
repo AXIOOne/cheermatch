@@ -423,6 +423,19 @@ export default function SubmissionScoresheet() {
           })}
         </div>
       )}
+
+      {isAdmin && submission.team && (
+        <EditTeamDialog
+          open={editTeamOpen}
+          onOpenChange={setEditTeamOpen}
+          team={{
+            id: submission.team.id,
+            name: submission.team.name,
+            division_id: submission.team.division_id,
+            athlete_count: submission.team.athlete_count,
+          }}
+        />
+      )}
     </div>
   );
 }
