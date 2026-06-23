@@ -59,6 +59,9 @@ export default function Judges() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [deletingJudge, setDeletingJudge] = useState<JudgeWithProfile | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
 
   const { data: judges, isLoading } = useQuery({
     queryKey: ['judges'],
