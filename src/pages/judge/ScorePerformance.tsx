@@ -229,8 +229,6 @@ export default function ScorePerformance() {
   };
 
   const saveMutation = useMutation({
-    mutationFn: async (status: 'in_progress' | 'submitted') => {
-  const saveMutation = useMutation({
     mutationFn: async (args: { status: 'in_progress' | 'submitted'; needsReview?: boolean; reviewReason?: string | null }) => {
       const { status, needsReview = false, reviewReason = null } = args;
       if (!eventOpenForScoring) {
