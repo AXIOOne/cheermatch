@@ -48,6 +48,8 @@ export default function ScorePerformance() {
   const [deductionCounts, setDeductionCounts] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [flagDialogOpen, setFlagDialogOpen] = useState(false);
+  const [flagReason, setFlagReason] = useState('');
 
   const { data: submission, isLoading: submissionLoading } = useQuery({
     queryKey: ['submission', submissionId],
