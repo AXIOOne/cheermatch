@@ -292,6 +292,40 @@ export default function Judges() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={!!deletingJudge}
+        onOpenChange={(open) => !open && !deleting && setDeletingJudge(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete judge?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove{' '}
+              <span className="font-medium text-foreground">
+                {deletingJudge?.profile?.full_name || deletingJudge?.profile?.email}
+              </span>{' '}
+              and their login. Any existing scoring assignments will need to be reassigned. This
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteJudge();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+
   );
 }
