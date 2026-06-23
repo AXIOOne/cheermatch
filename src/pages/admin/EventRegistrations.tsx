@@ -17,6 +17,7 @@ export default function EventRegistrations() {
   const { eventId } = useParams<{ eventId: string }>();
   const [searchQuery, setSearchQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editTeam, setEditTeam] = useState<any>(null);
 
   const { data: event, isLoading: eventLoading } = useQuery({
