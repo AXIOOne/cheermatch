@@ -220,6 +220,16 @@ export default function ScoringQueue() {
 
   const uniqueEvents = [...new Map(assignments?.map((a: any) => [a.event_id, a.event]) || [])];
 
+  const filteredSubmissions = useMemo(() => {
+    return (visibleSubmissions || []).filter((sub: any) => {
+      const status = getScoreStatus(sub.id);
+      const isScored = status === 'submitted' || status === 'locked';
+      if (statusFilter === 'pending') return !isScored;
+      if (statusFilter === 'scored') return isScored;
+      return true;
+    });
+  }, [visibleSubmissions, existingScores, statusFilter]);
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
@@ -228,6 +238,16 @@ export default function ScoringQueue() {
           <p className="text-muted-foreground mt-1">Review and score team performances</p>
         </div>
         <div className="flex items-center gap-4">
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="scored">Scored</SelectItem>
+              <SelectItem value="all">All</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={selectedEvent} onValueChange={setSelectedEvent}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Filter by event" />
