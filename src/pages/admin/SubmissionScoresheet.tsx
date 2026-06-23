@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, Play, Trophy, Users, Calendar, Award, FileText, Download, Check, X, Pencil } from 'lucide-react';
+import { ArrowLeft, Loader2, Play, Trophy, Users, Calendar, Award, FileText, Download, Check, X, Pencil, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { aggregateValues, AggregationMode } from '@/lib/scoring';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { buildScoresheet, type RawField, type ScoreType } from '@/lib/build-scoresheet';
 import { buildScoresheetPdf, downloadPdf } from '@/lib/scoresheet-pdf';
 import { EditTeamDialog } from '@/components/admin/EditTeamDialog';
+import { RequestRevisionDialog } from '@/components/admin/RequestRevisionDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
