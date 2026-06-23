@@ -14,7 +14,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { UserCheck, Loader2, Pencil, Plus } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { UserCheck, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import { useToast } from '@/hooks/use-toast';
 
@@ -48,6 +59,9 @@ export default function Judges() {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [deletingJudge, setDeletingJudge] = useState<JudgeWithProfile | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
 
   const { data: judges, isLoading } = useQuery({
     queryKey: ['judges'],
@@ -125,6 +139,30 @@ export default function Judges() {
     }
   };
 
+  const handleDeleteJudge = async () => {
+    if (!deletingJudge) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId: deletingJudge.user_id },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast({ title: 'Judge deleted' });
+      await queryClient.invalidateQueries({ queryKey: ['judges'] });
+      setDeletingJudge(null);
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete judge',
+        description: err.message || 'Unknown error',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+
   return (
     <div className="p-8">
       <div className="flex items-start justify-between mb-8">
@@ -162,15 +200,26 @@ export default function Judges() {
                     </TableCell>
                     <TableCell>{judge.profile?.email}</TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEditJudge(judge)}
-                        title="Edit judge"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditJudge(judge)}
+                          title="Edit judge"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeletingJudge(judge)}
+                          title="Delete judge"
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
+
                   </TableRow>
                 ))}
               </TableBody>
@@ -243,6 +292,40 @@ export default function Judges() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={!!deletingJudge}
+        onOpenChange={(open) => !open && !deleting && setDeletingJudge(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete judge?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove{' '}
+              <span className="font-medium text-foreground">
+                {deletingJudge?.profile?.full_name || deletingJudge?.profile?.email}
+              </span>{' '}
+              and their login. Any existing scoring assignments will need to be reassigned. This
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteJudge();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+
   );
 }
