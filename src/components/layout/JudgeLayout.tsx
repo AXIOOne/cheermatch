@@ -4,9 +4,9 @@ import { JudgeSidebar } from './JudgeSidebar';
 import { Loader2 } from 'lucide-react';
 
 export function JudgeLayout() {
-  const { user, loading, isJudge, isAdmin } = useAuth();
+  const { user, loading, rolesLoaded, isJudge, isAdmin } = useAuth();
 
-  if (loading) {
+  if (loading || (user && !rolesLoaded)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

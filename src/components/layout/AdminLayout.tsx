@@ -4,9 +4,9 @@ import { AdminSidebar } from './AdminSidebar';
 import { Loader2 } from 'lucide-react';
 
 export function AdminLayout() {
-  const { user, loading, isAdmin, roles } = useAuth();
+  const { user, loading, rolesLoaded, isAdmin, isJudge, isGymCoach } = useAuth();
 
-  if (loading) {
+  if (loading || (user && !rolesLoaded)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -18,9 +18,9 @@ export function AdminLayout() {
     return <Navigate to="/auth" replace />;
   }
 
-  // Allow access if user is admin OR if they have no roles yet (new user, admin will assign)
-  // In production, you might want to restrict this further
-  if (roles.length > 0 && !isAdmin) {
+  if (!isAdmin) {
+    if (isJudge) return <Navigate to="/judge" replace />;
+    if (isGymCoach) return <Navigate to="/coach" replace />;
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
