@@ -193,9 +193,10 @@ export default function EventScoring() {
   const getPanelStatus = (
     submission: Submission,
     panelId: string
-  ): 'pending' | 'in_progress' | 'submitted' | 'needs_review' => {
+  ): 'pending' | 'in_progress' | 'submitted' | 'needs_review' | 'reviewed' => {
     const score = submission.scores.find(s => s.panel_id === panelId);
     if (!score) return 'pending';
+    if (score.reviewed_at) return 'reviewed';
     if (score.needs_review) return 'needs_review';
     return score.status as 'pending' | 'in_progress' | 'submitted';
   };
@@ -222,7 +223,7 @@ export default function EventScoring() {
     onClick,
     label,
   }: {
-    status: 'pending' | 'in_progress' | 'submitted' | 'needs_review';
+    status: 'pending' | 'in_progress' | 'submitted' | 'needs_review' | 'reviewed';
     onClick?: () => void;
     label?: string;
   }) => {
@@ -231,12 +232,14 @@ export default function EventScoring() {
       in_progress: 'bg-destructive hover:bg-destructive/80',
       submitted: 'bg-success hover:bg-success/80',
       needs_review: 'bg-warning hover:bg-warning/80',
+      reviewed: 'bg-success hover:bg-success/80',
     };
     const titles = {
       pending: 'Not started — click to score',
       in_progress: 'In progress — click to continue',
       submitted: 'Complete — click to view/edit',
       needs_review: 'Needs review — click to view/edit',
+      reviewed: 'Reviewed — click to view/edit',
     };
     return (
       <button
@@ -244,8 +247,10 @@ export default function EventScoring() {
         onClick={onClick}
         aria-label={label ? `${label}: ${titles[status]}` : titles[status]}
         title={titles[status]}
-        className={`w-5 h-5 rounded-sm transition-colors cursor-pointer ${colors[status]}`}
-      />
+        className={`w-5 h-5 rounded-sm transition-colors cursor-pointer flex items-center justify-center text-success-foreground ${colors[status]}`}
+      >
+        {status === 'reviewed' && <CheckCircle className="w-3.5 h-3.5" />}
+      </button>
     );
   };
 
