@@ -429,6 +429,19 @@ export default function SubmissionScoringDialog({
                   </Card>
                 ) : (
                   <>
+                    {currentPanelScore?.needs_review && !currentPanelScore?.reviewed_at && (
+                      <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 mt-0.5 text-warning shrink-0" />
+                        <div className="text-sm">
+                          <p className="font-medium text-warning">Flagged by judge for review</p>
+                          {currentPanelScore?.review_reason ? (
+                            <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{currentPanelScore.review_reason}</p>
+                          ) : (
+                            <p className="text-muted-foreground mt-1">No reason provided.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                       {visibleSections.length === 0 && (
                         <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
