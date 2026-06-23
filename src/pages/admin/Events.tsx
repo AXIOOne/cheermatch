@@ -376,7 +376,22 @@ export default function Events() {
                   </div>
                   <FormField
                     control={form.control}
+                    name="accuscore_end_at"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>AccuScore Review Cutoff</FormLabel>
+                        <FormControl>
+                          <Input type="datetime-local" {...field} />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">When coaches can no longer request a scoresheet review.</p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
                     name="status"
+
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Status</FormLabel>
