@@ -522,7 +522,8 @@ export default function Events() {
                   <TableRow>
                     <TableHead>Event Name</TableHead>
                     <TableHead>Dates</TableHead>
-                    <TableHead>Submission Deadline</TableHead>
+                    <TableHead>Discipline</TableHead>
+                    <TableHead>Time Zone</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Scoring</TableHead>
                     <TableHead>Registrations</TableHead>
