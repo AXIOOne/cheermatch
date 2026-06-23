@@ -416,46 +416,6 @@ export default function Events() {
                       </FormItem>
                     )}
                   />
-                  {editingEvent && (
-                    <FormField
-                      control={form.control}
-                      name="default_template_id"
-                      render={({ field }) => {
-                        const eventTemplates = getEventTemplates(editingEvent?.id);
-                        return (
-                          <FormItem>
-                            <FormLabel>Scoring Template</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || ''}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select a template" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {eventTemplates.length > 0 ? (
-                                  eventTemplates.map((template) => (
-                                    <SelectItem key={template.id} value={template.id}>
-                                      {template.name}
-                                    </SelectItem>
-                                  ))
-                                ) : (
-                                  <SelectItem value="none" disabled>
-                                    No templates available
-                                  </SelectItem>
-                                )}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-xs text-muted-foreground">
-                              {eventTemplates.length === 0 
-                                ? 'Create a scoring template for this event first.'
-                                : 'Choose the default template for scoring.'}
-                            </p>
-                            <FormMessage />
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  )}
                   <div className="flex justify-end gap-2 pt-4">
                     <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                       Cancel
