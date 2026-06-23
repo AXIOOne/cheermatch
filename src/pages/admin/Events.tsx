@@ -52,6 +52,7 @@ const eventSchema = z.object({
   end_date: z.string().min(1, 'End date is required'),
   registration_deadline: z.string().min(1, 'Registration deadline is required'),
   broadcast_deadline: z.string().optional(),
+  accuscore_end_at: z.string().optional(),
   status: z.enum(['draft', 'registration_open', 'registration_closed', 'in_progress', 'completed', 'archived']),
   
 });
