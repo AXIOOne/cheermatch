@@ -193,8 +193,9 @@ export default function Events() {
         end_date: data.end_date,
         registration_deadline: data.registration_deadline,
         broadcast_deadline: data.broadcast_deadline || null,
+        accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
         status: data.status,
-      }).eq('id', id);
+      } as any).eq('id', id);
       if (error) throw error;
 
     },
