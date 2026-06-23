@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Camera, Square, Upload, RotateCcw, CheckCircle2, Plus, RotateCw, ChevronLeft, LogOut } from "lucide-react";
+import { Camera, Square, Upload, CheckCircle2, Plus, RotateCw, ChevronLeft, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -175,17 +175,6 @@ export default function MobileRecord() {
     recorderRef.current = null;
   }
 
-  function discardCurrentPreview() {
-    if (previewAttemptId == null) return;
-    setAttempts((prev) => {
-      const found = prev.find((a) => a.id === previewAttemptId);
-      if (found) URL.revokeObjectURL(found.url);
-      return prev.filter((a) => a.id !== previewAttemptId);
-    });
-    setPreviewAttemptId(null);
-    setProgress(0);
-    setPhase("ready");
-  }
 
   function recordAnother() {
     setPreviewAttemptId(null);
@@ -366,14 +355,9 @@ export default function MobileRecord() {
           </Button>
         )}
         {phase === "preview" && (
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="secondary" onClick={discardCurrentPreview} className="h-14">
-              <RotateCcw className="h-5 w-5 mr-2" /> Retake
-            </Button>
-            <Button onClick={goChoose} className="h-14">
-              {attempts.length < maxAttempts ? "Keep & continue" : "Choose submission"}
-            </Button>
-          </div>
+          <Button onClick={goChoose} className="w-full h-14">
+            {attempts.length < maxAttempts ? "Keep & continue" : "Choose submission"}
+          </Button>
         )}
         <div className="flex items-center justify-between pt-1 text-xs text-white/70">
           <button
