@@ -202,20 +202,25 @@ export default function EventScoring() {
   };
 
   // Get overall scoring status text
-  const getOverallStatus = (submission: Submission): { text: string; allComplete: boolean } => {
+  const getOverallStatus = (submission: Submission): { text: string; allComplete: boolean; allReviewed: boolean } => {
     if (!panels || panels.length === 0) {
       const hasSubmitted = submission.scores.some(s => s.status === 'submitted');
-      return { text: hasSubmitted ? 'SCORED' : 'PENDING', allComplete: hasSubmitted };
+      const hasReviewed = hasSubmitted && submission.scores.every(s => s.status !== 'submitted' || s.reviewed_at);
+      return { text: hasReviewed ? 'REVIEWED' : hasSubmitted ? 'SCORED' : 'PENDING', allComplete: hasSubmitted, allReviewed: hasReviewed };
     }
-    
-    const completedPanels = panels.filter(p => 
+
+    const completedPanels = panels.filter(p =>
       submission.scores.some(s => s.panel_id === p.id && s.status === 'submitted')
     ).length;
-    
-    if (completedPanels === panels.length) {
-      return { text: 'COMPLETE', allComplete: true };
-    }
-    return { text: 'PENDING', allComplete: false };
+    const reviewedPanels = panels.filter(p =>
+      submission.scores.some(s => s.panel_id === p.id && s.status === 'submitted' && s.reviewed_at)
+    ).length;
+
+    const allComplete = completedPanels === panels.length;
+    const allReviewed = allComplete && reviewedPanels === panels.length;
+    if (allReviewed) return { text: 'REVIEWED', allComplete, allReviewed };
+    if (allComplete) return { text: 'COMPLETE', allComplete, allReviewed };
+    return { text: 'PENDING', allComplete, allReviewed };
   };
 
   const StatusIndicator = ({
@@ -426,8 +431,10 @@ export default function EventScoring() {
                         <Badge
                           variant="outline"
                           className={
-                            overallStatus.allComplete
+                            overallStatus.allReviewed
                               ? 'bg-success/10 text-success border-success/20'
+                              : overallStatus.allComplete
+                              ? 'bg-warning/10 text-warning border-warning/20'
                               : 'bg-muted text-muted-foreground border-transparent'
                           }
                         >
@@ -462,7 +469,7 @@ export default function EventScoring() {
                             <DropdownMenuContent align="end" className="w-52">
                               <DropdownMenuItem
                                 onClick={() => handleSendScoreSheet(submission.id)}
-                                disabled={sendingScoreFor === submission.id || !overallStatus.allComplete}
+                                disabled={sendingScoreFor === submission.id || !overallStatus.allReviewed}
                               >
                                 {sendingScoreFor === submission.id ? (
                                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -479,7 +486,7 @@ export default function EventScoring() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleDownloadPdf(submission.id)}
-                                disabled={downloadingPdfFor === submission.id || !overallStatus.allComplete}
+                                disabled={downloadingPdfFor === submission.id || !overallStatus.allReviewed}
                               >
                                 {downloadingPdfFor === submission.id ? (
                                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />

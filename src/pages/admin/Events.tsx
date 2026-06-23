@@ -58,7 +58,7 @@ const eventSchema = z.object({
   time_zone: z.string().min(1, 'Time zone is required'),
   discipline: z.enum(['allstar_cheer','allstar_dance','nca_cheer','nca_dance','uca_cheer','uca_dance','usa_cheer','usa_dance']),
   accuscore_end_at: z.string().optional(),
-  status: z.enum(['draft', 'registration_open', 'registration_closed', 'in_progress', 'completed', 'archived']),
+  status: z.enum(['draft', 'registration_open', 'registration_closed', 'open_for_scoring', 'in_progress', 'completed', 'archived']),
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
@@ -67,6 +67,7 @@ const statusLabels: Record<string, string> = {
   draft: 'Draft',
   registration_open: 'Registration Open',
   registration_closed: 'Registration Closed',
+  open_for_scoring: 'Open for Scoring',
   in_progress: 'In Progress',
   completed: 'Completed',
   archived: 'Archived',
@@ -76,6 +77,7 @@ const statusVariants: Record<string, 'default' | 'secondary' | 'destructive' | '
   draft: 'secondary',
   registration_open: 'default',
   registration_closed: 'outline',
+  open_for_scoring: 'default',
   in_progress: 'default',
   completed: 'secondary',
   archived: 'outline',
@@ -431,6 +433,7 @@ export default function Events() {
                             <SelectItem value="draft">Draft</SelectItem>
                             <SelectItem value="registration_open">Registration Open</SelectItem>
                             <SelectItem value="registration_closed">Registration Closed</SelectItem>
+                            <SelectItem value="open_for_scoring">Open for Scoring</SelectItem>
                             <SelectItem value="in_progress">In Progress</SelectItem>
                             <SelectItem value="completed">Completed</SelectItem>
                             <SelectItem value="archived">Archived</SelectItem>
@@ -474,6 +477,7 @@ export default function Events() {
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="registration_open">Registration Open</SelectItem>
                     <SelectItem value="registration_closed">Registration Closed</SelectItem>
+                    <SelectItem value="open_for_scoring">Open for Scoring</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="archived">Archived</SelectItem>

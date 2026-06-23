@@ -1,0 +1,1 @@
+ALTER TYPE public.event_status ADD VALUE IF NOT EXISTS 'open_for_scoring' BEFORE 'in_progress';

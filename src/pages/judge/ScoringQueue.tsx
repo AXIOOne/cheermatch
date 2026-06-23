@@ -24,7 +24,7 @@ export default function ScoringQueue() {
         .select(`
           event_id,
           division_id,
-          event:events(id, name)
+          event:events(id, name, status)
         `)
         .eq('judge_user_id', user!.id);
       if (error) throw error;
@@ -45,7 +45,20 @@ export default function ScoringQueue() {
     return m;
   }, [assignments]);
 
-  const assignedEventIds = useMemo(() => [...eventDivisionMap.keys()], [eventDivisionMap]);
+  // Only allow scoring for events the admin has released
+  const OPEN_STATUSES = new Set(['open_for_scoring', 'in_progress']);
+  const openEventIds = useMemo(() => {
+    const ids = new Set<string>();
+    (assignments || []).forEach((a: any) => {
+      if (a.event_id && OPEN_STATUSES.has(a.event?.status)) ids.add(a.event_id);
+    });
+    return ids;
+  }, [assignments]);
+
+  const assignedEventIds = useMemo(
+    () => [...eventDivisionMap.keys()].filter((id) => openEventIds.has(id)),
+    [eventDivisionMap, openEventIds]
+  );
 
   // Get submissions for assigned events whose team's division is in the judge's assignments
   const { data: submissions, isLoading } = useQuery({
@@ -204,8 +217,8 @@ export default function ScoringQueue() {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No submissions assigned to you yet.</p>
-            <p className="text-sm mt-1">An admin will assign you to divisions under Events → Assign Panels.</p>
+            <p>No submissions available to score yet.</p>
+            <p className="text-sm mt-1">Submissions appear here once an admin assigns you and releases the event for scoring.</p>
           </CardContent>
         </Card>
       )}
