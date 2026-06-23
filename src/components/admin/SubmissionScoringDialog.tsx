@@ -357,6 +357,7 @@ export default function SubmissionScoringDialog({
                           submitted: 'bg-success text-success-foreground',
                           needs_review: 'bg-warning text-warning-foreground',
                           locked: 'bg-muted text-muted-foreground',
+                          reviewed: 'bg-success text-success-foreground',
                         };
                         const score: any = allScores?.find((s: any) => s.panel_id === panel.id);
                         return (
