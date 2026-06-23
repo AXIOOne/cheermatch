@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Video, Inbox, CheckCircle, XCircle, UserCheck, Flag, Search, ExternalLink, Mail, Check, X } from 'lucide-react';
+import { Loader2, Video, Inbox, CheckCircle, XCircle, UserCheck, Flag, Search, ExternalLink, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import { GenerateReviewLink } from '@/components/admin/GenerateReviewLink';
 import { BulkEmailDialog } from '@/components/admin/BulkEmailDialog';
