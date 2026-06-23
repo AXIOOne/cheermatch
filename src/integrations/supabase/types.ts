@@ -1361,13 +1361,16 @@ export type Database = {
       video_submissions: {
         Row: {
           brightcove_video_id: string | null
+          captured_at: string | null
           created_at: string
+          device_info: Json | null
           duration_seconds: number | null
           event_id: string
           id: string
           status: Database["public"]["Enums"]["submission_status"]
           submitted_at: string | null
           submitted_by: string | null
+          submitted_via: string
           team_id: string
           thumbnail_url: string | null
           updated_at: string
@@ -1375,13 +1378,16 @@ export type Database = {
         }
         Insert: {
           brightcove_video_id?: string | null
+          captured_at?: string | null
           created_at?: string
+          device_info?: Json | null
           duration_seconds?: number | null
           event_id: string
           id?: string
           status?: Database["public"]["Enums"]["submission_status"]
           submitted_at?: string | null
           submitted_by?: string | null
+          submitted_via?: string
           team_id: string
           thumbnail_url?: string | null
           updated_at?: string
@@ -1389,13 +1395,16 @@ export type Database = {
         }
         Update: {
           brightcove_video_id?: string | null
+          captured_at?: string | null
           created_at?: string
+          device_info?: Json | null
           duration_seconds?: number | null
           event_id?: string
           id?: string
           status?: Database["public"]["Enums"]["submission_status"]
           submitted_at?: string | null
           submitted_by?: string | null
+          submitted_via?: string
           team_id?: string
           thumbnail_url?: string | null
           updated_at?: string
