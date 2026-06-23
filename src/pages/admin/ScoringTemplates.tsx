@@ -293,7 +293,7 @@ export default function ScoringTemplates() {
 
   const handleNewTemplate = () => {
     setEditingTemplate(null);
-    form.reset({ name: '', description: '', event_id: '', is_default: false });
+    form.reset({ name: '', description: '', is_default: false });
     setSections([]); setDeductions([]);
     setIsDialogOpen(true);
   };
