@@ -39,6 +39,25 @@ export default function MobileRecord() {
   // Event-driven capture settings
   const [maxDuration, setMaxDuration] = useState<number>(DEFAULT_DURATION);
   const [maxAttempts, setMaxAttempts] = useState<number>(DEFAULT_ATTEMPTS);
+  const [isPortrait, setIsPortrait] = useState<boolean>(
+    typeof window !== "undefined" ? window.innerHeight > window.innerWidth : false
+  );
+
+  // Track orientation and try to lock to landscape where supported
+  useEffect(() => {
+    const update = () => setIsPortrait(window.innerHeight > window.innerWidth);
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    // Best-effort lock (works in some Android browsers / installed PWAs)
+    const so = (screen as unknown as { orientation?: { lock?: (o: string) => Promise<void>; unlock?: () => void } }).orientation;
+    so?.lock?.("landscape").catch(() => { /* unsupported (iOS Safari) — we show a hint instead */ });
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+      so?.unlock?.();
+    };
+  }, []);
 
   // Load capture settings from the event
   useEffect(() => {
