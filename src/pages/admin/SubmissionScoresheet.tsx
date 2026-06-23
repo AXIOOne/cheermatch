@@ -467,6 +467,14 @@ export default function SubmissionScoresheet() {
           }}
         />
       )}
+      {isAdmin && (
+        <RequestRevisionDialog
+          open={revisionOpen}
+          onOpenChange={setRevisionOpen}
+          submissionId={submissionId!}
+          teamName={submission.team?.name}
+        />
+      )}
     </div>
   );
 }
