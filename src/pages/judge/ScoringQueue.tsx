@@ -24,7 +24,7 @@ export default function ScoringQueue() {
         .select(`
           event_id,
           division_id,
-          event:events(id, name)
+          event:events(id, name, status)
         `)
         .eq('judge_user_id', user!.id);
       if (error) throw error;
