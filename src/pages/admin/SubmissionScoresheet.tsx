@@ -29,6 +29,7 @@ export default function SubmissionScoresheet() {
   const queryClient = useQueryClient();
   const { isAdmin } = useAuth();
   const [editTeamOpen, setEditTeamOpen] = useState(false);
+  const [revisionOpen, setRevisionOpen] = useState(false);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: SubmissionStatus) => {
