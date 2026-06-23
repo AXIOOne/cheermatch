@@ -34,6 +34,7 @@ export default function ScoringQueue() {
   const [searchParams] = useSearchParams();
   const eventFilter = searchParams.get('event');
   const [selectedEvent, setSelectedEvent] = useState<string>(eventFilter || 'all');
+  const [statusFilter, setStatusFilter] = useState<'pending' | 'scored' | 'all'>('pending');
 
   // Judge's assignments — event, division, and panel
   const { data: assignments } = useQuery({
