@@ -11,7 +11,8 @@ export function MobileLayout() {
   const canGoBack = location.pathname !== "/m" && location.pathname !== "/m/login";
   const showHeader = location.pathname !== "/m/login"
     && location.pathname !== "/m/forgot-password"
-    && location.pathname !== "/m/reset-password";
+    && location.pathname !== "/m/reset-password"
+    && !/\/record$/.test(location.pathname);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -52,7 +53,11 @@ export function MobileLayout() {
       )}
       <main
         className="flex-1"
-        style={{ paddingBottom: "max(env(safe-area-inset-bottom), 1rem)" }}
+        style={{
+          paddingBottom: /\/record$/.test(location.pathname)
+            ? "0"
+            : "max(env(safe-area-inset-bottom), 1rem)",
+        }}
       >
         <Outlet />
       </main>
