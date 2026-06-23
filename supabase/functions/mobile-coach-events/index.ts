@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
 
     const { data: events, error: eErr } = await sb
       .from("events")
-      .select("id, name, description, start_date, end_date, status, sub_deadline, reg_cost, event_uuid, screen_capture_cnt, duration_of_capture, broadcast_channel")
+      .select("id, name, description, start_date, end_date, status, sub_deadline, reg_cost, event_uuid, screen_capture_cnt, duration_of_capture, broadcast_channel, registration_open_at, registration_close_at, submission_open_at, submission_close_at, scoring_open_at, scoring_close_at")
       .in("id", eventIds)
       .order("start_date", { ascending: false });
     if (eErr) return fail(eErr.message);
@@ -51,6 +51,12 @@ Deno.serve(async (req) => {
       screen_capture_cnt: asId(e.screen_capture_cnt ?? 2),
       duration_of_capture: asId(e.duration_of_capture ?? 180),
       broadcast_channel: (e.broadcast_channel as string) ?? "VTV",
+      registration_open_at: (e.registration_open_at as string) ?? null,
+      registration_close_at: (e.registration_close_at as string) ?? null,
+      submission_open_at: (e.submission_open_at as string) ?? null,
+      submission_close_at: (e.submission_close_at as string) ?? null,
+      scoring_open_at: (e.scoring_open_at as string) ?? null,
+      scoring_close_at: (e.scoring_close_at as string) ?? null,
     }));
 
     return ok("Events fetched successfully", list);

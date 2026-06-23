@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.coach_account_status(uuid) FROM PUBLIC, anon;

@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, Play, Trophy, Users, Calendar, Award, FileText, Download, Check, X, Pencil } from 'lucide-react';
+import { ArrowLeft, Loader2, Play, Trophy, Users, Calendar, Award, FileText, Download, Check, X, Pencil, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { aggregateValues, AggregationMode } from '@/lib/scoring';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { buildScoresheet, type RawField, type ScoreType } from '@/lib/build-scoresheet';
 import { buildScoresheetPdf, downloadPdf } from '@/lib/scoresheet-pdf';
 import { EditTeamDialog } from '@/components/admin/EditTeamDialog';
+import { RequestRevisionDialog } from '@/components/admin/RequestRevisionDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
@@ -28,6 +29,7 @@ export default function SubmissionScoresheet() {
   const queryClient = useQueryClient();
   const { isAdmin } = useAuth();
   const [editTeamOpen, setEditTeamOpen] = useState(false);
+  const [revisionOpen, setRevisionOpen] = useState(false);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: SubmissionStatus) => {
@@ -53,6 +55,7 @@ export default function SubmissionScoresheet() {
         .from('video_submissions')
         .select(`
           id, video_url, thumbnail_url, status, submitted_at, created_at, duration_seconds,
+          review_notes, reviewed_at,
           event_id,
           team:teams!inner(id, name, gym_name, athlete_count, division_id,
             division:divisions!inner(id, name, scoring_template_id), level:levels!inner(name, level_number)),
@@ -218,11 +221,30 @@ export default function SubmissionScoresheet() {
               <X className="w-4 h-4 mr-2" /> Deny
             </Button>
           )}
+          {submission.status !== 'revision_requested' && submission.status !== 'complete' && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setRevisionOpen(true)}
+              disabled={updateStatusMutation.isPending}
+            >
+              <RotateCcw className="w-4 h-4 mr-2" /> Request Revision
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={handleDownloadPdf} disabled={submittedScores.length === 0}>
             <Download className="w-4 h-4 mr-2" /> Download PDF
           </Button>
         </div>
       </div>
+
+      {(submission as any).review_notes && (
+        <div className="mb-6 border border-amber-300 bg-amber-50 rounded-lg p-4">
+          <p className="text-sm font-semibold text-amber-900 flex items-center gap-2">
+            <RotateCcw className="w-4 h-4" /> Reviewer notes
+          </p>
+          <p className="text-sm text-amber-900/90 mt-1 whitespace-pre-wrap">{(submission as any).review_notes}</p>
+        </div>
+      )}
 
 
 
@@ -443,6 +465,14 @@ export default function SubmissionScoresheet() {
             division_id: submission.team.division_id,
             athlete_count: submission.team.athlete_count,
           }}
+        />
+      )}
+      {isAdmin && (
+        <RequestRevisionDialog
+          open={revisionOpen}
+          onOpenChange={setRevisionOpen}
+          submissionId={submissionId!}
+          teamName={submission.team?.name}
         />
       )}
     </div>

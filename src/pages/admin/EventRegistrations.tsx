@@ -7,14 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Search, Loader2, Users, Plus, Pencil } from 'lucide-react';
+import { ArrowLeft, Search, Loader2, Users, Plus, Pencil, Upload } from 'lucide-react';
 import { AddTeamDialog } from '@/components/admin/AddTeamDialog';
 import { EditRegistrationDialog } from '@/components/admin/EditRegistrationDialog';
+import { BulkImportTeamsDialog } from '@/components/admin/BulkImportTeamsDialog';
+import { CoachAccountsPanel } from '@/components/admin/CoachAccountsPanel';
 
 export default function EventRegistrations() {
   const { eventId } = useParams<{ eventId: string }>();
   const [searchQuery, setSearchQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editTeam, setEditTeam] = useState<any>(null);
 
   const { data: event, isLoading: eventLoading } = useQuery({
@@ -74,10 +77,16 @@ export default function EventRegistrations() {
             </h1>
             <p className="text-muted-foreground mt-1">Team Registrations</p>
           </div>
-          <Button onClick={() => setAddOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Registration
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Import CSV
+            </Button>
+            <Button onClick={() => setAddOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Registration
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -156,8 +165,13 @@ export default function EventRegistrations() {
         </CardContent>
       </Card>
 
+      {eventId && <CoachAccountsPanel eventId={eventId} />}
+
       {eventId && (
         <AddTeamDialog open={addOpen} onOpenChange={setAddOpen} eventId={eventId} />
+      )}
+      {eventId && (
+        <BulkImportTeamsDialog open={importOpen} onOpenChange={setImportOpen} eventId={eventId} />
       )}
       {editTeam && (
         <EditRegistrationDialog

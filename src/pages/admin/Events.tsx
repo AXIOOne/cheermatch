@@ -61,7 +61,17 @@ const eventSchema = z.object({
   status: z.enum(['draft', 'registration_open', 'registration_closed', 'open_for_scoring', 'in_progress', 'completed', 'archived']),
   duration_of_capture: z.coerce.number().int().min(15, 'Must be at least 15 seconds').max(900, 'Must be 900 seconds or less'),
   screen_capture_cnt: z.coerce.number().int().min(1, 'At least 1 attempt').max(5, 'At most 5 attempts'),
+  registration_open_at: z.string().optional(),
+  registration_close_at: z.string().optional(),
+  submission_open_at: z.string().optional(),
+  submission_close_at: z.string().optional(),
+  scoring_open_at: z.string().optional(),
+  scoring_close_at: z.string().optional(),
 });
+
+const toIso = (v?: string) => (v && v.trim() ? new Date(v).toISOString() : null);
+const fromIso = (v?: string | null) =>
+  v ? new Date(v).toISOString().slice(0, 16) : '';
 
 type EventFormData = z.infer<typeof eventSchema>;
 
@@ -110,6 +120,12 @@ export default function Events() {
       status: 'draft',
       duration_of_capture: 150,
       screen_capture_cnt: 2,
+      registration_open_at: '',
+      registration_close_at: '',
+      submission_open_at: '',
+      submission_close_at: '',
+      scoring_open_at: '',
+      scoring_close_at: '',
     },
   });
 
@@ -180,6 +196,12 @@ export default function Events() {
         status: data.status,
         duration_of_capture: data.duration_of_capture,
         screen_capture_cnt: data.screen_capture_cnt,
+        registration_open_at: toIso(data.registration_open_at),
+        registration_close_at: toIso(data.registration_close_at),
+        submission_open_at: toIso(data.submission_open_at),
+        submission_close_at: toIso(data.submission_close_at),
+        scoring_open_at: toIso(data.scoring_open_at),
+        scoring_close_at: toIso(data.scoring_close_at),
         created_by: user!.id,
       } as any]);
       if (error) throw error;
@@ -209,6 +231,12 @@ export default function Events() {
         status: data.status,
         duration_of_capture: data.duration_of_capture,
         screen_capture_cnt: data.screen_capture_cnt,
+        registration_open_at: toIso(data.registration_open_at),
+        registration_close_at: toIso(data.registration_close_at),
+        submission_open_at: toIso(data.submission_open_at),
+        submission_close_at: toIso(data.submission_close_at),
+        scoring_open_at: toIso(data.scoring_open_at),
+        scoring_close_at: toIso(data.scoring_close_at),
       } as any).eq('id', id);
       if (error) throw error;
 
@@ -263,6 +291,12 @@ export default function Events() {
       status: event.status,
       duration_of_capture: event.duration_of_capture ?? 150,
       screen_capture_cnt: event.screen_capture_cnt ?? 2,
+      registration_open_at: fromIso(event.registration_open_at),
+      registration_close_at: fromIso(event.registration_close_at),
+      submission_open_at: fromIso(event.submission_open_at),
+      submission_close_at: fromIso(event.submission_close_at),
+      scoring_open_at: fromIso(event.scoring_open_at),
+      scoring_close_at: fromIso(event.scoring_close_at),
     });
     setIsDialogOpen(true);
   };
@@ -302,7 +336,7 @@ export default function Events() {
                 New Event
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingEvent ? 'Edit Event' : 'Create New Event'}</DialogTitle>
               </DialogHeader>
@@ -459,6 +493,46 @@ export default function Events() {
                         </FormItem>
                       )}
                     />
+                  </div>
+
+                  {/* Lifecycle windows */}
+                  <div className="border-t pt-4 space-y-4">
+                    <div>
+                      <h3 className="text-sm font-semibold">Lifecycle Windows</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Optional. When set, these gate the registration / submission / scoring phases independently of Status.
+                      </p>
+                    </div>
+                    {([
+                      ['Registration', 'registration_open_at', 'registration_close_at'],
+                      ['Submission', 'submission_open_at', 'submission_close_at'],
+                      ['Scoring', 'scoring_open_at', 'scoring_close_at'],
+                    ] as const).map(([label, openKey, closeKey]) => (
+                      <div key={label} className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name={openKey as any}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{label} opens</FormLabel>
+                              <FormControl><Input type="datetime-local" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={closeKey as any}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{label} closes</FormLabel>
+                              <FormControl><Input type="datetime-local" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    ))}
                   </div>
                   <FormField
                     control={form.control}

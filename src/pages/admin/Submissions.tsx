@@ -10,17 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Video, Inbox, CheckCircle, XCircle, UserCheck, Flag, Search, ExternalLink, Mail } from 'lucide-react';
+import { Loader2, Video, Inbox, CheckCircle, XCircle, UserCheck, Flag, Search, ExternalLink, Mail, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { GenerateReviewLink } from '@/components/admin/GenerateReviewLink';
 import { BulkEmailDialog } from '@/components/admin/BulkEmailDialog';
+import { RequestRevisionDialog } from '@/components/admin/RequestRevisionDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
 
 // Lifecycle statuses we surface in the UI.
-type LifecycleStatus = 'imported' | 'approved' | 'denied' | 'assigned' | 'complete';
-const LIFECYCLE_STATUSES: LifecycleStatus[] = ['imported', 'approved', 'denied', 'assigned', 'complete'];
+type LifecycleStatus = 'imported' | 'approved' | 'denied' | 'revision_requested' | 'assigned' | 'complete';
+const LIFECYCLE_STATUSES: LifecycleStatus[] = ['imported', 'approved', 'denied', 'revision_requested', 'assigned', 'complete'];
 
 interface SubmissionWithDetails {
   id: string;
@@ -47,6 +48,7 @@ const lifecycleConfig: Record<LifecycleStatus, { label: string; icon: React.Elem
   imported: { label: 'Imported', icon: Inbox, className: 'bg-muted text-muted-foreground' },
   approved: { label: 'Approved', icon: CheckCircle, className: 'bg-green-100 text-green-700' },
   denied: { label: 'Denied', icon: XCircle, className: 'bg-destructive/10 text-destructive' },
+  revision_requested: { label: 'Revision Requested', icon: RotateCcw, className: 'bg-amber-100 text-amber-700' },
   assigned: { label: 'Assigned', icon: UserCheck, className: 'bg-blue-100 text-blue-700' },
   complete: { label: 'Complete', icon: Flag, className: 'bg-primary/10 text-primary' },
 };
@@ -145,6 +147,7 @@ export default function Submissions() {
     total: submissions?.length || 0,
     imported: countBy('imported'),
     approved: countBy('approved'),
+    revision_requested: countBy('revision_requested'),
     assigned: countBy('assigned'),
     complete: countBy('complete'),
   };
@@ -184,7 +187,7 @@ export default function Submissions() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
@@ -207,6 +210,14 @@ export default function Submissions() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-green-600">{stats.approved}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Revisions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-amber-600">{stats.revision_requested}</p>
           </CardContent>
         </Card>
         <Card>

@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
         id, name, gym_name, athlete_count,
         division:divisions(id, name),
         level:levels(id, name),
-        video_submissions(id, event_id, status, video_url, thumbnail_url, brightcove_video_id, submitted_at, captured_at, submitted_via, duration_seconds)
+        video_submissions(id, event_id, status, video_url, thumbnail_url, brightcove_video_id, submitted_at, captured_at, submitted_via, duration_seconds, review_notes, reviewed_at)
       `)
       .eq("event_id", eventId)
       .or(`coach_user_id.eq.${user.user_id},coach_email.eq.${user.email}`);
@@ -50,6 +50,8 @@ Deno.serve(async (req) => {
           submitted_at: (sub.submitted_at as string) ?? "",
           captured_at: (sub.captured_at as string) ?? "",
           submitted_via: (sub.submitted_via as string) ?? "web",
+          review_notes: (sub.review_notes as string) ?? "",
+          reviewed_at: (sub.reviewed_at as string) ?? "",
         } : null,
       };
     });
