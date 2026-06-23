@@ -107,8 +107,13 @@ export function CoachAccountsPanel({ eventId }: Props) {
             <TableBody>
               {rows.map((r) => {
                 const ok = r.user_exists && r.has_gym_coach_role;
+                const isHighlighted = highlightedEmail === r.coach_email;
                 return (
-                  <TableRow key={r.coach_email}>
+                  <TableRow
+                    key={r.coach_email}
+                    id={`coach-row-${r.coach_email}`}
+                    className={isHighlighted ? 'bg-primary/10 transition-colors' : 'transition-colors'}
+                  >
                     <TableCell>
                       <div className="font-medium">{r.coach_name || '—'}</div>
                       <div className="text-xs text-muted-foreground">{r.coach_email}</div>
