@@ -1,11 +1,22 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { UserCheck, Loader2, Pencil } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { UserCheck, Loader2, Pencil, Plus } from 'lucide-react';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
+import { useToast } from '@/hooks/use-toast';
 
 interface JudgeWithProfile {
   id: string;
@@ -18,12 +29,25 @@ interface JudgeWithProfile {
   } | null;
 }
 
+function generateTempPassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  let p = '';
+  for (let i = 0; i < 14; i++) p += chars[Math.floor(Math.random() * chars.length)];
+  return p + '!9';
+}
+
 export default function Judges() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [editingJudge, setEditingJudge] = useState<{
     user_id: string;
     email: string;
     full_name: string | null;
   } | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const { data: judges, isLoading } = useQuery({
     queryKey: ['judges'],
@@ -61,6 +85,46 @@ export default function Judges() {
     }
   };
 
+  const resetForm = () => {
+    setFullName('');
+    setEmail('');
+  };
+
+  const handleAddJudge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setSubmitting(true);
+    try {
+      const password = generateTempPassword();
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: email.trim().toLowerCase(),
+          password,
+          fullName: fullName.trim() || null,
+          role: 'judge',
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      toast({
+        title: 'Judge added',
+        description: `${email} can now sign in. Share the temporary password: ${password}`,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['judges'] });
+      resetForm();
+      setAddOpen(false);
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to add judge',
+        description: err.message || 'Unknown error',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="p-8">
       <div className="flex items-start justify-between mb-8">
@@ -70,6 +134,9 @@ export default function Judges() {
             Judges are global logins. Assign them to panels inside each event's configuration.
           </p>
         </div>
+        <Button onClick={() => setAddOpen(true)}>
+          <Plus className="w-4 h-4 mr-2" /> Add Judge
+        </Button>
       </div>
 
       <Card>
@@ -112,7 +179,7 @@ export default function Judges() {
             <div className="text-center py-12 text-muted-foreground">
               <UserCheck className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No judges yet.</p>
-              <p className="text-sm mt-1">Judges will appear here once they're assigned the judge role.</p>
+              <p className="text-sm mt-1">Click "Add Judge" to create the first one.</p>
             </div>
           )}
         </CardContent>
@@ -123,6 +190,59 @@ export default function Judges() {
         open={!!editingJudge}
         onOpenChange={(open) => !open && setEditingJudge(null)}
       />
+
+      <Dialog
+        open={addOpen}
+        onOpenChange={(open) => {
+          setAddOpen(open);
+          if (!open) resetForm();
+        }}
+      >
+        <DialogContent>
+          <form onSubmit={handleAddJudge}>
+            <DialogHeader>
+              <DialogTitle>Add Judge</DialogTitle>
+              <DialogDescription>
+                Creates a global judge login. A temporary password will be generated — share it with
+                them and they can change it after first sign-in.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="judge-name">Full name</Label>
+                <Input
+                  id="judge-name"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Jane Smith"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="judge-email">Email</Label>
+                <Input
+                  id="judge-email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="judge@example.com"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={submitting || !email.trim()}>
+                {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Create Judge
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
