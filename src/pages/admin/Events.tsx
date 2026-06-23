@@ -53,7 +53,7 @@ const eventSchema = z.object({
   registration_deadline: z.string().min(1, 'Registration deadline is required'),
   broadcast_deadline: z.string().optional(),
   status: z.enum(['draft', 'registration_open', 'registration_closed', 'in_progress', 'completed', 'archived']),
-  default_template_id: z.string().optional(),
+  
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
