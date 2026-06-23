@@ -221,11 +221,30 @@ export default function SubmissionScoresheet() {
               <X className="w-4 h-4 mr-2" /> Deny
             </Button>
           )}
+          {submission.status !== 'revision_requested' && submission.status !== 'complete' && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setRevisionOpen(true)}
+              disabled={updateStatusMutation.isPending}
+            >
+              <RotateCcw className="w-4 h-4 mr-2" /> Request Revision
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={handleDownloadPdf} disabled={submittedScores.length === 0}>
             <Download className="w-4 h-4 mr-2" /> Download PDF
           </Button>
         </div>
       </div>
+
+      {(submission as any).review_notes && (
+        <div className="mb-6 border border-amber-300 bg-amber-50 rounded-lg p-4">
+          <p className="text-sm font-semibold text-amber-900 flex items-center gap-2">
+            <RotateCcw className="w-4 h-4" /> Reviewer notes
+          </p>
+          <p className="text-sm text-amber-900/90 mt-1 whitespace-pre-wrap">{(submission as any).review_notes}</p>
+        </div>
+      )}
 
 
 
