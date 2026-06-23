@@ -243,6 +243,9 @@ export default function Events() {
       end_date: event.end_date,
       registration_deadline: event.registration_deadline.split('T')[0],
       broadcast_deadline: event.broadcast_deadline || '',
+      accuscore_end_at: event.accuscore_end_at
+        ? new Date(event.accuscore_end_at).toISOString().slice(0, 16)
+        : '',
       status: event.status,
     });
     setIsDialogOpen(true);
