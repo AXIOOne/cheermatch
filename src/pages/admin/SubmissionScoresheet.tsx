@@ -5,27 +5,31 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, Play, Trophy, Users, Calendar, Award, FileText } from 'lucide-react';
+import { ArrowLeft, Loader2, Play, Trophy, Users, Calendar, Award, FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { aggregateValues, AggregationMode } from '@/lib/scoring';
+import { useToast } from '@/hooks/use-toast';
+import { buildScoresheet, type RawField, type ScoreType } from '@/lib/build-scoresheet';
+import { buildScoresheetPdf, downloadPdf } from '@/lib/scoresheet-pdf';
 
 const sb = supabase as any;
 
 export default function SubmissionScoresheet() {
   const { submissionId } = useParams<{ submissionId: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const { data: submission, isLoading } = useQuery({
     queryKey: ['admin-submission-scoresheet', submissionId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('video_submissions')
         .select(`
           id, video_url, thumbnail_url, status, submitted_at, created_at, duration_seconds,
           event_id,
-          team:teams!inner(id, name, gym_name, athlete_count,
-            division:divisions!inner(name), level:levels!inner(name, level_number)),
-          event:events!inner(id, name, start_date, end_date)
+          team:teams!inner(id, name, gym_name, athlete_count, division_id,
+            division:divisions!inner(id, name, scoring_template_id), level:levels!inner(name, level_number)),
+          event:events!inner(id, name, start_date, end_date, accuscore_end_at)
         `)
         .eq('id', submissionId!).maybeSingle();
       if (error) throw error;
@@ -33,6 +37,7 @@ export default function SubmissionScoresheet() {
     },
     enabled: !!submissionId,
   });
+
 
   const { data: scores } = useQuery({
     queryKey: ['admin-submission-scores', submissionId],
