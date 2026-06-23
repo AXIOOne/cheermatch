@@ -306,7 +306,7 @@ export default function ScoringTemplates() {
     setEditingTemplate(tpl);
     form.reset({
       name: tpl.name, description: tpl.description || '',
-      event_id: tpl.event_id, is_default: tpl.is_default,
+      is_default: tpl.is_default,
     });
     const loadedSections: ScoringSection[] = (tpl.sections || [])
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
