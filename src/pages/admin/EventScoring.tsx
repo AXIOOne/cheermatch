@@ -415,63 +415,76 @@ export default function EventScoring() {
                         {coach?.full_name || coach?.email || '—'}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col gap-1">
+                        <Badge
+                          variant="outline"
+                          className={
+                            overallStatus.allComplete
+                              ? 'bg-success/10 text-success border-success/20'
+                              : 'bg-muted text-muted-foreground border-transparent'
+                          }
+                        >
+                          {overallStatus.text}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
                           <Button
                             variant="default"
                             size="sm"
-                            className="h-7"
+                            className="h-8"
                             onClick={() => {
                               setScoringPanelId(null);
                               setScoringSubmissionId(submission.id);
                             }}
                           >
-                            <ClipboardList className="w-3 h-3 mr-1" />
+                            <ClipboardList className="w-3.5 h-3.5 mr-1" />
                             Score
                           </Button>
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="h-auto p-0 text-primary"
-                            onClick={() => handleSendScoreSheet(submission.id)}
-                            disabled={sendingScoreFor === submission.id || !overallStatus.allComplete}
-                          >
-                            {sendingScoreFor === submission.id ? (
-                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                            ) : (
-                              <Send className="w-3 h-3 mr-1" />
-                            )}
-                            Send Score Sheet
-                          </Button>
-                          <Button
-                            asChild
-                            variant="link"
-                            size="sm"
-                            className="h-auto p-0 text-primary"
-                          >
-                            <Link to={`/admin/submissions/${submission.id}`}>
-                              <Eye className="w-3 h-3 mr-1" />
-                              Preview
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="link"
-                            size="sm"
-                            className="h-auto p-0 text-primary"
-                            onClick={() => handleDownloadPdf(submission.id)}
-                            disabled={downloadingPdfFor === submission.id || !overallStatus.allComplete}
-                          >
-                            {downloadingPdfFor === submission.id ? (
-                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                            ) : (
-                              <Download className="w-3 h-3 mr-1" />
-                            )}
-                            Download PDF
-                          </Button>
-                          <span className={`text-xs font-medium ${overallStatus.allComplete ? 'text-success' : 'text-muted-foreground'}`}>
-                            [{overallStatus.text}]
-                          </span>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                aria-label="More actions"
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-52">
+                              <DropdownMenuItem
+                                onClick={() => handleSendScoreSheet(submission.id)}
+                                disabled={sendingScoreFor === submission.id || !overallStatus.allComplete}
+                              >
+                                {sendingScoreFor === submission.id ? (
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Send className="w-4 h-4 mr-2" />
+                                )}
+                                Send Score Sheet
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild>
+                                <Link to={`/admin/submissions/${submission.id}`}>
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  Preview
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDownloadPdf(submission.id)}
+                                disabled={downloadingPdfFor === submission.id || !overallStatus.allComplete}
+                              >
+                                {downloadingPdfFor === submission.id ? (
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Download className="w-4 h-4 mr-2" />
+                                )}
+                                Download PDF
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </TableCell>
+
                       {panels?.map((panel) => (
                         <TableCell key={panel.id} className="text-center">
                           <div className="flex justify-center">
