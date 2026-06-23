@@ -343,7 +343,12 @@ export default function ScoringTemplates() {
     else setLockConfirmTemplate(tpl);
   };
 
-  const isEventInProgress = (tpl: any) => tpl.event?.status === 'in_progress';
+  const divisionLabel = (tpl: any) => {
+    const divs = tpl.divisions || [];
+    if (!divs.length) return 'Unassigned';
+    if (divs.length <= 2) return divs.map((d: any) => d.name).join(', ');
+    return `${divs.length} divisions`;
+  };
   const getTotalPoints = (tpl: any) =>
     (tpl.sections || []).reduce(
       (sum: number, s: any) => sum + (s.fields || []).reduce((a: number, f: any) => a + Number(f.max_points || 0), 0),
