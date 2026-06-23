@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
@@ -25,19 +26,35 @@ const CHEER_LEVELS = [
   'Level 6',
 ] as const;
 
+const DISCIPLINES = [
+  { value: 'allstar_cheer', label: 'All-Star Cheer' },
+  { value: 'allstar_dance', label: 'All-Star Dance' },
+  { value: 'nca_cheer', label: 'NCA Cheer' },
+  { value: 'nca_dance', label: 'NCA Dance' },
+  { value: 'uca_cheer', label: 'UCA Cheer' },
+  { value: 'uca_dance', label: 'UCA Dance' },
+  { value: 'usa_cheer', label: 'USA Cheer' },
+  { value: 'usa_dance', label: 'USA Dance' },
+] as const;
+
+const disciplineLabel = (v: string) =>
+  DISCIPLINES.find((d) => d.value === v)?.label ?? v;
+
+const DISCIPLINE_VALUES = DISCIPLINES.map((d) => d.value) as [string, ...string[]];
+
 const divisionSchema = z
   .object({
-    discipline: z.enum(['cheer', 'dance']),
+    discipline: z.enum(DISCIPLINE_VALUES),
     name: z.string().min(1, 'Division title is required'),
     scoring_template_id: z.string().min(1, 'Scoring template is required'),
     level: z.string().optional(),
   })
   .superRefine((val, ctx) => {
-    if (val.discipline === 'cheer' && !val.level) {
+    if (val.discipline === 'allstar_cheer' && !val.level) {
       ctx.addIssue({
         path: ['level'],
         code: z.ZodIssueCode.custom,
-        message: 'Level is required for cheer divisions',
+        message: 'Level is required for All-Star Cheer divisions',
       });
     }
   });
@@ -49,26 +66,27 @@ const sb = supabase as any;
 export default function Divisions() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDivision, setEditingDivision] = useState<any | null>(null);
+  const [filter, setFilter] = useState<string>('all');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const form = useForm<DivisionFormData>({
     resolver: zodResolver(divisionSchema),
-    defaultValues: { discipline: 'cheer', name: '', scoring_template_id: '', level: '' },
+    defaultValues: { discipline: 'allstar_cheer', name: '', scoring_template_id: '', level: '' },
   });
 
   const discipline = form.watch('discipline');
 
   const openCreate = () => {
     setEditingDivision(null);
-    form.reset({ discipline: 'cheer', name: '', scoring_template_id: '', level: '' });
+    form.reset({ discipline: 'allstar_cheer', name: '', scoring_template_id: '', level: '' });
     setIsDialogOpen(true);
   };
 
   const openEdit = (div: any) => {
     setEditingDivision(div);
     form.reset({
-      discipline: (div.discipline as 'cheer' | 'dance') ?? 'cheer',
+      discipline: (div.discipline as any) ?? 'allstar_cheer',
       name: div.name ?? '',
       scoring_template_id: div.scoring_template_id ?? '',
       level: div.level ?? '',
@@ -106,13 +124,19 @@ export default function Divisions() {
     },
   });
 
+  const filteredDivisions = useMemo(() => {
+    if (!divisions) return [];
+    if (filter === 'all') return divisions;
+    return divisions.filter((d: any) => d.discipline === filter);
+  }, [divisions, filter]);
+
   const upsertMutation = useMutation({
     mutationFn: async (data: DivisionFormData) => {
       const payload = {
         name: data.name,
         discipline: data.discipline,
         scoring_template_id: data.scoring_template_id,
-        level: data.discipline === 'cheer' ? data.level || null : null,
+        level: data.discipline === 'allstar_cheer' ? data.level || null : null,
       };
       if (editingDivision) {
         const { error } = await sb.from('divisions').update(payload).eq('id', editingDivision.id);
@@ -163,13 +187,24 @@ export default function Divisions() {
         </Button>
       </div>
 
+      <Tabs value={filter} onValueChange={setFilter} className="mb-4">
+        <TabsList className="flex flex-wrap h-auto">
+          <TabsTrigger value="all">All</TabsTrigger>
+          {DISCIPLINES.map((d) => (
+            <TabsTrigger key={d.value} value={d.value}>
+              {d.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin" />
             </div>
-          ) : divisions && divisions.length > 0 ? (
+          ) : filteredDivisions && filteredDivisions.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -181,11 +216,11 @@ export default function Divisions() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {divisions.map((div: any) => (
+                {filteredDivisions.map((div: any) => (
                   <TableRow key={div.id}>
                     <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {div.discipline ?? 'cheer'}
+                      <Badge variant="outline">
+                        {disciplineLabel(div.discipline ?? 'allstar_cheer')}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-medium">{div.name}</TableCell>
@@ -245,7 +280,7 @@ export default function Divisions() {
                     <Select
                       onValueChange={(v) => {
                         field.onChange(v);
-                        if (v === 'dance') form.setValue('level', '');
+                        if (v !== 'allstar_cheer') form.setValue('level', '');
                       }}
                       value={field.value}
                     >
@@ -255,8 +290,11 @@ export default function Divisions() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="cheer">Cheer</SelectItem>
-                        <SelectItem value="dance">Dance</SelectItem>
+                        {DISCIPLINES.map((d) => (
+                          <SelectItem key={d.value} value={d.value}>
+                            {d.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -310,7 +348,7 @@ export default function Divisions() {
                 )}
               />
 
-              {discipline === 'cheer' && (
+              {discipline === 'allstar_cheer' && (
                 <FormField
                   control={form.control}
                   name="level"
