@@ -364,7 +364,10 @@ export default function SubmissionScoringDialog({
                           <div key={panel.id}
                             className={`px-3 py-2 rounded-lg text-center cursor-pointer transition-all ${selectedPanelId === panel.id ? 'ring-2 ring-primary ring-offset-2' : ''} ${colors[status] || ''}`}
                             onClick={() => setSelectedPanelId(panel.id)}>
-                            <p className="font-bold">{panel.abbreviation}</p>
+                            <p className="font-bold flex items-center justify-center gap-1">
+                              {status === 'reviewed' && <CheckCircle className="w-3.5 h-3.5" />}
+                              {panel.abbreviation}
+                            </p>
                             {score?.total_score !== null && score?.total_score !== undefined && (
                               <p className="text-xs opacity-90">{Number(score.total_score).toFixed(1)}</p>
                             )}
