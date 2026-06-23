@@ -61,7 +61,7 @@ export function AdminSidebar() {
         <NavItem to="/admin/scoring" icon={<ClipboardList className="w-5 h-5" />} label="Scoring Templates" />
         <NavItem to="/admin/rubrics" icon={<BookOpen className="w-5 h-5" />} label="Rubrics" />
         <NavItem to="/admin/divisions" icon={<Layers className="w-5 h-5" />} label="Divisions & Levels" />
-        <NavItem to="/admin/teams" icon={<Users className="w-5 h-5" />} label="Teams" />
+        
         <NavItem to="/admin/submissions" icon={<Video className="w-5 h-5" />} label="Submissions" />
         <NavItem to="/admin/judges" icon={<UserCheck className="w-5 h-5" />} label="Judges" />
         <NavItem to="/admin/reviews" icon={<MessageSquareText className="w-5 h-5" />} label="Review Requests" />
