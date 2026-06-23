@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Camera, Square, Upload, RotateCcw, CheckCircle2, Plus, RotateCw } from "lucide-react";
+import { Camera, Square, Upload, RotateCcw, CheckCircle2, Plus, RotateCw, ChevronLeft, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { mobileApi } from "@/lib/mobile-api";
+import { useMobileAuth } from "@/hooks/useMobileAuth";
 
 type Phase = "ready" | "recording" | "preview" | "choose" | "uploading" | "done";
 type Attempt = { id: number; blob: Blob; url: string; durationSec: number };
