@@ -58,7 +58,12 @@ export default function SectionFieldsTable({ fields, onChange, availablePanels }
               {fields.map((f, idx) => (
                 <tr key={f.temp_id} className="border-t">
                   <td className="px-3 py-2">
-                    <p className="font-medium">{f.name || <span className="text-muted-foreground italic">Unnamed</span>}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{f.name || <span className="text-muted-foreground italic">Unnamed</span>}</p>
+                      <Badge variant={f.score_type === 'execution' ? 'default' : 'secondary'} className="text-[10px] uppercase">
+                        {f.score_type === 'execution' ? 'Exec' : 'Diff'}
+                      </Badge>
+                    </div>
                     {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
                   </td>
                   <td className="px-3 py-2 capitalize">{f.field_type}</td>

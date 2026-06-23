@@ -1,0 +1,1 @@
+ALTER TABLE public.scoring_fields ADD COLUMN score_type text NOT NULL DEFAULT 'difficulty' CHECK (score_type IN ('difficulty','execution'));

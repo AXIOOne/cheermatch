@@ -15,12 +15,15 @@ export interface FieldOption {
   value: number;
 }
 
+export type ScoreType = 'difficulty' | 'execution';
+
 export interface ScoringField {
   temp_id: string;
   id?: string;
   name: string;
   description?: string;
   field_type: 'number' | 'dropdown';
+  score_type: ScoreType;
   min_value: number;
   max_value: number;
   step: number;
@@ -41,6 +44,7 @@ export function blankField(): ScoringField {
     temp_id: tempId(),
     name: '',
     field_type: 'number',
+    score_type: 'difficulty',
     min_value: 0,
     max_value: 10,
     step: 0.25,
@@ -135,6 +139,19 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
               </Select>
             </div>
             <div>
+              <Label>Score Type</Label>
+              <Select
+                value={draft.score_type}
+                onValueChange={(v) => setDraft(d => ({ ...d, score_type: v as ScoreType }))}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="difficulty">Difficulty</SelectItem>
+                  <SelectItem value="execution">Execution</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="col-span-2">
               <Label>Max Points (contributes to row total)</Label>
               <Input
                 type="number"
@@ -144,6 +161,9 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
               />
             </div>
           </div>
+
+
+
 
           {draft.field_type === 'number' && (
             <div className="grid grid-cols-3 gap-3 bg-muted/30 p-3 rounded-md">

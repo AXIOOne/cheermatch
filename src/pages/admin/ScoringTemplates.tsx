@@ -125,6 +125,7 @@ export default function ScoringTemplates() {
         description: f.description || null,
         display_order: idx,
         field_type: f.field_type,
+        score_type: f.score_type,
         min_value: f.min_value,
         max_value: f.max_value,
         step: f.step,
@@ -264,7 +265,7 @@ export default function ScoringTemplates() {
           const { data: fIns, error: fErr } = await sb.from('scoring_fields').insert({
             template_id: newTpl.id, section_id: secIns.id,
             name: f.name, description: f.description, display_order: f.display_order ?? j,
-            field_type: f.field_type, min_value: f.min_value, max_value: f.max_value,
+            field_type: f.field_type, score_type: f.score_type || 'difficulty', min_value: f.min_value, max_value: f.max_value,
             step: f.step, max_points: f.max_points, aggregation: f.aggregation,
           }).select().single();
           if (fErr) throw fErr;
@@ -343,6 +344,7 @@ export default function ScoringTemplates() {
             id: f.id, temp_id: f.id,
             name: f.name, description: f.description,
             field_type: f.field_type,
+            score_type: f.score_type || 'difficulty',
             min_value: Number(f.min_value), max_value: Number(f.max_value),
             step: Number(f.step), max_points: Number(f.max_points),
             aggregation: f.aggregation,

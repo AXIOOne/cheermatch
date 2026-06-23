@@ -571,6 +571,7 @@ export type Database = {
           max_value: number
           min_value: number
           name: string
+          score_type: string
           section_id: string
           step: number
           template_id: string
@@ -587,6 +588,7 @@ export type Database = {
           max_value?: number
           min_value?: number
           name: string
+          score_type?: string
           section_id: string
           step?: number
           template_id: string
@@ -603,6 +605,7 @@ export type Database = {
           max_value?: number
           min_value?: number
           name?: string
+          score_type?: string
           section_id?: string
           step?: number
           template_id?: string
