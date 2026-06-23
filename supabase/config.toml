@@ -30,3 +30,28 @@ verify_jwt = false
 [functions.uniqueTeamName]
 verify_jwt = false
 
+[functions.login]
+verify_jwt = false
+
+[functions.forgotPassword]
+verify_jwt = false
+
+[functions.create_password]
+verify_jwt = false
+
+[functions.mobile-coach-events]
+verify_jwt = false
+
+[functions.mobile-coach-teams]
+verify_jwt = false
+
+[functions.brightcove-upload-init]
+verify_jwt = false
+
+[functions.brightcove-upload-complete]
+verify_jwt = false
+
+[functions.brightcove-ingest-callback]
+verify_jwt = false
+
+
