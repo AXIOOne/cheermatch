@@ -1,25 +1,59 @@
-## Audit result
+## Goals
 
-Most of this flow is already wired up. Here's what exists today and the small gaps to close.
+1. Reformat `src/pages/judge/ScorePerformance.tsx` so the video is the primary focus, with team info stacked beside it and scoring fields below.
+2. Add a "Submit & Flag" button next to "Submit Score" that captures a flag reason, then submits the score with a "Needs Review" status visible in the admin scoring control panel.
 
-### Already working
-- **ScoringQueue** (`src/pages/judge/ScoringQueue.tsx`) reads `judge_assignments` for the logged-in judge, keeps only events whose status is `open_for_scoring` or `in_progress`, and filters `video_submissions` to assigned divisions.
-- **ScorePerformance** (`src/pages/judge/ScorePerformance.tsx`) loads the judge's `panel_id` for the event, then filters scoring fields by `scoring_field_panels.panel_abbreviation` matching the judge's panel — so judges only see/score the fields tied to their panel. Save/submit is blocked unless the event is open for scoring.
-- Trigger `set_submissions_assigned_on_judge_assignment` flips approved submissions to `assigned` when an assignment is created, so they appear in the queue.
+## Layout changes (judge scoring screen)
 
-### Gaps to fix
+New structure replacing the current `lg:grid-cols-2` split:
 
-1. **Surface the judge's panel on the queue card.** Today the queue card shows team / gym / division / level but never tells the judge which panel (e.g. B1, B2) they're scoring for that event. Add a `Panel: B1` badge on each submission card, derived from the judge's `judge_assignments.panel_id` for that event.
+```text
++--------------------------------------------+-----------------+
+|                                            | Team Info       |
+|              VIDEO PLAYER (large)          |  - Team name    |
+|              (≈ 2/3 width on desktop)      |  - Gym          |
+|                                            |  - Division     |
+|                                            |  - Level        |
+|                                            |  - Event        |
+|                                            |  - Athletes     |
+|                                            |  - Duration     |
++--------------------------------------------+-----------------+
+|  SCORING FIELDS (sections + inputs)        | Judge Comments  |
+|  (≈ 2/3 width)                             | (textarea)      |
+|                                            |                 |
+|  Deductions block below scoring fields     |                 |
++--------------------------------------------+-----------------+
+```
 
-2. **Hide submissions that have no fields for the judge's panel.** A judge can be assigned to a division whose scoring template has zero fields tagged for their panel. Today those submissions still appear and open to an empty scoring form. Filter them out: only show a submission if at least one `scoring_fields` row in the division's template has a `scoring_field_panels` row matching the judge's panel abbreviation (or has no panel restrictions at all).
+- Top row: video left (col-span-2), team info card stacked right (col-span-1).
+- Bottom row: scoring sections left (col-span-2), comments card right (col-span-1, sticky).
+- Mobile: everything stacks single-column (video → team → scoring → comments).
+- Preserve existing rubric reference, panel badges, save/submit buttons, locked/closed states.
+- No changes to data fetching, visibility filtering, or score calculation logic.
 
-3. **Include `approved` submissions as a safety net.** Queue currently filters to `['assigned', 'complete']`. If a panel is added after the submission was approved but the trigger missed (e.g. assignment edited later), the row never moves out of `approved`. Include `approved` in the visible statuses so nothing falls through, and rely on the division/panel filter to scope it correctly.
+## Submit & Flag flow
 
-4. **Dashboard "Assigned Events" should reflect scoring-ready state.** On `src/pages/judge/Dashboard.tsx`, tag each assignment row with whether the event is `open_for_scoring` (green "Open for scoring"), `in_progress`, or "Not yet released" — and disable the row's **Score** button when the event isn't open. Today it shows raw enum text and always links to the queue.
+Header buttons (when not locked):
+`Save Draft` | `Submit Score` | `Submit & Flag` (warning-styled).
 
-### Technical notes
+Clicking **Submit & Flag** opens a modal (`Dialog`) requiring a non-empty reason. On confirm, the score is saved with `status = 'submitted'`, `needs_review = true`, and the reason persisted.
 
-- No schema changes. All filters use existing tables: `judge_assignments`, `judge_panels`, `scoring_field_panels`, `scoring_fields`, `scoring_sections`, `scoring_templates`, `divisions.scoring_template_id`.
-- For gap #2, extend the queue query to also fetch each division's `scoring_template_id` → sections → fields → `scoring_field_panels`, then drop submissions whose template has no matching fields for the judge's panel abbreviation. Reuse the same panel-matching logic already in `ScorePerformance.visibleSections`.
-- For gap #1, the queue already loads `judge_assignments` per event; just join `panel:judge_panels(abbreviation)` and render a badge.
-- Files touched: `src/pages/judge/ScoringQueue.tsx`, `src/pages/judge/Dashboard.tsx`. No migration, no edge function changes.
+### Reason storage
+
+Add a `review_reason` (text, nullable) column to `public.scores` via migration. The existing `needs_review` boolean is already in use by `EventScoring.tsx`, which already maps `needs_review` → orange/yellow "Needs review" status — no admin changes needed for the badge.
+
+### Mutation changes
+
+Extend `saveMutation` to accept `{ status, needsReview?, reviewReason? }`:
+- On insert/update, set `needs_review` and `review_reason` accordingly.
+- `Submit Score` clears `needs_review` to `false` and `review_reason` to `null`.
+- `Submit & Flag` sets `needs_review = true` and stores the reason; status `submitted`; navigates back to queue with a toast.
+
+## Technical details
+
+Files:
+- `src/pages/judge/ScorePerformance.tsx` — layout restructure, new flag button + dialog, mutation params.
+- New migration: `ALTER TABLE public.scores ADD COLUMN review_reason text;` (no new policies needed; existing scores policies cover it).
+- Optional: surface `review_reason` in `src/pages/admin/EventScoring.tsx` tooltip/dialog so admins see why the judge flagged it (small select-list addition + display in the existing score editor).
+
+No changes to RLS, GRANTS (column-level inherits), or other judge/admin pages beyond the optional reason display.

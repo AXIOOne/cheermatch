@@ -1,0 +1,1 @@
+ALTER TABLE public.scores ADD COLUMN IF NOT EXISTS review_reason text;
