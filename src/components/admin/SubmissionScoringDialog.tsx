@@ -312,13 +312,57 @@ export default function SubmissionScoringDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-4">
+          <DialogTitle className="flex items-center gap-4 flex-wrap pr-8">
             <span>Score Submission</span>
             {submission && (
               <Badge variant="outline" className="font-normal">
                 {submission.team?.name} • {submission.team?.gym_name}
               </Badge>
             )}
+            <div className="ml-auto flex items-center gap-2">
+              {isCurrentPanelSubmitted ? (
+                isCurrentPanelReviewed ? (
+                  <>
+                    <span className="text-xs text-muted-foreground font-normal">
+                      Reviewed {new Date(currentPanelScore!.reviewed_at!).toLocaleString()}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => reviewMutation.mutate(false)}
+                      disabled={reviewMutation.isPending}
+                    >
+                      {reviewMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                      )}
+                      Unmark Reviewed
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    onClick={() => reviewMutation.mutate(true)}
+                    disabled={reviewMutation.isPending}
+                  >
+                    {reviewMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                    )}
+                    Mark as Reviewed
+                  </Button>
+                )
+              ) : (
+                <span className="text-xs text-muted-foreground font-normal">
+                  Submit this panel's score before it can be reviewed.
+                </span>
+              )}
+            </div>
           </DialogTitle>
         </DialogHeader>
 
