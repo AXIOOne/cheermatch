@@ -102,7 +102,7 @@ export default function EventScoring() {
             division:divisions(id, name),
             level:levels(id, name)
           ),
-          scores:scores(id, status, total_score, panel_id, needs_review)
+          scores:scores(id, status, total_score, panel_id, needs_review, reviewed_at)
         `)
         .eq('event_id', eventId)
         .order('created_at', { ascending: false });
