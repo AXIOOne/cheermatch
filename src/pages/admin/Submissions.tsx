@@ -367,39 +367,8 @@ export default function Submissions() {
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
-                          {lifecycle === 'imported' && (
-                            <>
-                              <Button
-                                size="sm"
-                                variant="default"
-                                onClick={() => updateStatusMutation.mutate({ id: submission.id, status: 'approved' })}
-                                disabled={updateStatusMutation.isPending}
-                              >
-                                <Check className="w-4 h-4 mr-1" />
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => updateStatusMutation.mutate({ id: submission.id, status: 'denied' })}
-                                disabled={updateStatusMutation.isPending}
-                              >
-                                <X className="w-4 h-4 mr-1" />
-                                Deny
-                              </Button>
-                            </>
-                          )}
-                          {lifecycle === 'denied' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateStatusMutation.mutate({ id: submission.id, status: 'approved' })}
-                              disabled={updateStatusMutation.isPending}
-                            >
-                              <Check className="w-4 h-4 mr-1" />
-                              Re-approve
-                            </Button>
-                          )}
+                          {/* Approve/Deny actions live on the submission detail page */}
+
                           {submission.video_url && (
                             <Button variant="ghost" size="sm" asChild>
                               <a href={submission.video_url} target="_blank" rel="noopener noreferrer">
