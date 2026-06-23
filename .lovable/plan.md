@@ -1,46 +1,41 @@
-## Assign Panels (Event Scoring)
 
-Rename the "Configure Panels" button on `/admin/events/:id/scoring` to **Assign Panels** and replace its dialog with a tabbed interface for assigning a specific judge to each scoring section, grouped by the divisions that currently have submitted teams.
+## Goal
 
-### UX
+Make the existing **Scoring Queue** tab actually show each judge only the submissions they've been assigned to, and change **Assign Panels** so admin assignments are staged and committed via a **Save** button (which then makes those teams appear in each assigned judge's queue).
 
-Button label changes from "Configure Panels" → "Assign Panels".
+## Current state
 
-Dialog (wider, ~max-w-4xl) with two tabs:
+- The `/judge/queue` route and sidebar item already exist (`src/pages/judge/ScoringQueue.tsx`). It returns no rows because it filters `video_submissions` by `status = 'ready'`, but submissions actually use `approved` / `assigned` / `complete`.
+- `AssignPanelsDialog` writes every combobox change to the database immediately — there is no Save button and no way to review pending changes.
+- A DB trigger (`set_submissions_assigned_on_judge_assignment`) already flips matching submissions from `approved` → `assigned` when a `judge_assignments` row is inserted, so once assignments save, queue visibility follows.
 
-1. **Assignments** (default tab)
-   - Loads the active scoring template for the event and all sections (grouped by their panel via `default_panel_abbreviation`).
-   - Loads divisions that have at least one `video_submissions` row for this event (status ≠ `withdrawn`/`rejected`), via `teams.division_id`.
-   - Renders one collapsible card per division. Inside each: a row per scoring section showing section name, its panel badge, and a Judge select dropdown.
-   - Judge dropdown lists users with the `judge` role (`user_roles` + `profiles`).
-   - Saves immediately on change (upsert).
+## Changes
 
-2. **Panel Definitions**
-   - Houses the existing `JudgePanelsManager` so admins can still add/remove panel rows (B1, B2, T1…) used by sections.
+### 1. `src/components/admin/AssignPanelsDialog.tsx` — stage edits + Save
 
-### Data model
+- Hold pending edits in local state keyed by `division_id:section_id` → `judge_user_id | null`, seeded from existing assignments.
+- The judge combobox updates local state only (no immediate DB write).
+- Show a "Modified" indicator on changed rows and a footer with **Cancel** and **Save Assignments** buttons. Save is disabled when there are no pending changes.
+- On Save: diff against existing assignments and run inserts / updates / deletes in one batch, then invalidate `section-assignments`, `judge-assignments`, and `judge-submissions` queries; toast success; close dialog.
 
-Current `judge_assignments` is `(event_id, judge_user_id, division_id, level_id, panel_id)` — panel-grain only. To support per-section assignment, add a nullable `section_id uuid` column referencing `scoring_sections(id) ON DELETE CASCADE`, plus a partial unique index `(event_id, division_id, section_id) WHERE section_id IS NOT NULL` so each section has one judge per division.
+### 2. `src/pages/judge/ScoringQueue.tsx` — show only assigned submissions
 
-No data backfill. Existing rows (panel-level) remain untouched and continue to work for legacy lookups; the new UI writes section-level rows.
+- Fetch the judge's `judge_assignments` rows (event_id + division_id, section-level).
+- Fetch `video_submissions` for those event_ids whose team's `division_id` matches one of the judge's assignments for that event, with `status IN ('assigned','complete')` so judges can still view what they've already scored.
+- Keep the existing event filter, thumbnail/card layout, and score-status badges.
+- Empty state copy: "No submissions assigned to you yet."
 
-### Files
+### 3. Judge Dashboard (`src/pages/judge/Dashboard.tsx`) — minor
 
-- **Migration**: add `section_id` column + index to `public.judge_assignments`.
-- **`src/pages/admin/EventScoring.tsx`**: button label → "Assign Panels"; swap dialog content for new component; widen dialog.
-- **`src/components/admin/AssignPanelsDialog.tsx`** (new): tabbed UI described above.
-- **`src/components/admin/JudgePanelsManager.tsx`**: unchanged, embedded in the second tab.
+- No schema change; the existing "Assigned Events" count already derives from `judge_assignments`. Leave behavior as-is so it stays consistent with the new queue.
 
-### Queries used by the new dialog
+## Technical notes
 
-- Scoring template + sections: `scoring_templates` (where `event_id=` and `is_default=true`) → `scoring_sections` ordered by `display_order`.
-- Divisions with submissions: `video_submissions` joined to `teams` → distinct `division_id` + name.
-- Judges list: `user_roles` where `role='judge'` joined to `profiles` (full_name, email).
-- Existing assignments: `judge_assignments` where `event_id=` and `section_id is not null`, keyed by `${division_id}:${section_id}` for fast lookup.
-- Upsert on judge select: insert if missing, update `judge_user_id` if present, delete if cleared.
+- No schema or RLS changes — `judge_assignments` already has admin-write + judge-read-own policies, and the assignment→submission status trigger is in place.
+- Save runs one Supabase call per diffed row inside a `Promise.all`. On any failure, show a destructive toast and keep the dialog open with state intact.
+- Submission visibility for a judge is computed client-side by intersecting `judge_assignments(event_id, division_id)` with `teams.division_id` on each submission — no new RPC.
 
-### Out of scope
+## Out of scope
 
-- No changes to the per-team scoring flow or how scores reference panels.
-- No backfill of existing panel-level assignments into section-level rows.
-- No bulk-assign UX (e.g. "apply this judge to all B1 sections across divisions") — single-row edits only for v1.
+- Level- or panel-scoped filtering of the queue (assignments today are section-level per division).
+- Any change to the submission status workflow beyond what the existing trigger already does.

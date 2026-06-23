@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,14 +15,15 @@ export default function ScoringQueue() {
   const eventFilter = searchParams.get('event');
   const [selectedEvent, setSelectedEvent] = useState<string>(eventFilter || 'all');
 
-  // Get judge's assignments
+  // Get judge's section-level assignments (event_id + division_id)
   const { data: assignments } = useQuery({
     queryKey: ['judge-assignments', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('judge_assignments')
         .select(`
-          *,
+          event_id,
+          division_id,
           event:events(id, name)
         `)
         .eq('judge_user_id', user!.id);
@@ -32,27 +33,39 @@ export default function ScoringQueue() {
     enabled: !!user,
   });
 
-  // Get submissions for assigned events
+  // Build event_id → Set<division_id> for filtering submissions
+  const eventDivisionMap = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    (assignments || []).forEach((a: any) => {
+      if (!a.event_id) return;
+      const set = m.get(a.event_id) || new Set<string>();
+      if (a.division_id) set.add(a.division_id);
+      m.set(a.event_id, set);
+    });
+    return m;
+  }, [assignments]);
+
+  const assignedEventIds = useMemo(() => [...eventDivisionMap.keys()], [eventDivisionMap]);
+
+  // Get submissions for assigned events whose team's division is in the judge's assignments
   const { data: submissions, isLoading } = useQuery({
-    queryKey: ['judge-submissions', user?.id, selectedEvent],
+    queryKey: ['judge-submissions', user?.id, selectedEvent, assignedEventIds.join(',')],
     queryFn: async () => {
-      // Get event IDs from assignments
-      const eventIds = assignments?.map(a => a.event_id) || [];
-      if (eventIds.length === 0) return [];
+      if (assignedEventIds.length === 0) return [];
 
       let query = supabase
         .from('video_submissions')
         .select(`
           *,
           team:teams(
-            id, name, gym_name, athlete_count,
-            division:divisions(name),
+            id, name, gym_name, athlete_count, division_id,
+            division:divisions(id, name),
             level:levels(name, level_number)
           ),
           event:events(id, name)
         `)
-        .in('event_id', eventIds)
-        .eq('status', 'ready')
+        .in('event_id', assignedEventIds)
+        .in('status', ['assigned', 'complete'])
         .order('created_at', { ascending: true });
 
       if (selectedEvent && selectedEvent !== 'all') {
@@ -61,7 +74,12 @@ export default function ScoringQueue() {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data;
+
+      return (data || []).filter((sub: any) => {
+        const allowedDivs = eventDivisionMap.get(sub.event_id);
+        if (!allowedDivs || allowedDivs.size === 0) return false;
+        return sub.team?.division_id && allowedDivs.has(sub.team.division_id);
+      });
     },
     enabled: !!user && !!assignments,
   });
@@ -85,7 +103,7 @@ export default function ScoringQueue() {
     return score?.status || null;
   };
 
-  const uniqueEvents = [...new Map(assignments?.map(a => [a.event_id, a.event]) || [])];
+  const uniqueEvents = [...new Map(assignments?.map((a: any) => [a.event_id, a.event]) || [])];
 
   return (
     <div className="p-8">
@@ -186,8 +204,8 @@ export default function ScoringQueue() {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No performances ready for scoring.</p>
-            <p className="text-sm mt-1">Submissions will appear here once teams upload their videos.</p>
+            <p>No submissions assigned to you yet.</p>
+            <p className="text-sm mt-1">An admin will assign you to divisions under Events → Assign Panels.</p>
           </CardContent>
         </Card>
       )}
