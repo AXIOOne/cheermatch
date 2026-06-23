@@ -232,12 +232,12 @@ export default function EventsSummary() {
             </Card>
           </div>
 
-          {/* Upcoming Deadlines */}
+          {/* Upcoming Events */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="w-5 h-5" />
-                Upcoming Deadlines (Next 30 Days)
+                Upcoming Events (Next 30 Days)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -253,10 +253,8 @@ export default function EventsSummary() {
                           {event.name}
                         </Link>
                         <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
-                          <span>Registration: {format(new Date(event.registration_deadline), 'MMM d, yyyy')}</span>
-                          {event.broadcast_deadline && (
-                            <span>Broadcast: {format(new Date(event.broadcast_deadline), 'MMM d, yyyy')}</span>
-                          )}
+                          <span>Starts: {format(new Date(event.start_date), 'MMM d, yyyy')}</span>
+                          {event.time_zone && <span>{event.time_zone}</span>}
                         </div>
                       </div>
                       <div className="text-right">
