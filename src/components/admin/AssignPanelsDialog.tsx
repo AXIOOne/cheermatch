@@ -263,3 +263,80 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
     </Tabs>
   );
 }
+
+interface JudgeOption {
+  user_id: string;
+  full_name: string | null;
+  email: string;
+}
+
+function JudgeCombobox({
+  value,
+  judges,
+  onChange,
+}: {
+  value: string;
+  judges: JudgeOption[];
+  onChange: (judgeUserId: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = judges.find(j => j.user_id === value);
+  const selectedLabel = selected ? (selected.full_name || selected.email) : 'Unassigned';
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className={cn('truncate', !selected && 'text-muted-foreground')}>{selectedLabel}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Search judges..." />
+          <CommandList>
+            <CommandEmpty>No judges found.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value="unassigned"
+                onSelect={() => {
+                  onChange(null);
+                  setOpen(false);
+                }}
+              >
+                <Check className={cn('mr-2 h-4 w-4', !value ? 'opacity-100' : 'opacity-0')} />
+                Unassigned
+              </CommandItem>
+              {judges.map(j => {
+                const label = j.full_name || j.email;
+                return (
+                  <CommandItem
+                    key={j.user_id}
+                    value={`${label} ${j.email}`}
+                    onSelect={() => {
+                      onChange(j.user_id);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check className={cn('mr-2 h-4 w-4', value === j.user_id ? 'opacity-100' : 'opacity-0')} />
+                    <div className="flex flex-col min-w-0">
+                      <span className="truncate">{label}</span>
+                      {j.full_name && (
+                        <span className="text-xs text-muted-foreground truncate">{j.email}</span>
+                      )}
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
