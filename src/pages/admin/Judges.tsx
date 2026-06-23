@@ -139,6 +139,30 @@ export default function Judges() {
     }
   };
 
+  const handleDeleteJudge = async () => {
+    if (!deletingJudge) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: { userId: deletingJudge.user_id },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+      toast({ title: 'Judge deleted' });
+      await queryClient.invalidateQueries({ queryKey: ['judges'] });
+      setDeletingJudge(null);
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete judge',
+        description: err.message || 'Unknown error',
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+
   return (
     <div className="p-8">
       <div className="flex items-start justify-between mb-8">
