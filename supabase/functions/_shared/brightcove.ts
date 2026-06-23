@@ -32,11 +32,26 @@ export async function bcCreateVideo(name: string, tags: string[] = []): Promise<
     {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ name, tags }),
+      // state: ACTIVE is required for the Brightcove player to actually play the video.
+      // Without it, videos default to INACTIVE and the player returns "video not playable".
+      body: JSON.stringify({ name, tags, state: "ACTIVE" }),
     },
   );
   if (!res.ok) throw new Error(`Brightcove create video failed: ${res.status} ${await res.text()}`);
   return await res.json();
+}
+
+export async function bcActivateVideo(videoId: string): Promise<void> {
+  const token = await getBrightcoveToken();
+  const res = await fetch(
+    `https://cms.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/videos/${videoId}`,
+    {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ state: "ACTIVE" }),
+    },
+  );
+  if (!res.ok) throw new Error(`Brightcove activate video failed: ${res.status} ${await res.text()}`);
 }
 
 export async function bcGetUploadUrl(videoId: string, fileName: string): Promise<{ signed_url: string; api_request_url: string }> {

@@ -1,7 +1,7 @@
 // POST /functions/v1/brightcove-ingest-callback?secret=...
 // Brightcove notifies us when transcoding completes; flip submission to ready, fill in playback URL + thumbnail.
 import { handleOptions, ok, fail, serviceClient } from "../_shared/legacy.ts";
-import { bcGetVideo } from "../_shared/brightcove.ts";
+import { bcGetVideo, bcActivateVideo } from "../_shared/brightcove.ts";
 
 const CALLBACK_SECRET = Deno.env.get("BRIGHTCOVE_INGEST_CALLBACK_SECRET")!;
 
@@ -48,6 +48,8 @@ Deno.serve(async (req) => {
     // Only flip to ready when the dynamic ingest job is done
     if (action === "dynamic-ingest" && status === "FINISHED") {
       update.status = "approved";
+      // Belt-and-braces: ensure the Brightcove video is ACTIVE so the player will play it.
+      try { await bcActivateVideo(videoId); } catch (_) { /* non-fatal */ }
     }
     if (Object.keys(update).length > 0) {
       await sb.from("video_submissions").update(update).eq("id", sub.id);
