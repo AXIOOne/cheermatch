@@ -61,7 +61,17 @@ const eventSchema = z.object({
   status: z.enum(['draft', 'registration_open', 'registration_closed', 'open_for_scoring', 'in_progress', 'completed', 'archived']),
   duration_of_capture: z.coerce.number().int().min(15, 'Must be at least 15 seconds').max(900, 'Must be 900 seconds or less'),
   screen_capture_cnt: z.coerce.number().int().min(1, 'At least 1 attempt').max(5, 'At most 5 attempts'),
+  registration_open_at: z.string().optional(),
+  registration_close_at: z.string().optional(),
+  submission_open_at: z.string().optional(),
+  submission_close_at: z.string().optional(),
+  scoring_open_at: z.string().optional(),
+  scoring_close_at: z.string().optional(),
 });
+
+const toIso = (v?: string) => (v && v.trim() ? new Date(v).toISOString() : null);
+const fromIso = (v?: string | null) =>
+  v ? new Date(v).toISOString().slice(0, 16) : '';
 
 type EventFormData = z.infer<typeof eventSchema>;
 
