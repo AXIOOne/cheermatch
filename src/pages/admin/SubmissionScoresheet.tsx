@@ -22,6 +22,24 @@ export default function SubmissionScoresheet() {
   const { submissionId } = useParams<{ submissionId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async (status: SubmissionStatus) => {
+      const { error } = await supabase
+        .from('video_submissions')
+        .update({ status })
+        .eq('id', submissionId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-submission-scoresheet', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+      toast({ title: 'Status updated' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+  });
+
 
   const { data: submission, isLoading } = useQuery({
     queryKey: ['admin-submission-scoresheet', submissionId],
