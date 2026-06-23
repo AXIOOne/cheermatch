@@ -296,7 +296,7 @@ export default function SubmissionScoringDialog({
   });
 
   const getPanelStatus = (panelId: string) => {
-    const s: any = allScores?.find((x: any) => x.panel_id === panelId);
+    const s: any = allScores?.find((x: any) => resolveScorePanelId(x) === panelId);
     if (!s) return 'pending';
     if (s.reviewed_at) return 'reviewed';
     if (s.needs_review) return 'needs_review';
