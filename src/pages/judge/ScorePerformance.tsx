@@ -57,7 +57,7 @@ export default function ScorePerformance() {
       const { data, error } = await supabase.from('video_submissions').select(`
         *, team:teams(id, name, gym_name, athlete_count, division_id, level_id,
           division:divisions(id, name, scoring_template_id), level:levels(name, level_number)),
-        event:events(id, name, status)
+        event:events(id, name, status, scoring_open_at, scoring_close_at)
       `).eq('id', submissionId!).maybeSingle();
       if (error) throw error;
       return data;
@@ -66,7 +66,12 @@ export default function ScorePerformance() {
   });
 
   const OPEN_STATUSES = new Set(['open_for_scoring', 'in_progress']);
-  const eventOpenForScoring = OPEN_STATUSES.has((submission as any)?.event?.status);
+  const eventRow: any = (submission as any)?.event;
+  const now = Date.now();
+  const openAt = eventRow?.scoring_open_at ? new Date(eventRow.scoring_open_at).getTime() : null;
+  const closeAt = eventRow?.scoring_close_at ? new Date(eventRow.scoring_close_at).getTime() : null;
+  const withinWindow = (openAt == null || now >= openAt) && (closeAt == null || now <= closeAt);
+  const eventOpenForScoring = OPEN_STATUSES.has(eventRow?.status) && withinWindow;
 
   // The judge's assignment for this submission determines which fields they see.
   const { data: judgeAssignments } = useQuery({
