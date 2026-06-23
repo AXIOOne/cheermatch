@@ -433,6 +433,31 @@ export default function EventScoring() {
                             )}
                             Send Score Sheet
                           </Button>
+                          <Button
+                            asChild
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-primary"
+                          >
+                            <Link to={`/admin/submissions/${submission.id}`}>
+                              <Eye className="w-3 h-3 mr-1" />
+                              Preview
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-primary"
+                            onClick={() => handleDownloadPdf(submission.id)}
+                            disabled={downloadingPdfFor === submission.id || !overallStatus.allComplete}
+                          >
+                            {downloadingPdfFor === submission.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                            ) : (
+                              <Download className="w-3 h-3 mr-1" />
+                            )}
+                            Download PDF
+                          </Button>
                           <span className={`text-xs font-medium ${overallStatus.allComplete ? 'text-success' : 'text-muted-foreground'}`}>
                             [{overallStatus.text}]
                           </span>
