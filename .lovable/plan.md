@@ -1,131 +1,154 @@
 
-# Legacy Webservices Recreation Plan
+# Mobile Coach App — Plan
 
-Recreate the 21 PHP endpoints from `virtualevents.varsity.com/webservices/*.php` as Lovable Cloud edge functions. Mobile app gets repointed to the new base URL; every response keeps the legacy JSON shape so the app needs zero code changes beyond the URL.
+Build a mobile-first coach experience inside this same Lovable project (`/m/*` routes) wrapped with Capacitor for native iOS/Android. The coach logs in, picks one of their pre-linked event/team registrations, records the routine in-app, the video uploads directly to Brightcove, and a `video_submissions` row appears in the admin Submissions screen.
 
-## Approach
+## User flow
 
-**1. Shared envelope and conventions**
+```
+Login (email + password)
+   ↓
+Home: list of Events open for submissions where this coach has a team
+   ↓
+Pick Event → list of THIS coach's teams in that event
+   ↓
+Team detail: division, level, athlete count, deadline, submission status,
+            existing video (if any)
+   ↓
+"Record performance" → fullscreen native camera, max duration = event.duration_of_capture
+            (with optional retake; uses event.screen_capture_cnt as the attempt limit)
+   ↓
+Preview → "Submit" → upload to Brightcove (progress bar, resilient to backgrounding)
+   ↓
+Backend writes video_submissions row (status='submitted', video URL,
+            Brightcove video_id, duration, captured_at, device info)
+   ↓
+Confirmation screen → row appears in admin /admin/events/:id/submissions
+```
 
-Every endpoint returns the legacy envelope:
+## Architecture
+
+### Routes (new, all under `/m`)
+
+| Route | Screen |
+|---|---|
+| `/m/login` | Email + password (mobile-styled) |
+| `/m/forgot-password` | Request reset code |
+| `/m/reset-password` | Enter code + new password |
+| `/m` | Event list (coach's events with open submissions) |
+| `/m/events/:eventId` | Team list for this coach in that event |
+| `/m/teams/:teamId` | Team detail + Record CTA |
+| `/m/teams/:teamId/record` | Capacitor camera capture |
+| `/m/teams/:teamId/review` | Preview + submit/retake |
+| `/m/teams/:teamId/uploading` | Upload progress + success |
+
+New `MobileLayout` (no admin sidebar; bottom-safe-area aware, dark teal header). Mobile auth uses a separate `useMobileAuth` hook that stores the legacy session token in `localStorage` / Capacitor `Preferences` — completely independent of the web portal's Supabase auth so a coach signing in on mobile doesn't touch the admin session and vice versa.
+
+### Backend (edge functions, all returning the legacy `{status,message,data}` envelope already established in Phase 1)
+
+| Function | Purpose |
+|---|---|
+| `login` | Email+password → mints a `mobile_sessions` token, returns coach profile |
+| `signup` | Self-serve coach signup (creates auth user + profile + gym_coach role + password_hash) |
+| `forgotPassword` | Emails a 6-digit reset code via Resend |
+| `create_password` | Consumes the reset code, sets new password |
+| `mobile-coach-events` | Lists events that have at least one team owned by this coach AND are open for submissions |
+| `mobile-coach-teams` | Lists this coach's teams for a given event (with submission status + video) |
+| `brightcove-upload-init` | Asks Brightcove for a `video_id` + signed upload URL (Dynamic Ingest API). Returns those + the ingest callback URL. |
+| `brightcove-upload-complete` | Called by the app after the bytes are uploaded. Tells Brightcove to ingest, then creates/updates `video_submissions` with the Brightcove `video_id`, master URL, duration, captured_at. Sets status `submitted`. |
+| `brightcove-ingest-callback` | Public webhook Brightcove calls when transcoding finishes → flips submission to `ready` and stores the playback URL/thumbnail. |
+
+Each authenticated function calls `legacyAuth(req)` from `_shared/legacy.ts` and resolves the coach. The Brightcove functions use the OAuth client-credentials flow (cached access token in memory per cold start).
+
+### Brightcove integration
+
+Secrets needed (I'll request them in build mode):
+- `BRIGHTCOVE_ACCOUNT_ID`
+- `BRIGHTCOVE_CLIENT_ID`
+- `BRIGHTCOVE_CLIENT_SECRET`
+- `BRIGHTCOVE_INGEST_CALLBACK_SECRET` (generated, shared secret on the callback URL)
+
+Flow (Brightcove Dynamic Ingest API):
+
+```
+brightcove-upload-init
+  1. POST https://oauth.brightcove.com/v4/access_token (client credentials)
+  2. POST .../v1/accounts/{acct}/videos                → video_id, master upload URL
+  3. GET  .../v1/accounts/{acct}/videos/{video_id}/upload-urls/{filename}
+                                                        → signed S3 PUT URL
+  4. Return { video_id, signed_url, api_url } to app
+mobile app
+  5. PUT bytes to signed_url with progress (XHR or fetch with stream)
+brightcove-upload-complete
+  6. POST .../v1/accounts/{acct}/videos/{video_id}/ingest-requests
+       { master: { url: api_url }, callbacks: [callback_url] }
+  7. INSERT/UPDATE video_submissions
+       (team_id, event_id, video_provider='brightcove',
+        provider_video_id, status='submitted', captured_at, duration_seconds, device_info)
+brightcove-ingest-callback
+  8. Verifies shared secret, looks up submission by provider_video_id,
+     updates playback_url, thumbnail_url, status='ready'.
+```
+
+### Database additions (one migration)
+
+- Add columns to `video_submissions`:
+  - `video_provider text default 'brightcove'`
+  - `provider_video_id text` (Brightcove ID)
+  - `playback_url text`, `thumbnail_url text`
+  - `duration_seconds integer`
+  - `captured_at timestamptz`
+  - `device_info jsonb`
+  - `submitted_via text default 'web'` (set to `mobile` from this flow)
+- Index `video_submissions(provider_video_id)`
+- Index `teams(coach_user_id, event_id)` via the existing FK chain
+
+(Verify before writing — some of these may already exist; the migration uses `IF NOT EXISTS`.)
+
+### Capacitor setup
+
+- Install: `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, `@capacitor/android`, `@capacitor/camera`, `@capacitor/filesystem`, `@capacitor/preferences`, `@capacitor/network`, `@capacitor-community/media` (for long video recording — `@capacitor/camera` alone caps short clips).
+- `capacitor.config.ts` with `appId: app.lovable.2c3cf65aff5b451a87e1f8f6c14f9f5c`, `appName: cheermatch`, hot-reload server URL pointing at the Lovable preview.
+- Web fallback: in a regular browser the record screen uses `MediaRecorder` so the flow still works for testing in the preview pane.
+
+## Admin portal impact
+
+Almost none. The existing admin `/admin/events/:id/submissions` and review pages already render `video_submissions` rows; the new ones just have a `submitted_via='mobile'` and a Brightcove URL. I'll add a small "Mobile" badge on those rows so admins can tell at a glance.
+
+## What I'm NOT changing
+
+- Web portal auth, judging flow, scoring screens, results, email templates.
+- Existing Phase 1 endpoints already shipped (`competitionList`, `getMobileAppVersion`, `getDropboxSetting`, `uniqueTeamName`).
+- The `_shared/legacy.ts` helper or its envelope.
+
+## Phasing
+
+I'll ship this in one approval but in clearly separated commits so it's reviewable:
+
+1. **Migration** — add the new `video_submissions` columns + Brightcove secrets request.
+2. **Auth edge functions** — `login`, `signup`, `forgotPassword`, `create_password` (no Brightcove dep, can be tested immediately).
+3. **Mobile React shell** — `/m/login`, `/m`, `/m/events/:id`, `/m/teams/:id`, `useMobileAuth` hook, `MobileLayout`. Talks to the auth functions only; record/upload buttons stubbed.
+4. **Brightcove edge functions** — `brightcove-upload-init`, `brightcove-upload-complete`, `brightcove-ingest-callback`. Tested via curl against a real Brightcove account.
+5. **Record + upload UI** — Capacitor + MediaRecorder fallback, progress bar, retake logic.
+6. **Capacitor wiring** — `capacitor.config.ts`, install native plugins, instructions for `npx cap add ios/android` and shipping to TestFlight.
+
+After Phase 6 you'll be able to: install the app on an iPhone (via Xcode/TestFlight), log in as a coach, pick a team, record, upload, and see the submission land in `/admin/events/:id/submissions` with playback.
+
+## Secrets I'll need (in build mode)
+
+- `BRIGHTCOVE_ACCOUNT_ID` (from Brightcove Studio → Admin → Account Information)
+- `BRIGHTCOVE_CLIENT_ID` (from Studio → Admin → API Authentication → your client)
+- `BRIGHTCOVE_CLIENT_SECRET` (same place)
+- I'll auto-generate `BRIGHTCOVE_INGEST_CALLBACK_SECRET` (no input needed)
+
+## Open question for after approval
+
+The existing legacy `login.php` JSON shape — I asked for a sample last turn. If you can't easily pull one, I'll ship `login` with this default response shape and we can rename fields later:
+
 ```json
-{ "status": true, "message": "...", "data": ... }
-```
-- All numeric IDs serialized as strings (`"16"`, not `16`)
-- Money/decimals as strings (`"0.00"`)
-- Dates/times split into `*_date` + `*_time` strings
-- Booleans as `"Y"/"N"` or `"0"/"1"` as the legacy used
-- HTTP 200 even on logical errors; `status:false` + `message` carries the error
-
-A shared helper `supabase/functions/_shared/legacy.ts` provides:
-- `ok(message, data)` / `fail(message)` response builders with CORS
-- `formatDate(d) / formatTime(d)` splitters
-- `asStringId(uuid)` and numeric-string formatters
-- `legacyAuth(req)` → validates the legacy session token (see auth below) and returns the Coach/Gym profile, or `null`
-
-**2. Auth: legacy token format on top of existing Coach/Gym accounts**
-
-The mobile app expects `login.php` to return a session token it can replay on later calls. Supabase JWTs don't match that shape, so:
-
-- New table `public.mobile_sessions` (`token text pk`, `user_id uuid`, `created_at`, `last_seen_at`, `expires_at`)
-- `login.php` validates email/password against the existing Coach/Gym profile, mints a random token, stores it, returns the legacy user payload + token
-- All authenticated endpoints accept the token via a `token` query/body param (legacy convention) and resolve it through `legacy_session_lookup` (security-definer function), bypassing RLS
-- `forgotPassword.php` triggers a Resend email with a reset code, `create_password.php` consumes the code
-
-Coach/Gym password storage: today these accounts are accessed via emailed magic links and don't have a real password. The migration adds a `password_hash` column to `profiles` (bcrypt via `pgcrypto`) populated on first `signup.php` / `create_password.php` use. Existing Coach/Gym users go through `forgotPassword.php` once to set a mobile password — no impact on the web portal login.
-
-**3. Endpoint-by-endpoint mapping**
-
-Each function lives at `supabase/functions/<name>/index.ts` and is reachable at `/functions/v1/<name>` (mobile app uses this as its new base URL, replacing `/webservices/`).
-
-| Endpoint                       | Method | Auth | Source tables                                    | Notes                                                                                  |
-|--------------------------------|--------|------|--------------------------------------------------|----------------------------------------------------------------------------------------|
-| competitionList.php            | GET    | no   | events (+ scoring_templates)                     | Already have a confirmed sample; map fields below                                      |
-| getMobileAppVersion.php        | GET    | no   | platform_settings                                | Reads `mobile_min_version` / `mobile_latest_version` keys (added by migration)         |
-| getDropboxSetting.php          | GET    | no   | platform_settings                                | Reads `dropbox_*` keys                                                                 |
-| getContentCategories.php       | GET    | no   | new `content_categories` table                   | Need sample to confirm shape; table added in migration                                 |
-| organizations.php              | GET    | no   | distinct `gym_name` from teams + new orgs table  | Need legacy sample                                                                     |
-| teamlevels.php                 | GET    | no   | levels, divisions, team_levels                   | Legacy returns a flat list — confirm shape from sample                                 |
-| submissionDropdownList.php     | GET    | yes  | events, divisions, levels                        | Dropdown options for the submit form                                                   |
-| uniqueTeamName.php             | GET    | yes  | teams                                            | `?name=` returns availability                                                          |
-| login.php                      | POST   | no   | profiles, mobile_sessions                        | Mints token                                                                            |
-| signup.php                     | POST   | no   | profiles (Coach), mobile_sessions                | Creates account if email unknown; returns same shape as login                          |
-| loginContentContributors.php   | POST   | no   | profiles + user_roles                            | Same as login but restricted to a `content_contributor` role (add to enum)             |
-| forgotPassword.php             | POST   | no   | profiles, password_reset_codes (new)             | Sends Resend email                                                                     |
-| create_password.php            | POST   | no   | profiles, password_reset_codes                   | Consumes reset code, sets bcrypt hash                                                  |
-| getLeaderboard.php             | GET    | no   | scores, video_submissions, teams, events         | Respects `release_score_leaderboard` flag                                              |
-| getSubmissions.php             | GET    | yes  | video_submissions, teams, events                 | Scoped to the logged-in coach's gym                                                    |
-| getSubmissions_test.php        | GET    | yes  | same as above                                    | Same handler with a `test=true` filter                                                 |
-| videoSubmission.php            | GET    | yes  | video_submissions                                | Detail view by id                                                                      |
-| postInitialSubmission.php      | POST   | yes  | video_submissions (status `draft`)               | Reserves a submission row, returns its id for the upload step                          |
-| postSubmission.php             | POST   | yes  | video_submissions (status `submitted`)           | Finalizes after upload; writes video_url                                               |
-| post_submission.json           | POST   | yes  | same as postSubmission.php                       | Likely an alias kept for back-compat — delegates to the same handler                   |
-| postContentVideo.php           | POST   | yes  | new `content_videos` table                       | For content contributors                                                               |
-
-**4. Field mapping for `competitionList.php` (concrete example, confirmed against the live response)**
-
-```
-id                              -> events.id::text
-description                     -> events.name
-long_description                -> events.description
-start_date / start_time         -> split(events.start_date)
-end_date   / end_time           -> split(events.end_date)
-broadcast_deadline_date/time    -> split(events.broadcast_deadline)  [add column]
-competition_status              -> map events.status -> 'OPEN'|'CLOSED'|'UPCOMING'
-broadcast_channel               -> events.broadcast_channel          [add column, default 'VTV']
-sub_deadline                    -> events.video_submission_deadline
-reg_cost                        -> to_char(events.reg_cost,'FM999.00') [add column]
-sanctioned_event                -> 'Y'/'N' from events.sanctioned     [add column]
-release_score_leaderboard       -> '0'/'1' from events.results_published
-per_show_registrations          -> '0'                                [add column, default 0]
-hide_from_leaderboard           -> '0'/'1'                            [add column]
-season_id                       -> '1' constant for now (or events.season_id if added)
-screen_capture_cnt              -> events.screen_capture_cnt          [add column, default 2]
-duration_of_capture             -> events.capture_duration_seconds    [add column, default 180]
-current_match                   -> null (placeholder)
-scoresheet_template             -> scoring_templates.name via event link
-hide_from_website               -> '0'/'1'                            [add column]
-show_teams_and_divisions        -> '0'/'1'                            [add column]
-dont_show_scoresheet            -> '0'/'1'                            [add column]
-list_on_special_events_page     -> '0'/'1'                            [add column]
-hide_video_from_team_gym_division -> '0'/'1'                          [add column]
-event_uuid                      -> events.public_uuid                 [add column, default short_id()]
+{"status":true,"message":"Login successful","data":{
+  "id":"<uuid>","email":"...","full_name":"...","organization_name":"...",
+  "role":"gym_coach","token":"<opaque>","token_expires":"<iso>"}}
 ```
 
-Every other endpoint will get the same field-by-field mapping table once you share its sample response.
-
-## Phased rollout
-
-I'll need a sample JSON response for each non-trivial endpoint to lock the field names. Plan execution in phases:
-
-**Phase 1 — Foundation (one migration + one PR-worth of code)**
-- Migration: `mobile_sessions`, `password_reset_codes`, `content_categories`, `content_videos` tables (with GRANT + RLS); add the new columns on `events`, `profiles.password_hash`, and the `content_contributor` role to the `app_role` enum; helper functions `legacy_session_lookup(token)` and `verify_mobile_password(email, pw)` as SECURITY DEFINER.
-- Shared `_shared/legacy.ts` helpers.
-- Endpoints implemented in this phase (no sample needed, shapes already known or trivial): `competitionList`, `getMobileAppVersion`, `getDropboxSetting`, `uniqueTeamName`.
-
-**Phase 2 — Auth endpoints**
-`login`, `signup`, `forgotPassword`, `create_password`, `loginContentContributors`. Needs one sample login.php response.
-
-**Phase 3 — Submission endpoints**
-`submissionDropdownList`, `getSubmissions`, `getSubmissions_test`, `videoSubmission`, `postInitialSubmission`, `postSubmission`, `post_submission.json`. Needs samples for the request bodies and response shapes.
-
-**Phase 4 — Remaining read endpoints**
-`getContentCategories`, `organizations`, `teamlevels`, `getLeaderboard`, `postContentVideo`. Needs samples.
-
-## Technical notes (for reviewers)
-
-- Edge functions use `verify_jwt = false` (default for Lovable-managed functions); auth is enforced in code via `legacyAuth(req)`.
-- CORS: import `corsHeaders` from `npm:@supabase/supabase-js@2/cors` in every function so the mobile app (and a browser tester) can call them.
-- Service-role client is used inside functions to bypass RLS once `legacyAuth` has identified the user.
-- `mobile_sessions` rows expire after 30 days; a daily `pg_cron` cleanup is added in the foundation migration.
-- Video uploads keep using the existing `video_submissions.video_url` + whatever storage the legacy app posts to (Brightcove/S3); `postSubmission` only records the URL the mobile app uploads to directly, matching legacy behavior.
-
-## Out of scope
-
-- Changing the web portal's auth flow, the Judge/Admin UI, or any existing edge function.
-- Building a new mobile app or modifying the existing one (beyond repointing its base URL).
-- Replacing Brightcove/S3 video hosting.
-
-## What I need from you to start Phase 1
-
-Just approve this plan. Phase 1 doesn't require any more samples — I can ship it from what we already have. Before Phases 2–4 I'll ask for one sample JSON response per endpoint (a single real call from the existing mobile app is enough) so the field names match exactly.
+Tell me if that's fine, or paste a sample login.php response and I'll match it exactly.
