@@ -30,7 +30,7 @@ const createUserSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   fullName: z.string().min(1, 'Full name is required'),
-  role: z.enum(['admin', 'judge', 'gym_coach', 'none'] as const).optional(),
+  role: z.enum(['admin', 'portal_admin', 'judge', 'gym_coach', 'none'] as const).optional(),
   sendEmail: z.boolean().default(true),
 });
 
