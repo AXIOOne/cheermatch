@@ -104,7 +104,7 @@ export default function EventScoring() {
             division:divisions(id, name),
             level:levels(id, name)
           ),
-          scores:scores(id, status, total_score, panel_id, needs_review, reviewed_at)
+          scores:scores(id, status, total_score, panel_id, judge_user_id, needs_review, reviewed_at, review_reason)
         `)
         .eq('event_id', eventId)
         .order('created_at', { ascending: false });
@@ -112,6 +112,29 @@ export default function EventScoring() {
       return data as Submission[];
     },
   });
+
+  // Map judge_user_id -> panel_id for this event so we can resolve scores whose
+  // panel_id is null (older rows from before section assignments were panel-linked).
+  const { data: judgePanelByUser } = useQuery({
+    queryKey: ['event-judge-panel-map', eventId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('judge_assignments')
+        .select('judge_user_id, panel_id')
+        .eq('event_id', eventId)
+        .not('panel_id', 'is', null);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((a: any) => {
+        if (a.judge_user_id && a.panel_id) map[a.judge_user_id] = a.panel_id;
+      });
+      return map;
+    },
+    enabled: !!eventId,
+  });
+
+  const resolveScorePanelId = (score: Score): string | null =>
+    score.panel_id ?? judgePanelByUser?.[score.judge_user_id] ?? null;
 
   const { data: coachProfiles } = useQuery({
     queryKey: ['coach-profiles', eventId],
