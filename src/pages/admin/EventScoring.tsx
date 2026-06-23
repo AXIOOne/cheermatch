@@ -32,8 +32,10 @@ interface Score {
   status: string;
   total_score: number | null;
   panel_id: string | null;
+  judge_user_id: string;
   needs_review?: boolean;
   reviewed_at?: string | null;
+  review_reason?: string | null;
 }
 
 interface Submission {
