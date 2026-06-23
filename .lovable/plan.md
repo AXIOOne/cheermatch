@@ -1,34 +1,34 @@
-## Goal
-Scoring templates become event-agnostic. Event selection is removed from the template builder. Templates are attached to a **division** instead (where event ↔ division ↔ team relationships already live).
+## Context
 
-## Schema changes (one migration)
-- `scoring_templates.event_id` → make nullable, drop the foreign-key requirement. Existing rows keep their value but it's no longer used by the app.
-- `divisions` → add `scoring_template_id uuid REFERENCES public.scoring_templates(id) ON DELETE SET NULL` (nullable).
-- Keep `scoring_templates.is_default` so a division with no template assigned can fall back to the default template.
+The previous round already wired up most of this request:
 
-## Template builder (`src/pages/admin/ScoringTemplates.tsx`)
-- Remove the Event select from the form and its zod validation.
-- Remove the "panel abbreviations fetched from the selected event" query. Panel chips in `FieldBuilderDialog` fall back to the existing `DEFAULT_PANELS` list (`B1/B2/T1/T2/OV/ALL`).
-- Drop event-related columns/labels from the template list cards (no more `event?.name`, no "Event in progress — consider locking" warning).
-- Insert/update/duplicate template mutations stop sending `event_id`.
-- Auto-lock-on-event-start behavior (DB trigger on `events`) is removed since templates are no longer event-scoped. Locking remains a manual toggle.
+- `divisions.scoring_template_id` column exists.
+- The **Create Division** dialog has a "Scoring Template" select (with "Use default template" fallback).
+- The divisions table shows the assigned template name.
+- Scoring resolution in `SubmissionScoringDialog.tsx` and `judge/ScorePerformance.tsx` walks `submission → team → division.scoring_template_id`, falling back to the global `is_default` template.
 
-## Division UI (`src/pages/admin/Divisions.tsx`)
-- Add a **Scoring Template** select to the division create/edit form (lists all templates; "Use default" option = `null`).
-- Show the assigned template name in the divisions table.
+So when a team in that division is registered in an event and a video is scored, the right template is already pulled automatically.
 
-## Scoring lookup (consumers)
-Resolve the template through the team's division rather than the event:
-- `src/pages/judge/ScorePerformance.tsx` — replace the `.eq('event_id', ...)` template query with: load `submission → team → division.scoring_template_id`, fall back to `is_default = true` if null.
-- `src/components/admin/SubmissionScoringDialog.tsx` — same resolution path.
-- `src/pages/admin/SubmissionScoresheet.tsx` and review token RPC — already key on `score → template_id` via the saved score row, no change needed.
+## What's missing
 
-## Events page (`src/pages/admin/Events.tsx`)
-- Remove the **Default Template** field from the event form and the related template-update mutation block.
-- Stop selecting `scoring_templates(...)` on the events query.
-- Strip the small "default template" badge from the event cards.
+The Divisions page only supports **Create** and **Delete** — there is no **Edit** action. Any division created before this feature (or one where you picked the wrong template) is stuck unless deleted and recreated, which would orphan teams.
+
+## Plan
+
+Add edit support to `src/pages/admin/Divisions.tsx`:
+
+1. Reuse the existing division `Dialog` for both create and edit by tracking an `editingDivision` state.
+2. When opening in edit mode, prefill the form (`name`, `min_age`, `max_age`, `description`, `scoring_template_id` — defaulting to `UNASSIGNED_TEMPLATE` when null).
+3. Add an `updateDivisionMutation` that runs `supabase.from('divisions').update({...}).eq('id', editingDivision.id)` with the same null-coalescing for `scoring_template_id`.
+4. Add a pencil/Edit button in the divisions table row alongside the existing Delete button that opens the dialog in edit mode.
+5. Dialog title and submit button label switch between "Create Division" / "Edit Division" based on mode; reset `editingDivision` on close.
+
+No schema migration, no changes to scoring resolution, no changes to Events or Teams pages.
+
+### Files touched
+- `src/pages/admin/Divisions.tsx`
 
 ## Out of scope
-- Migrating existing event→template links into divisions. Fresh assignment by admins.
 - Per-team template overrides.
-- UI for managing the now-removed `auto_lock_templates_on_event_start` trigger beyond the manual lock button that already exists.
+- Backfilling templates onto existing divisions automatically.
+- Showing the resolved template inside Events / Teams views.
