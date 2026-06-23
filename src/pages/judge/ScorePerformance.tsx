@@ -36,7 +36,7 @@ export default function ScorePerformance() {
     queryFn: async () => {
       const { data, error } = await supabase.from('video_submissions').select(`
         *, team:teams(id, name, gym_name, athlete_count, division_id, level_id,
-          division:divisions(name), level:levels(name, level_number)),
+          division:divisions(id, name, scoring_template_id), level:levels(name, level_number)),
         event:events(id, name)
       `).eq('id', submissionId!).maybeSingle();
       if (error) throw error;
