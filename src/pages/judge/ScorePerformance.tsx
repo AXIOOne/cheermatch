@@ -333,7 +333,7 @@ export default function ScorePerformance() {
                             const selectedOpt = opts.find((o: any) => Number(o.value) === Number(currentPoints));
                             return (
                               <Select
-                                value={selectedOpt?.id ?? ''}
+                                value={selectedOpt?.id ?? undefined}
                                 onValueChange={(optId) => {
                                   const picked = opts.find((o: any) => o.id === optId);
                                   if (picked) updateFieldScore(f.id, Number(picked.value));
