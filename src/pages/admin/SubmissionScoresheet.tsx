@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -5,12 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, Play, Trophy, Users, Calendar, Award, FileText, Download, Check, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Play, Trophy, Users, Calendar, Award, FileText, Download, Check, X, Pencil } from 'lucide-react';
 import { format } from 'date-fns';
 import { aggregateValues, AggregationMode } from '@/lib/scoring';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { buildScoresheet, type RawField, type ScoreType } from '@/lib/build-scoresheet';
 import { buildScoresheetPdf, downloadPdf } from '@/lib/scoresheet-pdf';
+import { EditTeamDialog } from '@/components/admin/EditTeamDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
@@ -23,6 +26,8 @@ export default function SubmissionScoresheet() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin } = useAuth();
+  const [editTeamOpen, setEditTeamOpen] = useState(false);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: SubmissionStatus) => {
@@ -225,7 +230,14 @@ export default function SubmissionScoresheet() {
       <div className="mb-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">{submission.team?.name}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-foreground">{submission.team?.name}</h1>
+              {isAdmin && (
+                <Button variant="ghost" size="sm" onClick={() => setEditTeamOpen(true)}>
+                  <Pencil className="w-4 h-4 mr-1" /> Edit Team
+                </Button>
+              )}
+            </div>
             <p className="text-lg text-muted-foreground mt-1">{submission.team?.gym_name}</p>
           </div>
           {submittedScores.length > 0 && (
@@ -410,6 +422,19 @@ export default function SubmissionScoresheet() {
             );
           })}
         </div>
+      )}
+
+      {isAdmin && submission.team && (
+        <EditTeamDialog
+          open={editTeamOpen}
+          onOpenChange={setEditTeamOpen}
+          team={{
+            id: submission.team.id,
+            name: submission.team.name,
+            division_id: submission.team.division_id,
+            athlete_count: submission.team.athlete_count,
+          }}
+        />
       )}
     </div>
   );
