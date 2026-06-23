@@ -14,7 +14,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import Events from "./pages/admin/Events";
 import ScoringTemplates from "./pages/admin/ScoringTemplates";
 import Divisions from "./pages/admin/Divisions";
-import Teams from "./pages/admin/Teams";
+
 import Judges from "./pages/admin/Judges";
 import Settings from "./pages/admin/Settings";
 import ReviewRequests from "./pages/admin/ReviewRequests";
