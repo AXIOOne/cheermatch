@@ -32,8 +32,10 @@ interface Score {
   status: string;
   total_score: number | null;
   panel_id: string | null;
+  judge_user_id: string;
   needs_review?: boolean;
   reviewed_at?: string | null;
+  review_reason?: string | null;
 }
 
 interface Submission {
@@ -102,7 +104,7 @@ export default function EventScoring() {
             division:divisions(id, name),
             level:levels(id, name)
           ),
-          scores:scores(id, status, total_score, panel_id, needs_review, reviewed_at)
+          scores:scores(id, status, total_score, panel_id, judge_user_id, needs_review, reviewed_at, review_reason)
         `)
         .eq('event_id', eventId)
         .order('created_at', { ascending: false });
@@ -110,6 +112,29 @@ export default function EventScoring() {
       return data as Submission[];
     },
   });
+
+  // Map judge_user_id -> panel_id for this event so we can resolve scores whose
+  // panel_id is null (older rows from before section assignments were panel-linked).
+  const { data: judgePanelByUser } = useQuery({
+    queryKey: ['event-judge-panel-map', eventId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('judge_assignments')
+        .select('judge_user_id, panel_id')
+        .eq('event_id', eventId)
+        .not('panel_id', 'is', null);
+      if (error) throw error;
+      const map: Record<string, string> = {};
+      (data || []).forEach((a: any) => {
+        if (a.judge_user_id && a.panel_id) map[a.judge_user_id] = a.panel_id;
+      });
+      return map;
+    },
+    enabled: !!eventId,
+  });
+
+  const resolveScorePanelId = (score: Score): string | null =>
+    score.panel_id ?? judgePanelByUser?.[score.judge_user_id] ?? null;
 
   const { data: coachProfiles } = useQuery({
     queryKey: ['coach-profiles', eventId],
@@ -172,20 +197,30 @@ export default function EventScoring() {
 
   const isLoading = eventLoading || panelsLoading || submissionsLoading;
 
+  // Find the score for a submission belonging to a given panel, resolving by
+  // judge_assignment when the score row has no panel_id of its own.
+  const findScoreForPanel = (submission: Submission, panelId: string): Score | undefined =>
+    submission.scores.find(s => resolveScorePanelId(s) === panelId);
+
   // Calculate stats
   const stats = {
     total: submissions?.length || 0,
     fullyScored: submissions?.filter(s => {
       if (!panels || panels.length === 0) return false;
-      return panels.every(p => 
-        s.scores.some(sc => sc.panel_id === p.id && sc.status === 'submitted')
-      );
+      return panels.every(p => {
+        const sc = findScoreForPanel(s, p.id);
+        return sc?.status === 'submitted';
+      });
     }).length || 0,
+    needsReview: submissions?.filter(s =>
+      s.scores.some(sc => sc.needs_review && !sc.reviewed_at)
+    ).length || 0,
     pending: submissions?.filter(s => {
       if (!panels || panels.length === 0) return s.scores.length === 0;
-      return !panels.every(p => 
-        s.scores.some(sc => sc.panel_id === p.id && sc.status === 'submitted')
-      );
+      return !panels.every(p => {
+        const sc = findScoreForPanel(s, p.id);
+        return sc?.status === 'submitted';
+      });
     }).length || 0,
   };
 
@@ -194,7 +229,7 @@ export default function EventScoring() {
     submission: Submission,
     panelId: string
   ): 'pending' | 'in_progress' | 'submitted' | 'needs_review' | 'reviewed' => {
-    const score = submission.scores.find(s => s.panel_id === panelId);
+    const score = findScoreForPanel(submission, panelId);
     if (!score) return 'pending';
     if (score.reviewed_at) return 'reviewed';
     if (score.needs_review) return 'needs_review';
@@ -202,26 +237,34 @@ export default function EventScoring() {
   };
 
   // Get overall scoring status text
-  const getOverallStatus = (submission: Submission): { text: string; allComplete: boolean; allReviewed: boolean } => {
+  const getOverallStatus = (
+    submission: Submission,
+  ): { text: string; allComplete: boolean; allReviewed: boolean; needsReview: boolean } => {
+    const needsReview = submission.scores.some(s => s.needs_review && !s.reviewed_at);
     if (!panels || panels.length === 0) {
       const hasSubmitted = submission.scores.some(s => s.status === 'submitted');
       const hasReviewed = hasSubmitted && submission.scores.every(s => s.status !== 'submitted' || s.reviewed_at);
-      return { text: hasReviewed ? 'REVIEWED' : hasSubmitted ? 'SCORED' : 'PENDING', allComplete: hasSubmitted, allReviewed: hasReviewed };
+      const text = needsReview ? 'NEEDS REVIEW' : hasReviewed ? 'REVIEWED' : hasSubmitted ? 'SCORED' : 'PENDING';
+      return { text, allComplete: hasSubmitted, allReviewed: hasReviewed, needsReview };
     }
 
-    const completedPanels = panels.filter(p =>
-      submission.scores.some(s => s.panel_id === p.id && s.status === 'submitted')
-    ).length;
-    const reviewedPanels = panels.filter(p =>
-      submission.scores.some(s => s.panel_id === p.id && s.status === 'submitted' && s.reviewed_at)
-    ).length;
+    const completedPanels = panels.filter(p => {
+      const sc = findScoreForPanel(submission, p.id);
+      return sc?.status === 'submitted';
+    }).length;
+    const reviewedPanels = panels.filter(p => {
+      const sc = findScoreForPanel(submission, p.id);
+      return sc?.status === 'submitted' && sc?.reviewed_at;
+    }).length;
 
     const allComplete = completedPanels === panels.length;
     const allReviewed = allComplete && reviewedPanels === panels.length;
-    if (allReviewed) return { text: 'REVIEWED', allComplete, allReviewed };
-    if (allComplete) return { text: 'COMPLETE', allComplete, allReviewed };
-    return { text: 'PENDING', allComplete, allReviewed };
+    if (needsReview) return { text: 'NEEDS REVIEW', allComplete, allReviewed, needsReview };
+    if (allReviewed) return { text: 'REVIEWED', allComplete, allReviewed, needsReview };
+    if (allComplete) return { text: 'COMPLETE', allComplete, allReviewed, needsReview };
+    return { text: 'PENDING', allComplete, allReviewed, needsReview };
   };
+
 
   const StatusIndicator = ({
     status,
@@ -297,7 +340,7 @@ export default function EventScoring() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -333,6 +376,19 @@ export default function EventScoring() {
               <div>
                 <p className="text-sm text-muted-foreground">Pending</p>
                 <p className="text-2xl font-bold">{stats.pending}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-warning/10 rounded-full">
+                <AlertCircle className="w-6 h-6 text-warning" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Needs Review</p>
+                <p className="text-2xl font-bold">{stats.needsReview}</p>
               </div>
             </div>
           </CardContent>
@@ -431,7 +487,9 @@ export default function EventScoring() {
                         <Badge
                           variant="outline"
                           className={
-                            overallStatus.allReviewed
+                            overallStatus.needsReview
+                              ? 'bg-warning/10 text-warning border-warning/20'
+                              : overallStatus.allReviewed
                               ? 'bg-success/10 text-success border-success/20'
                               : overallStatus.allComplete
                               ? 'bg-warning/10 text-warning border-warning/20'

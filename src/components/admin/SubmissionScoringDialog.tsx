@@ -131,7 +131,21 @@ export default function SubmissionScoringDialog({
     enabled: !!eventId && open,
   });
 
-  const currentPanelScore = allScores?.find((s: any) => s.panel_id === selectedPanelId);
+  // Resolve each score's effective panel. Falls back to the judge's assignment's
+  // panel_id when the score row itself is missing one (older rows from before
+  // section assignments were panel-linked).
+  const judgePanelByUser = useMemo(() => {
+    const map: Record<string, string> = {};
+    (judgeAssignments || []).forEach((a: any) => {
+      if (a.judge_user_id && a.panel_id) map[a.judge_user_id] = a.panel_id;
+    });
+    return map;
+  }, [judgeAssignments]);
+
+  const resolveScorePanelId = (s: any): string | null =>
+    s?.panel_id ?? judgePanelByUser[s?.judge_user_id] ?? null;
+
+  const currentPanelScore = allScores?.find((s: any) => resolveScorePanelId(s) === selectedPanelId);
   const assignedJudge = judgeAssignments?.find((ja: any) => ja.panel_id === selectedPanelId);
   const selectedPanelAbbrev = panels.find(p => p.id === selectedPanelId)?.abbreviation || null;
 
@@ -154,7 +168,7 @@ export default function SubmissionScoringDialog({
 
   useEffect(() => {
     if (!template?.sections) return;
-    const panelScore = allScores?.find((s: any) => s.panel_id === selectedPanelId);
+    const panelScore = allScores?.find((s: any) => resolveScorePanelId(s) === selectedPanelId);
     const allVisibleFields = visibleSections.flatMap((s: any) => s.visibleFields);
 
     if (panelScore?.details) {
@@ -282,7 +296,7 @@ export default function SubmissionScoringDialog({
   });
 
   const getPanelStatus = (panelId: string) => {
-    const s: any = allScores?.find((x: any) => x.panel_id === panelId);
+    const s: any = allScores?.find((x: any) => resolveScorePanelId(x) === panelId);
     if (!s) return 'pending';
     if (s.reviewed_at) return 'reviewed';
     if (s.needs_review) return 'needs_review';
@@ -359,7 +373,7 @@ export default function SubmissionScoringDialog({
                           locked: 'bg-muted text-muted-foreground',
                           reviewed: 'bg-success text-success-foreground',
                         };
-                        const score: any = allScores?.find((s: any) => s.panel_id === panel.id);
+                        const score: any = allScores?.find((s: any) => resolveScorePanelId(s) === panel.id);
                         return (
                           <div key={panel.id}
                             className={`px-3 py-2 rounded-lg text-center cursor-pointer transition-all ${selectedPanelId === panel.id ? 'ring-2 ring-primary ring-offset-2' : ''} ${colors[status] || ''}`}
@@ -415,6 +429,19 @@ export default function SubmissionScoringDialog({
                   </Card>
                 ) : (
                   <>
+                    {currentPanelScore?.needs_review && !currentPanelScore?.reviewed_at && (
+                      <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 flex items-start gap-2">
+                        <AlertCircle className="w-4 h-4 mt-0.5 text-warning shrink-0" />
+                        <div className="text-sm">
+                          <p className="font-medium text-warning">Flagged by judge for review</p>
+                          {currentPanelScore?.review_reason ? (
+                            <p className="text-muted-foreground mt-1 whitespace-pre-wrap">{currentPanelScore.review_reason}</p>
+                          ) : (
+                            <p className="text-muted-foreground mt-1">No reason provided.</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                       {visibleSections.length === 0 && (
                         <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">

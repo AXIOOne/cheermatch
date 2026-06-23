@@ -1,154 +1,41 @@
+## What's actually broken
 
-# Mobile Coach App — Plan
+I checked the data for this event. The Scoring Control Panel grid is **panel-keyed** — every cell in the grid is matched to a score by `score.panel_id`. But on this event, **all 5 judge assignments have `panel_id = NULL`**, even though the event has 6 panels (B1, B2, T1, T2, OV, SD). So when a judge submits, the score row is written with `panel_id = NULL`, no cell in the grid ever matches it, and nothing lights up — submissions, flags, and "mark as reviewed" all look like they "aren't reflecting" even though the database is updating correctly.
 
-Build a mobile-first coach experience inside this same Lovable project (`/m/*` routes) wrapped with Capacitor for native iOS/Android. The coach logs in, picks one of their pre-linked event/team registrations, records the routine in-app, the video uploads directly to Brightcove, and a `video_submissions` row appears in the admin Submissions screen.
+The same panel-keyed lookup is used inside the admin scoring dialog, so admin-side actions also fail to render until a panel is attached.
 
-## User flow
+## Fix
 
-```
-Login (email + password)
-   ↓
-Home: list of Events open for submissions where this coach has a team
-   ↓
-Pick Event → list of THIS coach's teams in that event
-   ↓
-Team detail: division, level, athlete count, deadline, submission status,
-            existing video (if any)
-   ↓
-"Record performance" → fullscreen native camera, max duration = event.duration_of_capture
-            (with optional retake; uses event.screen_capture_cnt as the attempt limit)
-   ↓
-Preview → "Submit" → upload to Brightcove (progress bar, resilient to backgrounding)
-   ↓
-Backend writes video_submissions row (status='submitted', video URL,
-            Brightcove video_id, duration, captured_at, device info)
-   ↓
-Confirmation screen → row appears in admin /admin/events/:id/submissions
-```
+### 1. Require a panel on every judge assignment
+- In `AssignPanelsDialog` / `JudgeAssignmentDialog` / `BulkJudgeAssignmentDialog`, when the event has panels (`judge_panels` rows > 0), make panel selection **required**. No more saving an assignment with `panel_id = NULL` on a paneled event.
+- Add a small validation banner if the event has panels but any existing assignment is missing one, with a one-click "Assign panel" inline fix.
 
-## Architecture
+### 2. Backfill / repair existing assignments
+- One-time admin action surfaced at the top of the Scoring Control Panel ("5 assignments are missing a panel — fix now") that opens the same assignment editor pre-filtered to the broken rows.
+- Optional supabase migration to also backfill any existing `scores` rows for this event whose `panel_id` is null by joining to `judge_assignments` on `(event_id, judge_user_id, division_id, level_id)` and copying the panel_id over — only when exactly one matching assignment exists.
 
-### Routes (new, all under `/m`)
+### 3. Make the grid resilient even if panel_id is missing
+So one bad assignment never silently hides a real submission:
+- In `EventScoring.getPanelStatus`, fall back to matching by `judge_user_id → assignment.panel_id` when `score.panel_id` is null.
+- Add a "Unassigned panel" column at the right of the grid that lists any submitted scores with no resolvable panel, so admins can see them and act.
 
-| Route | Screen |
-|---|---|
-| `/m/login` | Email + password (mobile-styled) |
-| `/m/forgot-password` | Request reset code |
-| `/m/reset-password` | Enter code + new password |
-| `/m` | Event list (coach's events with open submissions) |
-| `/m/events/:eventId` | Team list for this coach in that event |
-| `/m/teams/:teamId` | Team detail + Record CTA |
-| `/m/teams/:teamId/record` | Capacitor camera capture |
-| `/m/teams/:teamId/review` | Preview + submit/retake |
-| `/m/teams/:teamId/uploading` | Upload progress + success |
+### 4. Confirm Submit / Submit & Flag / Mark as Reviewed flows end-to-end
+Schema and code paths already exist:
+- Judge: `Submit` writes `status='submitted', needs_review=false`. `Submit & Flag` (with reason) writes `status='submitted', needs_review=true, review_reason=…`.
+- Admin grid cell colors: red = pending/in-progress, green = complete (submitted), amber = needs review, green w/ check = reviewed.
+- Admin scoring dialog has a "Mark as reviewed" button writing `reviewed_at`, `reviewed_by`.
 
-New `MobileLayout` (no admin sidebar; bottom-safe-area aware, dark teal header). Mobile auth uses a separate `useMobileAuth` hook that stores the legacy session token in `localStorage` / Capacitor `Preferences` — completely independent of the web portal's Supabase auth so a coach signing in on mobile doesn't touch the admin session and vice versa.
+I'll verify each in the preview after the panel fix and tighten any gaps I find (e.g. surface `review_reason` text in the admin dialog header when `needs_review=true`, and show an explicit "Reviewed by X on …" line under the cell when hovered).
 
-### Backend (edge functions, all returning the legacy `{status,message,data}` envelope already established in Phase 1)
+### 5. Overall submission status text
+Already computes `PENDING / COMPLETE / REVIEWED`. After fix #1–#3 these will become accurate. I'll add a fourth state **`NEEDS REVIEW`** to the overall badge when any panel is flagged but not yet reviewed, so admins can spot flagged submissions at a glance without scanning per-panel cells.
 
-| Function | Purpose |
-|---|---|
-| `login` | Email+password → mints a `mobile_sessions` token, returns coach profile |
-| `signup` | Self-serve coach signup (creates auth user + profile + gym_coach role + password_hash) |
-| `forgotPassword` | Emails a 6-digit reset code via Resend |
-| `create_password` | Consumes the reset code, sets new password |
-| `mobile-coach-events` | Lists events that have at least one team owned by this coach AND are open for submissions |
-| `mobile-coach-teams` | Lists this coach's teams for a given event (with submission status + video) |
-| `brightcove-upload-init` | Asks Brightcove for a `video_id` + signed upload URL (Dynamic Ingest API). Returns those + the ingest callback URL. |
-| `brightcove-upload-complete` | Called by the app after the bytes are uploaded. Tells Brightcove to ingest, then creates/updates `video_submissions` with the Brightcove `video_id`, master URL, duration, captured_at. Sets status `submitted`. |
-| `brightcove-ingest-callback` | Public webhook Brightcove calls when transcoding finishes → flips submission to `ready` and stores the playback URL/thumbnail. |
+## Out of scope
+- Judging UI changes beyond what's needed for the flag flow (already built).
+- Renaming statuses or restructuring the grid.
+- Notifications / email when a score is flagged.
 
-Each authenticated function calls `legacyAuth(req)` from `_shared/legacy.ts` and resolves the coach. The Brightcove functions use the OAuth client-credentials flow (cached access token in memory per cold start).
-
-### Brightcove integration
-
-Secrets needed (I'll request them in build mode):
-- `BRIGHTCOVE_ACCOUNT_ID`
-- `BRIGHTCOVE_CLIENT_ID`
-- `BRIGHTCOVE_CLIENT_SECRET`
-- `BRIGHTCOVE_INGEST_CALLBACK_SECRET` (generated, shared secret on the callback URL)
-
-Flow (Brightcove Dynamic Ingest API):
-
-```
-brightcove-upload-init
-  1. POST https://oauth.brightcove.com/v4/access_token (client credentials)
-  2. POST .../v1/accounts/{acct}/videos                → video_id, master upload URL
-  3. GET  .../v1/accounts/{acct}/videos/{video_id}/upload-urls/{filename}
-                                                        → signed S3 PUT URL
-  4. Return { video_id, signed_url, api_url } to app
-mobile app
-  5. PUT bytes to signed_url with progress (XHR or fetch with stream)
-brightcove-upload-complete
-  6. POST .../v1/accounts/{acct}/videos/{video_id}/ingest-requests
-       { master: { url: api_url }, callbacks: [callback_url] }
-  7. INSERT/UPDATE video_submissions
-       (team_id, event_id, video_provider='brightcove',
-        provider_video_id, status='submitted', captured_at, duration_seconds, device_info)
-brightcove-ingest-callback
-  8. Verifies shared secret, looks up submission by provider_video_id,
-     updates playback_url, thumbnail_url, status='ready'.
-```
-
-### Database additions (one migration)
-
-- Add columns to `video_submissions`:
-  - `video_provider text default 'brightcove'`
-  - `provider_video_id text` (Brightcove ID)
-  - `playback_url text`, `thumbnail_url text`
-  - `duration_seconds integer`
-  - `captured_at timestamptz`
-  - `device_info jsonb`
-  - `submitted_via text default 'web'` (set to `mobile` from this flow)
-- Index `video_submissions(provider_video_id)`
-- Index `teams(coach_user_id, event_id)` via the existing FK chain
-
-(Verify before writing — some of these may already exist; the migration uses `IF NOT EXISTS`.)
-
-### Capacitor setup
-
-- Install: `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, `@capacitor/android`, `@capacitor/camera`, `@capacitor/filesystem`, `@capacitor/preferences`, `@capacitor/network`, `@capacitor-community/media` (for long video recording — `@capacitor/camera` alone caps short clips).
-- `capacitor.config.ts` with `appId: app.lovable.2c3cf65aff5b451a87e1f8f6c14f9f5c`, `appName: cheermatch`, hot-reload server URL pointing at the Lovable preview.
-- Web fallback: in a regular browser the record screen uses `MediaRecorder` so the flow still works for testing in the preview pane.
-
-## Admin portal impact
-
-Almost none. The existing admin `/admin/events/:id/submissions` and review pages already render `video_submissions` rows; the new ones just have a `submitted_via='mobile'` and a Brightcove URL. I'll add a small "Mobile" badge on those rows so admins can tell at a glance.
-
-## What I'm NOT changing
-
-- Web portal auth, judging flow, scoring screens, results, email templates.
-- Existing Phase 1 endpoints already shipped (`competitionList`, `getMobileAppVersion`, `getDropboxSetting`, `uniqueTeamName`).
-- The `_shared/legacy.ts` helper or its envelope.
-
-## Phasing
-
-I'll ship this in one approval but in clearly separated commits so it's reviewable:
-
-1. **Migration** — add the new `video_submissions` columns + Brightcove secrets request.
-2. **Auth edge functions** — `login`, `signup`, `forgotPassword`, `create_password` (no Brightcove dep, can be tested immediately).
-3. **Mobile React shell** — `/m/login`, `/m`, `/m/events/:id`, `/m/teams/:id`, `useMobileAuth` hook, `MobileLayout`. Talks to the auth functions only; record/upload buttons stubbed.
-4. **Brightcove edge functions** — `brightcove-upload-init`, `brightcove-upload-complete`, `brightcove-ingest-callback`. Tested via curl against a real Brightcove account.
-5. **Record + upload UI** — Capacitor + MediaRecorder fallback, progress bar, retake logic.
-6. **Capacitor wiring** — `capacitor.config.ts`, install native plugins, instructions for `npx cap add ios/android` and shipping to TestFlight.
-
-After Phase 6 you'll be able to: install the app on an iPhone (via Xcode/TestFlight), log in as a coach, pick a team, record, upload, and see the submission land in `/admin/events/:id/submissions` with playback.
-
-## Secrets I'll need (in build mode)
-
-- `BRIGHTCOVE_ACCOUNT_ID` (from Brightcove Studio → Admin → Account Information)
-- `BRIGHTCOVE_CLIENT_ID` (from Studio → Admin → API Authentication → your client)
-- `BRIGHTCOVE_CLIENT_SECRET` (same place)
-- I'll auto-generate `BRIGHTCOVE_INGEST_CALLBACK_SECRET` (no input needed)
-
-## Open question for after approval
-
-The existing legacy `login.php` JSON shape — I asked for a sample last turn. If you can't easily pull one, I'll ship `login` with this default response shape and we can rename fields later:
-
-```json
-{"status":true,"message":"Login successful","data":{
-  "id":"<uuid>","email":"...","full_name":"...","organization_name":"...",
-  "role":"gym_coach","token":"<opaque>","token_expires":"<iso>"}}
-```
-
-Tell me if that's fine, or paste a sample login.php response and I'll match it exactly.
+## Technical notes
+- Files touched: `src/pages/admin/EventScoring.tsx`, `src/components/admin/SubmissionScoringDialog.tsx`, `src/components/admin/AssignPanelsDialog.tsx`, `src/components/admin/JudgeAssignmentDialog.tsx`, `src/components/admin/BulkJudgeAssignmentDialog.tsx`.
+- One optional data-only migration to backfill `judge_assignments.panel_id` and `scores.panel_id` for this event.
+- No schema changes — `needs_review`, `review_reason`, `reviewed_at`, `reviewed_by` already exist on `scores`.
