@@ -481,7 +481,7 @@ export default function UserRoles() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Admins</CardTitle>
@@ -489,6 +489,16 @@ export default function UserRoles() {
           <CardContent>
             <p className="text-3xl font-bold">
               {users?.filter((u) => u.roles.includes('admin')).length || 0}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Portal Admins</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">
+              {users?.filter((u) => u.roles.includes('portal_admin')).length || 0}
             </p>
           </CardContent>
         </Card>
