@@ -474,7 +474,9 @@ export default function EventScoring() {
                         <Badge
                           variant="outline"
                           className={
-                            overallStatus.allReviewed
+                            overallStatus.needsReview
+                              ? 'bg-warning/10 text-warning border-warning/20'
+                              : overallStatus.allReviewed
                               ? 'bg-success/10 text-success border-success/20'
                               : overallStatus.allComplete
                               ? 'bg-warning/10 text-warning border-warning/20'
