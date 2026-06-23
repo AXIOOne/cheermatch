@@ -1,42 +1,26 @@
-# Workflow Audit — Fixes
-
-The 8-step workflow is mostly wired up. Two gaps remain:
-
-- **Step 5** — there is no `open_for_scoring` event status, so judges can score the moment they're assigned.
-- **Step 8** — Send / Download scoresheet unlocks once all panels have *submitted*, not once all panels have been *reviewed*.
+## Goal
+Limit judge navigation to three items — Dashboard, Scoring Queue, Rubrics — and give judges a read-only Rubrics page.
 
 ## Changes
 
-### A. Add `open_for_scoring` event status (Step 5)
+### 1. `src/components/layout/JudgeSidebar.tsx`
+- Replace the nav list with exactly: Dashboard (`/judge`), Scoring Queue (`/judge/queue`), Rubrics (`/judge/rubrics`).
+- Remove the Score History link from the sidebar (route stays available so existing links/back-nav don't break).
 
-1. **Migration** — add `'open_for_scoring'` value to the `event_status` enum (placed after `registration_closed`, before `in_progress`).
-2. **Admin Events UI** (`src/pages/admin/Events.tsx`)
-   - Add `open_for_scoring` to the zod schema and the status `Select` options.
-   - Show it as a distinct badge color.
-3. **Judge gating**
-   - `src/pages/judge/ScoringQueue.tsx`: only show submissions whose event status is `open_for_scoring` (continue to include `in_progress` for backward compat).
-   - `src/pages/judge/ScorePerformance.tsx`: block save/submit mutations when the event is not `open_for_scoring` / `in_progress`; show inline notice.
-4. **Template auto-lock** — the existing template-locking flow keys off `in_progress`; extend it to also lock when an event moves to `open_for_scoring`.
+### 2. New page `src/pages/judge/Rubrics.tsx`
+- Read-only browser of `scoring_rubrics` (no upload, edit, or delete).
+- Columns: Title, Event, Division, Level, Season, Uploaded.
+- Search box + Event / Season filters (same as admin Rubrics).
+- Download button per row using a signed URL from the `rubrics` storage bucket.
+- Empty state when no rubrics exist.
 
-### B. Gate scoresheet on full review (Step 8)
+### 3. `src/App.tsx`
+- Import the new page and add `<Route path="rubrics" element={<JudgeRubrics />} />` inside the `/judge` route group.
 
-In `src/pages/admin/EventScoring.tsx`:
-- Compute `allReviewed` = every expected panel score row has `reviewed_at IS NOT NULL`.
-- Use `allReviewed` (not `allComplete`) to enable **Send Score Sheet** and **Download PDF**.
-- Add a per-submission "Reviewed" rollup badge next to the existing per-panel indicators.
-
-### C. Optional polish
-
-- When the last panel score is marked reviewed, update `video_submissions.status` to `complete` (today this only happens when the event itself closes).
-
-## Technical notes
-
-- Enum change is additive — no data backfill needed; existing events keep their current status.
-- No new tables, no RLS changes. `judge_assignments` policies already restrict judge reads.
-- Judge gating is enforced both in the UI (hide / disable) and on write (mutation refuses if event status is wrong) so it's safe even if a judge has a stale page open.
-- `allReviewed` is derivable from the data `EventScoring` already fetches — no new queries.
+### 4. RLS check (no migration unless needed)
+- Verify the `scoring_rubrics` SELECT policy and the `rubrics` storage bucket policy allow `authenticated` judges to read and download. If either is admin-only today, add a policy granting `SELECT` (and storage object read) to authenticated users with role `judge`. This will be confirmed by reading current policies before writing the migration; migration only added if a gap exists.
 
 ## Out of scope
-
-- Renaming `in_progress` (kept for compatibility with existing close-out trigger `set_submissions_complete_on_event_close`).
-- Coach-portal changes — results publishing flow already documented separately.
+- Score History page itself (kept; just unlinked from sidebar).
+- Any change to admin Rubrics management.
+- Auth/role logic — `JudgeLayout` already gates the section.
