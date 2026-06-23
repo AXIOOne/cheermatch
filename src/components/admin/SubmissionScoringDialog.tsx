@@ -414,25 +414,32 @@ export default function SubmissionScoringDialog({
                                   </div>
                                   <div className="text-right text-xs text-muted-foreground">max {Number(f.max_points).toFixed(2)}</div>
                                 </div>
-                                {f.field_type === 'dropdown' ? (
-                                  <Select
-                                    value={String(fieldScores[f.id]?.points ?? '')}
-                                    onValueChange={(v) => updateFieldScore(f.id, parseFloat(v))}
-                                    disabled={isCurrentPanelLocked}
-                                  >
-                                    <SelectTrigger><SelectValue placeholder="Choose..." /></SelectTrigger>
-                                    <SelectContent>
-                                      {(f.options || [])
-                                        .slice()
-                                        .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
-                                        .map((opt: any) => (
-                                          <SelectItem key={opt.id} value={String(Number(opt.value))}>
+                                {f.field_type === 'dropdown' ? (() => {
+                                  const opts = (f.options || [])
+                                    .slice()
+                                    .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
+                                  const currentPoints = fieldScores[f.id]?.points;
+                                  const selectedOpt = opts.find((o: any) => Number(o.value) === Number(currentPoints));
+                                  return (
+                                    <Select
+                                      value={selectedOpt?.id ?? ''}
+                                      onValueChange={(optId) => {
+                                        const picked = opts.find((o: any) => o.id === optId);
+                                        if (picked) updateFieldScore(f.id, Number(picked.value));
+                                      }}
+                                      disabled={isCurrentPanelLocked}
+                                    >
+                                      <SelectTrigger><SelectValue placeholder="Choose..." /></SelectTrigger>
+                                      <SelectContent>
+                                        {opts.map((opt: any) => (
+                                          <SelectItem key={opt.id} value={opt.id}>
                                             {opt.label} ({Number(opt.value)})
                                           </SelectItem>
                                         ))}
-                                    </SelectContent>
-                                  </Select>
-                                ) : (
+                                      </SelectContent>
+                                    </Select>
+                                  );
+                                })() : (
                                   <ScoreInput
                                     value={fieldScores[f.id]?.points || 0}
                                     onChange={(v) => updateFieldScore(f.id, v)}
@@ -441,13 +448,6 @@ export default function SubmissionScoringDialog({
                                     disabled={isCurrentPanelLocked}
                                   />
                                 )}
-                                <Input
-                                  placeholder="Notes..."
-                                  value={fieldScores[f.id]?.notes || ''}
-                                  onChange={(e) => updateFieldNotes(f.id, e.target.value)}
-                                  disabled={isCurrentPanelLocked}
-                                  className="text-sm h-8"
-                                />
                               </div>
                             ))}
                           </CardContent>
