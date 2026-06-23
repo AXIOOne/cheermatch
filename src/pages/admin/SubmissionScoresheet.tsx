@@ -189,14 +189,37 @@ export default function SubmissionScoresheet() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <Button variant="ghost" size="sm" onClick={() => navigate('/admin/submissions')}>
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
         </Button>
-        <Button size="sm" onClick={handleDownloadPdf} disabled={submittedScores.length === 0}>
-          <Download className="w-4 h-4 mr-2" /> Download PDF
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {(submission.status === 'imported' || submission.status === 'denied') && (
+            <Button
+              size="sm"
+              onClick={() => updateStatusMutation.mutate('approved')}
+              disabled={updateStatusMutation.isPending}
+            >
+              <Check className="w-4 h-4 mr-2" /> Approve
+            </Button>
+          )}
+          {(submission.status === 'imported' || submission.status === 'approved') && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => updateStatusMutation.mutate('denied')}
+              disabled={updateStatusMutation.isPending}
+            >
+              <X className="w-4 h-4 mr-2" /> Deny
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={handleDownloadPdf} disabled={submittedScores.length === 0}>
+            <Download className="w-4 h-4 mr-2" /> Download PDF
+          </Button>
+        </div>
       </div>
+
+
 
 
       <div className="mb-8">
