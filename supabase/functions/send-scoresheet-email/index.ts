@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'https://esm.sh/resend@4.0.0'
+import { buildScoresheet, type RawField, type ScoreType } from '../_shared/build-scoresheet.ts'
+import { buildScoresheetPdf } from '../_shared/scoresheet-pdf.ts'
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,10 +44,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
           name,
           gym_name,
           coach_user_id,
-          division:divisions(name),
+          division:divisions(id, name),
           level:levels(name)
         ),
-        event:events(id, name),
+        event:events(id, name, accuscore_end_at),
         scores:scores(
           id,
           total_score,
@@ -57,7 +59,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
           score_details:score_details(
             points,
             notes,
-            field:scoring_fields(name, max_points, section:scoring_sections(name))
+            field:scoring_fields(id, name, max_points, section_id, score_type, display_order,
+              section:scoring_sections(id, name, display_order))
           )
         )
       `)
@@ -171,11 +174,58 @@ Deno.serve(async (req: Request): Promise<Response> => {
       </html>
     `;
 
+    // Build PDF scoresheet
+    const fieldMap = new Map<string, RawField>();
+    submittedScores.forEach((s: any) => {
+      (s.score_details || []).forEach((d: any) => {
+        const f = Array.isArray(d.field) ? d.field[0] : d.field;
+        if (!f || fieldMap.has(f.id)) return;
+        const section = Array.isArray(f.section) ? f.section[0] : f.section;
+        fieldMap.set(f.id, {
+          id: f.id,
+          name: f.name,
+          max_points: Number(f.max_points || 0),
+          score_type: ((f.score_type as ScoreType) || 'difficulty'),
+          section_id: f.section_id,
+          section_name: section?.name || '',
+          section_order: section?.display_order ?? 0,
+          field_order: f.display_order ?? 0,
+        });
+      });
+    });
+    const sheetData = buildScoresheet({
+      team_name: team.name || 'Team',
+      gym_name: team.gym_name,
+      division_name: division?.name || null,
+      event_name: event?.name || 'Event',
+      accuscore_end_at: (event as any)?.accuscore_end_at || null,
+      fields: Array.from(fieldMap.values()),
+      submitted_scores: submittedScores.map((s: any) => ({
+        deductions: Number(s.deductions || 0),
+        details: (s.score_details || []).map((d: any) => ({
+          field_id: (Array.isArray(d.field) ? d.field[0] : d.field)?.id,
+          points: Number(d.points || 0),
+        })),
+      })),
+    });
+    const pdfBytes = await buildScoresheetPdf(sheetData);
+    let binary = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < pdfBytes.length; i += CHUNK) {
+      binary += String.fromCharCode.apply(null, pdfBytes.subarray(i, i + CHUNK) as unknown as number[]);
+    }
+    const pdfBase64 = btoa(binary);
+    const safeName = `${team.name || 'Team'} - ${event?.name || 'Event'}`.replace(/[^\w\s-]/g, '').trim() || 'scoresheet';
+
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "CheerMatch <noreply@cheermatch.com>",
       to: [coachProfile.email],
       subject: `Score Sheet - ${team.name || "Team"} | ${event?.name || "Event"}`,
       html: emailHtml,
+      attachments: [{
+        filename: `${safeName}.pdf`,
+        content: pdfBase64,
+      }],
     });
 
     if (emailError) {

@@ -52,6 +52,7 @@ const eventSchema = z.object({
   end_date: z.string().min(1, 'End date is required'),
   registration_deadline: z.string().min(1, 'Registration deadline is required'),
   broadcast_deadline: z.string().optional(),
+  accuscore_end_at: z.string().optional(),
   status: z.enum(['draft', 'registration_open', 'registration_closed', 'in_progress', 'completed', 'archived']),
   
 });
@@ -97,6 +98,7 @@ export default function Events() {
       end_date: '',
       registration_deadline: '',
       broadcast_deadline: '',
+      accuscore_end_at: '',
       status: 'draft',
     },
   });
@@ -164,9 +166,10 @@ export default function Events() {
         end_date: data.end_date,
         registration_deadline: data.registration_deadline,
         broadcast_deadline: data.broadcast_deadline || null,
+        accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
         status: data.status,
         created_by: user!.id,
-      }]);
+      } as any]);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -190,8 +193,9 @@ export default function Events() {
         end_date: data.end_date,
         registration_deadline: data.registration_deadline,
         broadcast_deadline: data.broadcast_deadline || null,
+        accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
         status: data.status,
-      }).eq('id', id);
+      } as any).eq('id', id);
       if (error) throw error;
 
     },
@@ -239,6 +243,9 @@ export default function Events() {
       end_date: event.end_date,
       registration_deadline: event.registration_deadline.split('T')[0],
       broadcast_deadline: event.broadcast_deadline || '',
+      accuscore_end_at: event.accuscore_end_at
+        ? new Date(event.accuscore_end_at).toISOString().slice(0, 16)
+        : '',
       status: event.status,
     });
     setIsDialogOpen(true);
@@ -369,7 +376,22 @@ export default function Events() {
                   </div>
                   <FormField
                     control={form.control}
+                    name="accuscore_end_at"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>AccuScore Review Cutoff</FormLabel>
+                        <FormControl>
+                          <Input type="datetime-local" {...field} />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground">When coaches can no longer request a scoresheet review.</p>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
                     name="status"
+
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Status</FormLabel>

@@ -5,27 +5,31 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, Play, Trophy, Users, Calendar, Award, FileText } from 'lucide-react';
+import { ArrowLeft, Loader2, Play, Trophy, Users, Calendar, Award, FileText, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { aggregateValues, AggregationMode } from '@/lib/scoring';
+import { useToast } from '@/hooks/use-toast';
+import { buildScoresheet, type RawField, type ScoreType } from '@/lib/build-scoresheet';
+import { buildScoresheetPdf, downloadPdf } from '@/lib/scoresheet-pdf';
 
 const sb = supabase as any;
 
 export default function SubmissionScoresheet() {
   const { submissionId } = useParams<{ submissionId: string }>();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const { data: submission, isLoading } = useQuery({
     queryKey: ['admin-submission-scoresheet', submissionId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('video_submissions')
         .select(`
           id, video_url, thumbnail_url, status, submitted_at, created_at, duration_seconds,
           event_id,
-          team:teams!inner(id, name, gym_name, athlete_count,
-            division:divisions!inner(name), level:levels!inner(name, level_number)),
-          event:events!inner(id, name, start_date, end_date)
+          team:teams!inner(id, name, gym_name, athlete_count, division_id,
+            division:divisions!inner(id, name, scoring_template_id), level:levels!inner(name, level_number)),
+          event:events!inner(id, name, start_date, end_date, accuscore_end_at)
         `)
         .eq('id', submissionId!).maybeSingle();
       if (error) throw error;
@@ -33,6 +37,7 @@ export default function SubmissionScoresheet() {
     },
     enabled: !!submissionId,
   });
+
 
   const { data: scores } = useQuery({
     queryKey: ['admin-submission-scores', submissionId],
@@ -42,7 +47,7 @@ export default function SubmissionScoresheet() {
         panel:judge_panels(id, name, abbreviation),
         details:score_details(
           points, notes,
-          field:scoring_fields(id, name, max_points, section_id,
+          field:scoring_fields(id, name, max_points, section_id, score_type, display_order,
             section:scoring_sections(id, name, abbreviation, display_order),
             panel_links:scoring_field_panels(panel_abbreviation))
         ),
@@ -53,6 +58,52 @@ export default function SubmissionScoresheet() {
     },
     enabled: !!submissionId,
   });
+
+  const handleDownloadPdf = async () => {
+    try {
+      if (!submission) return;
+      const submitted = (scores || []).filter((s: any) => s.status === 'submitted');
+      const fieldMap = new Map<string, RawField>();
+      submitted.forEach((s: any) => {
+        (s.details || []).forEach((d: any) => {
+          const f = Array.isArray(d.field) ? d.field[0] : d.field;
+          if (!f || fieldMap.has(f.id)) return;
+          const section = Array.isArray(f.section) ? f.section[0] : f.section;
+          fieldMap.set(f.id, {
+            id: f.id,
+            name: f.name,
+            max_points: Number(f.max_points || 0),
+            score_type: ((f.score_type as ScoreType) || 'difficulty'),
+            section_id: f.section_id,
+            section_name: section?.name || '',
+            section_order: section?.display_order ?? 0,
+            field_order: f.display_order ?? 0,
+          });
+        });
+      });
+      const data = buildScoresheet({
+        team_name: submission.team?.name || 'Team',
+        gym_name: submission.team?.gym_name,
+        division_name: submission.team?.division?.name,
+        event_name: submission.event?.name || 'Event',
+        accuscore_end_at: submission.event?.accuscore_end_at || null,
+        fields: Array.from(fieldMap.values()),
+        submitted_scores: submitted.map((s: any) => ({
+          deductions: Number(s.deductions || 0),
+          details: (s.details || []).map((d: any) => ({
+            field_id: (Array.isArray(d.field) ? d.field[0] : d.field)?.id,
+            points: Number(d.points || 0),
+          })),
+        })),
+      });
+      const bytes = await buildScoresheetPdf(data);
+      const safeName = `${data.team_name} - ${data.event_name}`.replace(/[^\w\s-]/g, '').trim();
+      downloadPdf(bytes, `${safeName || 'scoresheet'}.pdf`);
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'PDF failed', description: err.message });
+    }
+  };
+
 
   // Build aggregated view per field across all submitted panel scores
   type AggField = {
@@ -116,9 +167,15 @@ export default function SubmissionScoresheet() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <Button variant="ghost" size="sm" onClick={() => navigate('/admin/submissions')} className="mb-4">
-        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
-      </Button>
+      <div className="flex items-center justify-between mb-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/admin/submissions')}>
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
+        </Button>
+        <Button size="sm" onClick={handleDownloadPdf} disabled={submittedScores.length === 0}>
+          <Download className="w-4 h-4 mr-2" /> Download PDF
+        </Button>
+      </div>
+
 
       <div className="mb-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
