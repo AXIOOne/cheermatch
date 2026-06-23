@@ -300,7 +300,7 @@ export default function MobileRecord() {
 
   return (
     <div className="bg-black text-white min-h-[calc(100vh-3.5rem)] flex flex-col relative">
-      {isPortrait && phase !== "preview" && phase !== "uploading" && (
+      {isPortrait && phase !== "preview" && (
         <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center text-center px-6 space-y-4">
           <RotateCw className="h-16 w-16 text-primary animate-pulse" />
           <h2 className="text-xl font-bold">Please rotate your device</h2>
