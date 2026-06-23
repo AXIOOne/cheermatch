@@ -76,19 +76,14 @@ export default function EventsSummary() {
   const totalSubmissions = events?.reduce((sum, e) => sum + getSubmissionsCount(e.submissions), 0) || 0;
   const totalScores = scores?.length || 0;
 
-  // Upcoming deadlines (next 30 days)
+  // Upcoming events (start date in next 30 days)
   const today = new Date();
   const thirtyDaysOut = addDays(today, 30);
-  
+
   const upcomingDeadlines = events
     ?.filter(e => {
-      const regDeadline = new Date(e.registration_deadline);
-      const broadcastDeadline = e.broadcast_deadline ? new Date(e.broadcast_deadline) : null;
-      
-      return (
-        (isAfter(regDeadline, today) && isBefore(regDeadline, thirtyDaysOut)) ||
-        (broadcastDeadline && isAfter(broadcastDeadline, today) && isBefore(broadcastDeadline, thirtyDaysOut))
-      );
+      const startDate = new Date(e.start_date);
+      return isAfter(startDate, today) && isBefore(startDate, thirtyDaysOut);
     })
     .slice(0, 5) || [];
 
@@ -237,12 +232,12 @@ export default function EventsSummary() {
             </Card>
           </div>
 
-          {/* Upcoming Deadlines */}
+          {/* Upcoming Events */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="w-5 h-5" />
-                Upcoming Deadlines (Next 30 Days)
+                Upcoming Events (Next 30 Days)
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -258,10 +253,8 @@ export default function EventsSummary() {
                           {event.name}
                         </Link>
                         <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
-                          <span>Registration: {format(new Date(event.registration_deadline), 'MMM d, yyyy')}</span>
-                          {event.broadcast_deadline && (
-                            <span>Broadcast: {format(new Date(event.broadcast_deadline), 'MMM d, yyyy')}</span>
-                          )}
+                          <span>Starts: {format(new Date(event.start_date), 'MMM d, yyyy')}</span>
+                          {event.time_zone && <span>{event.time_zone}</span>}
                         </div>
                       </div>
                       <div className="text-right">
@@ -272,7 +265,7 @@ export default function EventsSummary() {
                 </div>
               ) : (
                 <p className="text-center py-8 text-muted-foreground">
-                  No upcoming deadlines in the next 30 days.
+                  No upcoming events in the next 30 days.
                 </p>
               )}
             </CardContent>

@@ -141,44 +141,44 @@ export type Database = {
       events: {
         Row: {
           accuscore_end_at: string | null
-          broadcast_deadline: string | null
           created_at: string
           created_by: string
           description: string | null
+          discipline: string | null
           end_date: string
           id: string
           name: string
-          registration_deadline: string
           start_date: string
           status: Database["public"]["Enums"]["event_status"]
+          time_zone: string
           updated_at: string
         }
         Insert: {
           accuscore_end_at?: string | null
-          broadcast_deadline?: string | null
           created_at?: string
           created_by: string
           description?: string | null
+          discipline?: string | null
           end_date: string
           id?: string
           name: string
-          registration_deadline: string
           start_date: string
           status?: Database["public"]["Enums"]["event_status"]
+          time_zone?: string
           updated_at?: string
         }
         Update: {
           accuscore_end_at?: string | null
-          broadcast_deadline?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
+          discipline?: string | null
           end_date?: string
           id?: string
           name?: string
-          registration_deadline?: string
           start_date?: string
           status?: Database["public"]["Enums"]["event_status"]
+          time_zone?: string
           updated_at?: string
         }
         Relationships: []

@@ -16,45 +16,49 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Calendar, Loader2, Pencil, Trash2, Search, BarChart3, Users, Trophy, FileText, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
-import { format, differenceInDays, isPast, isToday } from 'date-fns';
+import { Plus, Calendar, Loader2, Pencil, Trash2, Search, BarChart3, Users, Trophy, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { format } from 'date-fns';
 
-// Helper to get deadline status info
-const getDeadlineStatus = (deadline: string | null) => {
-  if (!deadline) return null;
-  
-  const deadlineDate = new Date(deadline);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  deadlineDate.setHours(0, 0, 0, 0);
-  
-  const daysRemaining = differenceInDays(deadlineDate, today);
-  
-  if (isPast(deadlineDate) && !isToday(deadlineDate)) {
-    return { days: Math.abs(daysRemaining), label: 'Overdue', variant: 'destructive' as const, isPast: true };
-  }
-  if (isToday(deadlineDate)) {
-    return { days: 0, label: 'Today', variant: 'destructive' as const, isPast: false };
-  }
-  if (daysRemaining <= 3) {
-    return { days: daysRemaining, label: `${daysRemaining}d left`, variant: 'destructive' as const, isPast: false };
-  }
-  if (daysRemaining <= 7) {
-    return { days: daysRemaining, label: `${daysRemaining}d left`, variant: 'secondary' as const, isPast: false };
-  }
-  return { days: daysRemaining, label: `${daysRemaining}d left`, variant: 'outline' as const, isPast: false };
-};
+const DISCIPLINES = [
+  { value: 'allstar_cheer', label: 'All-Star Cheer' },
+  { value: 'allstar_dance', label: 'All-Star Dance' },
+  { value: 'nca_cheer', label: 'NCA Cheer' },
+  { value: 'nca_dance', label: 'NCA Dance' },
+  { value: 'uca_cheer', label: 'UCA Cheer' },
+  { value: 'uca_dance', label: 'UCA Dance' },
+  { value: 'usa_cheer', label: 'USA Cheer' },
+  { value: 'usa_dance', label: 'USA Dance' },
+] as const;
+
+const disciplineLabel = (v: string | null | undefined) =>
+  DISCIPLINES.find((d) => d.value === v)?.label ?? '—';
+
+const TIME_ZONES: string[] = (() => {
+  try {
+    // @ts-ignore - supportedValuesOf is in modern runtimes
+    const list = (Intl as any).supportedValuesOf?.('timeZone');
+    if (Array.isArray(list) && list.length) return list as string[];
+  } catch {}
+  return [
+    'America/New_York',
+    'America/Chicago',
+    'America/Denver',
+    'America/Los_Angeles',
+    'America/Anchorage',
+    'Pacific/Honolulu',
+    'UTC',
+  ];
+})();
 
 const eventSchema = z.object({
   name: z.string().min(2, 'Event name must be at least 2 characters'),
   description: z.string().optional(),
   start_date: z.string().min(1, 'Start date is required'),
   end_date: z.string().min(1, 'End date is required'),
-  registration_deadline: z.string().min(1, 'Registration deadline is required'),
-  broadcast_deadline: z.string().optional(),
+  time_zone: z.string().min(1, 'Time zone is required'),
+  discipline: z.enum(['allstar_cheer','allstar_dance','nca_cheer','nca_dance','uca_cheer','uca_dance','usa_cheer','usa_dance']),
   accuscore_end_at: z.string().optional(),
   status: z.enum(['draft', 'registration_open', 'registration_closed', 'in_progress', 'completed', 'archived']),
-  
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
@@ -96,8 +100,8 @@ export default function Events() {
       description: '',
       start_date: '',
       end_date: '',
-      registration_deadline: '',
-      broadcast_deadline: '',
+      time_zone: 'America/New_York',
+      discipline: 'allstar_cheer',
       accuscore_end_at: '',
       status: 'draft',
     },
@@ -164,8 +168,8 @@ export default function Events() {
         description: data.description || null,
         start_date: data.start_date,
         end_date: data.end_date,
-        registration_deadline: data.registration_deadline,
-        broadcast_deadline: data.broadcast_deadline || null,
+        time_zone: data.time_zone,
+        discipline: data.discipline,
         accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
         status: data.status,
         created_by: user!.id,
@@ -191,8 +195,8 @@ export default function Events() {
         description: data.description || null,
         start_date: data.start_date,
         end_date: data.end_date,
-        registration_deadline: data.registration_deadline,
-        broadcast_deadline: data.broadcast_deadline || null,
+        time_zone: data.time_zone,
+        discipline: data.discipline,
         accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
         status: data.status,
       } as any).eq('id', id);
@@ -241,8 +245,8 @@ export default function Events() {
       description: event.description || '',
       start_date: event.start_date,
       end_date: event.end_date,
-      registration_deadline: event.registration_deadline.split('T')[0],
-      broadcast_deadline: event.broadcast_deadline || '',
+      time_zone: event.time_zone || 'America/New_York',
+      discipline: event.discipline || 'allstar_cheer',
       accuscore_end_at: event.accuscore_end_at
         ? new Date(event.accuscore_end_at).toISOString().slice(0, 16)
         : '',
@@ -349,26 +353,48 @@ export default function Events() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="registration_deadline"
+                      name="discipline"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Registration Deadline</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
+                          <FormLabel>Discipline</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a discipline" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {DISCIPLINES.map((d) => (
+                                <SelectItem key={d.value} value={d.value}>
+                                  {d.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     <FormField
                       control={form.control}
-                      name="broadcast_deadline"
+                      name="time_zone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Submission Deadline</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
+                          <FormLabel>Time Zone</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a time zone" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="max-h-80">
+                              {TIME_ZONES.map((tz) => (
+                                <SelectItem key={tz} value={tz}>
+                                  {tz}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -496,7 +522,8 @@ export default function Events() {
                   <TableRow>
                     <TableHead>Event Name</TableHead>
                     <TableHead>Dates</TableHead>
-                    <TableHead>Submission Deadline</TableHead>
+                    <TableHead>Discipline</TableHead>
+                    <TableHead>Time Zone</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Scoring</TableHead>
                     <TableHead>Registrations</TableHead>
@@ -519,26 +546,10 @@ export default function Events() {
                           {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
                         </TableCell>
                         <TableCell>
-                          {event.broadcast_deadline ? (
-                            <div className="flex flex-col gap-1">
-                              <span>{format(new Date(event.broadcast_deadline), 'MMM d, yyyy')}</span>
-                              {(() => {
-                                const status = getDeadlineStatus(event.broadcast_deadline);
-                                if (!status) return null;
-                                return (
-                                  <Badge 
-                                    variant={status.variant} 
-                                    className={`text-xs w-fit ${status.isPast ? 'animate-pulse' : ''}`}
-                                  >
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    {status.label}
-                                  </Badge>
-                                );
-                              })()}
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
+                          <Badge variant="outline">{disciplineLabel(event.discipline)}</Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {event.time_zone || '—'}
                         </TableCell>
                         <TableCell>
                           <Badge variant={statusVariants[event.status]}>
