@@ -10,13 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Video, Clock, CheckCircle, AlertCircle, XCircle, Search, ExternalLink, Mail } from 'lucide-react';
+import { Loader2, Video, Inbox, CheckCircle, XCircle, UserCheck, Flag, Search, ExternalLink, Mail, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { GenerateReviewLink } from '@/components/admin/GenerateReviewLink';
 import { BulkEmailDialog } from '@/components/admin/BulkEmailDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
+
+// Lifecycle statuses we surface in the UI.
+type LifecycleStatus = 'imported' | 'approved' | 'denied' | 'assigned' | 'complete';
+const LIFECYCLE_STATUSES: LifecycleStatus[] = ['imported', 'approved', 'denied', 'assigned', 'complete'];
 
 interface SubmissionWithDetails {
   id: string;
@@ -39,13 +43,19 @@ interface SubmissionWithDetails {
   };
 }
 
-const statusConfig: Record<SubmissionStatus, { label: string; icon: React.ElementType; className: string }> = {
-  pending: { label: 'Pending', icon: Clock, className: 'bg-muted text-muted-foreground' },
-  uploaded: { label: 'Uploaded', icon: Video, className: 'bg-blue-100 text-blue-700' },
-  processing: { label: 'Processing', icon: Loader2, className: 'bg-yellow-100 text-yellow-700' },
-  ready: { label: 'Ready', icon: CheckCircle, className: 'bg-green-100 text-green-700' },
-  failed: { label: 'Failed', icon: XCircle, className: 'bg-destructive/10 text-destructive' },
+const lifecycleConfig: Record<LifecycleStatus, { label: string; icon: React.ElementType; className: string }> = {
+  imported: { label: 'Imported', icon: Inbox, className: 'bg-muted text-muted-foreground' },
+  approved: { label: 'Approved', icon: CheckCircle, className: 'bg-green-100 text-green-700' },
+  denied: { label: 'Denied', icon: XCircle, className: 'bg-destructive/10 text-destructive' },
+  assigned: { label: 'Assigned', icon: UserCheck, className: 'bg-blue-100 text-blue-700' },
+  complete: { label: 'Complete', icon: Flag, className: 'bg-primary/10 text-primary' },
 };
+
+// Map any legacy status onto the new lifecycle for display.
+function toLifecycle(s: SubmissionStatus): LifecycleStatus {
+  if ((LIFECYCLE_STATUSES as string[]).includes(s)) return s as LifecycleStatus;
+  return 'imported';
+}
 
 export default function Submissions() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,16 +109,16 @@ export default function Submissions() {
   });
 
   const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: SubmissionStatus }) => {
+    mutationFn: async ({ id, status }: { id: string; status: LifecycleStatus }) => {
       const { error } = await supabase
         .from('video_submissions')
-        .update({ status })
+        .update({ status: status as SubmissionStatus })
         .eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
-      toast({ title: 'Status updated successfully!' });
+      toast({ title: 'Status updated' });
     },
     onError: (error: any) => {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -116,22 +126,27 @@ export default function Submissions() {
   });
 
   const filteredSubmissions = submissions?.filter((submission) => {
+    const lifecycle = toLifecycle(submission.status);
     const matchesSearch =
       searchQuery === '' ||
       submission.team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       submission.team.gym_name.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || submission.status === statusFilter;
+
+    const matchesStatus = statusFilter === 'all' || lifecycle === statusFilter;
     const matchesEvent = eventFilter === 'all' || submission.event.id === eventFilter;
 
     return matchesSearch && matchesStatus && matchesEvent;
   });
 
+  const countBy = (status: LifecycleStatus) =>
+    submissions?.filter((s) => toLifecycle(s.status) === status).length || 0;
+
   const stats = {
     total: submissions?.length || 0,
-    pending: submissions?.filter((s) => s.status === 'pending').length || 0,
-    ready: submissions?.filter((s) => s.status === 'ready').length || 0,
-    failed: submissions?.filter((s) => s.status === 'failed').length || 0,
+    imported: countBy('imported'),
+    approved: countBy('approved'),
+    assigned: countBy('assigned'),
+    complete: countBy('complete'),
   };
 
   const toggleSelection = (id: string) => {
@@ -165,11 +180,11 @@ export default function Submissions() {
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-foreground">Video Submissions</h1>
-        <p className="text-muted-foreground mt-1">Manage all team video submissions</p>
+        <p className="text-muted-foreground mt-1">Review, approve, and track team video submissions</p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
@@ -180,26 +195,34 @@ export default function Submissions() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Pending</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Imported</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-muted-foreground">{stats.pending}</p>
+            <p className="text-3xl font-bold text-muted-foreground">{stats.imported}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Ready</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Approved</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-green-600">{stats.ready}</p>
+            <p className="text-3xl font-bold text-green-600">{stats.approved}</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Failed</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Assigned</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-destructive">{stats.failed}</p>
+            <p className="text-3xl font-bold text-blue-600">{stats.assigned}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Complete</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-primary">{stats.complete}</p>
           </CardContent>
         </Card>
       </div>
@@ -224,11 +247,9 @@ export default function Submissions() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="uploaded">Uploaded</SelectItem>
-                  <SelectItem value="processing">Processing</SelectItem>
-                  <SelectItem value="ready">Ready</SelectItem>
-                  <SelectItem value="failed">Failed</SelectItem>
+                  {LIFECYCLE_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>{lifecycleConfig[s].label}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={eventFilter} onValueChange={setEventFilter}>
@@ -245,7 +266,7 @@ export default function Submissions() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             {/* Bulk Actions Bar */}
             {selectedIds.size > 0 && (
               <div className="flex items-center gap-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
@@ -292,7 +313,9 @@ export default function Submissions() {
               </TableHeader>
               <TableBody>
                 {filteredSubmissions.map((submission) => {
-                  const StatusIcon = statusConfig[submission.status].icon;
+                  const lifecycle = toLifecycle(submission.status);
+                  const cfg = lifecycleConfig[lifecycle];
+                  const StatusIcon = cfg.icon;
                   return (
                     <TableRow
                       key={submission.id}
@@ -331,30 +354,11 @@ export default function Submissions() {
                           <p className="text-muted-foreground">{submission.team.level.name}</p>
                         </div>
                       </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Select
-                          value={submission.status}
-                          onValueChange={(value) =>
-                            updateStatusMutation.mutate({ id: submission.id, status: value as SubmissionStatus })
-                          }
-                        >
-                          <SelectTrigger className="w-[130px] h-8">
-                            <Badge
-                              variant="outline"
-                              className={`${statusConfig[submission.status].className} border-0`}
-                            >
-                              <StatusIcon className={`w-3 h-3 mr-1 ${submission.status === 'processing' ? 'animate-spin' : ''}`} />
-                              {statusConfig[submission.status].label}
-                            </Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="uploaded">Uploaded</SelectItem>
-                            <SelectItem value="processing">Processing</SelectItem>
-                            <SelectItem value="ready">Ready</SelectItem>
-                            <SelectItem value="failed">Failed</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <TableCell>
+                        <Badge variant="outline" className={`${cfg.className} border-0`}>
+                          <StatusIcon className="w-3 h-3 mr-1" />
+                          {cfg.label}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         {submission.submitted_at
@@ -363,6 +367,39 @@ export default function Submissions() {
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
+                          {lifecycle === 'imported' && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => updateStatusMutation.mutate({ id: submission.id, status: 'approved' })}
+                                disabled={updateStatusMutation.isPending}
+                              >
+                                <Check className="w-4 h-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => updateStatusMutation.mutate({ id: submission.id, status: 'denied' })}
+                                disabled={updateStatusMutation.isPending}
+                              >
+                                <X className="w-4 h-4 mr-1" />
+                                Deny
+                              </Button>
+                            </>
+                          )}
+                          {lifecycle === 'denied' && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateStatusMutation.mutate({ id: submission.id, status: 'approved' })}
+                              disabled={updateStatusMutation.isPending}
+                            >
+                              <Check className="w-4 h-4 mr-1" />
+                              Re-approve
+                            </Button>
+                          )}
                           {submission.video_url && (
                             <Button variant="ghost" size="sm" asChild>
                               <a href={submission.video_url} target="_blank" rel="noopener noreferrer">

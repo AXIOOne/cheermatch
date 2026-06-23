@@ -1259,6 +1259,11 @@ export type Database = {
         | "processing"
         | "ready"
         | "failed"
+        | "imported"
+        | "approved"
+        | "denied"
+        | "assigned"
+        | "complete"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1412,6 +1417,11 @@ export const Constants = {
         "processing",
         "ready",
         "failed",
+        "imported",
+        "approved",
+        "denied",
+        "assigned",
+        "complete",
       ],
     },
   },

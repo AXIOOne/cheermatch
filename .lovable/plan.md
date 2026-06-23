@@ -1,78 +1,39 @@
 ## Goal
+Rework the Submissions tab around a clear lifecycle: **imported → approved (or denied) → assigned → complete**. Remove scoring details from this view — it's purely for intake, approval, and status tracking.
 
-Generate a polished PDF scoresheet matching the sample table layout, with a header block showing **Team Name · Division · Event Title · AccuScore End Time**, and a footer block showing **Raw Score · Deductions · % Perfection · Event Score**. Delivered via an admin "Download PDF" button and as an attachment on the coach scoresheet email.
+## Status Lifecycle
 
-## Header
+| Status | When it's set | How |
+|---|---|---|
+| `imported` | A submission first enters the system | Default on insert |
+| `approved` | Staff has reviewed the video and accepts it for scoring | Manual action in Submissions tab |
+| `denied` | Staff rejects the video | Manual action in Submissions tab |
+| `assigned` | Submission has been assigned to a judge | Auto-set when a `judge_assignments` row is created for it |
+| `complete` | The parent event is closed | Auto-set when the event status becomes `completed`/closed |
 
-```text
-{Team Name}                             Event: {Event Title}
-Division: {Division Name}               AccuScore Ends: {accuscore_end_time}
-```
+## Database changes
+1. Extend the `submission_status` enum with the new values: `imported`, `approved`, `denied`, `assigned`, `complete`. (Existing values stay so legacy rows don't break; we just stop using them in the UI.)
+2. Change the default of `video_submissions.status` to `imported`.
+3. Backfill: any current `pending`/`uploaded`/`processing`/`ready` → `imported`; `failed` left alone or mapped to `denied` (will confirm — see Open question).
+4. Trigger on `judge_assignments` insert: set the submission's status to `assigned` if it's currently `approved`.
+5. Trigger on `events` update: when an event transitions to closed, set all of that event's submissions with status in (`approved`, `assigned`) to `complete`.
 
-`accuscore_end_time` is a new per-event setting that defines when coaches can no longer submit a review on their scoresheet. Formatted as `MMM D, YYYY · h:mm A z` in the venue/local timezone (UTC formatting acceptable for v1).
-
-## Table (matches the sample)
-
-| Judge Criteria | Max Value | Difficulty | Execution | Score |
-
-- One row per scoring field, ordered by section `display_order` then field `display_order`.
-- Fields sharing the same `name` within a section merge into one row: Difficulty column gets the difficulty-typed value, Execution column gets the execution-typed value, Max Value is the sum of merged `max_points`, Score = difficulty + execution (blank side = 0).
-- Cells with no applicable score type render as a shaded gray box.
-- Multi-judge fields: cell shows the **average across submitted judges, rounded to 2 decimals**.
-
-## Footer
-
-```text
-                                                Raw Score:   48.40
-                                                Deductions:  -1.50
-                                                % Perfection: 95.30
-                                                Event Score:  95.30
-```
-
-- `Raw Score` = sum of all row scores (out of total_max, typically 50).
-- `Deductions` = sum of submitted-judge deductions, displayed with leading minus.
-- `% Perfection` = `(raw_score / total_max) * 100 - deductions`, 2 decimals.
-- `Event Score` = identical value to `% Perfection` (kept as a separate labeled line per request).
-
-## Schema change
-
-Add to `events`:
-
-- `accuscore_end_at timestamptz NULL` — the cutoff for coach scoresheet reviews and the value displayed in the PDF header.
-
-Event create/edit form (`Events.tsx`) gets a corresponding datetime input. No backfill needed; existing rows stay null and PDF prints "—" when missing. (Enforcement of the cutoff in the review portal is out of scope for this turn — column + capture + display only.)
-
-## Technical implementation
-
-### PDF generation (pdf-lib)
-
-- Single renderer module that runs in both Deno and the browser: `supabase/functions/_shared/scoresheet-pdf.ts` using `npm:pdf-lib@1.17`. The admin client imports the same source via a thin `src/lib/scoresheet-pdf.ts` wrapper that pulls from npm.
-- Letter portrait, Helvetica/HelveticaBold, 1px borders, gray fill `rgb(0.85, 0.85, 0.85)` for N/A cells. Judge Criteria column wraps; row height grows accordingly. Auto-paginates the table header on overflow.
-
-### Data shaping (`src/lib/scoresheet.ts` + duplicated in `_shared/build-scoresheet.ts` since Deno can't import from `src/`)
-
-Pulls submission → team → division → template, walks `scoring_sections`/`scoring_fields` (including `score_type`), averages per-field judge scores, merges same-name rows, sums deductions, returns the normalized payload consumed by the renderer.
-
-### Admin download
-
-`SubmissionScoresheet.tsx` gets a "Download PDF" button: calls shaping helper with the data already loaded by React Query, generates the PDF in-browser via pdf-lib, triggers a Blob download `{Team} - {Event}.pdf`.
-
-### Email attachment
-
-`supabase/functions/send-scoresheet-email/index.ts`:
-- Extend submission query to include `accuscore_end_at`, `division`, `score_type`, section/field `display_order`.
-- Generate the PDF with the shared renderer.
-- Attach to the existing Resend email (`attachments: [{ filename, content: base64Pdf }]`). Existing HTML body remains as a summary; PDF is authoritative.
-
-## Files
-
-- **Migration**: add `events.accuscore_end_at`
-- **New**: `supabase/functions/_shared/scoresheet-pdf.ts`, `supabase/functions/_shared/build-scoresheet.ts`, `src/lib/scoresheet-pdf.ts`, `src/lib/build-scoresheet.ts`
-- **Edited**: `src/pages/admin/SubmissionScoresheet.tsx`, `src/pages/admin/Events.tsx`, `supabase/functions/send-scoresheet-email/index.ts`
-- **Dependency**: `bun add pdf-lib`
+## Submissions page (`src/pages/admin/Submissions.tsx`)
+- Replace the status-config map with the five new statuses and matching colors/icons (imported = neutral, approved = green, denied = red, assigned = blue, complete = teal).
+- Stats cards become: **Total / Imported / Approved / Assigned / Complete** (drop Pending/Ready/Failed).
+- Status filter dropdown reflects the new five values.
+- Per-row status cell becomes a **read-only badge** (no manual dropdown to arbitrary values).
+- Per-row actions:
+  - When status = `imported`: show **Approve** and **Deny** buttons.
+  - When status = `denied`: show **Re-approve** (sets back to `approved`).
+  - When status = `approved` / `assigned` / `complete`: status is informational only (no approve/deny buttons).
+- Keep: bulk selection, Send Review Links, external video link, generate review link, search, event filter, row click → submission detail page.
+- Remove anything that surfaces scoring details on this page (we already don't show scores here; will double-check nothing leaked in via the detail link section — the row link to `/admin/submissions/:id` stays since that's a separate page).
 
 ## Out of scope
+- The submission detail/scoresheet page is untouched.
+- Judge assignment UI is untouched — only the DB trigger reacts to new assignments.
+- Event close UI is untouched — only the DB trigger reacts to status change.
 
-- Enforcing `accuscore_end_at` inside the coach review portal (display-only this turn).
-- Itemized deduction list, per-judge breakdown, branding/logo on the PDF.
-- Timezone picker for the displayed cutoff (UTC formatting for v1).
+## Open question
+For existing `failed` submissions (videos that failed to process), should they be migrated to `denied` or left as `imported` for staff to re-review? I'll default to **`imported`** unless you say otherwise.
