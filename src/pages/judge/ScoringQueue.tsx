@@ -155,13 +155,15 @@ export default function ScoringQueue() {
     },
   });
 
-  // template_id -> Set of panel abbreviations that have at least one field. Empty set ⇒ no restrictions anywhere.
+  // template_id -> section ids and panel abbreviations with at least one field.
   const templatePanelCoverage = useMemo(() => {
-    const m = new Map<string, { panels: Set<string>; hasUnrestricted: boolean }>();
+    const m = new Map<string, { sectionIds: Set<string>; panels: Set<string>; hasUnrestricted: boolean }>();
     (templates || []).forEach((t: any) => {
+      const sectionIds = new Set<string>();
       const panels = new Set<string>();
       let hasUnrestricted = false;
       (t.sections || []).forEach((s: any) => {
+        if (s.id) sectionIds.add(s.id);
         (s.fields || []).forEach((f: any) => {
           const links = f.panel_links || [];
           if (links.length === 0) {
@@ -173,7 +175,7 @@ export default function ScoringQueue() {
           }
         });
       });
-      m.set(t.id, { panels, hasUnrestricted });
+      m.set(t.id, { sectionIds, panels, hasUnrestricted });
     });
     return m;
   }, [templates]);
@@ -189,6 +191,7 @@ export default function ScoringQueue() {
       if (cov.hasUnrestricted) return true;
       return matchingAssignments.some((assignment: any) => {
         if (isAllPanelsAssignment(assignment)) return true;
+        if (assignment.section_id) return cov.sectionIds.has(assignment.section_id);
         const judgePanel = getAssignmentPanelAbbrev(assignment);
         return judgePanel ? cov.panels.has(judgePanel) : false;
       });
