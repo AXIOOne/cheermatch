@@ -234,28 +234,17 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
                           <span className="text-sm font-medium truncate">{section.name}</span>
                         </div>
                         <div className="w-64">
-                          <Select
-                            value={current || UNASSIGNED}
-                            onValueChange={(val) => {
+                          <JudgeCombobox
+                            value={current}
+                            judges={judges || []}
+                            onChange={(judgeUserId) => {
                               saveMutation.mutate({
                                 divisionId: div.id,
                                 sectionId: section.id,
-                                judgeUserId: val === UNASSIGNED ? null : val,
+                                judgeUserId,
                               });
                             }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Unassigned" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
-                              {judges?.map(j => (
-                                <SelectItem key={j.user_id} value={j.user_id}>
-                                  {j.full_name || j.email}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          />
                         </div>
                       </div>
                     );
