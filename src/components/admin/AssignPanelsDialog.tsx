@@ -53,17 +53,25 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
   const { data: divisions, isLoading: divisionsLoading } = useQuery({
     queryKey: ['event-submission-divisions', eventId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: subs, error } = await supabase
         .from('video_submissions')
-        .select('team:teams!inner(division:divisions!inner(id, name))')
+        .select('team:teams(division_id)')
         .eq('event_id', eventId);
       if (error) throw error;
-      const map = new Map<string, { id: string; name: string }>();
-      (data || []).forEach((row: any) => {
-        const d = row.team?.division;
-        if (d?.id) map.set(d.id, { id: d.id, name: d.name });
-      });
-      return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+      const divisionIds = [
+        ...new Set(
+          (subs || [])
+            .map((s: any) => s.team?.division_id)
+            .filter((id: string | null | undefined): id is string => !!id)
+        ),
+      ];
+      if (divisionIds.length === 0) return [];
+      const { data: divs, error: dErr } = await supabase
+        .from('divisions')
+        .select('id, name')
+        .in('id', divisionIds);
+      if (dErr) throw dErr;
+      return (divs || []).sort((a, b) => a.name.localeCompare(b.name));
     },
   });
 
