@@ -122,8 +122,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setSession(null);
+    setUser(null);
     setRoles([]);
     setRolesLoaded(true);
+    setLoading(false);
   };
 
   const hasRole = (role: AppRole) => roles.includes(role);
