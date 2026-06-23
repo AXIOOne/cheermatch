@@ -133,7 +133,14 @@ export default function EventRegistrations() {
               <TableBody>
                 {filteredTeams.map((team) => (
                   <TableRow key={team.id}>
-                    <TableCell className="font-medium">{team.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div>{team.name}</div>
+                      {team.coach_name && (
+                        <div className="text-xs text-muted-foreground font-normal">
+                          {team.coach_name}
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell>{team.gym_name}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{team.division?.name || '—'}</Badge>
