@@ -214,6 +214,14 @@ export default function Submissions() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Revisions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-amber-600">{stats.revision_requested}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Assigned</CardTitle>
           </CardHeader>
           <CardContent>
