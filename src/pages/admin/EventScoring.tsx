@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader2, BarChart3, CheckCircle, Clock, Settings, Send, AlertCircle, ClipboardList } from 'lucide-react';
+import { ArrowLeft, Loader2, BarChart3, CheckCircle, Clock, Settings, Send, AlertCircle, ClipboardList, Eye, Download } from 'lucide-react';
 import JudgePanelsManager from '@/components/admin/JudgePanelsManager';
 import SubmissionScoringDialog from '@/components/admin/SubmissionScoringDialog';
+import { downloadSubmissionScoresheet } from '@/lib/download-submission-scoresheet';
 
 interface JudgePanel {
   id: string;
@@ -45,6 +46,7 @@ export default function EventScoring() {
   const { eventId } = useParams<{ eventId: string }>();
   const [isPanelsDialogOpen, setIsPanelsDialogOpen] = useState(false);
   const [sendingScoreFor, setSendingScoreFor] = useState<string | null>(null);
+  const [downloadingPdfFor, setDownloadingPdfFor] = useState<string | null>(null);
   const [scoringSubmissionId, setScoringSubmissionId] = useState<string | null>(null);
   const [scoringPanelId, setScoringPanelId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -147,6 +149,17 @@ export default function EventScoring() {
   const handleSendScoreSheet = (submissionId: string) => {
     setSendingScoreFor(submissionId);
     sendScoreSheetMutation.mutate(submissionId);
+  };
+
+  const handleDownloadPdf = async (submissionId: string) => {
+    setDownloadingPdfFor(submissionId);
+    try {
+      await downloadSubmissionScoresheet(submissionId);
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'PDF failed', description: err.message });
+    } finally {
+      setDownloadingPdfFor(null);
+    }
   };
 
   const isLoading = eventLoading || panelsLoading || submissionsLoading;
@@ -419,6 +432,31 @@ export default function EventScoring() {
                               <Send className="w-3 h-3 mr-1" />
                             )}
                             Send Score Sheet
+                          </Button>
+                          <Button
+                            asChild
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-primary"
+                          >
+                            <Link to={`/admin/submissions/${submission.id}`}>
+                              <Eye className="w-3 h-3 mr-1" />
+                              Preview
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="link"
+                            size="sm"
+                            className="h-auto p-0 text-primary"
+                            onClick={() => handleDownloadPdf(submission.id)}
+                            disabled={downloadingPdfFor === submission.id || !overallStatus.allComplete}
+                          >
+                            {downloadingPdfFor === submission.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                            ) : (
+                              <Download className="w-3 h-3 mr-1" />
+                            )}
+                            Download PDF
                           </Button>
                           <span className={`text-xs font-medium ${overallStatus.allComplete ? 'text-success' : 'text-muted-foreground'}`}>
                             [{overallStatus.text}]
