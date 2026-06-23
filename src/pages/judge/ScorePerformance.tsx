@@ -150,6 +150,7 @@ export default function ScorePerformance() {
   const assignedPanelAbbrevs = useMemo(() => {
     return new Set(
       (judgeAssignments || [])
+        .filter((assignment: any) => !assignment.section_id)
         .map((assignment: any) => getAssignmentPanelAbbrev(assignment))
         .filter(Boolean) as string[]
     );
@@ -175,10 +176,10 @@ export default function ScorePerformance() {
       .map((s: any) => {
         const fields = ((s.fields as any[]) || [])
           .filter((f: any) => {
+            if (hasAllPanelsAssignment) return true;
             if (assignedSectionIds.has(s.id)) return true;
             const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
-            if (abbrs.length === 0) return true;
-            if (hasAllPanelsAssignment) return true;
+            if (abbrs.length === 0) return assignedPanelAbbrevs.size > 0;
             if (assignedPanelAbbrevs.size === 0) return false;
             return abbrs.some((abbrev: string) => assignedPanelAbbrevs.has(abbrev));
           })
