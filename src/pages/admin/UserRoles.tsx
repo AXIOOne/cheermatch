@@ -300,6 +300,7 @@ export default function UserRoles() {
     portal_admin: 'bg-purple-100 text-purple-700 border-purple-200',
     judge: 'bg-blue-100 text-blue-700 border-blue-200',
     gym_coach: 'bg-green-100 text-green-700 border-green-200',
+    content_contributor: 'bg-amber-100 text-amber-700 border-amber-200',
   };
 
   const roleLabels: Record<AppRole, string> = {
@@ -307,6 +308,7 @@ export default function UserRoles() {
     portal_admin: 'Portal Admin',
     judge: 'Judge',
     gym_coach: 'Gym Coach',
+    content_contributor: 'Content Contributor',
   };
 
   return (
