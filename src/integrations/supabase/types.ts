@@ -1279,7 +1279,12 @@ export type Database = {
       teams: {
         Row: {
           athlete_count: number
-          coach_user_id: string
+          athletes_female: number
+          athletes_male: number
+          coach_email: string | null
+          coach_name: string | null
+          coach_phone: string | null
+          coach_user_id: string | null
           created_at: string
           division_id: string
           event_id: string
@@ -1291,7 +1296,12 @@ export type Database = {
         }
         Insert: {
           athlete_count: number
-          coach_user_id: string
+          athletes_female?: number
+          athletes_male?: number
+          coach_email?: string | null
+          coach_name?: string | null
+          coach_phone?: string | null
+          coach_user_id?: string | null
           created_at?: string
           division_id: string
           event_id: string
@@ -1303,7 +1313,12 @@ export type Database = {
         }
         Update: {
           athlete_count?: number
-          coach_user_id?: string
+          athletes_female?: number
+          athletes_male?: number
+          coach_email?: string | null
+          coach_name?: string | null
+          coach_phone?: string | null
+          coach_user_id?: string | null
           created_at?: string
           division_id?: string
           event_id?: string
