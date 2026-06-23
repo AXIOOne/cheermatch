@@ -7,11 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Search, Loader2, Users } from 'lucide-react';
+import { ArrowLeft, Search, Loader2, Users, Plus } from 'lucide-react';
+import { AddTeamDialog } from '@/components/admin/AddTeamDialog';
 
 export default function EventRegistrations() {
   const { eventId } = useParams<{ eventId: string }>();
   const [searchQuery, setSearchQuery] = useState('');
+  const [addOpen, setAddOpen] = useState(false);
 
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ['event', eventId],
@@ -63,11 +65,20 @@ export default function EventRegistrations() {
           <ArrowLeft className="w-4 h-4" />
           Back to Events
         </Link>
-        <h1 className="text-3xl font-bold text-foreground">
-          {eventLoading ? 'Loading...' : event?.name}
-        </h1>
-        <p className="text-muted-foreground mt-1">Team Registrations</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              {eventLoading ? 'Loading...' : event?.name}
+            </h1>
+            <p className="text-muted-foreground mt-1">Team Registrations</p>
+          </div>
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Registration
+          </Button>
+        </div>
       </div>
+
 
       {/* Search */}
       <Card className="mb-4">
@@ -135,6 +146,10 @@ export default function EventRegistrations() {
           )}
         </CardContent>
       </Card>
+
+      {eventId && (
+        <AddTeamDialog open={addOpen} onOpenChange={setAddOpen} eventId={eventId} />
+      )}
     </div>
   );
 }
