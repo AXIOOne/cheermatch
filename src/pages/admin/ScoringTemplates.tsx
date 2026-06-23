@@ -58,7 +58,7 @@ export default function ScoringTemplates() {
         .from('scoring_templates')
         .select(`
           *,
-          event:events(name, status),
+          divisions:divisions(id, name),
           sections:scoring_sections(
             *,
             fields:scoring_fields(
