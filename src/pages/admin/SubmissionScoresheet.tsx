@@ -1,16 +1,20 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, Play, Trophy, Users, Calendar, Award, FileText, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, Play, Trophy, Users, Calendar, Award, FileText, Download, Check, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { aggregateValues, AggregationMode } from '@/lib/scoring';
 import { useToast } from '@/hooks/use-toast';
 import { buildScoresheet, type RawField, type ScoreType } from '@/lib/build-scoresheet';
 import { buildScoresheetPdf, downloadPdf } from '@/lib/scoresheet-pdf';
+import type { Database } from '@/integrations/supabase/types';
+
+type SubmissionStatus = Database['public']['Enums']['submission_status'];
+
 
 const sb = supabase as any;
 
@@ -18,6 +22,24 @@ export default function SubmissionScoresheet() {
   const { submissionId } = useParams<{ submissionId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async (status: SubmissionStatus) => {
+      const { error } = await supabase
+        .from('video_submissions')
+        .update({ status })
+        .eq('id', submissionId!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-submission-scoresheet', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+      toast({ title: 'Status updated' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+  });
+
 
   const { data: submission, isLoading } = useQuery({
     queryKey: ['admin-submission-scoresheet', submissionId],
@@ -167,14 +189,37 @@ export default function SubmissionScoresheet() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <Button variant="ghost" size="sm" onClick={() => navigate('/admin/submissions')}>
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
         </Button>
-        <Button size="sm" onClick={handleDownloadPdf} disabled={submittedScores.length === 0}>
-          <Download className="w-4 h-4 mr-2" /> Download PDF
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {(submission.status === 'imported' || submission.status === 'denied') && (
+            <Button
+              size="sm"
+              onClick={() => updateStatusMutation.mutate('approved')}
+              disabled={updateStatusMutation.isPending}
+            >
+              <Check className="w-4 h-4 mr-2" /> Approve
+            </Button>
+          )}
+          {(submission.status === 'imported' || submission.status === 'approved') && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => updateStatusMutation.mutate('denied')}
+              disabled={updateStatusMutation.isPending}
+            >
+              <X className="w-4 h-4 mr-2" /> Deny
+            </Button>
+          )}
+          <Button size="sm" variant="outline" onClick={handleDownloadPdf} disabled={submittedScores.length === 0}>
+            <Download className="w-4 h-4 mr-2" /> Download PDF
+          </Button>
+        </div>
       </div>
+
+
 
 
       <div className="mb-8">
