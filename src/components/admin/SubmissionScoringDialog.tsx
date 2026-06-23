@@ -111,6 +111,7 @@ export default function SubmissionScoringDialog({
         .from('scoring_templates')
         .select(`
           *,
+          sections:scoring_sections(*),
           categories:scoring_categories(*),
           deduction_types:deduction_types(*)
         `)
@@ -124,6 +125,7 @@ export default function SubmissionScoringDialog({
           .from('scoring_templates')
           .select(`
             *,
+              sections:scoring_sections(*),
               categories:scoring_categories(*),
               deduction_types:deduction_types(*)
           `)
