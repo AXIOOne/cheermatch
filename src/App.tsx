@@ -14,7 +14,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import Events from "./pages/admin/Events";
 import ScoringTemplates from "./pages/admin/ScoringTemplates";
 import Divisions from "./pages/admin/Divisions";
-import Teams from "./pages/admin/Teams";
+
 import Judges from "./pages/admin/Judges";
 import Settings from "./pages/admin/Settings";
 import ReviewRequests from "./pages/admin/ReviewRequests";
@@ -65,7 +65,7 @@ const App = () => (
               <Route path="scoring" element={<ScoringTemplates />} />
               <Route path="rubrics" element={<Rubrics />} />
               <Route path="divisions" element={<Divisions />} />
-              <Route path="teams" element={<Teams />} />
+              
               <Route path="submissions" element={<Submissions />} />
               <Route path="submissions/:submissionId" element={<SubmissionScoresheet />} />
               <Route path="judges" element={<Judges />} />

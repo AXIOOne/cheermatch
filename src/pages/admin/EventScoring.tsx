@@ -395,16 +395,14 @@ export default function EventScoring() {
                       </TableCell>
                       <TableCell>
                         <div>
-                          <Link 
-                            to={`/admin/teams`} 
-                            className="font-medium text-primary hover:underline"
-                          >
+                          <p className="font-medium">
                             {submission.team?.name || 'Unknown Team'}
-                          </Link>
+                          </p>
                           <p className="text-sm text-muted-foreground">
                             {submission.team?.gym_name || '—'}
                           </p>
                         </div>
+
                       </TableCell>
                       <TableCell>
                         {submission.team?.level?.name && submission.team?.division?.name
