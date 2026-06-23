@@ -160,6 +160,9 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
                 onChange={(e) => setDraft(d => ({ ...d, max_points: parseFloat(e.target.value) || 0 }))}
               />
             </div>
+          </div>
+
+
 
 
           {draft.field_type === 'number' && (
