@@ -1,70 +1,67 @@
-# Scoring Rubric Library
 
-Add a place for admins to upload, organize, and manage scoring rubric documents that judges can reference while scoring. Rubrics are stored in a single library and can be tagged by season, event, level, and division so they're easy to find.
+## Goal
 
-## What gets built
+Within a scoring template section, allow each sub-category (Difficulty, Execution, drivers, etc.) to be assigned to a specific judge-panel slot (B1, B2, T1, T2, J1, J2…). At scoring time, a judge only sees the categories that belong to their panel, so two judges can split one section.
 
-### Admin: Rubrics page (new)
-- New nav item under Admin → "Rubrics".
-- List of uploaded rubrics with: title, file type icon, season, event, level, division, uploaded by, uploaded date.
-- Filters: season, event, level, division, file type, free-text search on title/description.
-- Actions: Upload new rubric, Edit metadata, Download, Replace file, Delete.
-- Upload dialog: title, description, season (free-text e.g. "2026"), optional event, optional division, optional level, file picker.
-  - If an event is chosen, the division/level pickers filter to that event's options.
-  - All scoping fields are optional — a rubric can be fully global, season-only, or tied to a specific event/level/division.
-- Accepts any document or image: PDF, Word (.doc/.docx), images (.png/.jpg/.webp), spreadsheets (.xls/.xlsx), text.
-- File size cap: 25 MB per file.
+## Approach
 
-### Judge: Rubric reference
-- On the judge scoring page (`ScorePerformance`), add a "Rubrics" panel/button that opens a side sheet listing rubrics relevant to the current submission's event/division/level (plus any season-tagged or global rubrics).
-- Each item shows title + description and a Download / Open-in-new-tab link.
-- Read-only — judges cannot upload, edit, or delete.
+Store a **panel abbreviation string** on each `scoring_categories` row (e.g. "B1", "B2"). We use a free-text abbreviation, not a hard FK, because templates are universal but `judge_panels` are per event — abbreviations are the bridge already used everywhere else (judge_panels.abbreviation, judge_assignments.panel → judge_panels.id with matching abbreviations across events).
 
-## Technical details
+Inheritance rule: if a category has no panel set, it inherits from its parent; if the parent has none, it inherits from the section's default panel; if the section has no default, the category is visible to every panel mapped to that section.
 
-### Storage
-- New private Supabase storage bucket: `rubrics`.
-- File path convention: `rubrics/{rubric_id}/{original_filename}`.
-- Access via short-lived signed URLs generated on demand (no public bucket).
+## Changes
 
-### Database
-New table `public.scoring_rubrics`:
-- `id uuid pk`
-- `title text not null`
-- `description text`
-- `season text` (free-text, e.g. "2025-2026")
-- `event_id uuid` (nullable, references events)
-- `division_id uuid` (nullable, references divisions)
-- `level_id uuid` (nullable, references levels)
-- `file_path text not null` (storage object path)
-- `file_name text not null` (original filename for download)
-- `file_size_bytes bigint`
-- `mime_type text`
-- `uploaded_by uuid not null` (auth user id)
-- `created_at`, `updated_at` timestamps + trigger
+### 1. Database (single migration)
 
-Indexes on `event_id`, `division_id`, `level_id`, `season` for filter performance.
+```sql
+ALTER TABLE public.scoring_categories
+  ADD COLUMN panel_abbreviation TEXT;
 
-### RLS (Admins + Judges only)
-- `scoring_rubrics` table:
-  - SELECT: admins or judges (`has_role` check).
-  - INSERT / UPDATE / DELETE: admins only.
-- `rubrics` storage bucket policies:
-  - SELECT on objects: admins or judges.
-  - INSERT / UPDATE / DELETE on objects: admins only.
-- Bucket is private; the UI requests signed URLs to view/download.
+ALTER TABLE public.scoring_sections
+  ADD COLUMN default_panel_abbreviation TEXT;
+```
 
-### Frontend
-- New files:
-  - `src/pages/admin/Rubrics.tsx` — list, filters, upload/edit/delete flows.
-  - `src/components/admin/RubricUploadDialog.tsx` — upload + metadata form.
-  - `src/components/judge/RubricReferenceSheet.tsx` — judge-facing side sheet.
-- Edits:
-  - `src/App.tsx` — add `/admin/rubrics` route.
-  - `src/components/layout/AdminSidebar.tsx` — add nav entry (FileText icon).
-  - `src/pages/judge/ScorePerformance.tsx` — add "Rubrics" trigger that opens the reference sheet, filtered by the current submission's event/division/level.
+No RLS changes needed (existing policies cover the new columns).
 
-## Out of scope (for this pass)
-- Version history of rubric files (replace = overwrite; no historical versions kept).
-- Coach-facing rubric visibility.
-- Inline PDF viewer (we open/download in a new tab; can add a viewer later if desired).
+### 2. Scoresheet builder UI
+
+**`src/components/admin/ScoringCategoryTree.tsx`**
+- Extend `CategoryItem` with `panel_abbreviation?: string`.
+- Add a 4th compact field in `CategoryFields`: a "Panel" input (short text, max 4 chars, placeholder "B1"). Empty = inherit.
+
+**`src/components/admin/SectionTabs.tsx`**
+- Extend `ScoringSection` with `default_panel_abbreviation?: string`.
+- Add a "Default Panel" input next to Abbreviation in the section header.
+- Update the new B1/B2/T1/T2 default sections to seed:
+  - B1 section default_panel = "B1", B2 = "B2", T1 = "T1", T2 = "T2", OV = "OV", ALL = "" (all).
+
+### 3. Save / load in templates page
+
+**`src/pages/admin/ScoringTemplates.tsx`**
+- Include `panel_abbreviation` when reading categories and `default_panel_abbreviation` when reading sections.
+- Persist both fields in the create + update paths (`flattenCategories` insert, sections insert, and the update branch).
+
+### 4. Scoring runtime filter
+
+**`src/components/admin/SubmissionScoringDialog.tsx`** and any judge scoring view that renders a scoresheet (`src/pages/admin/SubmissionScoresheet.tsx`, judge scoring queue/score page if they render categories directly):
+- Determine the active panel abbreviation from the current `judge_assignment` / panel selector (already exists).
+- When rendering categories, hide any leaf category whose effective panel (self → parent → section default) is set and does not match the active panel abbreviation. If no panel is set anywhere on the chain, show it (back-compat).
+- Recompute the visible section subtotal/total from only the visible leaf categories.
+
+### 5. Types
+
+`src/integrations/supabase/types.ts` auto-regenerates after the migration runs.
+
+## Out of scope
+
+- No change to `judge_panels` or `judge_assignments` — assignment of *people* to panels stays exactly as it is today.
+- No change to score submission logic; judges still submit one score row per panel and only fill in the categories they see.
+
+## Files touched
+
+- `supabase/migrations/<new>.sql` (new)
+- `src/components/admin/ScoringCategoryTree.tsx`
+- `src/components/admin/SectionTabs.tsx`
+- `src/pages/admin/ScoringTemplates.tsx`
+- `src/components/admin/SubmissionScoringDialog.tsx`
+- `src/pages/admin/SubmissionScoresheet.tsx` (verify, edit if it renders categories)
