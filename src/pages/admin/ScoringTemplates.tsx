@@ -294,6 +294,7 @@ export default function ScoringTemplates() {
           abbreviation: section.abbreviation,
           description: section.description,
           max_points: section.max_points,
+          default_panel_abbreviation: section.default_panel_abbreviation || null,
           display_order: index,
         }));
 
