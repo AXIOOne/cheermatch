@@ -8,22 +8,22 @@ import logoBlack from '@/assets/logo-black.png';
 import logoWhite from '@/assets/logo-white.png';
 
 export default function Index() {
-  const { user, loading, isAdmin, isJudge, isGymCoach, roles } = useAuth();
+  const { user, loading, rolesLoaded, isAdmin, isJudge, isGymCoach } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) {
-      // Redirect based on role
-      if (isAdmin || roles.length === 0) {
-        // New users or admins go to admin dashboard
-        navigate('/admin');
-      } else if (isJudge) {
-        navigate('/judge');
-      } else if (isGymCoach) {
-        navigate('/coach');
-      }
+    if (loading || !user || !rolesLoaded) return;
+    if (isAdmin) {
+      navigate('/admin');
+    } else if (isJudge) {
+      navigate('/judge');
+    } else if (isGymCoach) {
+      navigate('/coach');
+    } else {
+      // Authenticated but no role assigned — send to admin so AccessDenied shows
+      navigate('/admin');
     }
-  }, [user, loading, isAdmin, isJudge, isGymCoach, roles, navigate]);
+  }, [user, loading, rolesLoaded, isAdmin, isJudge, isGymCoach, navigate]);
 
   if (loading) {
     return (
