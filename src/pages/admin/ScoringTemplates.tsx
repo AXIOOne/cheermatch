@@ -46,33 +46,10 @@ export default function ScoringTemplates() {
 
   const form = useForm<TemplateFormData>({
     resolver: zodResolver(templateSchema),
-    defaultValues: { name: '', description: '', event_id: '', is_default: false },
+    defaultValues: { name: '', description: '', is_default: false },
   });
 
-  const { data: events } = useQuery({
-    queryKey: ['events-select'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('events').select('id, name, status').order('name');
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Fetch panel abbreviations for the selected event, used in the field builder dropdown
-  const selectedEventId = form.watch('event_id');
-  const { data: eventPanels } = useQuery({
-    queryKey: ['event-panels-for-builder', selectedEventId],
-    enabled: !!selectedEventId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('judge_panels')
-        .select('abbreviation')
-        .eq('event_id', selectedEventId)
-        .order('display_order');
-      if (error) throw error;
-      return (data || []).map((r: any) => r.abbreviation);
-    },
-  });
+  const eventPanels: string[] | undefined = undefined;
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ['scoring-templates-full'],
