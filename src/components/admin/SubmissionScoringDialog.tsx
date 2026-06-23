@@ -168,7 +168,7 @@ export default function SubmissionScoringDialog({
 
   useEffect(() => {
     if (!template?.sections) return;
-    const panelScore = allScores?.find((s: any) => s.panel_id === selectedPanelId);
+    const panelScore = allScores?.find((s: any) => resolveScorePanelId(s) === selectedPanelId);
     const allVisibleFields = visibleSections.flatMap((s: any) => s.visibleFields);
 
     if (panelScore?.details) {
