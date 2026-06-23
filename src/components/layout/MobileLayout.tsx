@@ -11,7 +11,8 @@ export function MobileLayout() {
   const canGoBack = location.pathname !== "/m" && location.pathname !== "/m/login";
   const showHeader = location.pathname !== "/m/login"
     && location.pathname !== "/m/forgot-password"
-    && location.pathname !== "/m/reset-password";
+    && location.pathname !== "/m/reset-password"
+    && !/\/record$/.test(location.pathname);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
