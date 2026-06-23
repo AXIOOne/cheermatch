@@ -42,7 +42,7 @@ export default function Divisions() {
 
   const divisionForm = useForm<DivisionFormData>({
     resolver: zodResolver(divisionSchema),
-    defaultValues: { name: '', description: '' },
+    defaultValues: { name: '', description: '', scoring_template_id: UNASSIGNED_TEMPLATE },
   });
 
   const levelForm = useForm<LevelFormData>({
