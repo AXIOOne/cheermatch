@@ -8,10 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader2, BarChart3, CheckCircle, Clock, Settings, Send, AlertCircle, ClipboardList, Eye, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, BarChart3, CheckCircle, Clock, Settings, Send, AlertCircle, ClipboardList, Eye, Download, MoreHorizontal } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import JudgePanelsManager from '@/components/admin/JudgePanelsManager';
 import SubmissionScoringDialog from '@/components/admin/SubmissionScoringDialog';
 import { downloadSubmissionScoresheet } from '@/lib/download-submission-scoresheet';
+
 
 interface JudgePanel {
   id: string;
