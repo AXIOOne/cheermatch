@@ -155,6 +155,33 @@ export default function Divisions() {
     },
   });
 
+  const updateDivisionMutation = useMutation({
+    mutationFn: async (data: DivisionFormData) => {
+      if (!editingDivision) throw new Error('No division selected');
+      const tplId = data.scoring_template_id && data.scoring_template_id !== UNASSIGNED_TEMPLATE
+        ? data.scoring_template_id
+        : null;
+      const { error } = await (supabase as any).from('divisions').update({
+        name: data.name,
+        min_age: data.min_age || null,
+        max_age: data.max_age || null,
+        description: data.description || null,
+        scoring_template_id: tplId,
+      }).eq('id', editingDivision.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['divisions'] });
+      toast({ title: 'Division updated successfully!' });
+      setIsDivisionDialogOpen(false);
+      setEditingDivision(null);
+      divisionForm.reset();
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    },
+  });
+
   const deleteDivisionMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('divisions').delete().eq('id', id);
