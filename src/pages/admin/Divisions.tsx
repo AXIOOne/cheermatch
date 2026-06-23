@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
@@ -14,11 +15,14 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Layers, Loader2, Trash2 } from 'lucide-react';
 
+const UNASSIGNED_TEMPLATE = '__none__';
+
 const divisionSchema = z.object({
   name: z.string().min(1, 'Division name is required'),
   min_age: z.coerce.number().optional(),
   max_age: z.coerce.number().optional(),
   description: z.string().optional(),
+  scoring_template_id: z.string().optional(),
 });
 
 const levelSchema = z.object({
@@ -38,7 +42,7 @@ export default function Divisions() {
 
   const divisionForm = useForm<DivisionFormData>({
     resolver: zodResolver(divisionSchema),
-    defaultValues: { name: '', description: '' },
+    defaultValues: { name: '', description: '', scoring_template_id: UNASSIGNED_TEMPLATE },
   });
 
   const levelForm = useForm<LevelFormData>({
@@ -49,9 +53,21 @@ export default function Divisions() {
   const { data: divisions, isLoading: divisionsLoading } = useQuery({
     queryKey: ['divisions'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('divisions')
-        .select('*')
+        .select('*, template:scoring_templates(id, name)')
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: scoringTemplates } = useQuery({
+    queryKey: ['scoring-templates-select'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('scoring_templates')
+        .select('id, name, is_default')
         .order('name');
       if (error) throw error;
       return data;
@@ -72,11 +88,15 @@ export default function Divisions() {
 
   const createDivisionMutation = useMutation({
     mutationFn: async (data: DivisionFormData) => {
-      const { error } = await supabase.from('divisions').insert([{
+      const tplId = data.scoring_template_id && data.scoring_template_id !== UNASSIGNED_TEMPLATE
+        ? data.scoring_template_id
+        : null;
+      const { error } = await (supabase as any).from('divisions').insert([{
         name: data.name,
         min_age: data.min_age || null,
         max_age: data.max_age || null,
         description: data.description || null,
+        scoring_template_id: tplId,
       }]);
       if (error) throw error;
     },
@@ -202,6 +222,29 @@ export default function Divisions() {
                         )}
                       />
                     </div>
+                    <FormField
+                      control={divisionForm.control}
+                      name="scoring_template_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Scoring Template</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || UNASSIGNED_TEMPLATE}>
+                            <FormControl>
+                              <SelectTrigger><SelectValue placeholder="Use default template" /></SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value={UNASSIGNED_TEMPLATE}>Use default template</SelectItem>
+                              {scoringTemplates?.map((t: any) => (
+                                <SelectItem key={t.id} value={t.id}>
+                                  {t.name}{t.is_default ? ' (default)' : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <div className="flex justify-end gap-2 pt-4">
                       <Button type="button" variant="outline" onClick={() => setIsDivisionDialogOpen(false)}>
                         Cancel
@@ -229,17 +272,21 @@ export default function Divisions() {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Age Range</TableHead>
+                      <TableHead>Scoring Template</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {divisions.map((div) => (
+                    {divisions.map((div: any) => (
                       <TableRow key={div.id}>
                         <TableCell className="font-medium">{div.name}</TableCell>
                         <TableCell>
                           {div.min_age || div.max_age
                             ? `${div.min_age || '?'} - ${div.max_age || '?'} years`
                             : 'Not set'}
+                        </TableCell>
+                        <TableCell>
+                          {div.template?.name || <span className="text-muted-foreground italic">Default</span>}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button

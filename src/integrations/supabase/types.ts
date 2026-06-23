@@ -63,6 +63,7 @@ export type Database = {
           max_age: number | null
           min_age: number | null
           name: string
+          scoring_template_id: string | null
         }
         Insert: {
           created_at?: string
@@ -71,6 +72,7 @@ export type Database = {
           max_age?: number | null
           min_age?: number | null
           name: string
+          scoring_template_id?: string | null
         }
         Update: {
           created_at?: string
@@ -79,8 +81,17 @@ export type Database = {
           max_age?: number | null
           min_age?: number | null
           name?: string
+          scoring_template_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "divisions_scoring_template_id_fkey"
+            columns: ["scoring_template_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       email_templates: {
         Row: {
@@ -799,7 +810,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
-          event_id: string
+          event_id: string | null
           id: string
           is_default: boolean
           is_locked: boolean
@@ -809,7 +820,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
-          event_id: string
+          event_id?: string | null
           id?: string
           is_default?: boolean
           is_locked?: boolean
@@ -819,7 +830,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
-          event_id?: string
+          event_id?: string | null
           id?: string
           is_default?: boolean
           is_locked?: boolean

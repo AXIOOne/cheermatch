@@ -36,7 +36,7 @@ export default function ScorePerformance() {
     queryFn: async () => {
       const { data, error } = await supabase.from('video_submissions').select(`
         *, team:teams(id, name, gym_name, athlete_count, division_id, level_id,
-          division:divisions(name), level:levels(name, level_number)),
+          division:divisions(id, name, scoring_template_id), level:levels(name, level_number)),
         event:events(id, name)
       `).eq('id', submissionId!).maybeSingle();
       if (error) throw error;
@@ -62,19 +62,27 @@ export default function ScorePerformance() {
     },
   });
 
+  const divisionTemplateId: string | null = (submission as any)?.team?.division?.scoring_template_id || null;
   const { data: template, isLoading: templateLoading } = useQuery({
-    queryKey: ['scoring-template-v2', submission?.event_id],
+    queryKey: ['scoring-template-v2', divisionTemplateId, submission?.id],
     queryFn: async () => {
-      const { data, error } = await sb.from('scoring_templates').select(`
+      const baseSelect = `
         *,
         sections:scoring_sections(*,
           fields:scoring_fields(*, options:scoring_field_options(*), panel_links:scoring_field_panels(*))),
         deduction_types:deduction_types(*)
-      `).eq('event_id', submission!.event_id!).order('created_at').limit(1).maybeSingle();
+      `;
+      if (divisionTemplateId) {
+        const { data, error } = await sb.from('scoring_templates').select(baseSelect).eq('id', divisionTemplateId).maybeSingle();
+        if (error) throw error;
+        if (data) return data;
+      }
+      const { data, error } = await sb.from('scoring_templates').select(baseSelect)
+        .eq('is_default', true).order('created_at').limit(1).maybeSingle();
       if (error) throw error;
       return data;
     },
-    enabled: !!submission?.event_id,
+    enabled: !!submission,
   });
 
   const { data: existingScore } = useQuery({

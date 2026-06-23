@@ -68,7 +68,7 @@ export default function SubmissionScoringDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('video_submissions')
-        .select(`*, team:teams(id, name, gym_name, athlete_count, division:divisions(name), level:levels(name, level_number)), event:events(id, name)`)
+        .select(`*, team:teams(id, name, gym_name, athlete_count, division:divisions(id, name, scoring_template_id), level:levels(name, level_number)), event:events(id, name)`)
         .eq('id', submissionId!).maybeSingle();
       if (error) throw error;
       return data;
@@ -76,28 +76,29 @@ export default function SubmissionScoringDialog({
     enabled: !!submissionId && open,
   });
 
+  const divisionTemplateId: string | null = submission?.team?.division?.scoring_template_id || null;
   const { data: template } = useQuery({
-    queryKey: ['event-scoring-template-v2', eventId],
+    queryKey: ['division-scoring-template-v2', divisionTemplateId, submissionId],
     queryFn: async () => {
-      const fetchOne = (isDefault?: boolean) => {
-        let q = sb.from('scoring_templates').select(`
+      const baseSelect = `
+        *,
+        sections:scoring_sections(
           *,
-          sections:scoring_sections(
-            *,
-            fields:scoring_fields(*, options:scoring_field_options(*), panel_links:scoring_field_panels(*))
-          ),
-          deduction_types:deduction_types(*)
-        `).eq('event_id', eventId);
-        if (isDefault) q = q.eq('is_default', true);
-        return q.order('created_at').limit(1).maybeSingle();
-      };
-      const def = await fetchOne(true);
-      if (def.data) return def.data;
-      const first = await fetchOne(false);
-      if (first.error) throw first.error;
-      return first.data;
+          fields:scoring_fields(*, options:scoring_field_options(*), panel_links:scoring_field_panels(*))
+        ),
+        deduction_types:deduction_types(*)
+      `;
+      if (divisionTemplateId) {
+        const { data, error } = await sb.from('scoring_templates').select(baseSelect).eq('id', divisionTemplateId).maybeSingle();
+        if (error) throw error;
+        if (data) return data;
+      }
+      const { data, error } = await sb.from('scoring_templates').select(baseSelect)
+        .eq('is_default', true).order('created_at').limit(1).maybeSingle();
+      if (error) throw error;
+      return data;
     },
-    enabled: !!eventId && open,
+    enabled: !!submission && open,
   });
 
   const { data: allScores } = useQuery({

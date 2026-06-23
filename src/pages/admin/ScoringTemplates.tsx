@@ -24,7 +24,6 @@ import TemplatePreview from '@/components/admin/TemplatePreview';
 const templateSchema = z.object({
   name: z.string().min(2, 'Template name must be at least 2 characters'),
   description: z.string().optional(),
-  event_id: z.string().min(1, 'Please select an event'),
   is_default: z.boolean(),
 });
 
@@ -47,33 +46,10 @@ export default function ScoringTemplates() {
 
   const form = useForm<TemplateFormData>({
     resolver: zodResolver(templateSchema),
-    defaultValues: { name: '', description: '', event_id: '', is_default: false },
+    defaultValues: { name: '', description: '', is_default: false },
   });
 
-  const { data: events } = useQuery({
-    queryKey: ['events-select'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('events').select('id, name, status').order('name');
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Fetch panel abbreviations for the selected event, used in the field builder dropdown
-  const selectedEventId = form.watch('event_id');
-  const { data: eventPanels } = useQuery({
-    queryKey: ['event-panels-for-builder', selectedEventId],
-    enabled: !!selectedEventId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('judge_panels')
-        .select('abbreviation')
-        .eq('event_id', selectedEventId)
-        .order('display_order');
-      if (error) throw error;
-      return (data || []).map((r: any) => r.abbreviation);
-    },
-  });
+  const eventPanels: string[] | undefined = undefined;
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ['scoring-templates-full'],
@@ -82,7 +58,7 @@ export default function ScoringTemplates() {
         .from('scoring_templates')
         .select(`
           *,
-          event:events(name, status),
+          divisions:divisions(id, name),
           sections:scoring_sections(
             *,
             fields:scoring_fields(
@@ -177,7 +153,7 @@ export default function ScoringTemplates() {
     mutationFn: async (data: TemplateFormData) => {
       const { data: template, error } = await sb
         .from('scoring_templates')
-        .insert({ name: data.name, description: data.description, event_id: data.event_id, is_default: data.is_default })
+        .insert({ name: data.name, description: data.description, is_default: data.is_default })
         .select().single();
       if (error) throw error;
       await persistSectionsAndFields(template.id);
@@ -195,7 +171,7 @@ export default function ScoringTemplates() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: TemplateFormData }) => {
       const { error: tErr } = await sb.from('scoring_templates').update({
-        name: data.name, description: data.description, event_id: data.event_id, is_default: data.is_default,
+        name: data.name, description: data.description, is_default: data.is_default,
       }).eq('id', id);
       if (tErr) throw tErr;
       // wipe and recreate sections+fields (cascade handles fields/options/panels)
@@ -242,7 +218,7 @@ export default function ScoringTemplates() {
       const { data: newTpl, error } = await sb.from('scoring_templates').insert({
         name: `${src.name} (Copy)`,
         description: src.description,
-        event_id: src.event_id,
+        
         is_default: false,
         is_locked: false,
       }).select().single();
@@ -317,7 +293,7 @@ export default function ScoringTemplates() {
 
   const handleNewTemplate = () => {
     setEditingTemplate(null);
-    form.reset({ name: '', description: '', event_id: '', is_default: false });
+    form.reset({ name: '', description: '', is_default: false });
     setSections([]); setDeductions([]);
     setIsDialogOpen(true);
   };
@@ -330,7 +306,7 @@ export default function ScoringTemplates() {
     setEditingTemplate(tpl);
     form.reset({
       name: tpl.name, description: tpl.description || '',
-      event_id: tpl.event_id, is_default: tpl.is_default,
+      is_default: tpl.is_default,
     });
     const loadedSections: ScoringSection[] = (tpl.sections || [])
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
@@ -367,7 +343,12 @@ export default function ScoringTemplates() {
     else setLockConfirmTemplate(tpl);
   };
 
-  const isEventInProgress = (tpl: any) => tpl.event?.status === 'in_progress';
+  const divisionLabel = (tpl: any) => {
+    const divs = tpl.divisions || [];
+    if (!divs.length) return 'Unassigned';
+    if (divs.length <= 2) return divs.map((d: any) => d.name).join(', ');
+    return `${divs.length} divisions`;
+  };
   const getTotalPoints = (tpl: any) =>
     (tpl.sections || []).reduce(
       (sum: number, s: any) => sum + (s.fields || []).reduce((a: number, f: any) => a + Number(f.max_points || 0), 0),
@@ -395,29 +376,13 @@ export default function ScoringTemplates() {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Template Name</FormLabel>
-                      <FormControl><Input placeholder="USASF Level 4 Senior" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="event_id" render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Event</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger><SelectValue placeholder="Select event" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {events?.map((e) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )} />
-                </div>
+                <FormField control={form.control} name="name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Template Name</FormLabel>
+                    <FormControl><Input placeholder="USASF Level 4 Senior" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
                 <FormField control={form.control} name="description" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Description</FormLabel>
@@ -479,9 +444,9 @@ export default function ScoringTemplates() {
                         </Badge>
                       )}
                     </div>
-                    <CardDescription>{tpl.event?.name}</CardDescription>
-                    {isEventInProgress(tpl) && !tpl.is_locked && (
-                      <p className="text-xs text-warning mt-1">⚠️ Event in progress — consider locking</p>
+                    <CardDescription>Divisions: {divisionLabel(tpl)}</CardDescription>
+                    {tpl.is_default && (
+                      <p className="text-xs text-muted-foreground mt-1">Default template for unassigned divisions</p>
                     )}
                   </div>
                   <div className="flex gap-1">
