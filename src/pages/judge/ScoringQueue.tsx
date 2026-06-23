@@ -268,10 +268,11 @@ export default function ScoringQueue() {
         <div className="flex justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
-      ) : visibleSubmissions && visibleSubmissions.length > 0 ? (
+      ) : filteredSubmissions && filteredSubmissions.length > 0 ? (
         <div className="grid gap-4">
-          {visibleSubmissions.map((submission: any) => {
+          {filteredSubmissions.map((submission: any) => {
             const scoreStatus = getScoreStatus(submission.id);
+            const isScored = scoreStatus === 'submitted' || scoreStatus === 'locked';
             const panelBadges = [...new Map(
               getSubmissionAssignments(submission)
                 .map((assignment: any) => {
@@ -328,12 +329,19 @@ export default function ScoringQueue() {
                       </div>
                     </div>
 
-                    <Button asChild>
-                      <Link to={`/judge/score/${submission.id}`}>
-                        <Play className="w-4 h-4 mr-2" />
-                        {scoreStatus === 'in_progress' ? 'Continue' : scoreStatus === 'submitted' ? 'View' : 'Score'}
-                      </Link>
-                    </Button>
+                    {isScored ? (
+                      <Button variant="outline" disabled>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Submitted
+                      </Button>
+                    ) : (
+                      <Button asChild>
+                        <Link to={`/judge/score/${submission.id}`}>
+                          <Play className="w-4 h-4 mr-2" />
+                          {scoreStatus === 'in_progress' ? 'Continue' : 'Score'}
+                        </Link>
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -344,7 +352,13 @@ export default function ScoringQueue() {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No submissions available to score yet.</p>
+            <p>
+              {statusFilter === 'scored'
+                ? 'No scored submissions yet.'
+                : statusFilter === 'pending'
+                ? 'No pending submissions to score.'
+                : 'No submissions available to score yet.'}
+            </p>
             <p className="text-sm mt-1">Submissions appear here once an admin assigns you and releases the event for scoring.</p>
           </CardContent>
         </Card>
