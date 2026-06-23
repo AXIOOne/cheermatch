@@ -19,6 +19,23 @@ import { RubricReferenceSheet } from '@/components/judge/RubricReferenceSheet';
 interface FieldScore { field_id: string; points: number; notes: string; }
 const sb = supabase as any;
 
+const single = (value: any) => Array.isArray(value) ? value[0] : value;
+
+const getAssignmentPanelAbbrev = (assignment: any): string | null => {
+  const panel = single(assignment?.panel);
+  const section = single(assignment?.section);
+  const abbreviation = panel?.abbreviation || section?.default_panel_abbreviation || section?.abbreviation;
+  return abbreviation ? String(abbreviation).toUpperCase() : null;
+};
+
+const getAssignmentPanelLabel = (assignment: any): string | null => {
+  const panel = single(assignment?.panel);
+  const section = single(assignment?.section);
+  return panel?.name || section?.name || null;
+};
+
+const isAllPanelsAssignment = (assignment: any): boolean => !assignment?.panel_id && !assignment?.section_id;
+
 export default function ScorePerformance() {
   const { submissionId } = useParams<{ submissionId: string }>();
   const navigate = useNavigate();
@@ -48,22 +65,51 @@ export default function ScorePerformance() {
   const OPEN_STATUSES = new Set(['open_for_scoring', 'in_progress']);
   const eventOpenForScoring = OPEN_STATUSES.has((submission as any)?.event?.status);
 
-  // The judge's panel assignment for this event determines which fields they see
-  const { data: judgePanel } = useQuery({
-    queryKey: ['judge-panel-for-event', submission?.event_id, user?.id],
+  // The judge's assignment for this submission determines which fields they see.
+  const { data: judgeAssignments } = useQuery({
+    queryKey: ['judge-assignments-for-submission', submission?.event_id, submission?.team_id, user?.id],
     enabled: !!submission?.event_id && !!user?.id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('judge_assignments')
-        .select('panel_id, panel:judge_panels(id, abbreviation, name)')
+        .select(`
+          panel_id,
+          section_id,
+          division_id,
+          level_id,
+          panel:judge_panels(id, abbreviation, name),
+          section:scoring_sections(id, name, abbreviation, default_panel_abbreviation)
+        `)
         .eq('event_id', submission!.event_id!)
-        .eq('judge_user_id', user!.id)
-        .maybeSingle();
+        .eq('judge_user_id', user!.id);
       if (error) throw error;
-      const panel = Array.isArray((data as any)?.panel) ? (data as any).panel[0] : (data as any)?.panel;
-      return panel || null;
+
+      const team = (submission as any)?.team;
+      return (data || []).filter((assignment: any) =>
+        (!assignment.division_id || assignment.division_id === team?.division_id)
+        && (!assignment.level_id || assignment.level_id === team?.level_id)
+      );
     },
   });
+
+  const assignedPanelId = useMemo(() => {
+    const ids = [...new Set((judgeAssignments || []).map((assignment: any) => assignment.panel_id).filter(Boolean))];
+    return ids.length === 1 ? ids[0] : null;
+  }, [judgeAssignments]);
+
+  const assignedPanelBadges = useMemo(() => {
+    return [...new Map(
+      (judgeAssignments || [])
+        .map((assignment: any) => {
+          if (isAllPanelsAssignment(assignment)) return ['all', 'All panels'];
+          const abbreviation = getAssignmentPanelAbbrev(assignment);
+          if (!abbreviation) return null;
+          const label = getAssignmentPanelLabel(assignment);
+          return [abbreviation, label ? `${abbreviation} · ${label}` : abbreviation];
+        })
+        .filter(Boolean) as [string, string][]
+    ).values()];
+  }, [judgeAssignments]);
 
   const divisionTemplateId: string | null = (submission as any)?.team?.division?.scoring_template_id || null;
   const { data: template, isLoading: templateLoading } = useQuery({
@@ -89,11 +135,11 @@ export default function ScorePerformance() {
   });
 
   const { data: existingScore } = useQuery({
-    queryKey: ['existing-score', submissionId, user?.id, judgePanel?.id],
+    queryKey: ['existing-score', submissionId, user?.id, assignedPanelId],
     queryFn: async () => {
       let q = sb.from('scores').select(`*, details:score_details(*), deduction_items:score_deductions(*)`)
         .eq('submission_id', submissionId!).eq('judge_user_id', user!.id);
-      if (judgePanel?.id) q = q.eq('panel_id', judgePanel.id);
+      if (assignedPanelId) q = q.eq('panel_id', assignedPanelId);
       const { data, error } = await q.maybeSingle();
       if (error) throw error;
       return data;
@@ -101,7 +147,28 @@ export default function ScorePerformance() {
     enabled: !!submissionId && !!user,
   });
 
-  const panelAbbrev = judgePanel?.abbreviation?.toUpperCase() || null;
+  const assignedPanelAbbrevs = useMemo(() => {
+    return new Set(
+      (judgeAssignments || [])
+        .filter((assignment: any) => !assignment.section_id)
+        .map((assignment: any) => getAssignmentPanelAbbrev(assignment))
+        .filter(Boolean) as string[]
+    );
+  }, [judgeAssignments]);
+
+  const assignedSectionIds = useMemo(() => {
+    return new Set(
+      (judgeAssignments || [])
+        .map((assignment: any) => assignment.section_id)
+        .filter(Boolean) as string[]
+    );
+  }, [judgeAssignments]);
+
+  const hasAllPanelsAssignment = useMemo(
+    () => (judgeAssignments || []).some((assignment: any) => isAllPanelsAssignment(assignment)),
+    [judgeAssignments]
+  );
+
   const visibleSections = useMemo(() => {
     if (!template?.sections) return [] as any[];
     return [...(template.sections as any[])]
@@ -109,14 +176,17 @@ export default function ScorePerformance() {
       .map((s: any) => {
         const fields = ((s.fields as any[]) || [])
           .filter((f: any) => {
+            if (hasAllPanelsAssignment) return true;
+            if (assignedSectionIds.has(s.id)) return true;
             const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
-            if (abbrs.length === 0) return true;
-            return panelAbbrev ? abbrs.includes(panelAbbrev) : true;
+            if (abbrs.length === 0) return assignedPanelAbbrevs.size > 0;
+            if (assignedPanelAbbrevs.size === 0) return false;
+            return abbrs.some((abbrev: string) => assignedPanelAbbrevs.has(abbrev));
           })
           .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
         return { ...s, visibleFields: fields };
       }).filter((s: any) => s.visibleFields.length > 0);
-  }, [template, panelAbbrev]);
+  }, [template, assignedPanelAbbrevs, assignedSectionIds, hasAllPanelsAssignment]);
 
   useEffect(() => {
     if (!template) return;
@@ -164,7 +234,10 @@ export default function ScorePerformance() {
       const totalScore = calculateTotalScore();
       const dedTotal = calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts);
       const detailRows = (scoreId: string) =>
-        Object.values(fieldScores).map(fs => ({
+        visibleSections.flatMap((s: any) => s.visibleFields)
+          .map((field: any) => fieldScores[field.id])
+          .filter(Boolean)
+          .map(fs => ({
           score_id: scoreId, field_id: fs.field_id,
           points: fs.points, notes: fs.notes || null,
         }));
@@ -188,7 +261,7 @@ export default function ScorePerformance() {
       } else {
         const { data: newScore, error } = await sb.from('scores').insert([{
           submission_id: submissionId, judge_user_id: user!.id, template_id: template!.id,
-          panel_id: judgePanel?.id || null,
+          panel_id: assignedPanelId || null,
           total_score: totalScore, deductions: dedTotal, comments, status,
           submitted_at: status === 'submitted' ? new Date().toISOString() : null,
         }]).select().single();
@@ -243,9 +316,9 @@ export default function ScorePerformance() {
                 {submission.team?.gym_name} • {submission.team?.division?.name} • Level {submission.team?.level?.level_number}
               </p>
             </div>
-            {judgePanel && (
-              <Badge variant="outline" className="ml-2">Panel: {judgePanel.abbreviation}</Badge>
-            )}
+            {assignedPanelBadges.map((panel) => (
+              <Badge key={panel} variant="outline" className="ml-2">Panel: {panel}</Badge>
+            ))}
           </div>
           <div className="flex items-center gap-2">
             <RubricReferenceSheet eventId={submission.event_id}
