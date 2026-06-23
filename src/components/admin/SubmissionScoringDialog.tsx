@@ -290,7 +290,8 @@ export default function SubmissionScoringDialog({
 
   const calculateTotalScore = () => {
     if (!template?.categories) return 0;
-    const leafCategories = getLeafCategories(template.categories as any[]);
+    const leafCategories = getLeafCategories(template.categories as any[])
+      .filter((cat: any) => isCategoryVisible(cat));
     const deductionsTotal = calculateStructuredDeductions(template.deduction_types as any[], deductionCounts);
     let total = 0;
     leafCategories.forEach((cat: any) => {
