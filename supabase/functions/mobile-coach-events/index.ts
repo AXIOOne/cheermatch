@@ -21,24 +21,14 @@ Deno.serve(async (req) => {
 
     const sb = serviceClient();
 
-    // Get distinct event_ids via teams owned by this coach
+    // Get distinct event_ids from teams owned by this coach (matched by user_id OR email)
     const { data: teams, error: tErr } = await sb
       .from("teams")
-      .select("id, event_id:video_submissions(event_id)")
-      .eq("coach_user_id", user.user_id);
+      .select("event_id")
+      .or(`coach_user_id.eq.${user.user_id},coach_email.eq.${user.email}`);
     if (tErr) return fail(tErr.message);
 
-    // teams.event_id isn't a direct column — fetch through video_submissions OR via a separate query.
-    // Simpler: get all submissions for this coach's teams.
-    const teamIds = (teams ?? []).map((t: { id: string }) => t.id);
-    let eventIds: string[] = [];
-    if (teamIds.length > 0) {
-      const { data: subs } = await sb
-        .from("video_submissions")
-        .select("event_id")
-        .in("team_id", teamIds);
-      eventIds = Array.from(new Set((subs ?? []).map((s: { event_id: string }) => s.event_id)));
-    }
+    const eventIds = Array.from(new Set((teams ?? []).map((t: { event_id: string }) => t.event_id).filter(Boolean)));
     if (eventIds.length === 0) return ok("No events found", []);
 
     const { data: events, error: eErr } = await sb
