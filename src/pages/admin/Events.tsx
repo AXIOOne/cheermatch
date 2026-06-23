@@ -101,25 +101,6 @@ export default function Events() {
     },
   });
 
-  // Fetch all scoring templates for the template selector
-  const { data: allTemplates } = useQuery({
-    queryKey: ['all-scoring-templates'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('scoring_templates')
-        .select('id, name, event_id')
-        .order('name');
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  // Get templates available for selection (templates from this event or unassigned)
-  const getEventTemplates = (eventId: string | null) => {
-    if (!allTemplates) return [];
-    if (!eventId) return allTemplates.filter(t => !t.event_id);
-    return allTemplates.filter(t => t.event_id === eventId);
-  };
 
   const { data: events, isLoading } = useQuery({
     queryKey: ['events'],
