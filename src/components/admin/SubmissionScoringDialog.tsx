@@ -148,6 +148,7 @@ export default function SubmissionScoringDialog({
   const currentPanelScore = allScores?.find((s: any) => resolveScorePanelId(s) === selectedPanelId);
   const assignedJudge = judgeAssignments?.find((ja: any) => ja.panel_id === selectedPanelId);
   const selectedPanelAbbrev = panels.find(p => p.id === selectedPanelId)?.abbreviation || null;
+  const isSdPanel = (selectedPanelAbbrev || '').toUpperCase() === 'SD';
 
   // Flatten visible fields for this panel, grouped by section
   const visibleSections = useMemo(() => {
@@ -202,7 +203,9 @@ export default function SubmissionScoringDialog({
     setFieldScores(prev => ({ ...prev, [fieldId]: { ...prev[fieldId], field_id: fieldId, points: prev[fieldId]?.points || 0, notes } }));
 
   const calculateTotalScore = () => {
-    const deductionsTotal = calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts);
+    const deductionsTotal = isSdPanel
+      ? calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts)
+      : 0;
     let total = 0;
     visibleSections.forEach((s: any) => {
       s.visibleFields.forEach((f: any) => {
@@ -220,11 +223,15 @@ export default function SubmissionScoringDialog({
   const formatTime = (s: number) => `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
 
   const saveMutation = useMutation({
-    mutationFn: async (status: 'in_progress' | 'submitted') => {
-      if (!selectedPanelId || !template || !assignedJudge) throw new Error('Missing required data');
+    mutationFn: async (args: { markReviewed: boolean }) => {
+      if (!selectedPanelId || !template) throw new Error('Missing required data');
       setIsSaving(true);
+      const { data: userData } = await supabase.auth.getUser();
+      const adminUserId = userData.user?.id ?? null;
       const totalScore = calculateTotalScore();
-      const deductionsTotal = calculateStructuredDeductions((template.deduction_types || []) as any[], deductionCounts);
+      const deductionsTotal = isSdPanel
+        ? calculateStructuredDeductions((template.deduction_types || []) as any[], deductionCounts)
+        : 0;
 
       const detailRows = (scoreId: string) =>
         Object.values(fieldScores).map((fs) => ({
@@ -232,11 +239,16 @@ export default function SubmissionScoringDialog({
           points: fs.points, notes: fs.notes || null,
         }));
 
+      const reviewFields = args.markReviewed
+        ? { reviewed_at: new Date().toISOString(), reviewed_by: adminUserId }
+        : {};
+
       if (currentPanelScore) {
         const { error } = await sb.from('scores').update({
           total_score: totalScore, deductions: deductionsTotal, comments,
-          status, needs_review: needsReview,
-          submitted_at: status === 'submitted' ? new Date().toISOString() : null,
+          status: 'submitted', needs_review: needsReview,
+          submitted_at: new Date().toISOString(),
+          ...reviewFields,
         }).eq('id', currentPanelScore.id);
         if (error) throw error;
         await sb.from('score_details').delete().eq('score_id', currentPanelScore.id);
@@ -246,16 +258,21 @@ export default function SubmissionScoringDialog({
           if (dErr) throw dErr;
         }
         await sb.from('score_deductions').delete().eq('score_id', currentPanelScore.id);
-        const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
-          .map(([deduction_type_id, count]) => ({ score_id: currentPanelScore.id, deduction_type_id, count }));
-        if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
+        if (isSdPanel) {
+          const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
+            .map(([deduction_type_id, count]) => ({ score_id: currentPanelScore.id, deduction_type_id, count }));
+          if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
+        }
       } else {
+        const judgeUserId = assignedJudge?.judge_user_id ?? adminUserId;
+        if (!judgeUserId) throw new Error('Could not determine score author');
         const { data: newScore, error } = await sb.from('scores').insert([{
-          submission_id: submissionId, judge_user_id: assignedJudge.judge_user_id,
+          submission_id: submissionId, judge_user_id: judgeUserId,
           template_id: template.id, panel_id: selectedPanelId,
           total_score: totalScore, deductions: deductionsTotal, comments,
-          status, needs_review: needsReview,
-          submitted_at: status === 'submitted' ? new Date().toISOString() : null,
+          status: 'submitted', needs_review: needsReview,
+          submitted_at: new Date().toISOString(),
+          ...reviewFields,
         }]).select().single();
         if (error) throw error;
         const rows = detailRows(newScore.id);
@@ -263,15 +280,17 @@ export default function SubmissionScoringDialog({
           const { error: dErr } = await sb.from('score_details').insert(rows);
           if (dErr) throw dErr;
         }
-        const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
-          .map(([deduction_type_id, count]) => ({ score_id: newScore.id, deduction_type_id, count }));
-        if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
+        if (isSdPanel) {
+          const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
+            .map(([deduction_type_id, count]) => ({ score_id: newScore.id, deduction_type_id, count }));
+          if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
+        }
       }
     },
-    onSuccess: (_, status) => {
+    onSuccess: (_, args) => {
       queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
       queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
-      toast({ title: status === 'submitted' ? 'Score submitted!' : 'Progress saved' });
+      toast({ title: args.markReviewed ? 'Score saved & marked reviewed' : 'Score saved' });
     },
     onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
     onSettled: () => setIsSaving(false),
@@ -559,40 +578,49 @@ export default function SubmissionScoringDialog({
 
                     <Separator />
 
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-destructive">Deductions</label>
+                    {isSdPanel ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm font-medium text-destructive">Deductions</label>
+                          <div className="text-right">
+                            <p className="text-sm text-muted-foreground">Total Score</p>
+                            <p className="text-3xl font-bold text-primary">{calculateTotalScore().toFixed(2)}</p>
+                          </div>
+                        </div>
+
+                        {template.deduction_types && template.deduction_types.length > 0 ? (
+                          <div className="space-y-2">
+                            {sortByDisplayOrder(template.deduction_types as any[]).map((dt: any) => (
+                              <div key={dt.id} className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate">{dt.name}</p>
+                                  <p className="text-xs text-muted-foreground">{Number(dt.points).toFixed(2)} each</p>
+                                </div>
+                                <Input type="number" min={0} step={1}
+                                  value={deductionCounts[dt.id] || 0}
+                                  onChange={(e) => setDeductionCounts(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
+                                  className="w-20" disabled={isCurrentPanelLocked} />
+                              </div>
+                            ))}
+                            <div className="pt-2 border-t flex items-center justify-between">
+                              <span className="text-sm font-medium text-destructive">Total deductions</span>
+                              <span className="text-sm font-bold text-destructive">
+                                {calculateStructuredDeductions(template.deduction_types as any[], deductionCounts).toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No deduction types configured.</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-end">
                         <div className="text-right">
                           <p className="text-sm text-muted-foreground">Total Score</p>
                           <p className="text-3xl font-bold text-primary">{calculateTotalScore().toFixed(2)}</p>
                         </div>
                       </div>
-
-                      {template.deduction_types && template.deduction_types.length > 0 ? (
-                        <div className="space-y-2">
-                          {sortByDisplayOrder(template.deduction_types as any[]).map((dt: any) => (
-                            <div key={dt.id} className="flex items-center justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium truncate">{dt.name}</p>
-                                <p className="text-xs text-muted-foreground">{Number(dt.points).toFixed(2)} each</p>
-                              </div>
-                              <Input type="number" min={0} step={1}
-                                value={deductionCounts[dt.id] || 0}
-                                onChange={(e) => setDeductionCounts(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
-                                className="w-20" disabled={isCurrentPanelLocked} />
-                            </div>
-                          ))}
-                          <div className="pt-2 border-t flex items-center justify-between">
-                            <span className="text-sm font-medium text-destructive">Total deductions</span>
-                            <span className="text-sm font-bold text-destructive">
-                              {calculateStructuredDeductions(template.deduction_types as any[], deductionCounts).toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No deduction types configured.</p>
-                      )}
-                    </div>
+                    )}
 
                     <div>
                       <label className="text-sm font-medium">Feedback & Comments</label>
@@ -617,49 +645,24 @@ export default function SubmissionScoringDialog({
                         </Badge>
                       ) : (
                         <>
-                          <Button variant="outline" onClick={() => saveMutation.mutate('in_progress')}
-                            disabled={isSaving || !assignedJudge} className="flex-1">
+                          <Button variant="outline" onClick={() => saveMutation.mutate({ markReviewed: false })}
+                            disabled={isSaving} className="flex-1">
                             {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                            Save Draft
+                            Save Score
                           </Button>
-                          <Button onClick={() => saveMutation.mutate('submitted')}
-                            disabled={isSaving || !assignedJudge} className="flex-1">
-                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
-                            Submit Score
+                          <Button onClick={() => saveMutation.mutate({ markReviewed: true })}
+                            disabled={isSaving} className="flex-1">
+                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                            Save & Mark as Reviewed
                           </Button>
                         </>
                       )}
                     </div>
 
-                    {isCurrentPanelSubmitted && (
-                      <div className="flex items-center justify-between p-3 rounded-lg border bg-success/5 border-success/30">
-                        <div>
-                          <p className="text-sm font-medium">
-                            {isCurrentPanelReviewed ? 'Reviewed by admin' : 'Mark this panel as reviewed'}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {isCurrentPanelReviewed
-                              ? `Reviewed ${new Date(currentPanelScore!.reviewed_at!).toLocaleString()}`
-                              : 'Confirms an admin has verified this score.'}
-                          </p>
-                        </div>
-                        <Button
-                          variant={isCurrentPanelReviewed ? 'outline' : 'default'}
-                          size="sm"
-                          onClick={() => reviewMutation.mutate(!isCurrentPanelReviewed)}
-                          disabled={reviewMutation.isPending}
-                        >
-                          {reviewMutation.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          ) : (
-                            <CheckCircle className="w-4 h-4 mr-2" />
-                          )}
-                          {isCurrentPanelReviewed ? 'Unmark Reviewed' : 'Mark as Reviewed'}
-                        </Button>
-                      </div>
-                    )}
                     {!assignedJudge && (
-                      <p className="text-xs text-destructive text-center">No judge assigned to this panel. Assign a judge first.</p>
+                      <p className="text-xs text-muted-foreground text-center">
+                        No judge assigned to this panel — saving will record the score under your admin account.
+                      </p>
                     )}
                   </>
                 )}
