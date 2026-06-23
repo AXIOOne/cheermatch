@@ -1,0 +1,1 @@
+ALTER TABLE public.scores ADD COLUMN IF NOT EXISTS reviewed_at timestamp with time zone, ADD COLUMN IF NOT EXISTS reviewed_by uuid;

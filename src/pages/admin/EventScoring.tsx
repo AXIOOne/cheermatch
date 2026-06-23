@@ -33,6 +33,7 @@ interface Score {
   total_score: number | null;
   panel_id: string | null;
   needs_review?: boolean;
+  reviewed_at?: string | null;
 }
 
 interface Submission {
@@ -101,7 +102,7 @@ export default function EventScoring() {
             division:divisions(id, name),
             level:levels(id, name)
           ),
-          scores:scores(id, status, total_score, panel_id, needs_review)
+          scores:scores(id, status, total_score, panel_id, needs_review, reviewed_at)
         `)
         .eq('event_id', eventId)
         .order('created_at', { ascending: false });
@@ -192,9 +193,10 @@ export default function EventScoring() {
   const getPanelStatus = (
     submission: Submission,
     panelId: string
-  ): 'pending' | 'in_progress' | 'submitted' | 'needs_review' => {
+  ): 'pending' | 'in_progress' | 'submitted' | 'needs_review' | 'reviewed' => {
     const score = submission.scores.find(s => s.panel_id === panelId);
     if (!score) return 'pending';
+    if (score.reviewed_at) return 'reviewed';
     if (score.needs_review) return 'needs_review';
     return score.status as 'pending' | 'in_progress' | 'submitted';
   };
@@ -221,7 +223,7 @@ export default function EventScoring() {
     onClick,
     label,
   }: {
-    status: 'pending' | 'in_progress' | 'submitted' | 'needs_review';
+    status: 'pending' | 'in_progress' | 'submitted' | 'needs_review' | 'reviewed';
     onClick?: () => void;
     label?: string;
   }) => {
@@ -230,12 +232,14 @@ export default function EventScoring() {
       in_progress: 'bg-destructive hover:bg-destructive/80',
       submitted: 'bg-success hover:bg-success/80',
       needs_review: 'bg-warning hover:bg-warning/80',
+      reviewed: 'bg-success hover:bg-success/80',
     };
     const titles = {
       pending: 'Not started — click to score',
       in_progress: 'In progress — click to continue',
       submitted: 'Complete — click to view/edit',
       needs_review: 'Needs review — click to view/edit',
+      reviewed: 'Reviewed — click to view/edit',
     };
     return (
       <button
@@ -243,8 +247,10 @@ export default function EventScoring() {
         onClick={onClick}
         aria-label={label ? `${label}: ${titles[status]}` : titles[status]}
         title={titles[status]}
-        className={`w-5 h-5 rounded-sm transition-colors cursor-pointer ${colors[status]}`}
-      />
+        className={`w-5 h-5 rounded-sm transition-colors cursor-pointer flex items-center justify-center text-success-foreground ${colors[status]}`}
+      >
+        {status === 'reviewed' && <CheckCircle className="w-3.5 h-3.5" />}
+      </button>
     );
   };
 
@@ -337,6 +343,12 @@ export default function EventScoring() {
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-sm bg-success" />
                 <span className="text-sm">Complete</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-sm bg-success flex items-center justify-center text-success-foreground">
+                  <CheckCircle className="w-3 h-3" />
+                </div>
+                <span className="text-sm">Reviewed</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-sm bg-warning" />

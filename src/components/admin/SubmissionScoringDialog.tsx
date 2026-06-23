@@ -263,13 +263,34 @@ export default function SubmissionScoringDialog({
     onSettled: () => setIsSaving(false),
   });
 
+  const reviewMutation = useMutation({
+    mutationFn: async (markReviewed: boolean) => {
+      if (!currentPanelScore) throw new Error('No score to review');
+      const { data: userData } = await supabase.auth.getUser();
+      const { error } = await sb.from('scores').update({
+        reviewed_at: markReviewed ? new Date().toISOString() : null,
+        reviewed_by: markReviewed ? userData.user?.id ?? null : null,
+      }).eq('id', currentPanelScore.id);
+      if (error) throw error;
+    },
+    onSuccess: (_, markReviewed) => {
+      queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
+      toast({ title: markReviewed ? 'Marked as reviewed' : 'Review cleared' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+  });
+
   const getPanelStatus = (panelId: string) => {
     const s: any = allScores?.find((x: any) => x.panel_id === panelId);
     if (!s) return 'pending';
+    if (s.reviewed_at) return 'reviewed';
     if (s.needs_review) return 'needs_review';
     return s.status;
   };
   const isCurrentPanelLocked = currentPanelScore?.status === 'locked';
+  const isCurrentPanelReviewed = Boolean(currentPanelScore?.reviewed_at);
+  const isCurrentPanelSubmitted = currentPanelScore?.status === 'submitted';
 
   if (!submissionId) return null;
 
@@ -336,13 +357,17 @@ export default function SubmissionScoringDialog({
                           submitted: 'bg-success text-success-foreground',
                           needs_review: 'bg-warning text-warning-foreground',
                           locked: 'bg-muted text-muted-foreground',
+                          reviewed: 'bg-success text-success-foreground',
                         };
                         const score: any = allScores?.find((s: any) => s.panel_id === panel.id);
                         return (
                           <div key={panel.id}
                             className={`px-3 py-2 rounded-lg text-center cursor-pointer transition-all ${selectedPanelId === panel.id ? 'ring-2 ring-primary ring-offset-2' : ''} ${colors[status] || ''}`}
                             onClick={() => setSelectedPanelId(panel.id)}>
-                            <p className="font-bold">{panel.abbreviation}</p>
+                            <p className="font-bold flex items-center justify-center gap-1">
+                              {status === 'reviewed' && <CheckCircle className="w-3.5 h-3.5" />}
+                              {panel.abbreviation}
+                            </p>
                             {score?.total_score !== null && score?.total_score !== undefined && (
                               <p className="text-xs opacity-90">{Number(score.total_score).toFixed(1)}</p>
                             )}
@@ -534,6 +559,34 @@ export default function SubmissionScoringDialog({
                         </>
                       )}
                     </div>
+
+                    {isCurrentPanelSubmitted && (
+                      <div className="flex items-center justify-between p-3 rounded-lg border bg-success/5 border-success/30">
+                        <div>
+                          <p className="text-sm font-medium">
+                            {isCurrentPanelReviewed ? 'Reviewed by admin' : 'Mark this panel as reviewed'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {isCurrentPanelReviewed
+                              ? `Reviewed ${new Date(currentPanelScore!.reviewed_at!).toLocaleString()}`
+                              : 'Confirms an admin has verified this score.'}
+                          </p>
+                        </div>
+                        <Button
+                          variant={isCurrentPanelReviewed ? 'outline' : 'default'}
+                          size="sm"
+                          onClick={() => reviewMutation.mutate(!isCurrentPanelReviewed)}
+                          disabled={reviewMutation.isPending}
+                        >
+                          {reviewMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                          )}
+                          {isCurrentPanelReviewed ? 'Unmark Reviewed' : 'Mark as Reviewed'}
+                        </Button>
+                      </div>
+                    )}
                     {!assignedJudge && (
                       <p className="text-xs text-destructive text-center">No judge assigned to this panel. Assign a judge first.</p>
                     )}
