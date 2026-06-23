@@ -120,6 +120,12 @@ export default function Events() {
       status: 'draft',
       duration_of_capture: 150,
       screen_capture_cnt: 2,
+      registration_open_at: '',
+      registration_close_at: '',
+      submission_open_at: '',
+      submission_close_at: '',
+      scoring_open_at: '',
+      scoring_close_at: '',
     },
   });
 
