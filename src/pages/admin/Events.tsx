@@ -484,7 +484,6 @@ export default function Events() {
                 </TableHeader>
                 <TableBody>
                   {paginatedEvents.map((event) => {
-                    const template = getDefaultTemplate(event.scoring_templates);
                     const teamsCount = getTeamsCount(event.teams);
                     
                     return (
