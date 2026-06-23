@@ -426,6 +426,39 @@ export default function Events() {
                       </FormItem>
                     )}
                   />
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="duration_of_capture"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Capture Duration (seconds)</FormLabel>
+                          <FormControl>
+                            <Input type="number" min={15} max={900} {...field} />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground">
+                            Recording auto-stops after this many seconds. Default 150 (2:30).
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="screen_capture_cnt"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Capture Attempts</FormLabel>
+                          <FormControl>
+                            <Input type="number" min={1} max={5} {...field} />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground">
+                            Number of takes each team can record before choosing one to submit.
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   <FormField
                     control={form.control}
                     name="status"
