@@ -263,13 +263,34 @@ export default function SubmissionScoringDialog({
     onSettled: () => setIsSaving(false),
   });
 
+  const reviewMutation = useMutation({
+    mutationFn: async (markReviewed: boolean) => {
+      if (!currentPanelScore) throw new Error('No score to review');
+      const { data: userData } = await supabase.auth.getUser();
+      const { error } = await sb.from('scores').update({
+        reviewed_at: markReviewed ? new Date().toISOString() : null,
+        reviewed_by: markReviewed ? userData.user?.id ?? null : null,
+      }).eq('id', currentPanelScore.id);
+      if (error) throw error;
+    },
+    onSuccess: (_, markReviewed) => {
+      queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
+      toast({ title: markReviewed ? 'Marked as reviewed' : 'Review cleared' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+  });
+
   const getPanelStatus = (panelId: string) => {
     const s: any = allScores?.find((x: any) => x.panel_id === panelId);
     if (!s) return 'pending';
+    if (s.reviewed_at) return 'reviewed';
     if (s.needs_review) return 'needs_review';
     return s.status;
   };
   const isCurrentPanelLocked = currentPanelScore?.status === 'locked';
+  const isCurrentPanelReviewed = Boolean(currentPanelScore?.reviewed_at);
+  const isCurrentPanelSubmitted = currentPanelScore?.status === 'submitted';
 
   if (!submissionId) return null;
 
