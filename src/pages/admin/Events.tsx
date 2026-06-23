@@ -245,8 +245,8 @@ export default function Events() {
       description: event.description || '',
       start_date: event.start_date,
       end_date: event.end_date,
-      registration_deadline: event.registration_deadline.split('T')[0],
-      broadcast_deadline: event.broadcast_deadline || '',
+      time_zone: event.time_zone || 'America/New_York',
+      discipline: event.discipline || 'allstar_cheer',
       accuscore_end_at: event.accuscore_end_at
         ? new Date(event.accuscore_end_at).toISOString().slice(0, 16)
         : '',
