@@ -59,7 +59,9 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          discipline: string
           id: string
+          level: string | null
           max_age: number | null
           min_age: number | null
           name: string
@@ -68,7 +70,9 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          discipline?: string
           id?: string
+          level?: string | null
           max_age?: number | null
           min_age?: number | null
           name: string
@@ -77,7 +81,9 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          discipline?: string
           id?: string
+          level?: string | null
           max_age?: number | null
           min_age?: number | null
           name?: string
