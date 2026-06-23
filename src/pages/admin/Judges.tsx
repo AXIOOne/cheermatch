@@ -14,7 +14,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { UserCheck, Loader2, Pencil, Plus } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { UserCheck, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
+
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import { useToast } from '@/hooks/use-toast';
 
