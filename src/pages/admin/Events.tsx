@@ -16,45 +16,49 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Calendar, Loader2, Pencil, Trash2, Search, BarChart3, Users, Trophy, FileText, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
-import { format, differenceInDays, isPast, isToday } from 'date-fns';
+import { Plus, Calendar, Loader2, Pencil, Trash2, Search, BarChart3, Users, Trophy, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { format } from 'date-fns';
 
-// Helper to get deadline status info
-const getDeadlineStatus = (deadline: string | null) => {
-  if (!deadline) return null;
-  
-  const deadlineDate = new Date(deadline);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  deadlineDate.setHours(0, 0, 0, 0);
-  
-  const daysRemaining = differenceInDays(deadlineDate, today);
-  
-  if (isPast(deadlineDate) && !isToday(deadlineDate)) {
-    return { days: Math.abs(daysRemaining), label: 'Overdue', variant: 'destructive' as const, isPast: true };
-  }
-  if (isToday(deadlineDate)) {
-    return { days: 0, label: 'Today', variant: 'destructive' as const, isPast: false };
-  }
-  if (daysRemaining <= 3) {
-    return { days: daysRemaining, label: `${daysRemaining}d left`, variant: 'destructive' as const, isPast: false };
-  }
-  if (daysRemaining <= 7) {
-    return { days: daysRemaining, label: `${daysRemaining}d left`, variant: 'secondary' as const, isPast: false };
-  }
-  return { days: daysRemaining, label: `${daysRemaining}d left`, variant: 'outline' as const, isPast: false };
-};
+const DISCIPLINES = [
+  { value: 'allstar_cheer', label: 'All-Star Cheer' },
+  { value: 'allstar_dance', label: 'All-Star Dance' },
+  { value: 'nca_cheer', label: 'NCA Cheer' },
+  { value: 'nca_dance', label: 'NCA Dance' },
+  { value: 'uca_cheer', label: 'UCA Cheer' },
+  { value: 'uca_dance', label: 'UCA Dance' },
+  { value: 'usa_cheer', label: 'USA Cheer' },
+  { value: 'usa_dance', label: 'USA Dance' },
+] as const;
+
+const disciplineLabel = (v: string | null | undefined) =>
+  DISCIPLINES.find((d) => d.value === v)?.label ?? '—';
+
+const TIME_ZONES: string[] = (() => {
+  try {
+    // @ts-ignore - supportedValuesOf is in modern runtimes
+    const list = (Intl as any).supportedValuesOf?.('timeZone');
+    if (Array.isArray(list) && list.length) return list as string[];
+  } catch {}
+  return [
+    'America/New_York',
+    'America/Chicago',
+    'America/Denver',
+    'America/Los_Angeles',
+    'America/Anchorage',
+    'Pacific/Honolulu',
+    'UTC',
+  ];
+})();
 
 const eventSchema = z.object({
   name: z.string().min(2, 'Event name must be at least 2 characters'),
   description: z.string().optional(),
   start_date: z.string().min(1, 'Start date is required'),
   end_date: z.string().min(1, 'End date is required'),
-  registration_deadline: z.string().min(1, 'Registration deadline is required'),
-  broadcast_deadline: z.string().optional(),
+  time_zone: z.string().min(1, 'Time zone is required'),
+  discipline: z.enum(['allstar_cheer','allstar_dance','nca_cheer','nca_dance','uca_cheer','uca_dance','usa_cheer','usa_dance']),
   accuscore_end_at: z.string().optional(),
   status: z.enum(['draft', 'registration_open', 'registration_closed', 'in_progress', 'completed', 'archived']),
-  
 });
 
 type EventFormData = z.infer<typeof eventSchema>;
