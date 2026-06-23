@@ -146,6 +146,10 @@ export default function EventRegistrations() {
           )}
         </CardContent>
       </Card>
+
+      {eventId && (
+        <AddTeamDialog open={addOpen} onOpenChange={setAddOpen} eventId={eventId} />
+      )}
     </div>
   );
 }
