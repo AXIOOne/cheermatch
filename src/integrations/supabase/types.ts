@@ -1264,6 +1264,7 @@ export type Database = {
         | "draft"
         | "registration_open"
         | "registration_closed"
+        | "open_for_scoring"
         | "in_progress"
         | "completed"
         | "archived"
@@ -1420,6 +1421,7 @@ export const Constants = {
         "draft",
         "registration_open",
         "registration_closed",
+        "open_for_scoring",
         "in_progress",
         "completed",
         "archived",
