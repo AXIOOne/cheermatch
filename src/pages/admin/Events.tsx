@@ -250,10 +250,6 @@ export default function Events() {
     setIsDialogOpen(true);
   };
 
-  const getDefaultTemplate = (templates: any[] | null) => {
-    if (!templates || templates.length === 0) return null;
-    return templates.find(t => t.is_default) || templates[0];
-  };
 
   const getTeamsCount = (teams: any) => {
     if (Array.isArray(teams) && teams.length > 0 && teams[0]?.count !== undefined) {
