@@ -82,6 +82,12 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
       const athleteTotal = (data.athletes_male || 0) + (data.athletes_female || 0);
+      // Try to link to an existing coach profile by email
+      const { data: profile } = await sb
+        .from('profiles')
+        .select('user_id')
+        .ilike('email', data.coach_email)
+        .maybeSingle();
       const { error } = await sb.from('teams').insert({
         event_id: eventId,
         name: data.name,
@@ -89,6 +95,7 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
         coach_name: data.coach_name,
         coach_email: data.coach_email,
         coach_phone: data.coach_phone || null,
+        coach_user_id: profile?.user_id ?? null,
         division_id: data.division_id,
         level_id: data.level_id,
         athletes_male: data.athletes_male,
