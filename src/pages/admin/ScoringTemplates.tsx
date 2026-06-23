@@ -171,7 +171,7 @@ export default function ScoringTemplates() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: TemplateFormData }) => {
       const { error: tErr } = await sb.from('scoring_templates').update({
-        name: data.name, description: data.description, event_id: data.event_id, is_default: data.is_default,
+        name: data.name, description: data.description, is_default: data.is_default,
       }).eq('id', id);
       if (tErr) throw tErr;
       // wipe and recreate sections+fields (cascade handles fields/options/panels)
