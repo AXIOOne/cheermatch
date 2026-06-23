@@ -151,6 +151,17 @@ export default function EventScoring() {
     sendScoreSheetMutation.mutate(submissionId);
   };
 
+  const handleDownloadPdf = async (submissionId: string) => {
+    setDownloadingPdfFor(submissionId);
+    try {
+      await downloadSubmissionScoresheet(submissionId);
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'PDF failed', description: err.message });
+    } finally {
+      setDownloadingPdfFor(null);
+    }
+  };
+
   const isLoading = eventLoading || panelsLoading || submissionsLoading;
 
   // Calculate stats
