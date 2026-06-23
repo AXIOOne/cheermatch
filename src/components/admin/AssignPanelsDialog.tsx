@@ -224,7 +224,7 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
             section_id: sectionId,
             judge_user_id: newJudge,
             level_id: null,
-            panel_id: null,
+            panel_id: resolvePanelIdForSection(sectionId),
           });
           if (error) throw error;
         }
