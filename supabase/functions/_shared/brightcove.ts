@@ -1,0 +1,76 @@
+// Shared Brightcove helpers — Dynamic Ingest API
+// https://apis.support.brightcove.com/dynamic-ingest/getting-started/overview-dynamic-ingest-api-dynamic-delivery.html
+
+const ACCOUNT_ID = Deno.env.get("BRIGHTCOVE_ACCOUNT_ID")!;
+const CLIENT_ID = Deno.env.get("BRIGHTCOVE_CLIENT_ID")!;
+const CLIENT_SECRET = Deno.env.get("BRIGHTCOVE_CLIENT_SECRET")!;
+
+let cachedToken: { value: string; expires_at: number } | null = null;
+
+export async function getBrightcoveToken(): Promise<string> {
+  if (cachedToken && cachedToken.expires_at > Date.now() + 30_000) return cachedToken.value;
+
+  const basic = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
+  const res = await fetch("https://oauth.brightcove.com/v4/access_token", {
+    method: "POST",
+    headers: {
+      Authorization: `Basic ${basic}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "grant_type=client_credentials",
+  });
+  if (!res.ok) throw new Error(`Brightcove auth failed: ${res.status} ${await res.text()}`);
+  const data = await res.json() as { access_token: string; expires_in: number };
+  cachedToken = { value: data.access_token, expires_at: Date.now() + data.expires_in * 1000 };
+  return data.access_token;
+}
+
+export async function bcCreateVideo(name: string, tags: string[] = []): Promise<{ id: string }> {
+  const token = await getBrightcoveToken();
+  const res = await fetch(
+    `https://cms.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/videos`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ name, tags }),
+    },
+  );
+  if (!res.ok) throw new Error(`Brightcove create video failed: ${res.status} ${await res.text()}`);
+  return await res.json();
+}
+
+export async function bcGetUploadUrl(videoId: string, fileName: string): Promise<{ signed_url: string; api_request_url: string }> {
+  const token = await getBrightcoveToken();
+  const res = await fetch(
+    `https://ingest.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/videos/${videoId}/upload-urls/${encodeURIComponent(fileName)}`,
+    { method: "GET", headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) throw new Error(`Brightcove get upload url failed: ${res.status} ${await res.text()}`);
+  return await res.json();
+}
+
+export async function bcIngestRequest(videoId: string, apiRequestUrl: string, callbackUrl?: string): Promise<{ id: string }> {
+  const token = await getBrightcoveToken();
+  const body: Record<string, unknown> = { master: { url: apiRequestUrl }, profile: "multi-platform-standard-static" };
+  if (callbackUrl) body.callbacks = [callbackUrl];
+  const res = await fetch(
+    `https://ingest.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/videos/${videoId}/ingest-requests`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
+  if (!res.ok) throw new Error(`Brightcove ingest failed: ${res.status} ${await res.text()}`);
+  return await res.json();
+}
+
+export async function bcGetVideo(videoId: string): Promise<Record<string, unknown>> {
+  const token = await getBrightcoveToken();
+  const res = await fetch(
+    `https://cms.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/videos/${videoId}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) throw new Error(`Brightcove get video failed: ${res.status} ${await res.text()}`);
+  return await res.json();
+}
