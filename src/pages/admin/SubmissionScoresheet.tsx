@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft, Loader2, Play, Trophy, Users, Calendar, Award, FileText } from 'lucide-react';
 import { format } from 'date-fns';
+import { aggregateValues, AggregationMode } from '@/lib/scoring';
+
+const sb = supabase as any;
 
 export default function SubmissionScoresheet() {
   const { submissionId } = useParams<{ submissionId: string }>();
@@ -18,22 +21,13 @@ export default function SubmissionScoresheet() {
       const { data, error } = await supabase
         .from('video_submissions')
         .select(`
-          id,
-          video_url,
-          thumbnail_url,
-          status,
-          submitted_at,
-          created_at,
-          duration_seconds,
-          team:teams!inner(
-            id, name, gym_name, athlete_count,
-            division:divisions!inner(name),
-            level:levels!inner(name, level_number)
-          ),
+          id, video_url, thumbnail_url, status, submitted_at, created_at, duration_seconds,
+          event_id,
+          team:teams!inner(id, name, gym_name, athlete_count,
+            division:divisions!inner(name), level:levels!inner(name, level_number)),
           event:events!inner(id, name, start_date, end_date)
         `)
-        .eq('id', submissionId!)
-        .maybeSingle();
+        .eq('id', submissionId!).maybeSingle();
       if (error) throw error;
       return data;
     },
@@ -43,64 +37,72 @@ export default function SubmissionScoresheet() {
   const { data: scores } = useQuery({
     queryKey: ['admin-submission-scores', submissionId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('scores')
-        .select(`
-          id,
-          total_score,
-          deductions,
-          comments,
-          status,
-          submitted_at,
-          panel:judge_panels(id, name, abbreviation),
-          details:score_details(
-            points,
-            notes,
-            category:scoring_categories(id, name, max_points, weight, display_order)
-          ),
-          deduction_items:score_deductions(
-            count,
-            notes,
-            deduction_type:deduction_types(name, points)
-          )
-        `)
-        .eq('submission_id', submissionId!)
-        .order('created_at');
+      const { data, error } = await sb.from('scores').select(`
+        id, total_score, deductions, comments, status, submitted_at,
+        panel:judge_panels(id, name, abbreviation),
+        details:score_details(
+          points, notes,
+          field:scoring_fields(id, name, max_points, section_id,
+            section:scoring_sections(id, name, abbreviation, display_order),
+            panel_links:scoring_field_panels(panel_abbreviation))
+        ),
+        deduction_items:score_deductions(count, notes, deduction_type:deduction_types(name, points))
+      `).eq('submission_id', submissionId!).order('created_at');
       if (error) throw error;
       return data;
     },
     enabled: !!submissionId,
   });
 
-  const { data: judgeProfiles } = useQuery({
-    queryKey: ['scores-judge-profiles', submissionId, scores?.length],
-    queryFn: async () => {
-      const { data: scoresData } = await supabase
-        .from('scores')
-        .select('judge_user_id')
-        .eq('submission_id', submissionId!);
-      const ids = [...new Set((scoresData || []).map((s) => s.judge_user_id))];
-      if (ids.length === 0) return {} as Record<string, { full_name: string | null; email: string }>;
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, email')
-        .in('user_id', ids);
-      return (profiles || []).reduce((acc, p) => {
-        acc[p.user_id] = { full_name: p.full_name, email: p.email };
-        return acc;
-      }, {} as Record<string, { full_name: string | null; email: string }>);
-    },
-    enabled: !!submissionId,
+  // Build aggregated view per field across all submitted panel scores
+  type AggField = {
+    field_id: string; field_name: string; max_points: number;
+    section_name: string; section_abbr: string; section_order: number;
+    aggregation: AggregationMode; values: number[]; aggregated: number;
+  };
+  const submittedScores = (scores || []).filter((s: any) => s.status === 'submitted');
+  const aggregatedFieldsBySection = new Map<string, AggField[]>();
+  submittedScores.forEach((s: any) => {
+    (s.details || []).forEach((d: any) => {
+      const field = Array.isArray(d.field) ? d.field[0] : d.field;
+      if (!field) return;
+      const section = Array.isArray(field.section) ? field.section[0] : field.section;
+      const key = section?.id || 'unknown';
+      const list = aggregatedFieldsBySection.get(key) || [];
+      let entry = list.find(e => e.field_id === field.id);
+      if (!entry) {
+        entry = {
+          field_id: field.id, field_name: field.name,
+          max_points: Number(field.max_points),
+          section_name: section?.name || 'Section',
+          section_abbr: section?.abbreviation || '',
+          section_order: section?.display_order ?? 0,
+          aggregation: (field.aggregation as AggregationMode) || 'average',
+          values: [], aggregated: 0,
+        };
+        list.push(entry);
+      }
+      entry.values.push(Number(d.points || 0));
+      aggregatedFieldsBySection.set(key, list);
+    });
   });
+  aggregatedFieldsBySection.forEach((list) => list.forEach((e) => {
+    e.aggregated = aggregateValues(e.values, e.aggregation);
+  }));
+
+  // Compute final = sum of aggregated field values - avg deductions across panels
+  const aggregatedScore = (() => {
+    let total = 0;
+    aggregatedFieldsBySection.forEach((list) => list.forEach((e) => total += e.aggregated));
+    const dedAvg = submittedScores.length
+      ? submittedScores.reduce((sum: number, s: any) => sum + Number(s.deductions || 0), 0) / submittedScores.length
+      : 0;
+    return Math.max(0, total - dedAvg);
+  })();
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <div className="flex items-center justify-center min-h-[60vh]"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
-
   if (!submission) {
     return (
       <div className="p-8">
@@ -112,49 +114,33 @@ export default function SubmissionScoresheet() {
     );
   }
 
-  const submittedScores = (scores || []).filter((s) => s.status === 'submitted');
-  const avgScore = submittedScores.length
-    ? submittedScores.reduce((sum, s) => sum + (Number(s.total_score) || 0), 0) / submittedScores.length
-    : null;
-
   return (
     <div className="p-8 max-w-7xl mx-auto">
       <Button variant="ghost" size="sm" onClick={() => navigate('/admin/submissions')} className="mb-4">
         <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
       </Button>
 
-      {/* Context Header */}
       <div className="mb-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-3xl font-bold text-foreground">{submission.team?.name}</h1>
             <p className="text-lg text-muted-foreground mt-1">{submission.team?.gym_name}</p>
           </div>
-          {avgScore !== null && (
+          {submittedScores.length > 0 && (
             <div className="text-right">
-              <p className="text-sm text-muted-foreground">Average Score</p>
-              <p className="text-4xl font-bold text-primary">{avgScore.toFixed(2)}</p>
+              <p className="text-sm text-muted-foreground">Aggregated Score</p>
+              <p className="text-4xl font-bold text-primary">{aggregatedScore.toFixed(2)}</p>
             </div>
           )}
         </div>
-
         <div className="flex flex-wrap gap-2 mt-4">
-          <Badge variant="secondary" className="gap-1">
-            <Trophy className="w-3 h-3" /> {submission.event?.name}
-          </Badge>
-          <Badge variant="outline" className="gap-1">
-            <Award className="w-3 h-3" /> {submission.team?.division?.name}
-          </Badge>
-          <Badge variant="outline" className="gap-1">
-            <Award className="w-3 h-3" /> {submission.team?.level?.name}
-          </Badge>
-          <Badge variant="outline" className="gap-1">
-            <Users className="w-3 h-3" /> {submission.team?.athlete_count} athletes
-          </Badge>
+          <Badge variant="secondary" className="gap-1"><Trophy className="w-3 h-3" /> {submission.event?.name}</Badge>
+          <Badge variant="outline" className="gap-1"><Award className="w-3 h-3" /> {submission.team?.division?.name}</Badge>
+          <Badge variant="outline" className="gap-1"><Award className="w-3 h-3" /> {submission.team?.level?.name}</Badge>
+          <Badge variant="outline" className="gap-1"><Users className="w-3 h-3" /> {submission.team?.athlete_count} athletes</Badge>
           {submission.submitted_at && (
             <Badge variant="outline" className="gap-1">
-              <Calendar className="w-3 h-3" />
-              Submitted {format(new Date(submission.submitted_at), 'MMM d, yyyy')}
+              <Calendar className="w-3 h-3" /> Submitted {format(new Date(submission.submitted_at), 'MMM d, yyyy')}
             </Badge>
           )}
           <Badge className="capitalize">{submission.status}</Badge>
@@ -162,22 +148,14 @@ export default function SubmissionScoresheet() {
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Video */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Play className="w-4 h-4" /> Performance Video
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base"><Play className="w-4 h-4" /> Performance Video</CardTitle>
           </CardHeader>
           <CardContent>
             {submission.video_url ? (
               <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                <video
-                  src={submission.video_url}
-                  controls
-                  className="w-full h-full"
-                  poster={submission.thumbnail_url || undefined}
-                />
+                <video src={submission.video_url} controls className="w-full h-full" poster={submission.thumbnail_url || undefined} />
               </div>
             ) : (
               <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
@@ -187,92 +165,100 @@ export default function SubmissionScoresheet() {
           </CardContent>
         </Card>
 
-        {/* Summary */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <FileText className="w-4 h-4" /> Scoresheet Summary
-            </CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base"><FileText className="w-4 h-4" /> Per-Panel Totals</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {scores && scores.length > 0 ? (
-              scores.map((s) => {
-                const panel = Array.isArray(s.panel) ? s.panel[0] : s.panel;
-                return (
-                  <div
-                    key={s.id}
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                  >
-                    <div>
-                      <p className="font-medium">{panel?.name || 'Judge'}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{s.status}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold">
-                        {s.total_score !== null ? Number(s.total_score).toFixed(2) : '—'}
-                      </p>
-                      {Number(s.deductions) > 0 && (
-                        <p className="text-xs text-destructive">-{Number(s.deductions)} deductions</p>
-                      )}
-                    </div>
+            {scores && scores.length > 0 ? scores.map((s: any) => {
+              const panel = Array.isArray(s.panel) ? s.panel[0] : s.panel;
+              return (
+                <div key={s.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div>
+                    <p className="font-medium">{panel?.name || 'Judge'}{panel?.abbreviation ? ` (${panel.abbreviation})` : ''}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{s.status}</p>
                   </div>
-                );
-              })
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-6">
-                No scores recorded yet.
-              </p>
-            )}
+                  <div className="text-right">
+                    <p className="text-2xl font-bold">{s.total_score !== null ? Number(s.total_score).toFixed(2) : '—'}</p>
+                    {Number(s.deductions) > 0 && <p className="text-xs text-destructive">-{Number(s.deductions)} deductions</p>}
+                  </div>
+                </div>
+              );
+            }) : <p className="text-sm text-muted-foreground text-center py-6">No scores recorded yet.</p>}
           </CardContent>
         </Card>
       </div>
 
-      {/* Per-Panel Breakdown */}
+      {aggregatedFieldsBySection.size > 0 && (
+        <div className="mt-6 space-y-6">
+          <h2 className="text-xl font-semibold">Aggregated Scoresheet</h2>
+          {Array.from(aggregatedFieldsBySection.values())
+            .sort((a, b) => (a[0]?.section_order ?? 0) - (b[0]?.section_order ?? 0))
+            .map((fields, idx) => (
+              <Card key={idx}>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Badge variant="outline">{fields[0].section_abbr}</Badge>
+                    {fields[0].section_name}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-2">Field</th>
+                        <th className="text-left py-2">Judges</th>
+                        <th className="text-left py-2">Aggregation</th>
+                        <th className="text-right py-2">Final</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fields.map(f => (
+                        <tr key={f.field_id} className="border-b last:border-0">
+                          <td className="py-2 font-medium">{f.field_name}</td>
+                          <td className="py-2 text-muted-foreground">
+                            {f.values.map((v, i) => <span key={i} className="mr-2">{v.toFixed(2)}</span>)}
+                          </td>
+                          <td className="py-2 text-xs uppercase text-muted-foreground">{f.aggregation}</td>
+                          <td className="py-2 text-right font-mono">{f.aggregated.toFixed(2)} <span className="text-xs text-muted-foreground">/ {f.max_points.toFixed(2)}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </CardContent>
+              </Card>
+            ))}
+        </div>
+      )}
+
       {scores && scores.length > 0 && (
         <div className="mt-6 space-y-6">
-          <h2 className="text-xl font-semibold">Score Breakdown by Panel</h2>
-          {scores.map((s) => {
+          <h2 className="text-xl font-semibold">Per-Panel Detail</h2>
+          {scores.map((s: any) => {
             const panel = Array.isArray(s.panel) ? s.panel[0] : s.panel;
-            const sortedDetails = [...(s.details || [])].sort((a: any, b: any) => {
-              const ao = (Array.isArray(a.category) ? a.category[0] : a.category)?.display_order ?? 0;
-              const bo = (Array.isArray(b.category) ? b.category[0] : b.category)?.display_order ?? 0;
-              return ao - bo;
-            });
             return (
               <Card key={s.id}>
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">
-                      {panel?.name || 'Judge Panel'}
-                      {panel?.abbreviation && (
-                        <span className="ml-2 text-sm text-muted-foreground">
-                          ({panel.abbreviation})
-                        </span>
-                      )}
+                      {panel?.name || 'Judge Panel'}{panel?.abbreviation && <span className="ml-2 text-sm text-muted-foreground">({panel.abbreviation})</span>}
                     </CardTitle>
-                    <Badge variant={s.status === 'submitted' ? 'default' : 'secondary'} className="capitalize">
-                      {s.status}
-                    </Badge>
+                    <Badge variant={s.status === 'submitted' ? 'default' : 'secondary'} className="capitalize">{s.status}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {sortedDetails.length > 0 && (
+                  {(s.details || []).length > 0 && (
                     <div className="space-y-2">
-                      {sortedDetails.map((d: any, idx: number) => {
-                        const cat = Array.isArray(d.category) ? d.category[0] : d.category;
+                      {(s.details || []).map((d: any, idx: number) => {
+                        const field = Array.isArray(d.field) ? d.field[0] : d.field;
                         return (
-                          <div
-                            key={idx}
-                            className="flex items-start justify-between py-2 border-b last:border-0"
-                          >
+                          <div key={idx} className="flex items-start justify-between py-2 border-b last:border-0">
                             <div className="flex-1">
-                              <p className="text-sm font-medium">{cat?.name || 'Category'}</p>
-                              {d.notes && (
-                                <p className="text-xs text-muted-foreground mt-1">{d.notes}</p>
-                              )}
+                              <p className="text-sm font-medium">{field?.name || 'Field'}</p>
+                              {d.notes && <p className="text-xs text-muted-foreground mt-1">{d.notes}</p>}
                             </div>
                             <p className="text-sm font-mono">
-                              {Number(d.points).toFixed(2)} / {Number(cat?.max_points || 0).toFixed(2)}
+                              {Number(d.points).toFixed(2)} / {Number(field?.max_points || 0).toFixed(2)}
                             </p>
                           </div>
                         );
@@ -287,17 +273,11 @@ export default function SubmissionScoresheet() {
                         <p className="text-sm font-medium mb-2">Deductions</p>
                         <div className="space-y-1">
                           {s.deduction_items.map((di: any, idx: number) => {
-                            const dt = Array.isArray(di.deduction_type)
-                              ? di.deduction_type[0]
-                              : di.deduction_type;
+                            const dt = Array.isArray(di.deduction_type) ? di.deduction_type[0] : di.deduction_type;
                             return (
                               <div key={idx} className="flex items-center justify-between text-sm">
-                                <span>
-                                  {dt?.name} × {di.count}
-                                </span>
-                                <span className="text-destructive font-mono">
-                                  -{(Number(dt?.points || 0) * Number(di.count || 0)).toFixed(2)}
-                                </span>
+                                <span>{dt?.name} × {di.count}</span>
+                                <span className="text-destructive font-mono">-{(Number(dt?.points || 0) * Number(di.count || 0)).toFixed(2)}</span>
                               </div>
                             );
                           })}
@@ -311,16 +291,14 @@ export default function SubmissionScoresheet() {
                       <Separator />
                       <div className="p-3 bg-muted rounded-lg">
                         <p className="text-xs font-medium mb-1">Judge Comments</p>
-                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                          {s.comments}
-                        </p>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{s.comments}</p>
                       </div>
                     </>
                   )}
 
                   <Separator />
                   <div className="flex items-center justify-between pt-1">
-                    <span className="font-medium">Total Score</span>
+                    <span className="font-medium">Panel Total</span>
                     <span className="text-2xl font-bold text-primary">
                       {s.total_score !== null ? Number(s.total_score).toFixed(2) : '—'}
                     </span>

@@ -1,23 +1,22 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ScoreInput } from '@/components/ui/score-input';
 import { Slider } from '@/components/ui/slider';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { calculateStructuredDeductions, getLeafCategories, sortByDisplayOrder } from '@/lib/scoring';
-import { 
-  Play, Pause, RotateCcw, Volume2, VolumeX, Maximize2, 
-  Save, Send, Loader2, CheckCircle, Clock, AlertCircle,
+import { calculateStructuredDeductions, sortByDisplayOrder } from '@/lib/scoring';
+import {
+  Play, Pause, Volume2, VolumeX, Maximize2,
+  Save, Send, Loader2, CheckCircle, AlertCircle,
   SkipBack, SkipForward, User
 } from 'lucide-react';
 
@@ -28,11 +27,7 @@ interface JudgePanel {
   display_order: number;
 }
 
-interface CategoryScore {
-  category_id: string;
-  points: number;
-  notes: string;
-}
+interface FieldScore { field_id: string; points: number; notes: string; }
 
 interface SubmissionScoringDialogProps {
   open: boolean;
@@ -43,20 +38,17 @@ interface SubmissionScoringDialogProps {
   initialPanelId?: string | null;
 }
 
+const sb = supabase as any;
+
 export default function SubmissionScoringDialog({
-  open,
-  onOpenChange,
-  submissionId,
-  eventId,
-  panels,
-  initialPanelId,
+  open, onOpenChange, submissionId, eventId, panels, initialPanelId,
 }: SubmissionScoringDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const videoRef = useRef<HTMLVideoElement>(null);
-  
+
   const [selectedPanelId, setSelectedPanelId] = useState<string>('');
-  const [categoryScores, setCategoryScores] = useState<Record<string, CategoryScore>>({});
+  const [fieldScores, setFieldScores] = useState<Record<string, FieldScore>>({});
   const [deductionCounts, setDeductionCounts] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
   const [needsReview, setNeedsReview] = useState(false);
@@ -66,403 +58,216 @@ export default function SubmissionScoringDialog({
   const [duration, setDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Apply initial panel when dialog opens
+  useEffect(() => { if (open && initialPanelId) setSelectedPanelId(initialPanelId); }, [open, initialPanelId]);
   useEffect(() => {
-    if (open && initialPanelId) {
-      setSelectedPanelId(initialPanelId);
-    }
-  }, [open, initialPanelId]);
-
-  // Set default panel when panels load
-  useEffect(() => {
-    if (panels.length > 0 && !selectedPanelId) {
-      setSelectedPanelId(initialPanelId || panels[0].id);
-    }
+    if (panels.length > 0 && !selectedPanelId) setSelectedPanelId(initialPanelId || panels[0].id);
   }, [panels, selectedPanelId, initialPanelId]);
 
-  // Fetch submission details
   const { data: submission, isLoading: submissionLoading } = useQuery({
     queryKey: ['admin-submission-detail', submissionId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('video_submissions')
-        .select(`
-          *,
-          team:teams(
-            id, name, gym_name, athlete_count,
-            division:divisions(name),
-            level:levels(name, level_number)
-          ),
-          event:events(id, name)
-        `)
-        .eq('id', submissionId!)
-        .maybeSingle();
+        .select(`*, team:teams(id, name, gym_name, athlete_count, division:divisions(name), level:levels(name, level_number)), event:events(id, name)`)
+        .eq('id', submissionId!).maybeSingle();
       if (error) throw error;
       return data;
     },
     enabled: !!submissionId && open,
   });
 
-  // Fetch scoring template for this event
   const { data: template } = useQuery({
-    queryKey: ['event-scoring-template', eventId],
+    queryKey: ['event-scoring-template-v2', eventId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('scoring_templates')
-        .select(`
+      const fetchOne = (isDefault?: boolean) => {
+        let q = sb.from('scoring_templates').select(`
           *,
-          sections:scoring_sections(*),
-          categories:scoring_categories(*),
-          deduction_types:deduction_types(*)
-        `)
-        .eq('event_id', eventId)
-        .eq('is_default', true)
-        .maybeSingle();
-      
-      // If no default, get first template
-      if (!data) {
-        const { data: firstTemplate, error: firstError } = await supabase
-          .from('scoring_templates')
-          .select(`
+          sections:scoring_sections(
             *,
-              sections:scoring_sections(*),
-              categories:scoring_categories(*),
-              deduction_types:deduction_types(*)
-          `)
-          .eq('event_id', eventId)
-          .order('created_at')
-          .limit(1)
-          .maybeSingle();
-        if (firstError) throw firstError;
-        return firstTemplate;
-      }
-      if (error) throw error;
-      return data;
+            fields:scoring_fields(*, options:scoring_field_options(*), panel_links:scoring_field_panels(*))
+          ),
+          deduction_types:deduction_types(*)
+        `).eq('event_id', eventId);
+        if (isDefault) q = q.eq('is_default', true);
+        return q.order('created_at').limit(1).maybeSingle();
+      };
+      const def = await fetchOne(true);
+      if (def.data) return def.data;
+      const first = await fetchOne(false);
+      if (first.error) throw first.error;
+      return first.data;
     },
     enabled: !!eventId && open,
   });
 
-  // Fetch all scores for this submission
   const { data: allScores } = useQuery({
     queryKey: ['submission-all-scores', submissionId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('scores')
-        .select(`
-          *,
-          details:score_details(*),
-          deduction_items:score_deductions(*),
-          judge:profiles!scores_judge_user_id_fkey(full_name, email)
-        `)
-        .eq('submission_id', submissionId!);
+      const { data, error } = await sb.from('scores').select(`
+        *,
+        details:score_details(*),
+        deduction_items:score_deductions(*),
+        judge:profiles!scores_judge_user_id_fkey(full_name, email)
+      `).eq('submission_id', submissionId!);
       if (error) throw error;
       return data;
     },
     enabled: !!submissionId && open,
   });
 
-  // Fetch judge assignments for this event with profiles
   const { data: judgeAssignments } = useQuery({
     queryKey: ['event-judge-assignments', eventId],
     queryFn: async () => {
       const { data: assignments, error } = await supabase
-        .from('judge_assignments')
-        .select('*')
-        .eq('event_id', eventId);
+        .from('judge_assignments').select('*').eq('event_id', eventId);
       if (error) throw error;
-      
-      // Fetch profiles separately
-      const judgeIds = [...new Set(assignments.map(a => a.judge_user_id))];
+      const ids = [...new Set(assignments.map((a: any) => a.judge_user_id))];
       const { data: profiles } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, email')
-        .in('user_id', judgeIds);
-      
-      const profileMap = (profiles || []).reduce((acc, p) => {
-        acc[p.user_id] = p;
-        return acc;
-      }, {} as Record<string, { user_id: string; full_name: string | null; email: string }>);
-      
-      return assignments.map(a => ({
-        ...a,
-        judge: profileMap[a.judge_user_id] || null,
-      }));
+        .from('profiles').select('user_id, full_name, email').in('user_id', ids);
+      const map = (profiles || []).reduce((acc: any, p: any) => { acc[p.user_id] = p; return acc; }, {});
+      return assignments.map((a: any) => ({ ...a, judge: map[a.judge_user_id] || null }));
     },
     enabled: !!eventId && open,
   });
 
-  // Get score for selected panel
-  const currentPanelScore = allScores?.find(s => s.panel_id === selectedPanelId);
-  
-  // Get judge assigned to selected panel
-  const assignedJudge = judgeAssignments?.find(ja => ja.panel_id === selectedPanelId);
-
-  // Selected panel's abbreviation, used to filter categories that target a specific panel
+  const currentPanelScore = allScores?.find((s: any) => s.panel_id === selectedPanelId);
+  const assignedJudge = judgeAssignments?.find((ja: any) => ja.panel_id === selectedPanelId);
   const selectedPanelAbbrev = panels.find(p => p.id === selectedPanelId)?.abbreviation || null;
 
-  // Build lookup maps + effective-panel resolver (category -> parent -> section default)
-  const categoriesById = new Map<string, any>(
-    ((template?.categories as any[]) || []).map((c: any) => [c.id, c])
-  );
-  const sectionsById = new Map<string, any>(
-    ((template?.sections as any[]) || []).map((s: any) => [s.id, s])
-  );
-  const getEffectivePanel = (cat: any): string | null => {
-    if (cat?.panel_abbreviation) return cat.panel_abbreviation;
-    if (cat?.parent_category_id) {
-      const parent = categoriesById.get(cat.parent_category_id);
-      if (parent) return getEffectivePanel(parent);
-    }
-    if (cat?.section_id) {
-      return sectionsById.get(cat.section_id)?.default_panel_abbreviation || null;
-    }
-    return null;
-  };
-  const isCategoryVisible = (cat: any) => {
-    const eff = getEffectivePanel(cat);
-    if (!eff) return true; // unassigned categories visible to all panels (back-compat)
-    if (!selectedPanelAbbrev) return true;
-    return eff.toUpperCase() === selectedPanelAbbrev.toUpperCase();
-  };
+  // Flatten visible fields for this panel, grouped by section
+  const visibleSections = useMemo(() => {
+    if (!template?.sections) return [] as any[];
+    const sections = [...(template.sections as any[])]
+      .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
+    return sections.map((s: any) => {
+      const fields = ((s.fields as any[]) || [])
+        .filter((f: any) => {
+          const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
+          if (abbrs.length === 0) return true; // unassigned visible to all
+          return selectedPanelAbbrev ? abbrs.includes(selectedPanelAbbrev.toUpperCase()) : true;
+        })
+        .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
+      return { ...s, visibleFields: fields };
+    }).filter(s => s.visibleFields.length > 0);
+  }, [template, selectedPanelAbbrev]);
 
-  // Initialize/reset scores when panel changes
   useEffect(() => {
-    if (!template?.categories) return;
+    if (!template?.sections) return;
+    const panelScore = allScores?.find((s: any) => s.panel_id === selectedPanelId);
+    const allVisibleFields = visibleSections.flatMap((s: any) => s.visibleFields);
 
-    const leafCategories = sortByDisplayOrder(getLeafCategories(template.categories as any[]))
-      .filter((cat: any) => isCategoryVisible(cat));
-    
-    const panelScore = allScores?.find(s => s.panel_id === selectedPanelId);
-    
     if (panelScore?.details) {
-      const loadedScores: Record<string, CategoryScore> = {};
-      panelScore.details.forEach((detail: any) => {
-        loadedScores[detail.category_id] = {
-          category_id: detail.category_id,
-          points: detail.points,
-          notes: detail.notes || '',
-        };
+      const loaded: Record<string, FieldScore> = {};
+      panelScore.details.forEach((d: any) => {
+        loaded[d.field_id] = { field_id: d.field_id, points: Number(d.points), notes: d.notes || '' };
       });
-      setCategoryScores(loadedScores);
-
-      const loadedDedCounts: Record<string, number> = {};
-      panelScore.deduction_items?.forEach((item: any) => {
-        loadedDedCounts[item.deduction_type_id] = item.count || 0;
-      });
-      setDeductionCounts(loadedDedCounts);
-
+      setFieldScores(loaded);
+      const loadedDed: Record<string, number> = {};
+      panelScore.deduction_items?.forEach((it: any) => { loadedDed[it.deduction_type_id] = it.count || 0; });
+      setDeductionCounts(loadedDed);
       setComments(panelScore.comments || '');
-      setNeedsReview(Boolean((panelScore as any).needs_review));
+      setNeedsReview(Boolean(panelScore.needs_review));
     } else {
-      // Initialize empty scores
-      const initialScores: Record<string, CategoryScore> = {};
-      leafCategories.forEach((cat: any) => {
-        initialScores[cat.id] = {
-          category_id: cat.id,
-          points: 0,
-          notes: '',
-        };
+      const init: Record<string, FieldScore> = {};
+      allVisibleFields.forEach((f: any) => {
+        init[f.id] = { field_id: f.id, points: 0, notes: '' };
       });
-      setCategoryScores(initialScores);
-      const initialDedCounts: Record<string, number> = {};
-      (sortByDisplayOrder(template.deduction_types || []) as any[]).forEach((dt: any) => {
-        initialDedCounts[dt.id] = 0;
-      });
-      setDeductionCounts(initialDedCounts);
+      setFieldScores(init);
+      const initDed: Record<string, number> = {};
+      (sortByDisplayOrder((template.deduction_types || []) as any[])).forEach((dt: any) => { initDed[dt.id] = 0; });
+      setDeductionCounts(initDed);
       setComments('');
       setNeedsReview(false);
     }
-  }, [selectedPanelId, allScores, template]);
+  }, [selectedPanelId, allScores, template, visibleSections]);
 
-  const updateCategoryScore = (categoryId: string, points: number) => {
-    setCategoryScores(prev => ({
-      ...prev,
-      [categoryId]: { ...prev[categoryId], points },
-    }));
-  };
-
-  const updateCategoryNotes = (categoryId: string, notes: string) => {
-    setCategoryScores(prev => ({
-      ...prev,
-      [categoryId]: { ...prev[categoryId], notes },
-    }));
-  };
+  const updateFieldScore = (fieldId: string, points: number) =>
+    setFieldScores(prev => ({ ...prev, [fieldId]: { ...prev[fieldId], field_id: fieldId, points, notes: prev[fieldId]?.notes || '' } }));
+  const updateFieldNotes = (fieldId: string, notes: string) =>
+    setFieldScores(prev => ({ ...prev, [fieldId]: { ...prev[fieldId], field_id: fieldId, points: prev[fieldId]?.points || 0, notes } }));
 
   const calculateTotalScore = () => {
-    if (!template?.categories) return 0;
-    const leafCategories = getLeafCategories(template.categories as any[])
-      .filter((cat: any) => isCategoryVisible(cat));
-    const deductionsTotal = calculateStructuredDeductions(template.deduction_types as any[], deductionCounts);
+    const deductionsTotal = calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts);
     let total = 0;
-    leafCategories.forEach((cat: any) => {
-      const score = categoryScores[cat.id]?.points || 0;
-      total += score * (Number(cat.weight) || 1);
+    visibleSections.forEach((s: any) => {
+      s.visibleFields.forEach((f: any) => {
+        total += Number(fieldScores[f.id]?.points || 0);
+      });
     });
     return Math.max(0, total - deductionsTotal);
   };
 
   // Video controls
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-    }
-  };
+  const togglePlay = () => { if (videoRef.current) { isPlaying ? videoRef.current.pause() : videoRef.current.play(); } };
+  const toggleMute = () => { if (videoRef.current) { videoRef.current.muted = !isMuted; setIsMuted(!isMuted); } };
+  const handleSeek = (v: number[]) => { if (videoRef.current) { videoRef.current.currentTime = v[0]; setCurrentTime(v[0]); } };
+  const skipTime = (s: number) => { if (videoRef.current) videoRef.current.currentTime = Math.max(0, Math.min(duration, currentTime + s)); };
+  const formatTime = (s: number) => `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
 
-  const toggleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-      setIsMuted(!isMuted);
-    }
-  };
-
-  const handleSeek = (value: number[]) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = value[0];
-      setCurrentTime(value[0]);
-    }
-  };
-
-  const skipTime = (seconds: number) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = Math.max(0, Math.min(duration, currentTime + seconds));
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Save score mutation
   const saveMutation = useMutation({
     mutationFn: async (status: 'in_progress' | 'submitted') => {
-      if (!selectedPanelId || !template || !assignedJudge) {
-        throw new Error('Missing required data');
-      }
-
+      if (!selectedPanelId || !template || !assignedJudge) throw new Error('Missing required data');
       setIsSaving(true);
       const totalScore = calculateTotalScore();
-      const deductionsTotal = calculateStructuredDeductions(template.deduction_types as any[], deductionCounts);
+      const deductionsTotal = calculateStructuredDeductions((template.deduction_types || []) as any[], deductionCounts);
+
+      const detailRows = (scoreId: string) =>
+        Object.values(fieldScores).map((fs) => ({
+          score_id: scoreId, field_id: fs.field_id,
+          points: fs.points, notes: fs.notes || null,
+        }));
 
       if (currentPanelScore) {
-        // Update existing score
-        const { error: scoreError } = await supabase
-          .from('scores')
-          .update({
-            total_score: totalScore,
-            deductions: deductionsTotal,
-            comments,
-            status,
-            needs_review: needsReview,
-            submitted_at: status === 'submitted' ? new Date().toISOString() : null,
-          } as any)
-          .eq('id', currentPanelScore.id);
-        if (scoreError) throw scoreError;
-
-        // Delete existing details and insert new ones
-        await supabase
-          .from('score_details')
-          .delete()
-          .eq('score_id', currentPanelScore.id);
-
-        const details = Object.values(categoryScores).map(catScore => ({
-          score_id: currentPanelScore.id,
-          category_id: catScore.category_id,
-          points: catScore.points,
-          notes: catScore.notes || null,
-        }));
-        
-        const { error: detailError } = await supabase
-          .from('score_details')
-          .insert(details);
-        if (detailError) throw detailError;
-
-        // Replace structured deductions
-        await supabase.from('score_deductions').delete().eq('score_id', currentPanelScore.id);
-        const deductionRows = Object.entries(deductionCounts)
-          .filter(([, count]) => (count || 0) > 0)
-          .map(([deduction_type_id, count]) => ({
-            score_id: currentPanelScore.id,
-            deduction_type_id,
-            count,
-          }));
-        if (deductionRows.length > 0) {
-          const { error: dedErr } = await supabase.from('score_deductions').insert(deductionRows);
-          if (dedErr) throw dedErr;
+        const { error } = await sb.from('scores').update({
+          total_score: totalScore, deductions: deductionsTotal, comments,
+          status, needs_review: needsReview,
+          submitted_at: status === 'submitted' ? new Date().toISOString() : null,
+        }).eq('id', currentPanelScore.id);
+        if (error) throw error;
+        await sb.from('score_details').delete().eq('score_id', currentPanelScore.id);
+        const rows = detailRows(currentPanelScore.id);
+        if (rows.length) {
+          const { error: dErr } = await sb.from('score_details').insert(rows);
+          if (dErr) throw dErr;
         }
+        await sb.from('score_deductions').delete().eq('score_id', currentPanelScore.id);
+        const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
+          .map(([deduction_type_id, count]) => ({ score_id: currentPanelScore.id, deduction_type_id, count }));
+        if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
       } else {
-        // Create new score
-        const { data: newScore, error: scoreError } = await supabase
-          .from('scores')
-          .insert([{
-            submission_id: submissionId,
-            judge_user_id: assignedJudge.judge_user_id,
-            template_id: template.id,
-            panel_id: selectedPanelId,
-            total_score: totalScore,
-            deductions: deductionsTotal,
-            comments,
-            status,
-            needs_review: needsReview,
-            submitted_at: status === 'submitted' ? new Date().toISOString() : null,
-          } as any])
-          .select()
-          .single();
-        if (scoreError) throw scoreError;
-
-        // Insert score details
-        const details = Object.values(categoryScores).map(catScore => ({
-          score_id: newScore.id,
-          category_id: catScore.category_id,
-          points: catScore.points,
-          notes: catScore.notes || null,
-        }));
-        
-        const { error: detailError } = await supabase
-          .from('score_details')
-          .insert(details);
-        if (detailError) throw detailError;
-
-        const deductionRows = Object.entries(deductionCounts)
-          .filter(([, count]) => (count || 0) > 0)
-          .map(([deduction_type_id, count]) => ({
-            score_id: newScore.id,
-            deduction_type_id,
-            count,
-          }));
-        if (deductionRows.length > 0) {
-          const { error: dedErr } = await supabase.from('score_deductions').insert(deductionRows);
-          if (dedErr) throw dedErr;
+        const { data: newScore, error } = await sb.from('scores').insert([{
+          submission_id: submissionId, judge_user_id: assignedJudge.judge_user_id,
+          template_id: template.id, panel_id: selectedPanelId,
+          total_score: totalScore, deductions: deductionsTotal, comments,
+          status, needs_review: needsReview,
+          submitted_at: status === 'submitted' ? new Date().toISOString() : null,
+        }]).select().single();
+        if (error) throw error;
+        const rows = detailRows(newScore.id);
+        if (rows.length) {
+          const { error: dErr } = await sb.from('score_details').insert(rows);
+          if (dErr) throw dErr;
         }
+        const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
+          .map(([deduction_type_id, count]) => ({ score_id: newScore.id, deduction_type_id, count }));
+        if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
       }
     },
     onSuccess: (_, status) => {
       queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
       queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
-      toast({ 
-        title: status === 'submitted' ? 'Score submitted!' : 'Progress saved',
-      });
+      toast({ title: status === 'submitted' ? 'Score submitted!' : 'Progress saved' });
     },
-    onError: (error: any) => {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
-    },
-    onSettled: () => {
-      setIsSaving(false);
-    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+    onSettled: () => setIsSaving(false),
   });
 
-  const getPanelStatus = (panelId: string): 'pending' | 'in_progress' | 'submitted' | 'needs_review' => {
-    const score = allScores?.find(s => s.panel_id === panelId);
-    if (!score) return 'pending';
-    if ((score as any).needs_review) return 'needs_review';
-    return score.status as 'pending' | 'in_progress' | 'submitted';
+  const getPanelStatus = (panelId: string) => {
+    const s: any = allScores?.find((x: any) => x.panel_id === panelId);
+    if (!s) return 'pending';
+    if (s.needs_review) return 'needs_review';
+    return s.status;
   };
-
   const isCurrentPanelLocked = currentPanelScore?.status === 'locked';
 
   if (!submissionId) return null;
@@ -482,139 +287,63 @@ export default function SubmissionScoringDialog({
         </DialogHeader>
 
         {submissionLoading ? (
-          <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-          </div>
+          <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
         ) : (
           <div className="flex-1 overflow-y-auto">
             <div className="grid lg:grid-cols-2 gap-6">
-              {/* Left Column - Video Player */}
+              {/* Video */}
               <div className="space-y-4">
-                {/* Video Player Card */}
                 <Card>
                   <CardContent className="p-0">
                     <div className="aspect-video bg-black rounded-t-lg relative">
                       {submission?.video_url ? (
-                        <video
-                          ref={videoRef}
-                          src={submission.video_url}
-                          className="w-full h-full rounded-t-lg"
-                          onPlay={() => setIsPlaying(true)}
-                          onPause={() => setIsPlaying(false)}
+                        <video ref={videoRef} src={submission.video_url} className="w-full h-full rounded-t-lg"
+                          onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)}
                           onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                          onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-                        />
+                          onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-white/50">
-                          <div className="text-center">
-                            <Play className="w-16 h-16 mx-auto mb-2" />
-                            <p>Video not available</p>
-                          </div>
+                          <div className="text-center"><Play className="w-16 h-16 mx-auto mb-2" /><p>Video not available</p></div>
                         </div>
                       )}
                     </div>
-                    
-                    {/* Video Controls */}
                     <div className="p-4 space-y-3">
-                      {/* Progress Bar */}
-                      <Slider
-                        value={[currentTime]}
-                        min={0}
-                        max={duration || 100}
-                        step={0.1}
-                        onValueChange={handleSeek}
-                        className="cursor-pointer"
-                      />
-                      
+                      <Slider value={[currentTime]} min={0} max={duration || 100} step={0.1} onValueChange={handleSeek} className="cursor-pointer" />
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" size="icon" onClick={() => skipTime(-10)}>
-                            <SkipBack className="w-4 h-4" />
-                          </Button>
-                          <Button variant="default" size="icon" onClick={togglePlay}>
-                            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                          </Button>
-                          <Button variant="outline" size="icon" onClick={() => skipTime(10)}>
-                            <SkipForward className="w-4 h-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={toggleMute}>
-                            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                          </Button>
+                          <Button variant="outline" size="icon" onClick={() => skipTime(-10)}><SkipBack className="w-4 h-4" /></Button>
+                          <Button variant="default" size="icon" onClick={togglePlay}>{isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}</Button>
+                          <Button variant="outline" size="icon" onClick={() => skipTime(10)}><SkipForward className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={toggleMute}>{isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}</Button>
                         </div>
-                        
-                        <span className="text-sm text-muted-foreground font-mono">
-                          {formatTime(currentTime)} / {formatTime(duration)}
-                        </span>
-                        
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => videoRef.current?.requestFullscreen()}
-                        >
-                          <Maximize2 className="w-4 h-4" />
-                        </Button>
+                        <span className="text-sm text-muted-foreground font-mono">{formatTime(currentTime)} / {formatTime(duration)}</span>
+                        <Button variant="ghost" size="icon" onClick={() => videoRef.current?.requestFullscreen()}><Maximize2 className="w-4 h-4" /></Button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Team Info */}
                 <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Team Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Event</span>
-                      <p className="font-medium">{submission?.event?.name}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Division</span>
-                      <p className="font-medium">{submission?.team?.division?.name || '—'}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Level</span>
-                      <p className="font-medium">
-                        {submission?.team?.level?.name || `Level ${submission?.team?.level?.level_number}` || '—'}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Athletes</span>
-                      <p className="font-medium">{submission?.team?.athlete_count || '—'}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Panel Status Overview */}
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-base">Panel Scoring Status</CardTitle>
-                  </CardHeader>
+                  <CardHeader className="pb-2"><CardTitle className="text-base">Panel Scoring Status</CardTitle></CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-3">
                       {panels.map((panel) => {
                         const status = getPanelStatus(panel.id);
-                        const statusColors = {
+                        const colors: Record<string, string> = {
                           pending: 'bg-destructive text-destructive-foreground',
                           in_progress: 'bg-destructive text-destructive-foreground',
                           submitted: 'bg-success text-success-foreground',
                           needs_review: 'bg-warning text-warning-foreground',
+                          locked: 'bg-muted text-muted-foreground',
                         };
-                        const score = allScores?.find(s => s.panel_id === panel.id);
-                        
+                        const score: any = allScores?.find((s: any) => s.panel_id === panel.id);
                         return (
-                          <div 
-                            key={panel.id}
-                            className={`px-3 py-2 rounded-lg text-center cursor-pointer transition-all ${
-                              selectedPanelId === panel.id 
-                                ? 'ring-2 ring-primary ring-offset-2' 
-                                : ''
-                            } ${statusColors[status]}`}
-                            onClick={() => setSelectedPanelId(panel.id)}
-                          >
+                          <div key={panel.id}
+                            className={`px-3 py-2 rounded-lg text-center cursor-pointer transition-all ${selectedPanelId === panel.id ? 'ring-2 ring-primary ring-offset-2' : ''} ${colors[status] || ''}`}
+                            onClick={() => setSelectedPanelId(panel.id)}>
                             <p className="font-bold">{panel.abbreviation}</p>
                             {score?.total_score !== null && score?.total_score !== undefined && (
-                              <p className="text-xs opacity-90">{score.total_score.toFixed(1)}</p>
+                              <p className="text-xs opacity-90">{Number(score.total_score).toFixed(1)}</p>
                             )}
                           </div>
                         );
@@ -624,24 +353,17 @@ export default function SubmissionScoringDialog({
                 </Card>
               </div>
 
-              {/* Right Column - Scoring Form */}
+              {/* Scoring Form */}
               <div className="space-y-4">
-                {/* Panel Selector */}
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex-1">
                         <label className="text-sm font-medium mb-1 block">Scoring Panel</label>
                         <Select value={selectedPanelId} onValueChange={setSelectedPanelId}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select panel" />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="Select panel" /></SelectTrigger>
                           <SelectContent>
-                            {panels.map((panel) => (
-                              <SelectItem key={panel.id} value={panel.id}>
-                                {panel.name} ({panel.abbreviation})
-                              </SelectItem>
-                            ))}
+                            {panels.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} ({p.abbreviation})</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
@@ -663,47 +385,70 @@ export default function SubmissionScoringDialog({
                     <CardContent className="py-12 text-center text-muted-foreground">
                       <AlertCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
                       <p>No scoring template configured for this event.</p>
-                      <p className="text-sm mt-1">Create a scoring template first.</p>
                     </CardContent>
                   </Card>
                 ) : (
                   <>
-                    {/* Category Scores */}
-                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                      {(template.categories as any[])
-                        ?.filter((category: any) => isCategoryVisible(category))
-                        .sort((a: any, b: any) => a.display_order - b.display_order)
-                        .map((category: any) => (
-                        <Card key={category.id} className="overflow-hidden">
+                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                      {visibleSections.length === 0 && (
+                        <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
+                          No scoring fields are assigned to this panel.
+                        </CardContent></Card>
+                      )}
+                      {visibleSections.map((section: any) => (
+                        <Card key={section.id}>
                           <CardHeader className="py-3 pb-2">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-sm">{category.name}</CardTitle>
-                              <div className="text-right">
-                                <span className="text-xl font-bold text-primary">
-                                  {categoryScores[category.id]?.points || 0}
-                                </span>
-                                <span className="text-xs text-muted-foreground"> / {category.max_points}</span>
-                              </div>
-                            </div>
+                            <CardTitle className="text-sm flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">{section.abbreviation}</Badge>
+                              {section.name}
+                            </CardTitle>
                           </CardHeader>
-                          <CardContent className="py-2 space-y-2">
-                            <div className="flex items-center gap-3">
-                              <ScoreInput
-                                value={categoryScores[category.id]?.points || 0}
-                                onChange={(value) => updateCategoryScore(category.id, value)}
-                                max={category.max_points}
-                                step={0.5}
-                                disabled={isCurrentPanelLocked}
-                              />
-                              <span className="text-xs text-muted-foreground">Range: 0 - {category.max_points}</span>
-                            </div>
-                            <Input
-                              placeholder="Notes..."
-                              value={categoryScores[category.id]?.notes || ''}
-                              onChange={(e) => updateCategoryNotes(category.id, e.target.value)}
-                              disabled={isCurrentPanelLocked}
-                              className="text-sm h-8"
-                            />
+                          <CardContent className="space-y-3 py-2">
+                            {section.visibleFields.map((f: any) => (
+                              <div key={f.id} className="space-y-2 pb-2 border-b last:border-0">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <p className="text-sm font-medium">{f.name}</p>
+                                    {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
+                                  </div>
+                                  <div className="text-right text-xs text-muted-foreground">max {Number(f.max_points).toFixed(2)}</div>
+                                </div>
+                                {f.field_type === 'dropdown' ? (
+                                  <Select
+                                    value={String(fieldScores[f.id]?.points ?? '')}
+                                    onValueChange={(v) => updateFieldScore(f.id, parseFloat(v))}
+                                    disabled={isCurrentPanelLocked}
+                                  >
+                                    <SelectTrigger><SelectValue placeholder="Choose..." /></SelectTrigger>
+                                    <SelectContent>
+                                      {(f.options || [])
+                                        .slice()
+                                        .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+                                        .map((opt: any) => (
+                                          <SelectItem key={opt.id} value={String(Number(opt.value))}>
+                                            {opt.label} ({Number(opt.value)})
+                                          </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                  </Select>
+                                ) : (
+                                  <ScoreInput
+                                    value={fieldScores[f.id]?.points || 0}
+                                    onChange={(v) => updateFieldScore(f.id, v)}
+                                    max={Number(f.max_value)}
+                                    step={Number(f.step) || 0.25}
+                                    disabled={isCurrentPanelLocked}
+                                  />
+                                )}
+                                <Input
+                                  placeholder="Notes..."
+                                  value={fieldScores[f.id]?.notes || ''}
+                                  onChange={(e) => updateFieldNotes(f.id, e.target.value)}
+                                  disabled={isCurrentPanelLocked}
+                                  className="text-sm h-8"
+                                />
+                              </div>
+                            ))}
                           </CardContent>
                         </Card>
                       ))}
@@ -711,7 +456,6 @@ export default function SubmissionScoringDialog({
 
                     <Separator />
 
-                    {/* Deductions */}
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <label className="text-sm font-medium text-destructive">Deductions</label>
@@ -729,23 +473,12 @@ export default function SubmissionScoringDialog({
                                 <p className="text-sm font-medium truncate">{dt.name}</p>
                                 <p className="text-xs text-muted-foreground">{Number(dt.points).toFixed(2)} each</p>
                               </div>
-                              <Input
-                                type="number"
-                                min={0}
-                                step={1}
+                              <Input type="number" min={0} step={1}
                                 value={deductionCounts[dt.id] || 0}
-                                onChange={(e) =>
-                                  setDeductionCounts((prev) => ({
-                                    ...prev,
-                                    [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0),
-                                  }))
-                                }
-                                className="w-20"
-                                disabled={isCurrentPanelLocked}
-                              />
+                                onChange={(e) => setDeductionCounts(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
+                                className="w-20" disabled={isCurrentPanelLocked} />
                             </div>
                           ))}
-
                           <div className="pt-2 border-t flex items-center justify-between">
                             <span className="text-sm font-medium text-destructive">Total deductions</span>
                             <span className="text-sm font-bold text-destructive">
@@ -754,75 +487,48 @@ export default function SubmissionScoringDialog({
                           </div>
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground">No deduction types configured for this template.</p>
+                        <p className="text-sm text-muted-foreground">No deduction types configured.</p>
                       )}
                     </div>
 
-                    {/* Comments */}
                     <div>
                       <label className="text-sm font-medium">Feedback & Comments</label>
-                      <Textarea
-                        placeholder="Overall feedback for the team..."
-                        value={comments}
-                        onChange={(e) => setComments(e.target.value)}
-                        rows={3}
-                        disabled={isCurrentPanelLocked}
-                        className="mt-1"
-                      />
+                      <Textarea placeholder="Overall feedback for the team..."
+                        value={comments} onChange={(e) => setComments(e.target.value)} rows={3}
+                        disabled={isCurrentPanelLocked} className="mt-1" />
                     </div>
 
-                    {/* Needs Review Flag */}
                     <div className="flex items-center justify-between p-3 rounded-lg border bg-warning/5 border-warning/30">
                       <div>
-                        <label htmlFor="needs-review-switch" className="text-sm font-medium cursor-pointer">
-                          Flag for review
-                        </label>
-                        <p className="text-xs text-muted-foreground">
-                          Mark this panel's score as needing review (shown as yellow).
-                        </p>
+                        <label htmlFor="needs-review-switch" className="text-sm font-medium cursor-pointer">Flag for review</label>
+                        <p className="text-xs text-muted-foreground">Mark as needing review.</p>
                       </div>
-                      <Switch
-                        id="needs-review-switch"
-                        checked={needsReview}
-                        onCheckedChange={setNeedsReview}
-                        disabled={isCurrentPanelLocked}
-                      />
+                      <Switch id="needs-review-switch" checked={needsReview}
+                        onCheckedChange={setNeedsReview} disabled={isCurrentPanelLocked} />
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="flex gap-2 pt-2">
                       {isCurrentPanelLocked ? (
                         <Badge variant="secondary" className="py-2 px-4">
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Score Locked
+                          <CheckCircle className="w-4 h-4 mr-2" /> Score Locked
                         </Badge>
                       ) : (
                         <>
-                          <Button
-                            variant="outline"
-                            onClick={() => saveMutation.mutate('in_progress')}
-                            disabled={isSaving || !assignedJudge}
-                            className="flex-1"
-                          >
+                          <Button variant="outline" onClick={() => saveMutation.mutate('in_progress')}
+                            disabled={isSaving || !assignedJudge} className="flex-1">
                             {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                             Save Draft
                           </Button>
-                          <Button
-                            onClick={() => saveMutation.mutate('submitted')}
-                            disabled={isSaving || !assignedJudge}
-                            className="flex-1"
-                          >
+                          <Button onClick={() => saveMutation.mutate('submitted')}
+                            disabled={isSaving || !assignedJudge} className="flex-1">
                             {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                             Submit Score
                           </Button>
                         </>
                       )}
                     </div>
-                    
                     {!assignedJudge && (
-                      <p className="text-xs text-destructive text-center">
-                        No judge assigned to this panel. Assign a judge first.
-                      </p>
+                      <p className="text-xs text-destructive text-center">No judge assigned to this panel. Assign a judge first.</p>
                     )}
                   </>
                 )}
