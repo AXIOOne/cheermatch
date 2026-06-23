@@ -444,9 +444,9 @@ export default function ScoringTemplates() {
                         </Badge>
                       )}
                     </div>
-                    <CardDescription>{tpl.event?.name}</CardDescription>
-                    {isEventInProgress(tpl) && !tpl.is_locked && (
-                      <p className="text-xs text-warning mt-1">⚠️ Event in progress — consider locking</p>
+                    <CardDescription>Divisions: {divisionLabel(tpl)}</CardDescription>
+                    {tpl.is_default && (
+                      <p className="text-xs text-muted-foreground mt-1">Default template for unassigned divisions</p>
                     )}
                   </div>
                   <div className="flex gap-1">
