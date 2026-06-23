@@ -272,17 +272,21 @@ export default function Divisions() {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       <TableHead>Age Range</TableHead>
+                      <TableHead>Scoring Template</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {divisions.map((div) => (
+                    {divisions.map((div: any) => (
                       <TableRow key={div.id}>
                         <TableCell className="font-medium">{div.name}</TableCell>
                         <TableCell>
                           {div.min_age || div.max_age
                             ? `${div.min_age || '?'} - ${div.max_age || '?'} years`
                             : 'Not set'}
+                        </TableCell>
+                        <TableCell>
+                          {div.template?.name || <span className="text-muted-foreground italic">Default</span>}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
