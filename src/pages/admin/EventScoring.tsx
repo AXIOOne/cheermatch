@@ -345,6 +345,12 @@ export default function EventScoring() {
                 <span className="text-sm">Complete</span>
               </div>
               <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-sm bg-success flex items-center justify-center text-success-foreground">
+                  <CheckCircle className="w-3 h-3" />
+                </div>
+                <span className="text-sm">Reviewed</span>
+              </div>
+              <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-sm bg-warning" />
                 <span className="text-sm">Needs Review</span>
               </div>
