@@ -385,24 +385,24 @@ export type Database = {
       }
       score_details: {
         Row: {
-          category_id: string
           created_at: string
+          field_id: string
           id: string
           notes: string | null
           points: number
           score_id: string
         }
         Insert: {
-          category_id: string
           created_at?: string
+          field_id: string
           id?: string
           notes?: string | null
           points: number
           score_id: string
         }
         Update: {
-          category_id?: string
           created_at?: string
+          field_id?: string
           id?: string
           notes?: string | null
           points?: number
@@ -410,10 +410,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "score_details_category_id_fkey"
-            columns: ["category_id"]
+            foreignKeyName: "score_details_field_id_fkey"
+            columns: ["field_id"]
             isOneToOne: false
-            referencedRelation: "scoring_categories"
+            referencedRelation: "scoring_fields"
             referencedColumns: ["id"]
           },
           {
@@ -495,66 +495,129 @@ export type Database = {
           },
         ]
       }
-      scoring_categories: {
+      scoring_field_options: {
         Row: {
-          category_type: Database["public"]["Enums"]["category_type"]
           created_at: string
-          description: string | null
           display_order: number
+          field_id: string
           id: string
-          max_points: number
-          name: string
-          panel_abbreviation: string | null
-          parent_category_id: string | null
-          section_id: string | null
-          template_id: string
-          weight: number
+          label: string
+          value: number
         }
         Insert: {
-          category_type?: Database["public"]["Enums"]["category_type"]
           created_at?: string
-          description?: string | null
           display_order?: number
+          field_id: string
           id?: string
-          max_points: number
-          name: string
-          panel_abbreviation?: string | null
-          parent_category_id?: string | null
-          section_id?: string | null
-          template_id: string
-          weight?: number
+          label: string
+          value?: number
         }
         Update: {
-          category_type?: Database["public"]["Enums"]["category_type"]
           created_at?: string
-          description?: string | null
           display_order?: number
+          field_id?: string
           id?: string
-          max_points?: number
-          name?: string
-          panel_abbreviation?: string | null
-          parent_category_id?: string | null
-          section_id?: string | null
-          template_id?: string
-          weight?: number
+          label?: string
+          value?: number
         }
         Relationships: [
           {
-            foreignKeyName: "scoring_categories_parent_category_id_fkey"
-            columns: ["parent_category_id"]
+            foreignKeyName: "scoring_field_options_field_id_fkey"
+            columns: ["field_id"]
             isOneToOne: false
-            referencedRelation: "scoring_categories"
+            referencedRelation: "scoring_fields"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      scoring_field_panels: {
+        Row: {
+          created_at: string
+          field_id: string
+          id: string
+          panel_abbreviation: string
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          id?: string
+          panel_abbreviation: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          id?: string
+          panel_abbreviation?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "scoring_categories_section_id_fkey"
+            foreignKeyName: "scoring_field_panels_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scoring_fields: {
+        Row: {
+          aggregation: Database["public"]["Enums"]["scoring_field_aggregation"]
+          created_at: string
+          description: string | null
+          display_order: number
+          field_type: Database["public"]["Enums"]["scoring_field_type"]
+          id: string
+          max_points: number
+          max_value: number
+          min_value: number
+          name: string
+          section_id: string
+          step: number
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          aggregation?: Database["public"]["Enums"]["scoring_field_aggregation"]
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          field_type?: Database["public"]["Enums"]["scoring_field_type"]
+          id?: string
+          max_points?: number
+          max_value?: number
+          min_value?: number
+          name: string
+          section_id: string
+          step?: number
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          aggregation?: Database["public"]["Enums"]["scoring_field_aggregation"]
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          field_type?: Database["public"]["Enums"]["scoring_field_type"]
+          id?: string
+          max_points?: number
+          max_value?: number
+          min_value?: number
+          name?: string
+          section_id?: string
+          step?: number
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scoring_fields_section_id_fkey"
             columns: ["section_id"]
             isOneToOne: false
             referencedRelation: "scoring_sections"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "scoring_categories_template_id_fkey"
+            foreignKeyName: "scoring_fields_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "scoring_templates"
@@ -1166,6 +1229,13 @@ export type Database = {
         | "completed"
         | "archived"
       score_status: "in_progress" | "submitted" | "locked"
+      scoring_field_aggregation:
+        | "average"
+        | "trimmed_mean"
+        | "min"
+        | "max"
+        | "sum"
+      scoring_field_type: "number" | "dropdown"
       submission_status:
         | "pending"
         | "uploaded"
@@ -1311,6 +1381,14 @@ export const Constants = {
         "archived",
       ],
       score_status: ["in_progress", "submitted", "locked"],
+      scoring_field_aggregation: [
+        "average",
+        "trimmed_mean",
+        "min",
+        "max",
+        "sum",
+      ],
+      scoring_field_type: ["number", "dropdown"],
       submission_status: [
         "pending",
         "uploaded",

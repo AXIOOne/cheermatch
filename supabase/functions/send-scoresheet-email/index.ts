@@ -57,7 +57,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           score_details:score_details(
             points,
             notes,
-            category:scoring_categories(name, max_points, weight)
+            field:scoring_fields(name, max_points, section:scoring_sections(name))
           )
         )
       `)
@@ -104,8 +104,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const panel = Array.isArray(score.panel) ? score.panel[0] : score.panel;
       const panelName = panel?.name || "Judge";
       const details = score.score_details?.map((d: any) => {
-        const category = Array.isArray(d.category) ? d.category[0] : d.category;
-        return `<tr><td style="padding: 4px 8px; border-bottom: 1px solid #eee;">${category?.name || "Category"}</td><td style="padding: 4px 8px; border-bottom: 1px solid #eee; text-align: right;">${d.points} / ${category?.max_points || 0}</td></tr>`;
+        const field = Array.isArray(d.field) ? d.field[0] : d.field;
+        const section = field?.section ? (Array.isArray(field.section) ? field.section[0] : field.section) : null;
+        const label = section?.name ? `${section.name} — ${field?.name || "Field"}` : (field?.name || "Field");
+        return `<tr><td style="padding: 4px 8px; border-bottom: 1px solid #eee;">${label}</td><td style="padding: 4px 8px; border-bottom: 1px solid #eee; text-align: right;">${d.points} / ${field?.max_points || 0}</td></tr>`;
       }).join("") || "";
 
       return `

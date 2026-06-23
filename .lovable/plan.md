@@ -1,67 +1,95 @@
 
-## Goal
+# Scoring Template Builder v2
 
-Within a scoring template section, allow each sub-category (Difficulty, Execution, drivers, etc.) to be assigned to a specific judge-panel slot (B1, B2, T1, T2, J1, J2…). At scoring time, a judge only sees the categories that belong to their panel, so two judges can split one section.
+A scoresheet = **Sections (rows)** × **Fields (columns)**. Each field is owned by one or more judge panel slots (B1, B2, T1…). Deductions remain as today.
 
-## Approach
+## 1. New data model (fresh start, replaces category tree)
 
-Store a **panel abbreviation string** on each `scoring_categories` row (e.g. "B1", "B2"). We use a free-text abbreviation, not a hard FK, because templates are universal but `judge_panels` are per event — abbreviations are the bridge already used everywhere else (judge_panels.abbreviation, judge_assignments.panel → judge_panels.id with matching abbreviations across events).
-
-Inheritance rule: if a category has no panel set, it inherits from its parent; if the parent has none, it inherits from the section's default panel; if the section has no default, the category is visible to every panel mapped to that section.
-
-## Changes
-
-### 1. Database (single migration)
-
-```sql
-ALTER TABLE public.scoring_categories
-  ADD COLUMN panel_abbreviation TEXT;
-
-ALTER TABLE public.scoring_sections
-  ADD COLUMN default_panel_abbreviation TEXT;
+```text
+scoring_templates
+  └── scoring_sections          (rows of the scoresheet — admin defined)
+        └── scoring_fields      (NEW — the column definitions)
+              └── scoring_field_options   (NEW — for dropdown fields)
+              └── scoring_field_panels    (NEW — which panel slots own this field)
+  └── deduction_types           (unchanged)
 ```
 
-No RLS changes needed (existing policies cover the new columns).
+**scoring_fields**
+- section_id, name, display_order
+- field_type: `number` | `dropdown`
+- number config: min, max, step, max_points
+- aggregation (used only when assigned to >1 panel): `average` | `trimmed_mean` | `min` | `max` | `sum`
 
-### 2. Scoresheet builder UI
+**scoring_field_options** (dropdown only)
+- field_id, label, value (numeric points), display_order
 
-**`src/components/admin/ScoringCategoryTree.tsx`**
-- Extend `CategoryItem` with `panel_abbreviation?: string`.
-- Add a 4th compact field in `CategoryFields`: a "Panel" input (short text, max 4 chars, placeholder "B1"). Empty = inherit.
+**scoring_field_panels**
+- field_id, panel_abbreviation (e.g. `B1`, `B2`)
+- One row per assigned panel slot. 1 row = single-judge field. 2+ rows = multi-judge, aggregated per field's `aggregation`.
 
-**`src/components/admin/SectionTabs.tsx`**
-- Extend `ScoringSection` with `default_panel_abbreviation?: string`.
-- Add a "Default Panel" input next to Abbreviation in the section header.
-- Update the new B1/B2/T1/T2 default sections to seed:
-  - B1 section default_panel = "B1", B2 = "B2", T1 = "T1", T2 = "T2", OV = "OV", ALL = "" (all).
+The old `scoring_categories` table and its sub-tree concept are dropped. Existing templates (incl. the USASF sample) are removed in the same migration — clean slate per your choice.
 
-### 3. Save / load in templates page
+Scores model change:
+- `score_details` keys on `field_id` instead of `category_id`.
+- For multi-judge fields, each judge writes their own `score_details` row; final scoresheet aggregates per the field's rule.
 
-**`src/pages/admin/ScoringTemplates.tsx`**
-- Include `panel_abbreviation` when reading categories and `default_panel_abbreviation` when reading sections.
-- Persist both fields in the create + update paths (`flattenCategories` insert, sections insert, and the update branch).
+## 2. Builder UI (`/admin/scoring` → template editor)
 
-### 4. Scoring runtime filter
+Layout:
 
-**`src/components/admin/SubmissionScoringDialog.tsx`** and any judge scoring view that renders a scoresheet (`src/pages/admin/SubmissionScoresheet.tsx`, judge scoring queue/score page if they render categories directly):
-- Determine the active panel abbreviation from the current `judge_assignment` / panel selector (already exists).
-- When rendering categories, hide any leaf category whose effective panel (self → parent → section default) is set and does not match the active panel abbreviation. If no panel is set anywhere on the chain, show it (back-compat).
-- Recompute the visible section subtotal/total from only the visible leaf categories.
+```text
+┌─ Template: USASF L4 ────────────────────────────────┐
+│ [+ Add Section]                                     │
+│                                                     │
+│ ▾ Stunts                      max 10.0   [⋯][🗑]   │
+│   ┌──────────────────────────────────────────────┐  │
+│   │ Field            Type     Panel(s)   Range   │  │
+│   │ Difficulty       Number   B1         0–5/.25 │  │
+│   │ Execution        Number   B1, B2 avg 0–5/.25 │  │
+│   │ Creativity       Dropdown OV         3 opts  │  │
+│   │ [+ Add Field]                                │  │
+│   └──────────────────────────────────────────────┘  │
+│ ▾ Pyramids …                                        │
+│ ▾ Tumbling …                                        │
+│                                                     │
+│ ── Deductions (unchanged manager) ──                │
+└─────────────────────────────────────────────────────┘
+```
 
-### 5. Types
+**Add Field dialog**
+- Name
+- Type: Number | Dropdown
+- If Number: min, max, step, max points
+- If Dropdown: repeatable rows of `label` + `points`
+- Panels: multi-select chips of available panel abbreviations (pulled from the event's `judge_panels`, falling back to B1/B2/T1/T2/OV/ALL)
+- If 2+ panels selected: show Aggregation select (Average / Trimmed mean / Min / Max / Sum), default Average
 
-`src/integrations/supabase/types.ts` auto-regenerates after the migration runs.
+Sections support reorder + max points display (auto-sum of fields' max).
 
-## Out of scope
+## 3. Scoring interface changes
 
-- No change to `judge_panels` or `judge_assignments` — assignment of *people* to panels stays exactly as it is today.
-- No change to score submission logic; judges still submit one score row per panel and only fill in the categories they see.
+`SubmissionScoringDialog`:
+- Renders sections as rows; within each row, only the fields whose `scoring_field_panels.panel_abbreviation` matches the current judge's assigned panel.
+- Number field: shadcn `Input type=number` with stepper +/- buttons honoring `step`.
+- Dropdown field: shadcn `Select` of the configured options; stored value = option points.
+- Judge sees only their own fields; multi-judge fields appear independently for each assigned judge.
 
-## Files touched
+Final scoresheet / `EventResults` / review portal:
+- Per field, compute the displayed value via the field's aggregation across all submitted `score_details` for that field.
+- Section subtotal = sum of aggregated field values. Total = sum of sections − deductions.
 
-- `supabase/migrations/<new>.sql` (new)
-- `src/components/admin/ScoringCategoryTree.tsx`
-- `src/components/admin/SectionTabs.tsx`
-- `src/pages/admin/ScoringTemplates.tsx`
-- `src/components/admin/SubmissionScoringDialog.tsx`
-- `src/pages/admin/SubmissionScoresheet.tsx` (verify, edit if it renders categories)
+## 4. Migration & cutover plan
+
+1. **Migration A (schema)**: create `scoring_fields`, `scoring_field_options`, `scoring_field_panels`; add `field_id` to `score_details` (nullable for now); add GRANTs + RLS policies mirroring current scoring tables.
+2. **Migration B (cleanup)**: delete all rows in `scores`, `score_details`, `score_deductions`, `scoring_categories`, `scoring_sections`, `scoring_templates`, `deduction_types` (fresh start, per your choice). Drop `scoring_categories` table and the `category_id` column on `score_details`.
+3. **Code**:
+   - New components: `FieldBuilderDialog.tsx`, `SectionFieldsTable.tsx`. Replace `ScoringCategoryTree.tsx` usage in `SectionTabs.tsx` / `ScoringTemplates.tsx`.
+   - Update `SubmissionScoringDialog.tsx`, `TemplatePreview.tsx`, `EventResults.tsx`, review token RPC `get_review_by_token`, and `send-scoresheet-email` edge function to read fields instead of categories.
+   - Regenerate Supabase types after migration.
+4. Keep `judge_panels` and panel-abbreviation concepts as-is — they're the source of truth for the panel selector.
+
+## 5. Out of scope (call out)
+
+- Per-field weights/multipliers (not requested).
+- Drop-high/drop-low for averaging (covered by `trimmed_mean` option but UI only exposes the chosen mode).
+- Importing the old USASF sample data — wiped in step 2.

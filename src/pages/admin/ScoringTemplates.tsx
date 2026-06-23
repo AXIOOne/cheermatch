@@ -17,7 +17,7 @@ import { Plus, ClipboardList, Loader2, Pencil, Trash2, Lock, Unlock, Eye, Layers
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SectionTabs, { ScoringSection } from '@/components/admin/SectionTabs';
-import { CategoryItem } from '@/components/admin/ScoringCategoryTree';
+import { ScoringField } from '@/components/admin/FieldBuilderDialog';
 import { DeductionType } from '@/components/admin/DeductionTypeManager';
 import TemplatePreview from '@/components/admin/TemplatePreview';
 
@@ -30,9 +30,11 @@ const templateSchema = z.object({
 
 type TemplateFormData = z.infer<typeof templateSchema>;
 
-function generateTempId() {
-  return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+function tempId() {
+  return `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
+
+const sb = supabase as any;
 
 export default function ScoringTemplates() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -45,12 +47,7 @@ export default function ScoringTemplates() {
 
   const form = useForm<TemplateFormData>({
     resolver: zodResolver(templateSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      event_id: '',
-      is_default: false,
-    },
+    defaultValues: { name: '', description: '', event_id: '', is_default: false },
   });
 
   const { data: events } = useQuery({
@@ -62,16 +59,38 @@ export default function ScoringTemplates() {
     },
   });
 
+  // Fetch panel abbreviations for the selected event, used in the field builder dropdown
+  const selectedEventId = form.watch('event_id');
+  const { data: eventPanels } = useQuery({
+    queryKey: ['event-panels-for-builder', selectedEventId],
+    enabled: !!selectedEventId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('judge_panels')
+        .select('abbreviation')
+        .eq('event_id', selectedEventId)
+        .order('display_order');
+      if (error) throw error;
+      return (data || []).map((r: any) => r.abbreviation);
+    },
+  });
+
   const { data: templates, isLoading } = useQuery({
     queryKey: ['scoring-templates-full'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await sb
         .from('scoring_templates')
         .select(`
           *,
           event:events(name, status),
-          sections:scoring_sections(*),
-          categories:scoring_categories(*),
+          sections:scoring_sections(
+            *,
+            fields:scoring_fields(
+              *,
+              options:scoring_field_options(*),
+              panel_links:scoring_field_panels(*)
+            )
+          ),
           deduction_types:deduction_types(*)
         `)
         .order('created_at', { ascending: false });
@@ -80,284 +99,121 @@ export default function ScoringTemplates() {
     },
   });
 
-  // Flatten categories tree for saving
-  const flattenCategories = (
-    categories: CategoryItem[],
-    sectionId: string,
-    parentTempId: string | null = null
-  ): any[] => {
-    const result: any[] = [];
-    categories.forEach((cat, index) => {
-      result.push({
-        temp_id: cat.temp_id,
-        parent_temp_id: parentTempId,
-        name: cat.name,
-        max_points: cat.max_points,
-        category_type: cat.category_type,
-        section_id: sectionId,
-        display_order: index,
-        description: cat.description,
-        panel_abbreviation: cat.panel_abbreviation || null,
-        weight: 1,
-      });
-      if (cat.children.length > 0) {
-        result.push(...flattenCategories(cat.children, sectionId, cat.temp_id));
-      }
-    });
-    return result;
-  };
+  const persistSectionsAndFields = async (templateId: string) => {
+    if (sections.length === 0) return;
+    const sectionsRows = sections.map((s, idx) => ({
+      template_id: templateId,
+      name: s.name,
+      abbreviation: s.abbreviation,
+      description: s.description || null,
+      max_points: s.fields.reduce((a, f) => a + (Number(f.max_points) || 0), 0),
+      display_order: idx,
+    }));
+    const { data: insertedSections, error: secErr } = await sb
+      .from('scoring_sections').insert(sectionsRows).select();
+    if (secErr) throw secErr;
 
-  const insertCategoriesForTemplate = async (
-    templateId: string,
-    allCategories: any[]
-  ) => {
-    if (allCategories.length === 0) return;
+    for (let i = 0; i < sections.length; i++) {
+      const sec = sections[i];
+      const sectionId = insertedSections![i].id;
+      if (sec.fields.length === 0) continue;
 
-    // Insert in dependency order: any category whose parent_temp_id is null or already inserted
-    const insertedIdByTempId = new Map<string, string>();
-    const remaining = [...allCategories];
-    let safety = 0;
-
-    while (remaining.length > 0) {
-      safety += 1;
-      if (safety > 20_000) {
-        throw new Error('Failed to insert categories (cycle or missing parent).');
-      }
-
-      const ready = remaining.filter(
-        (c) => !c.parent_temp_id || insertedIdByTempId.has(c.parent_temp_id)
-      );
-      if (ready.length === 0) {
-        const sample = remaining[0];
-        throw new Error(
-          `Failed to insert categories. Missing parent for ${sample.name} (${sample.temp_id}).`
-        );
-      }
-
-      const toInsert = ready.map((cat) => ({
+      const fieldRows = sec.fields.map((f, idx) => ({
         template_id: templateId,
-        section_id: cat.section_id,
-        parent_category_id: cat.parent_temp_id
-          ? insertedIdByTempId.get(cat.parent_temp_id) || null
-          : null,
-        name: cat.name,
-        max_points: cat.max_points,
-        category_type: cat.category_type,
-        description: cat.description,
-        panel_abbreviation: cat.panel_abbreviation || null,
-        display_order: cat.display_order,
-        weight: cat.weight,
+        section_id: sectionId,
+        name: f.name,
+        description: f.description || null,
+        display_order: idx,
+        field_type: f.field_type,
+        min_value: f.min_value,
+        max_value: f.max_value,
+        step: f.step,
+        max_points: f.max_points,
+        aggregation: f.aggregation,
       }));
+      const { data: insertedFields, error: fErr } = await sb
+        .from('scoring_fields').insert(fieldRows).select();
+      if (fErr) throw fErr;
 
-      const { data: inserted, error } = await supabase
-        .from('scoring_categories')
-        .insert(toInsert)
-        .select('id');
-      if (error) throw error;
-
-      inserted?.forEach((row, idx) => {
-        insertedIdByTempId.set(ready[idx].temp_id, row.id);
-      });
-
-      const readyTempIds = new Set(ready.map((r) => r.temp_id));
-      for (let i = remaining.length - 1; i >= 0; i -= 1) {
-        if (readyTempIds.has(remaining[i].temp_id)) {
-          remaining.splice(i, 1);
-        }
+      const optionRows: any[] = [];
+      const panelRows: any[] = [];
+      for (let j = 0; j < sec.fields.length; j++) {
+        const fId = insertedFields![j].id;
+        const f = sec.fields[j];
+        f.options.forEach((opt, oi) => {
+          optionRows.push({ field_id: fId, label: opt.label, value: opt.value, display_order: oi });
+        });
+        f.panels.forEach((abbr) => {
+          panelRows.push({ field_id: fId, panel_abbreviation: abbr });
+        });
+      }
+      if (optionRows.length > 0) {
+        const { error } = await sb.from('scoring_field_options').insert(optionRows);
+        if (error) throw error;
+      }
+      if (panelRows.length > 0) {
+        const { error } = await sb.from('scoring_field_panels').insert(panelRows);
+        if (error) throw error;
       }
     }
   };
 
+  const persistDeductions = async (templateId: string) => {
+    if (deductions.length === 0) return;
+    const rows = deductions.map((d, idx) => ({
+      template_id: templateId,
+      name: d.name,
+      points: d.points,
+      description: d.description || null,
+      category: d.category,
+      display_order: idx,
+    }));
+    const { error } = await sb.from('deduction_types').insert(rows);
+    if (error) throw error;
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: TemplateFormData) => {
-      // 1. Create template
-      const { data: template, error: templateError } = await supabase
+      const { data: template, error } = await sb
         .from('scoring_templates')
-        .insert({
-          name: data.name,
-          description: data.description,
-          event_id: data.event_id,
-          is_default: data.is_default,
-        })
-        .select()
-        .single();
-
-      if (templateError) throw templateError;
-
-      // 2. Create sections
-      if (sections.length > 0) {
-        const sectionsToInsert = sections.map((section, index) => ({
-          template_id: template.id,
-          name: section.name,
-          abbreviation: section.abbreviation,
-          description: section.description,
-          max_points: section.max_points,
-          default_panel_abbreviation: section.default_panel_abbreviation || null,
-          display_order: index,
-        }));
-
-        const { data: insertedSections, error: sectionsError } = await supabase
-          .from('scoring_sections')
-          .insert(sectionsToInsert)
-          .select();
-
-        if (sectionsError) throw sectionsError;
-
-        // 3. Create categories for each section
-        const sectionIdMap = new Map<string, string>();
-        insertedSections.forEach((inserted, index) => {
-          sectionIdMap.set(sections[index].temp_id, inserted.id);
-        });
-
-        const allCategories: any[] = [];
-        sections.forEach((section) => {
-          const sectionId = sectionIdMap.get(section.temp_id)!;
-          const flattened = flattenCategories(section.categories, sectionId);
-          allCategories.push(...flattened);
-        });
-
-        await insertCategoriesForTemplate(template.id, allCategories);
-      }
-
-      // 4. Create deduction types
-      if (deductions.length > 0) {
-        const deductionsToInsert = deductions.map((ded, index) => ({
-          template_id: template.id,
-          name: ded.name,
-          points: ded.points,
-          description: ded.description,
-          category: ded.category,
-          display_order: index,
-        }));
-
-        const { error: dedError } = await supabase
-          .from('deduction_types')
-          .insert(deductionsToInsert);
-
-        if (dedError) throw dedError;
-      }
-
+        .insert({ name: data.name, description: data.description, event_id: data.event_id, is_default: data.is_default })
+        .select().single();
+      if (error) throw error;
+      await persistSectionsAndFields(template.id);
+      await persistDeductions(template.id);
       return template;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scoring-templates-full'] });
-      toast({ title: 'Scoring template created successfully!' });
-      setIsDialogOpen(false);
-      setEditingTemplate(null);
-      form.reset();
-      setSections([]);
-      setDeductions([]);
+      toast({ title: 'Scoring template created!' });
+      closeDialog();
     },
-    onError: (error: any) => {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
-    },
+    onError: (error: any) => toast({ variant: 'destructive', title: 'Error', description: error.message }),
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: TemplateFormData }) => {
-      // 1. Update template
-      const { error: templateError } = await supabase
-        .from('scoring_templates')
-        .update({
-          name: data.name,
-          description: data.description,
-          event_id: data.event_id,
-          is_default: data.is_default,
-        })
-        .eq('id', id);
-
-      if (templateError) throw templateError;
-
-      // 2. Delete existing sections (cascades to categories)
-      {
-        const { error } = await supabase.from('scoring_sections').delete().eq('template_id', id);
-        if (error) throw error;
-      }
-
-      // 3. Delete existing deduction types
-      {
-        const { error } = await supabase.from('deduction_types').delete().eq('template_id', id);
-        if (error) throw error;
-      }
-
-      // 4. Delete remaining categories without sections
-      {
-        const { error } = await supabase.from('scoring_categories').delete().eq('template_id', id);
-        if (error) throw error;
-      }
-
-      // 5. Recreate sections and categories
-      if (sections.length > 0) {
-        const sectionsToInsert = sections.map((section, index) => ({
-          template_id: id,
-          name: section.name,
-          abbreviation: section.abbreviation,
-          description: section.description,
-          max_points: section.max_points,
-          default_panel_abbreviation: section.default_panel_abbreviation || null,
-          display_order: index,
-        }));
-
-        const { data: insertedSections, error: sectionsError } = await supabase
-          .from('scoring_sections')
-          .insert(sectionsToInsert)
-          .select();
-
-        if (sectionsError) throw sectionsError;
-
-        const sectionIdMap = new Map<string, string>();
-        insertedSections.forEach((inserted, index) => {
-          sectionIdMap.set(sections[index].temp_id, inserted.id);
-        });
-
-        const allCategories: any[] = [];
-        sections.forEach((section) => {
-          const sectionId = sectionIdMap.get(section.temp_id)!;
-          const flattened = flattenCategories(section.categories, sectionId);
-          allCategories.push(...flattened);
-        });
-
-        await insertCategoriesForTemplate(id, allCategories);
-      }
-
-      // 6. Recreate deduction types
-      if (deductions.length > 0) {
-        const deductionsToInsert = deductions.map((ded, index) => ({
-          template_id: id,
-          name: ded.name,
-          points: ded.points,
-          description: ded.description,
-          category: ded.category,
-          display_order: index,
-        }));
-
-        const { error: dedError } = await supabase
-          .from('deduction_types')
-          .insert(deductionsToInsert);
-
-        if (dedError) throw dedError;
-      }
+      const { error: tErr } = await sb.from('scoring_templates').update({
+        name: data.name, description: data.description, event_id: data.event_id, is_default: data.is_default,
+      }).eq('id', id);
+      if (tErr) throw tErr;
+      // wipe and recreate sections+fields (cascade handles fields/options/panels)
+      await sb.from('scoring_sections').delete().eq('template_id', id);
+      await sb.from('deduction_types').delete().eq('template_id', id);
+      await persistSectionsAndFields(id);
+      await persistDeductions(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scoring-templates-full'] });
-      toast({ title: 'Scoring template updated successfully!' });
-      setIsDialogOpen(false);
-      setEditingTemplate(null);
-      form.reset();
-      setSections([]);
-      setDeductions([]);
+      toast({ title: 'Scoring template updated!' });
+      closeDialog();
     },
-    onError: (error: any) => {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
-    },
+    onError: (error: any) => toast({ variant: 'destructive', title: 'Error', description: error.message }),
   });
 
   const lockMutation = useMutation({
     mutationFn: async ({ id, isLocked }: { id: string; isLocked: boolean }) => {
-      const { error } = await supabase
-        .from('scoring_templates')
-        .update({ is_locked: isLocked })
-        .eq('id', id);
+      const { error } = await sb.from('scoring_templates').update({ is_locked: isLocked }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: (_, { isLocked }) => {
@@ -365,358 +221,213 @@ export default function ScoringTemplates() {
       toast({ title: isLocked ? 'Template locked' : 'Template unlocked' });
       setLockConfirmTemplate(null);
     },
-    onError: (error: any) => {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
-    },
+    onError: (error: any) => toast({ variant: 'destructive', title: 'Error', description: error.message }),
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('scoring_templates').delete().eq('id', id);
+      const { error } = await sb.from('scoring_templates').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scoring-templates-full'] });
-      toast({ title: 'Template deleted successfully!' });
+      toast({ title: 'Template deleted' });
     },
-    onError: (error: any) => {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
-    },
+    onError: (error: any) => toast({ variant: 'destructive', title: 'Error', description: error.message }),
   });
 
   const duplicateMutation = useMutation({
-    mutationFn: async (sourceTemplate: any) => {
-      // 1. Create new template with "(Copy)" suffix
-      const { data: newTemplate, error: templateError } = await supabase
-        .from('scoring_templates')
-        .insert({
-          name: `${sourceTemplate.name} (Copy)`,
-          description: sourceTemplate.description,
-          event_id: sourceTemplate.event_id,
-          is_default: false,
-          is_locked: false,
-        })
-        .select()
-        .single();
+    mutationFn: async (src: any) => {
+      const { data: newTpl, error } = await sb.from('scoring_templates').insert({
+        name: `${src.name} (Copy)`,
+        description: src.description,
+        event_id: src.event_id,
+        is_default: false,
+        is_locked: false,
+      }).select().single();
+      if (error) throw error;
 
-      if (templateError) throw templateError;
-
-      // 2. Clone sections
-      const sourceSections = sourceTemplate.sections || [];
-      if (sourceSections.length > 0) {
-        const sectionsToInsert = sourceSections.map((s: any, index: number) => ({
-          template_id: newTemplate.id,
-          name: s.name,
-          abbreviation: s.abbreviation,
-          description: s.description,
-          max_points: s.max_points,
-          default_panel_abbreviation: s.default_panel_abbreviation ?? null,
-          display_order: s.display_order ?? index,
-        }));
-
-        const { data: insertedSections, error: sectionsError } = await supabase
-          .from('scoring_sections')
-          .insert(sectionsToInsert)
-          .select();
-
-        if (sectionsError) throw sectionsError;
-
-        // Map old section IDs to new section IDs
-        const sectionIdMap = new Map<string, string>();
-        sourceSections.forEach((oldSection: any, index: number) => {
-          sectionIdMap.set(oldSection.id, insertedSections![index].id);
-        });
-
-        // 3. Clone categories (handle parent-child relationships)
-        const sourceCategories = sourceTemplate.categories || [];
-        if (sourceCategories.length > 0) {
-          // First, insert categories without parent (root categories)
-          const oldIdToNewId = new Map<string, string>();
-          const remaining = [...sourceCategories];
-          let safety = 0;
-
-          while (remaining.length > 0) {
-            safety += 1;
-            if (safety > 20_000) {
-              throw new Error('Failed to clone categories (cycle or missing parent).');
-            }
-
-            // Find categories whose parent is null or already inserted
-            const ready = remaining.filter(
-              (c) => !c.parent_category_id || oldIdToNewId.has(c.parent_category_id)
+      // Clone sections+fields by remapping ids
+      const srcSections = (src.sections || []) as any[];
+      for (let i = 0; i < srcSections.length; i++) {
+        const ss = srcSections[i];
+        const { data: secIns, error: sErr } = await sb.from('scoring_sections').insert({
+          template_id: newTpl.id,
+          name: ss.name, abbreviation: ss.abbreviation,
+          description: ss.description, max_points: ss.max_points,
+          display_order: ss.display_order ?? i,
+        }).select().single();
+        if (sErr) throw sErr;
+        const sFields = (ss.fields || []) as any[];
+        for (let j = 0; j < sFields.length; j++) {
+          const f = sFields[j];
+          const { data: fIns, error: fErr } = await sb.from('scoring_fields').insert({
+            template_id: newTpl.id, section_id: secIns.id,
+            name: f.name, description: f.description, display_order: f.display_order ?? j,
+            field_type: f.field_type, min_value: f.min_value, max_value: f.max_value,
+            step: f.step, max_points: f.max_points, aggregation: f.aggregation,
+          }).select().single();
+          if (fErr) throw fErr;
+          const opts = (f.options || []) as any[];
+          if (opts.length) {
+            await sb.from('scoring_field_options').insert(
+              opts.map((o, oi) => ({ field_id: fIns.id, label: o.label, value: o.value, display_order: o.display_order ?? oi }))
             );
-
-            if (ready.length === 0) {
-              throw new Error('Failed to clone categories - missing parent.');
-            }
-
-            const toInsert = ready.map((cat) => ({
-              template_id: newTemplate.id,
-              section_id: cat.section_id ? sectionIdMap.get(cat.section_id) || null : null,
-              parent_category_id: cat.parent_category_id
-                ? oldIdToNewId.get(cat.parent_category_id) || null
-                : null,
-              name: cat.name,
-              max_points: cat.max_points,
-              category_type: cat.category_type,
-              description: cat.description,
-              panel_abbreviation: cat.panel_abbreviation ?? null,
-              display_order: cat.display_order,
-              weight: cat.weight,
-            }));
-
-            const { data: inserted, error: catError } = await supabase
-              .from('scoring_categories')
-              .insert(toInsert)
-              .select('id');
-
-            if (catError) throw catError;
-
-            inserted?.forEach((row, idx) => {
-              oldIdToNewId.set(ready[idx].id, row.id);
-            });
-
-            const readyIds = new Set(ready.map((r) => r.id));
-            for (let i = remaining.length - 1; i >= 0; i -= 1) {
-              if (readyIds.has(remaining[i].id)) {
-                remaining.splice(i, 1);
-              }
-            }
+          }
+          const links = (f.panel_links || []) as any[];
+          if (links.length) {
+            await sb.from('scoring_field_panels').insert(
+              links.map((l) => ({ field_id: fIns.id, panel_abbreviation: l.panel_abbreviation }))
+            );
           }
         }
       }
 
-      // 4. Clone deduction types
-      const sourceDeductions = sourceTemplate.deduction_types || [];
-      if (sourceDeductions.length > 0) {
-        const deductionsToInsert = sourceDeductions.map((d: any, index: number) => ({
-          template_id: newTemplate.id,
-          name: d.name,
-          points: d.points,
-          description: d.description,
-          category: d.category,
-          display_order: d.display_order ?? index,
-        }));
-
-        const { error: dedError } = await supabase
-          .from('deduction_types')
-          .insert(deductionsToInsert);
-
-        if (dedError) throw dedError;
+      const srcDeds = (src.deduction_types || []) as any[];
+      if (srcDeds.length) {
+        await sb.from('deduction_types').insert(
+          srcDeds.map((d, idx) => ({
+            template_id: newTpl.id, name: d.name, points: d.points,
+            description: d.description, category: d.category, display_order: d.display_order ?? idx,
+          }))
+        );
       }
-
-      return newTemplate;
+      return newTpl;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scoring-templates-full'] });
-      toast({ title: 'Template duplicated successfully!' });
+      toast({ title: 'Template duplicated' });
     },
-    onError: (error: any) => {
-      toast({ variant: 'destructive', title: 'Error duplicating template', description: error.message });
-    },
+    onError: (error: any) => toast({ variant: 'destructive', title: 'Error duplicating', description: error.message }),
   });
 
+  const closeDialog = () => {
+    setIsDialogOpen(false);
+    setEditingTemplate(null);
+    form.reset();
+    setSections([]);
+    setDeductions([]);
+  };
+
   const handleSubmit = (data: TemplateFormData) => {
-    if (editingTemplate) {
-      updateMutation.mutate({ id: editingTemplate.id, data });
-    } else {
-      createMutation.mutate(data);
-    }
+    if (editingTemplate) updateMutation.mutate({ id: editingTemplate.id, data });
+    else createMutation.mutate(data);
   };
 
   const handleNewTemplate = () => {
     setEditingTemplate(null);
-    form.reset({
-      name: '',
-      description: '',
-      event_id: '',
-      is_default: false,
-    });
-    setSections([]);
-    setDeductions([]);
+    form.reset({ name: '', description: '', event_id: '', is_default: false });
+    setSections([]); setDeductions([]);
     setIsDialogOpen(true);
   };
 
-  // Build hierarchical categories from flat list
-  const buildCategoryTree = (categories: any[], sectionId: string): CategoryItem[] => {
-    const sectionCats = categories.filter((c) => c.section_id === sectionId);
-    const mainCats = sectionCats.filter((c) => !c.parent_category_id);
-
-    return mainCats.map((cat) => ({
-      id: cat.id,
-      temp_id: cat.id,
-      name: cat.name,
-      max_points: Number(cat.max_points),
-      category_type: cat.category_type || 'main',
-      description: cat.description,
-      panel_abbreviation: cat.panel_abbreviation || '',
-      children: sectionCats
-        .filter((c) => c.parent_category_id === cat.id)
-        .map((child) => ({
-          id: child.id,
-          temp_id: child.id,
-          name: child.name,
-          max_points: Number(child.max_points),
-          category_type: child.category_type || 'difficulty',
-          description: child.description,
-          panel_abbreviation: child.panel_abbreviation || '',
-          children: [],
-        })),
-    }));
-  };
-
-  const handleEdit = (template: any) => {
-    if (template.is_locked) {
-      toast({
-        variant: 'destructive',
-        title: 'Template Locked',
-        description: 'This template is locked and cannot be edited. Unlock it first to make changes.',
-      });
+  const handleEdit = (tpl: any) => {
+    if (tpl.is_locked) {
+      toast({ variant: 'destructive', title: 'Template Locked', description: 'Unlock to edit.' });
       return;
     }
-
-    setEditingTemplate(template);
+    setEditingTemplate(tpl);
     form.reset({
-      name: template.name,
-      description: template.description || '',
-      event_id: template.event_id,
-      is_default: template.is_default,
+      name: tpl.name, description: tpl.description || '',
+      event_id: tpl.event_id, is_default: tpl.is_default,
     });
-
-    // Load sections with categories
-    const loadedSections: ScoringSection[] = (template.sections || []).map((s: any) => ({
-      id: s.id,
-      temp_id: s.id,
-      name: s.name,
-      abbreviation: s.abbreviation,
-      description: s.description,
-      max_points: Number(s.max_points),
-      default_panel_abbreviation: s.default_panel_abbreviation || '',
-      categories: buildCategoryTree(template.categories || [], s.id),
-    }));
+    const loadedSections: ScoringSection[] = (tpl.sections || [])
+      .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+      .map((s: any) => ({
+        id: s.id, temp_id: s.id,
+        name: s.name, abbreviation: s.abbreviation,
+        description: s.description, max_points: Number(s.max_points),
+        fields: (s.fields || [])
+          .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+          .map((f: any): ScoringField => ({
+            id: f.id, temp_id: f.id,
+            name: f.name, description: f.description,
+            field_type: f.field_type,
+            min_value: Number(f.min_value), max_value: Number(f.max_value),
+            step: Number(f.step), max_points: Number(f.max_points),
+            aggregation: f.aggregation,
+            panels: (f.panel_links || []).map((p: any) => p.panel_abbreviation),
+            options: (f.options || [])
+              .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+              .map((o: any) => ({ id: o.id, temp_id: o.id, label: o.label, value: Number(o.value) })),
+          })),
+      }));
     setSections(loadedSections);
-
-    // Load deduction types
-    const loadedDeductions: DeductionType[] = (template.deduction_types || []).map((d: any) => ({
-      id: d.id,
-      temp_id: d.id,
-      name: d.name,
-      points: Number(d.points),
-      description: d.description,
-      category: d.category,
-    }));
-    setDeductions(loadedDeductions);
-
+    setDeductions((tpl.deduction_types || []).map((d: any) => ({
+      id: d.id, temp_id: d.id, name: d.name, points: Number(d.points),
+      description: d.description, category: d.category,
+    })));
     setIsDialogOpen(true);
   };
 
-  const handleLockToggle = (template: any) => {
-    if (template.is_locked) {
-      lockMutation.mutate({ id: template.id, isLocked: false });
-    } else {
-      setLockConfirmTemplate(template);
-    }
+  const handleLockToggle = (tpl: any) => {
+    if (tpl.is_locked) lockMutation.mutate({ id: tpl.id, isLocked: false });
+    else setLockConfirmTemplate(tpl);
   };
 
-  const isEventInProgress = (template: any) => {
-    return template.event?.status === 'in_progress';
-  };
-
-  const getTotalPoints = (template: any) => {
-    const categories = template.categories || [];
-    // Only count leaf categories (no children)
-    const catIds = categories.map((c: any) => c.id);
-    const leafCats = categories.filter(
-      (c: any) => !categories.some((other: any) => other.parent_category_id === c.id)
+  const isEventInProgress = (tpl: any) => tpl.event?.status === 'in_progress';
+  const getTotalPoints = (tpl: any) =>
+    (tpl.sections || []).reduce(
+      (sum: number, s: any) => sum + (s.fields || []).reduce((a: number, f: any) => a + Number(f.max_points || 0), 0),
+      0
     );
-    return leafCats.reduce((sum: number, c: any) => sum + Number(c.max_points), 0);
-  };
+  const fieldCount = (tpl: any) =>
+    (tpl.sections || []).reduce((sum: number, s: any) => sum + (s.fields?.length || 0), 0);
 
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Scoring Templates</h1>
-          <p className="text-muted-foreground mt-1">Create professional scoring rubrics with sections and deductions</p>
+          <p className="text-muted-foreground mt-1">Build scoresheets with custom fields and panel assignments</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); else setIsDialogOpen(true); }}>
           <DialogTrigger asChild>
             <Button onClick={handleNewTemplate}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Template
+              <Plus className="w-4 h-4 mr-2" /> New Template
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingTemplate ? 'Edit Scoring Template' : 'Create Scoring Template'}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-                {/* Basic Info */}
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Template Name</FormLabel>
-                        <FormControl>
-                          <Input placeholder="Level 6 Senior All Girl" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="event_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Event</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select event" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {events?.map((event) => (
-                              <SelectItem key={event.id} value={event.id}>
-                                {event.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
+                  <FormField control={form.control} name="name" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="United Scoring System template for Level 6..." {...field} />
-                      </FormControl>
+                      <FormLabel>Template Name</FormLabel>
+                      <FormControl><Input placeholder="USASF Level 4 Senior" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>
-                  )}
-                />
+                  )} />
+                  <FormField control={form.control} name="event_id" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Event</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Select event" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {events?.map((e) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
+                <FormField control={form.control} name="description" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl><Textarea placeholder="Optional notes about this template..." {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
 
-                {/* Sections & Categories with Preview */}
                 <Tabs defaultValue="editor" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="editor">
-                      <Pencil className="w-4 h-4 mr-2" />
-                      Editor
-                    </TabsTrigger>
-                    <TabsTrigger value="preview">
-                      <Eye className="w-4 h-4 mr-2" />
-                      Judge Preview
-                    </TabsTrigger>
+                    <TabsTrigger value="editor"><Pencil className="w-4 h-4 mr-2" />Editor</TabsTrigger>
+                    <TabsTrigger value="preview"><Eye className="w-4 h-4 mr-2" />Preview</TabsTrigger>
                   </TabsList>
                   <TabsContent value="editor" className="mt-4">
                     <div className="border rounded-lg p-4">
@@ -725,28 +436,21 @@ export default function ScoringTemplates() {
                         deductions={deductions}
                         onSectionsChange={setSections}
                         onDeductionsChange={setDeductions}
+                        availablePanels={eventPanels}
                       />
                     </div>
                   </TabsContent>
                   <TabsContent value="preview" className="mt-4">
-                    <div className="border rounded-lg p-4 max-h-[500px] overflow-y-auto">
-                      <TemplatePreview
-                        templateName={form.watch('name')}
-                        sections={sections}
-                        deductions={deductions}
-                      />
+                    <div className="border rounded-lg p-4 max-h-[600px] overflow-y-auto">
+                      <TemplatePreview templateName={form.watch('name')} sections={sections} deductions={deductions} />
                     </div>
                   </TabsContent>
                 </Tabs>
 
                 <div className="flex justify-end gap-2 pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancel
-                  </Button>
+                  <Button type="button" variant="outline" onClick={closeDialog}>Cancel</Button>
                   <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-                    {(createMutation.isPending || updateMutation.isPending) && (
-                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    )}
+                    {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                     {editingTemplate ? 'Update Template' : 'Create Template'}
                   </Button>
                 </div>
@@ -757,126 +461,79 @@ export default function ScoringTemplates() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
-        </div>
+        <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>
       ) : templates && templates.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {templates.map((template) => (
-            <Card key={template.id} className={`relative ${template.is_locked ? 'border-warning/50' : ''}`}>
+          {templates.map((tpl: any) => (
+            <Card key={tpl.id} className={`relative ${tpl.is_locked ? 'border-warning/50' : ''}`}>
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <CardTitle className="text-lg">{template.name}</CardTitle>
-                      {template.is_locked && (
+                      <CardTitle className="text-lg">{tpl.name}</CardTitle>
+                      {tpl.is_locked && (
                         <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/30">
-                          <Lock className="w-3 h-3 mr-1" />
-                          Locked
+                          <Lock className="w-3 h-3 mr-1" /> Locked
                         </Badge>
                       )}
                     </div>
-                    <CardDescription>{template.event?.name}</CardDescription>
-                    {isEventInProgress(template) && !template.is_locked && (
-                      <p className="text-xs text-warning mt-1">⚠️ Event in progress - consider locking</p>
+                    <CardDescription>{tpl.event?.name}</CardDescription>
+                    {isEventInProgress(tpl) && !tpl.is_locked && (
+                      <p className="text-xs text-warning mt-1">⚠️ Event in progress — consider locking</p>
                     )}
                   </div>
                   <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => duplicateMutation.mutate(template)}
-                      disabled={duplicateMutation.isPending}
-                      title="Duplicate template"
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => duplicateMutation.mutate(tpl)} title="Duplicate">
                       <Copy className="w-4 h-4 text-muted-foreground" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleLockToggle(template)}
-                      title={template.is_locked ? 'Unlock template' : 'Lock template'}
-                    >
-                      {template.is_locked ? (
-                        <Unlock className="w-4 h-4 text-warning" />
-                      ) : (
-                        <Lock className="w-4 h-4 text-muted-foreground" />
-                      )}
+                    <Button variant="ghost" size="icon" onClick={() => handleLockToggle(tpl)}
+                      title={tpl.is_locked ? 'Unlock' : 'Lock'}>
+                      {tpl.is_locked ? <Unlock className="w-4 h-4 text-warning" /> : <Lock className="w-4 h-4 text-muted-foreground" />}
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(template)}
-                      disabled={template.is_locked}
-                      title={template.is_locked ? 'Template is locked' : 'Edit template'}
-                    >
-                      <Pencil className={`w-4 h-4 ${template.is_locked ? 'text-muted-foreground' : ''}`} />
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(tpl)} disabled={tpl.is_locked}>
+                      <Pencil className="w-4 h-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        if (template.is_locked) {
-                          toast({
-                            variant: 'destructive',
-                            title: 'Template Locked',
-                            description: 'Unlock this template before deleting.',
-                          });
-                          return;
-                        }
-                        if (confirm('Delete this template?')) {
-                          deleteMutation.mutate(template.id);
-                        }
-                      }}
-                      disabled={template.is_locked}
-                      title={template.is_locked ? 'Template is locked' : 'Delete template'}
-                    >
-                      <Trash2 className={`w-4 h-4 ${template.is_locked ? 'text-muted-foreground' : 'text-destructive'}`} />
+                    <Button variant="ghost" size="icon" disabled={tpl.is_locked}
+                      onClick={() => { if (confirm('Delete this template?')) deleteMutation.mutate(tpl.id); }}>
+                      <Trash2 className={`w-4 h-4 ${tpl.is_locked ? 'text-muted-foreground' : 'text-destructive'}`} />
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">{template.description}</p>
-
-                {/* Stats */}
+                <p className="text-sm text-muted-foreground mb-4">{tpl.description}</p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   <Badge variant="outline" className="text-xs">
-                    <Layers className="w-3 h-3 mr-1" />
-                    {template.sections?.length || 0} Sections
+                    <Layers className="w-3 h-3 mr-1" />{tpl.sections?.length || 0} Sections
                   </Badge>
                   <Badge variant="outline" className="text-xs">
-                    <Eye className="w-3 h-3 mr-1" />
-                    {template.categories?.length || 0} Categories
+                    <Eye className="w-3 h-3 mr-1" />{fieldCount(tpl)} Fields
                   </Badge>
                   <Badge variant="secondary" className="text-xs font-bold">
-                    {getTotalPoints(template).toFixed(1)} pts
+                    {getTotalPoints(tpl).toFixed(2)} pts
                   </Badge>
                 </div>
-
-                {/* Sections preview */}
-                {template.sections && template.sections.length > 0 && (
+                {tpl.sections && tpl.sections.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Sections</p>
-                    {template.sections.slice(0, 4).map((section: any) => (
-                      <div key={section.id} className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">
-                          {section.abbreviation} - {section.name}
-                        </span>
-                        <span className="font-medium">{Number(section.max_points).toFixed(1)} pts</span>
-                      </div>
-                    ))}
-                    {template.sections.length > 4 && (
-                      <p className="text-xs text-muted-foreground">+{template.sections.length - 4} more...</p>
+                    {tpl.sections.slice(0, 4).map((s: any) => {
+                      const pts = (s.fields || []).reduce((a: number, f: any) => a + Number(f.max_points || 0), 0);
+                      return (
+                        <div key={s.id} className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">{s.abbreviation} — {s.name}</span>
+                          <span className="font-medium">{pts.toFixed(1)} pts</span>
+                        </div>
+                      );
+                    })}
+                    {tpl.sections.length > 4 && (
+                      <p className="text-xs text-muted-foreground">+{tpl.sections.length - 4} more...</p>
                     )}
                   </div>
                 )}
-
-                {/* Deductions preview */}
-                {template.deduction_types && template.deduction_types.length > 0 && (
+                {tpl.deduction_types && tpl.deduction_types.length > 0 && (
                   <div className="mt-3 pt-3 border-t">
                     <p className="text-xs text-muted-foreground">
-                      {template.deduction_types.length} deduction type{template.deduction_types.length !== 1 ? 's' : ''} defined
+                      {tpl.deduction_types.length} deduction type{tpl.deduction_types.length !== 1 ? 's' : ''} defined
                     </p>
                   </div>
                 )}
@@ -893,15 +550,12 @@ export default function ScoringTemplates() {
         </Card>
       )}
 
-      {/* Lock Confirmation Dialog */}
       <AlertDialog open={!!lockConfirmTemplate} onOpenChange={() => setLockConfirmTemplate(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Lock Template?</AlertDialogTitle>
             <AlertDialogDescription>
-              Locking "{lockConfirmTemplate?.name}" will prevent any edits to this template.
-              This is recommended when an event is in progress to ensure scoring consistency.
-              You can unlock it later if needed.
+              Locking "{lockConfirmTemplate?.name}" prevents edits. You can unlock later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -910,8 +564,7 @@ export default function ScoringTemplates() {
               onClick={() => lockMutation.mutate({ id: lockConfirmTemplate.id, isLocked: true })}
               className="bg-warning text-warning-foreground hover:bg-warning/90"
             >
-              <Lock className="w-4 h-4 mr-2" />
-              Lock Template
+              <Lock className="w-4 h-4 mr-2" /> Lock Template
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

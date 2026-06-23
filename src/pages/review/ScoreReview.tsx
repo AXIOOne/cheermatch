@@ -8,11 +8,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Play, Trophy, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import logoBlack from '@/assets/logo-black.png';
 
-interface ScoreCategory {
+interface ScoreField {
   name: string;
   points: number;
   max_points: number;
-  weight: number;
+  section_name?: string;
 }
 
 interface Score {
@@ -21,7 +21,7 @@ interface Score {
   deductions: number;
   comments: string | null;
   submitted_at: string;
-  categories: ScoreCategory[] | null;
+  fields: ScoreField[] | null;
 }
 
 interface ReviewData {
@@ -243,20 +243,23 @@ export default function ScoreReview() {
                           </div>
                         )}
 
-                        {/* Category Breakdown */}
-                        {score.categories && score.categories.length > 0 && (
+                        {/* Field Breakdown */}
+                        {score.fields && score.fields.length > 0 && (
                           <div className="space-y-2">
                             <p className="text-sm font-medium text-muted-foreground">
                               Score Breakdown
                             </p>
-                            {score.categories.map((cat, catIdx) => (
-                              <div 
-                                key={catIdx}
+                            {score.fields.map((f, idx) => (
+                              <div
+                                key={idx}
                                 className="flex items-center justify-between py-2 border-b last:border-0"
                               >
-                                <span className="text-sm">{cat.name}</span>
+                                <span className="text-sm">
+                                  {f.section_name ? <span className="text-muted-foreground mr-1">{f.section_name} —</span> : null}
+                                  {f.name}
+                                </span>
                                 <span className="text-sm font-medium">
-                                  {cat.points} / {cat.max_points}
+                                  {f.points} / {f.max_points}
                                 </span>
                               </div>
                             ))}
