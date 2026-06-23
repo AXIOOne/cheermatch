@@ -365,43 +365,48 @@ export default function ScorePerformance() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <Card>
-              <CardContent className="p-0">
-                <div className="aspect-video bg-black rounded-t-lg flex items-center justify-center">
-                  {submission.video_url ? (
-                    <video src={submission.video_url} controls className="w-full h-full rounded-t-lg" />
-                  ) : (
-                    <div className="text-white/50 text-center">
-                      <Play className="w-16 h-16 mx-auto mb-2" /><p>Video not available</p>
-                    </div>
-                  )}
-                </div>
-                <div className="p-4 flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    {submission.duration_seconds
-                      ? `${Math.floor(submission.duration_seconds / 60)}:${(submission.duration_seconds % 60).toString().padStart(2, '0')}`
-                      : 'Duration unknown'}
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        {/* Top row: large video + stacked team info */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <CardContent className="p-0">
+              <div className="aspect-video bg-black rounded-t-lg flex items-center justify-center">
+                {submission.video_url ? (
+                  <video src={submission.video_url} controls className="w-full h-full rounded-t-lg" />
+                ) : (
+                  <div className="text-white/50 text-center">
+                    <Play className="w-16 h-16 mx-auto mb-2" /><p>Video not available</p>
                   </div>
-                  <Button variant="outline" size="sm"><RotateCcw className="w-4 h-4 mr-1" /> Replay</Button>
+                )}
+              </div>
+              <div className="p-4 flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {submission.duration_seconds
+                    ? `${Math.floor(submission.duration_seconds / 60)}:${(submission.duration_seconds % 60).toString().padStart(2, '0')}`
+                    : 'Duration unknown'}
                 </div>
-              </CardContent>
-            </Card>
+                <Button variant="outline" size="sm"><RotateCcw className="w-4 h-4 mr-1" /> Replay</Button>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Team Information</CardTitle></CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-muted-foreground">Event</span><p className="font-medium">{submission.event?.name}</p></div>
-                <div><span className="text-muted-foreground">Division</span><p className="font-medium">{submission.team?.division?.name}</p></div>
-                <div><span className="text-muted-foreground">Level</span><p className="font-medium">Level {submission.team?.level?.level_number}</p></div>
-                <div><span className="text-muted-foreground">Athletes</span><p className="font-medium">{submission.team?.athlete_count}</p></div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="lg:col-span-1">
+            <CardHeader><CardTitle className="text-lg">Team Information</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div><span className="text-muted-foreground">Team</span><p className="font-medium">{submission.team?.name}</p></div>
+              <div><span className="text-muted-foreground">Gym</span><p className="font-medium">{submission.team?.gym_name}</p></div>
+              <div><span className="text-muted-foreground">Event</span><p className="font-medium">{submission.event?.name}</p></div>
+              <div><span className="text-muted-foreground">Division</span><p className="font-medium">{submission.team?.division?.name}</p></div>
+              <div><span className="text-muted-foreground">Level</span><p className="font-medium">Level {submission.team?.level?.level_number}</p></div>
+              <div><span className="text-muted-foreground">Athletes</span><p className="font-medium">{submission.team?.athlete_count}</p></div>
+            </CardContent>
+          </Card>
+        </div>
 
-          <div className="space-y-4">
+        {/* Bottom row: scoring fields + comments side panel */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-4 lg:col-span-2">
+
             {visibleSections.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
