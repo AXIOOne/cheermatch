@@ -97,6 +97,7 @@ export default function ScoringTemplates() {
         section_id: sectionId,
         display_order: index,
         description: cat.description,
+        panel_abbreviation: cat.panel_abbreviation || null,
         weight: 1,
       });
       if (cat.children.length > 0) {
