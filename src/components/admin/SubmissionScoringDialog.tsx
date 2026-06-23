@@ -203,7 +203,9 @@ export default function SubmissionScoringDialog({
     setFieldScores(prev => ({ ...prev, [fieldId]: { ...prev[fieldId], field_id: fieldId, points: prev[fieldId]?.points || 0, notes } }));
 
   const calculateTotalScore = () => {
-    const deductionsTotal = calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts);
+    const deductionsTotal = isSdPanel
+      ? calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts)
+      : 0;
     let total = 0;
     visibleSections.forEach((s: any) => {
       s.visibleFields.forEach((f: any) => {
