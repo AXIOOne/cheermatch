@@ -21,15 +21,23 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
-  const { user, signIn } = useAuth();
+  const { user, loading, rolesLoaded, signIn, isAdmin, isJudge, isGymCoach } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    if (user) {
-      navigate('/');
+    if (loading || !user || !rolesLoaded) return;
+
+    if (isAdmin) {
+      navigate('/admin', { replace: true });
+    } else if (isJudge) {
+      navigate('/judge', { replace: true });
+    } else if (isGymCoach) {
+      navigate('/coach', { replace: true });
+    } else {
+      navigate('/', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, loading, rolesLoaded, isAdmin, isJudge, isGymCoach, navigate]);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
