@@ -199,7 +199,7 @@ export default function SubmissionScoresheet() {
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
         </Button>
         <div className="flex items-center gap-2 flex-wrap">
-          {(submission.status === 'imported' || submission.status === 'denied') && (
+          {(submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'denied') && (
             <Button
               size="sm"
               onClick={() => updateStatusMutation.mutate('approved')}
@@ -208,7 +208,7 @@ export default function SubmissionScoresheet() {
               <Check className="w-4 h-4 mr-2" /> Approve
             </Button>
           )}
-          {(submission.status === 'imported' || submission.status === 'approved') && (
+          {(submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'approved') && (
             <Button
               size="sm"
               variant="destructive"
