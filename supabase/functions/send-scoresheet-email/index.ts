@@ -209,7 +209,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
       })),
     });
     const pdfBytes = await buildScoresheetPdf(sheetData);
-    const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
+    let binary = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < pdfBytes.length; i += CHUNK) {
+      binary += String.fromCharCode.apply(null, pdfBytes.subarray(i, i + CHUNK) as unknown as number[]);
+    }
+    const pdfBase64 = btoa(binary);
     const safeName = `${team.name || 'Team'} - ${event?.name || 'Event'}`.replace(/[^\w\s-]/g, '').trim() || 'scoresheet';
 
     const { data: emailData, error: emailError } = await resend.emails.send({
