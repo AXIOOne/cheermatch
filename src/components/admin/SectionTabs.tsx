@@ -3,7 +3,8 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2 } from 'lucide-react';
-import ScoringCategoryTree, { CategoryItem } from './ScoringCategoryTree';
+import SectionFieldsTable from './SectionFieldsTable';
+import { ScoringField } from './FieldBuilderDialog';
 import DeductionTypeManager, { DeductionType } from './DeductionTypeManager';
 
 export interface ScoringSection {
@@ -13,8 +14,7 @@ export interface ScoringSection {
   abbreviation: string;
   description?: string;
   max_points: number;
-  default_panel_abbreviation?: string;
-  categories: CategoryItem[];
+  fields: ScoringField[];
 }
 
 interface SectionTabsProps {
@@ -22,6 +22,7 @@ interface SectionTabsProps {
   deductions: DeductionType[];
   onSectionsChange: (sections: ScoringSection[]) => void;
   onDeductionsChange: (deductions: DeductionType[]) => void;
+  availablePanels?: string[];
 }
 
 function generateTempId() {
@@ -29,67 +30,53 @@ function generateTempId() {
 }
 
 const DEFAULT_SECTIONS: Omit<ScoringSection, 'temp_id'>[] = [
-  { name: 'Building 1', abbreviation: 'B1', max_points: 22, categories: [], description: 'Stunts, Pyramids, and Tosses', default_panel_abbreviation: 'B1' },
-  { name: 'Building 2', abbreviation: 'B2', max_points: 22, categories: [], description: 'Stunts, Pyramids, and Tosses', default_panel_abbreviation: 'B2' },
-  { name: 'Tumbling 1', abbreviation: 'T1', max_points: 20, categories: [], description: 'Standing, Running Tumbling, and Jumps', default_panel_abbreviation: 'T1' },
-  { name: 'Tumbling 2', abbreviation: 'T2', max_points: 20, categories: [], description: 'Standing, Running Tumbling, and Jumps', default_panel_abbreviation: 'T2' },
-  { name: 'Overall', abbreviation: 'OV', max_points: 4, categories: [], description: 'Dance, Formations & Transitions', default_panel_abbreviation: 'OV' },
-  { name: 'All Judges', abbreviation: 'ALL', max_points: 4, categories: [], description: 'Routine Creativity and Showmanship' },
+  { name: 'Stunts', abbreviation: 'STU', max_points: 0, fields: [] },
+  { name: 'Pyramids', abbreviation: 'PYR', max_points: 0, fields: [] },
+  { name: 'Tosses', abbreviation: 'TOS', max_points: 0, fields: [] },
+  { name: 'Standing Tumbling', abbreviation: 'ST', max_points: 0, fields: [] },
+  { name: 'Running Tumbling', abbreviation: 'RT', max_points: 0, fields: [] },
+  { name: 'Jumps', abbreviation: 'JMP', max_points: 0, fields: [] },
+  { name: 'Dance', abbreviation: 'DAN', max_points: 0, fields: [] },
 ];
+
+function sectionPoints(s: ScoringSection): number {
+  return s.fields.reduce((sum, f) => sum + (Number(f.max_points) || 0), 0);
+}
 
 export default function SectionTabs({
   sections,
   deductions,
   onSectionsChange,
   onDeductionsChange,
+  availablePanels,
 }: SectionTabsProps) {
   const addSection = () => {
     onSectionsChange([
       ...sections,
-      {
-        temp_id: generateTempId(),
-        name: '',
-        abbreviation: '',
-        max_points: 0,
-        categories: [],
-      },
+      { temp_id: generateTempId(), name: '', abbreviation: '', max_points: 0, fields: [] },
     ]);
   };
 
   const updateSection = (index: number, updates: Partial<ScoringSection>) => {
-    const newSections = [...sections];
-    newSections[index] = { ...newSections[index], ...updates };
-    onSectionsChange(newSections);
+    const next = [...sections];
+    next[index] = { ...next[index], ...updates };
+    onSectionsChange(next);
   };
 
-  const deleteSection = (index: number) => {
+  const deleteSection = (index: number) =>
     onSectionsChange(sections.filter((_, i) => i !== index));
-  };
 
-  const addDefaultSections = () => {
+  const addDefaults = () => {
     onSectionsChange([
       ...sections,
-      ...DEFAULT_SECTIONS.map((s) => ({
-        ...s,
-        temp_id: generateTempId(),
-      })),
+      ...DEFAULT_SECTIONS.map((s) => ({ ...s, temp_id: generateTempId() })),
     ]);
   };
 
-  const totalPoints = sections.reduce((sum, section) => {
-    // Calculate from categories
-    const sectionPoints = section.categories.reduce((catSum, cat) => {
-      if (cat.children.length > 0) {
-        return catSum + cat.children.reduce((childSum, child) => childSum + child.max_points, 0);
-      }
-      return catSum + cat.max_points;
-    }, 0);
-    return sum + sectionPoints;
-  }, 0);
+  const totalPoints = sections.reduce((sum, s) => sum + sectionPoints(s), 0);
 
   return (
     <div className="space-y-4">
-      {/* Summary */}
       <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
         <div className="flex items-center gap-4">
           <span className="text-sm font-medium">
@@ -97,19 +84,17 @@ export default function SectionTabs({
           </span>
           <span className="text-sm text-muted-foreground">|</span>
           <span className="text-sm">
-            Total: <span className="font-bold text-primary">{totalPoints.toFixed(1)} pts</span>
+            Total: <span className="font-bold text-primary">{totalPoints.toFixed(2)} pts</span>
           </span>
         </div>
         <div className="flex gap-2">
           {sections.length === 0 && (
-            <Button type="button" variant="secondary" size="sm" onClick={addDefaultSections}>
-              <Plus className="w-4 h-4 mr-1" />
-              Add Standard Sections
+            <Button type="button" variant="secondary" size="sm" onClick={addDefaults}>
+              <Plus className="w-4 h-4 mr-1" /> Add Standard Sections
             </Button>
           )}
           <Button type="button" variant="outline" size="sm" onClick={addSection}>
-            <Plus className="w-4 h-4 mr-1" />
-            Add Section
+            <Plus className="w-4 h-4 mr-1" /> Add Section
           </Button>
         </div>
       </div>
@@ -117,30 +102,20 @@ export default function SectionTabs({
       {sections.length === 0 ? (
         <div className="text-center py-12 border border-dashed rounded-lg">
           <p className="text-muted-foreground mb-4">
-            No sections yet. Add the standard judge sections or create custom ones.
+            No sections yet. Sections are the rows of the scoresheet.
           </p>
-          <Button type="button" onClick={addDefaultSections}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Standard Sections (B1, B2, T1, T2, Overall, All Judges)
+          <Button type="button" onClick={addDefaults}>
+            <Plus className="w-4 h-4 mr-2" /> Add Standard Sections
           </Button>
         </div>
       ) : (
         <Tabs defaultValue={sections[0]?.temp_id || 'deductions'} className="w-full">
           <TabsList className="w-full flex-wrap h-auto gap-1 p-1">
-            {sections.map((section) => (
-              <TabsTrigger
-                key={section.temp_id}
-                value={section.temp_id}
-                className="flex-shrink-0"
-              >
-                {section.abbreviation || section.name || 'New Section'}
+            {sections.map((s) => (
+              <TabsTrigger key={s.temp_id} value={s.temp_id} className="flex-shrink-0">
+                {s.abbreviation || s.name || 'New Section'}
                 <span className="ml-1 text-xs text-muted-foreground">
-                  ({section.categories.reduce((sum, cat) => {
-                    if (cat.children.length > 0) {
-                      return sum + cat.children.reduce((s, c) => s + c.max_points, 0);
-                    }
-                    return sum + cat.max_points;
-                  }, 0).toFixed(1)})
+                  ({sectionPoints(s).toFixed(1)})
                 </span>
               </TabsTrigger>
             ))}
@@ -151,88 +126,57 @@ export default function SectionTabs({
 
           {sections.map((section, index) => (
             <TabsContent key={section.temp_id} value={section.temp_id} className="space-y-4">
-              {/* Section header fields */}
               <Card className="p-4">
                 <div className="flex items-start gap-4">
-                  <div className="flex-1 grid grid-cols-5 gap-3">
+                  <div className="flex-1 grid grid-cols-4 gap-3">
                     <div className="col-span-2">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Section Name
-                      </label>
+                      <label className="text-xs font-medium text-muted-foreground">Section Name</label>
                       <Input
                         value={section.name}
                         onChange={(e) => updateSection(index, { name: e.target.value })}
-                        placeholder="e.g., Building"
+                        placeholder="e.g., Stunts"
                         className="mt-1"
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Abbreviation
-                      </label>
+                      <label className="text-xs font-medium text-muted-foreground">Abbreviation</label>
                       <Input
                         value={section.abbreviation}
-                        onChange={(e) =>
-                          updateSection(index, { abbreviation: e.target.value })
-                        }
-                        placeholder="e.g., B1"
+                        onChange={(e) => updateSection(index, { abbreviation: e.target.value })}
+                        placeholder="STU"
                         className="mt-1"
-                        maxLength={4}
+                        maxLength={6}
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Default Panel
-                      </label>
-                      <Input
-                        value={section.default_panel_abbreviation || ''}
-                        onChange={(e) =>
-                          updateSection(index, { default_panel_abbreviation: e.target.value.toUpperCase() })
-                        }
-                        placeholder="e.g., B1"
-                        className="mt-1"
-                        maxLength={4}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Description
-                      </label>
+                      <label className="text-xs font-medium text-muted-foreground">Description</label>
                       <Input
                         value={section.description || ''}
-                        onChange={(e) =>
-                          updateSection(index, { description: e.target.value })
-                        }
-                        placeholder="Optional description"
+                        onChange={(e) => updateSection(index, { description: e.target.value })}
+                        placeholder="Optional"
                         className="mt-1"
                       />
                     </div>
                   </div>
                   <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => deleteSection(index)}
-                    className="mt-5"
+                    type="button" variant="ghost" size="icon"
+                    onClick={() => deleteSection(index)} className="mt-5"
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>
                 </div>
               </Card>
 
-              {/* Categories for this section */}
-              <ScoringCategoryTree
-                categories={section.categories}
-                onChange={(categories) => updateSection(index, { categories })}
+              <SectionFieldsTable
+                fields={section.fields}
+                onChange={(fields) => updateSection(index, { fields })}
+                availablePanels={availablePanels}
               />
             </TabsContent>
           ))}
 
           <TabsContent value="deductions" className="space-y-4">
-            <DeductionTypeManager
-              deductions={deductions}
-              onChange={onDeductionsChange}
-            />
+            <DeductionTypeManager deductions={deductions} onChange={onDeductionsChange} />
           </TabsContent>
         </Tabs>
       )}
