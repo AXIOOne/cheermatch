@@ -16,64 +16,83 @@ interface AssignPanelsDialogProps {
 
 const UNASSIGNED = '__unassigned__';
 
+interface AssignmentDivision {
+  id: string;
+  name: string;
+  scoring_template_id: string | null;
+}
+
+interface AssignmentSection {
+  id: string;
+  template_id: string;
+  name: string;
+  abbreviation: string;
+  default_panel_abbreviation: string | null;
+  display_order: number;
+}
+
 export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Default scoring template for this event
-  const { data: template } = useQuery({
-    queryKey: ['event-default-template', eventId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('scoring_templates')
-        .select('id, name')
-        .eq('event_id', eventId)
-        .eq('is_default', true)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: sections, isLoading: sectionsLoading } = useQuery({
-    queryKey: ['template-sections', template?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('scoring_sections')
-        .select('id, name, abbreviation, default_panel_abbreviation, display_order')
-        .eq('template_id', template!.id)
-        .order('display_order');
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!template?.id,
-  });
-
-  // Divisions that have submissions for this event
+  // Divisions that have submitted teams for this event
   const { data: divisions, isLoading: divisionsLoading } = useQuery({
     queryKey: ['event-submission-divisions', eventId],
     queryFn: async () => {
       const { data: subs, error } = await supabase
         .from('video_submissions')
-        .select('team:teams(division_id)')
+        .select('team_id')
         .eq('event_id', eventId);
       if (error) throw error;
-      const divisionIds = [
-        ...new Set(
-          (subs || [])
-            .map((s: any) => s.team?.division_id)
-            .filter((id: string | null | undefined): id is string => !!id)
-        ),
-      ];
-      if (divisionIds.length === 0) return [];
-      const { data: divs, error: dErr } = await supabase
-        .from('divisions')
-        .select('id, name')
-        .in('id', divisionIds);
-      if (dErr) throw dErr;
-      return (divs || []).sort((a, b) => a.name.localeCompare(b.name));
+      const teamIds = [...new Set((subs || []).map(s => s.team_id).filter(Boolean))];
+      if (teamIds.length === 0) return [];
+
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select('division:divisions(id, name, scoring_template_id)')
+        .eq('event_id', eventId)
+        .in('id', teamIds);
+      if (teamsError) throw teamsError;
+
+      const byId = new Map<string, AssignmentDivision>();
+      (teams || []).forEach((team: any) => {
+        if (team.division?.id) {
+          byId.set(team.division.id, team.division);
+        }
+      });
+
+      return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
     },
+    enabled: !!eventId,
   });
+
+  const templateIds = useMemo(
+    () => [...new Set((divisions || []).map(div => div.scoring_template_id).filter((id): id is string => !!id))],
+    [divisions]
+  );
+
+  const { data: sections, isLoading: sectionsLoading } = useQuery({
+    queryKey: ['division-template-sections', templateIds],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('scoring_sections')
+        .select('id, template_id, name, abbreviation, default_panel_abbreviation, display_order')
+        .in('template_id', templateIds)
+        .order('display_order');
+      if (error) throw error;
+      return data as AssignmentSection[];
+    },
+    enabled: templateIds.length > 0,
+  });
+
+  const sectionsByTemplate = useMemo(() => {
+    const grouped = new Map<string, AssignmentSection[]>();
+    (sections || []).forEach(section => {
+      const existing = grouped.get(section.template_id) || [];
+      grouped.set(section.template_id, [...existing, section]);
+    });
+    return grouped;
+  }, [sections]);
 
   // Judges (users with judge role)
   const { data: judges, isLoading: judgesLoading } = useQuery({
@@ -171,11 +190,7 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
       </TabsList>
 
       <TabsContent value="assignments" className="mt-4">
-        {!template ? (
-          <p className="text-center py-12 text-muted-foreground">
-            No default scoring template found for this event. Configure a template first.
-          </p>
-        ) : isLoading ? (
+        {isLoading ? (
           <div className="flex justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
@@ -183,19 +198,28 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
           <p className="text-center py-12 text-muted-foreground">
             No divisions with submitted teams yet.
           </p>
-        ) : !sections || sections.length === 0 ? (
-          <p className="text-center py-12 text-muted-foreground">
-            The scoring template has no sections.
-          </p>
         ) : (
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-            {divisions.map(div => (
-              <Card key={div.id}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">{div.name}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {sections.map(section => {
+            {divisions.map(div => {
+              const divisionSections = div.scoring_template_id
+                ? sectionsByTemplate.get(div.scoring_template_id) || []
+                : [];
+
+              return (
+                <Card key={div.id}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">{div.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {!div.scoring_template_id ? (
+                      <p className="text-sm text-muted-foreground">
+                        No scoring template is assigned to this division.
+                      </p>
+                    ) : divisionSections.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        This division's scoring template has no judging sections.
+                      </p>
+                    ) : divisionSections.map(section => {
                     const key = `${div.id}:${section.id}`;
                     const current = assignmentMap.get(key)?.judge_user_id ?? '';
                     return (
@@ -232,10 +256,11 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
                         </div>
                       </div>
                     );
-                  })}
-                </CardContent>
-              </Card>
-            ))}
+                    })}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </TabsContent>
