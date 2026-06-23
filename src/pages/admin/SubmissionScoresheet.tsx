@@ -26,6 +26,8 @@ export default function SubmissionScoresheet() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin } = useAuth();
+  const [editTeamOpen, setEditTeamOpen] = useState(false);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: SubmissionStatus) => {
