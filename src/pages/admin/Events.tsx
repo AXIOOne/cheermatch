@@ -353,26 +353,48 @@ export default function Events() {
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
-                      name="registration_deadline"
+                      name="discipline"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Registration Deadline</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
+                          <FormLabel>Discipline</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a discipline" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {DISCIPLINES.map((d) => (
+                                <SelectItem key={d.value} value={d.value}>
+                                  {d.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
                     <FormField
                       control={form.control}
-                      name="broadcast_deadline"
+                      name="time_zone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Submission Deadline</FormLabel>
-                          <FormControl>
-                            <Input type="date" {...field} />
-                          </FormControl>
+                          <FormLabel>Time Zone</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a time zone" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent className="max-h-80">
+                              {TIME_ZONES.map((tz) => (
+                                <SelectItem key={tz} value={tz}>
+                                  {tz}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
