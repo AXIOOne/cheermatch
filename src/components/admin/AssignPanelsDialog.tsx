@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,8 +16,6 @@ interface AssignPanelsDialogProps {
   eventId: string;
   onClose: () => void;
 }
-
-const UNASSIGNED = '__unassigned__';
 
 interface AssignmentDivision {
   id: string;
@@ -143,43 +141,95 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
     return m;
   }, [assignments]);
 
+  // Pending (staged) edits keyed by `${divisionId}:${sectionId}` → judge_user_id | null
+  const [pending, setPending] = useState<Record<string, string | null>>({});
+
+  // Reset pending whenever the underlying assignments change (e.g. after Save)
+  useEffect(() => {
+    setPending({});
+  }, [assignments]);
+
+  const getCurrentValue = (divisionId: string, sectionId: string): string => {
+    const key = `${divisionId}:${sectionId}`;
+    if (key in pending) return pending[key] ?? '';
+    return assignmentMap.get(key)?.judge_user_id ?? '';
+  };
+
+  const isModified = (divisionId: string, sectionId: string): boolean => {
+    const key = `${divisionId}:${sectionId}`;
+    if (!(key in pending)) return false;
+    const original = assignmentMap.get(key)?.judge_user_id ?? null;
+    return (pending[key] ?? null) !== original;
+  };
+
+  const modifiedCount = useMemo(() => {
+    return Object.keys(pending).filter(key => {
+      const [divisionId, sectionId] = key.split(':');
+      return isModified(divisionId, sectionId);
+    }).length;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending, assignmentMap]);
+
   const saveMutation = useMutation({
-    mutationFn: async (args: { divisionId: string; sectionId: string; judgeUserId: string | null }) => {
-      const key = `${args.divisionId}:${args.sectionId}`;
-      const existing = assignmentMap.get(key);
+    mutationFn: async () => {
+      const ops: Promise<any>[] = [];
 
-      if (!args.judgeUserId) {
-        if (existing) {
-          const { error } = await supabase.from('judge_assignments').delete().eq('id', existing.id);
-          if (error) throw error;
+      for (const key of Object.keys(pending)) {
+        const [divisionId, sectionId] = key.split(':');
+        if (!isModified(divisionId, sectionId)) continue;
+
+        const newJudge = pending[key]; // string | null
+        const existing = assignmentMap.get(key);
+
+        if (!newJudge) {
+          if (existing) {
+            ops.push(
+              supabase.from('judge_assignments').delete().eq('id', existing.id).then(({ error }) => {
+                if (error) throw error;
+              })
+            );
+          }
+        } else if (existing) {
+          ops.push(
+            supabase
+              .from('judge_assignments')
+              .update({ judge_user_id: newJudge })
+              .eq('id', existing.id)
+              .then(({ error }) => {
+                if (error) throw error;
+              })
+          );
+        } else {
+          ops.push(
+            supabase
+              .from('judge_assignments')
+              .insert({
+                event_id: eventId,
+                division_id: divisionId,
+                section_id: sectionId,
+                judge_user_id: newJudge,
+                level_id: null,
+                panel_id: null,
+              })
+              .then(({ error }) => {
+                if (error) throw error;
+              })
+          );
         }
-        return;
       }
 
-      if (existing) {
-        const { error } = await supabase
-          .from('judge_assignments')
-          .update({ judge_user_id: args.judgeUserId })
-          .eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('judge_assignments').insert({
-          event_id: eventId,
-          division_id: args.divisionId,
-          section_id: args.sectionId,
-          judge_user_id: args.judgeUserId,
-          level_id: null,
-          panel_id: null,
-        });
-        if (error) throw error;
-      }
+      await Promise.all(ops);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['section-assignments', eventId] });
       queryClient.invalidateQueries({ queryKey: ['judge-assignments'] });
+      queryClient.invalidateQueries({ queryKey: ['judge-submissions'] });
+      toast({ title: 'Assignments saved', description: 'Submissions have been added to the assigned judges\' scoring queues.' });
+      setPending({});
+      onClose();
     },
     onError: (error: any) => {
-      toast({ variant: 'destructive', title: 'Failed to save assignment', description: error.message });
+      toast({ variant: 'destructive', title: 'Failed to save assignments', description: error.message });
     },
   });
 
@@ -202,58 +252,82 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
             No divisions with submitted teams yet.
           </p>
         ) : (
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-            {divisions.map(div => {
-              const divisionSections = div.scoring_template_id
-                ? sectionsByTemplate.get(div.scoring_template_id) || []
-                : [];
+          <>
+            <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
+              {divisions.map(div => {
+                const divisionSections = div.scoring_template_id
+                  ? sectionsByTemplate.get(div.scoring_template_id) || []
+                  : [];
 
-              return (
-                <Card key={div.id}>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">{div.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    {!div.scoring_template_id ? (
-                      <p className="text-sm text-muted-foreground">
-                        No scoring template is assigned to this division.
-                      </p>
-                    ) : divisionSections.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        This division's scoring template has no judging sections.
-                      </p>
-                    ) : divisionSections.map(section => {
-                    const key = `${div.id}:${section.id}`;
-                    const current = assignmentMap.get(key)?.judge_user_id ?? '';
-                    return (
-                      <div key={section.id} className="flex items-center gap-3">
-                        <div className="flex-1 min-w-0 flex items-center gap-2">
-                          {section.default_panel_abbreviation && (
-                            <Badge variant="secondary">{section.default_panel_abbreviation}</Badge>
-                          )}
-                          <span className="text-sm font-medium truncate">{section.name}</span>
-                        </div>
-                        <div className="w-64">
-                          <JudgeCombobox
-                            value={current}
-                            judges={judges || []}
-                            onChange={(judgeUserId) => {
-                              saveMutation.mutate({
-                                divisionId: div.id,
-                                sectionId: section.id,
-                                judgeUserId,
-                              });
-                            }}
-                          />
-                        </div>
-                      </div>
-                    );
-                    })}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                return (
+                  <Card key={div.id}>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">{div.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {!div.scoring_template_id ? (
+                        <p className="text-sm text-muted-foreground">
+                          No scoring template is assigned to this division.
+                        </p>
+                      ) : divisionSections.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          This division's scoring template has no judging sections.
+                        </p>
+                      ) : divisionSections.map(section => {
+                        const current = getCurrentValue(div.id, section.id);
+                        const modified = isModified(div.id, section.id);
+                        return (
+                          <div key={section.id} className="flex items-center gap-3">
+                            <div className="flex-1 min-w-0 flex items-center gap-2">
+                              {section.default_panel_abbreviation && (
+                                <Badge variant="secondary">{section.default_panel_abbreviation}</Badge>
+                              )}
+                              <span className="text-sm font-medium truncate">{section.name}</span>
+                              {modified && (
+                                <Badge variant="outline" className="text-xs">Modified</Badge>
+                              )}
+                            </div>
+                            <div className="w-64">
+                              <JudgeCombobox
+                                value={current}
+                                judges={judges || []}
+                                onChange={(judgeUserId) => {
+                                  setPending(prev => ({
+                                    ...prev,
+                                    [`${div.id}:${section.id}`]: judgeUserId,
+                                  }));
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between border-t mt-4 pt-4">
+              <p className="text-sm text-muted-foreground">
+                {modifiedCount > 0
+                  ? `${modifiedCount} change${modifiedCount === 1 ? '' : 's'} pending`
+                  : 'No changes'}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={onClose} disabled={saveMutation.isPending}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => saveMutation.mutate()}
+                  disabled={modifiedCount === 0 || saveMutation.isPending}
+                >
+                  {saveMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  Save Assignments
+                </Button>
+              </div>
+            </div>
+          </>
         )}
       </TabsContent>
 
