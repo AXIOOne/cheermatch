@@ -455,6 +455,7 @@ export default function UserRoles() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="portal_admin">Portal Admin</SelectItem>
                             <SelectItem value="judge">Judge</SelectItem>
                             <SelectItem value="gym_coach">Gym Coach</SelectItem>
                           </SelectContent>
