@@ -7,11 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Search, Loader2, Users } from 'lucide-react';
+import { ArrowLeft, Search, Loader2, Users, Plus } from 'lucide-react';
+import { AddTeamDialog } from '@/components/admin/AddTeamDialog';
 
 export default function EventRegistrations() {
   const { eventId } = useParams<{ eventId: string }>();
   const [searchQuery, setSearchQuery] = useState('');
+  const [addOpen, setAddOpen] = useState(false);
 
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ['event', eventId],
