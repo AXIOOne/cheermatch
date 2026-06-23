@@ -44,10 +44,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
           name,
           gym_name,
           coach_user_id,
-          division:divisions(name),
+          division:divisions(id, name),
           level:levels(name)
         ),
-        event:events(id, name),
+        event:events(id, name, accuscore_end_at),
         scores:scores(
           id,
           total_score,
@@ -59,7 +59,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
           score_details:score_details(
             points,
             notes,
-            field:scoring_fields(name, max_points, section:scoring_sections(name))
+            field:scoring_fields(id, name, max_points, section_id, score_type, display_order,
+              section:scoring_sections(id, name, display_order))
           )
         )
       `)
