@@ -55,6 +55,7 @@ export default function SubmissionScoresheet() {
         .from('video_submissions')
         .select(`
           id, video_url, thumbnail_url, status, submitted_at, created_at, duration_seconds,
+          review_notes, reviewed_at,
           event_id,
           team:teams!inner(id, name, gym_name, athlete_count, division_id,
             division:divisions!inner(id, name, scoring_template_id), level:levels!inner(name, level_number)),
