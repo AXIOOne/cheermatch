@@ -86,6 +86,30 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
     enabled: templateIds.length > 0,
   });
 
+  // Panels for this event, used to auto-link section assignments to a panel
+  // by matching the section abbreviation (or its default_panel_abbreviation).
+  const { data: eventPanels } = useQuery({
+    queryKey: ['event-panels-for-assignment', eventId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('judge_panels')
+        .select('id, abbreviation')
+        .eq('event_id', eventId);
+      if (error) throw error;
+      return data as Array<{ id: string; abbreviation: string }>;
+    },
+    enabled: !!eventId,
+  });
+
+  const resolvePanelIdForSection = (sectionId: string): string | null => {
+    const section = (sections || []).find(s => s.id === sectionId);
+    if (!section) return null;
+    const abbr = (section.default_panel_abbreviation || section.abbreviation || '').toUpperCase();
+    if (!abbr) return null;
+    const match = (eventPanels || []).find(p => p.abbreviation?.toUpperCase() === abbr);
+    return match?.id ?? null;
+  };
+
   const sectionsByTemplate = useMemo(() => {
     const grouped = new Map<string, AssignmentSection[]>();
     (sections || []).forEach(section => {
