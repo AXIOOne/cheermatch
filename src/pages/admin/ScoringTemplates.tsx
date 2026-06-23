@@ -24,7 +24,6 @@ import TemplatePreview from '@/components/admin/TemplatePreview';
 const templateSchema = z.object({
   name: z.string().min(2, 'Template name must be at least 2 characters'),
   description: z.string().optional(),
-  event_id: z.string().min(1, 'Please select an event'),
   is_default: z.boolean(),
 });
 
