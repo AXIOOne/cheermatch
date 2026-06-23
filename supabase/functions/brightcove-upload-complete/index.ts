@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
       submitted_via: "mobile",
       submitted_at: new Date().toISOString(),
       submitted_by: user.user_id,
-      status: "submitted" as const,
+      status: "uploaded" as const,
     };
 
     if (existing?.id) {
