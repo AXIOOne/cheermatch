@@ -9,6 +9,7 @@ interface AuthContextType {
   session: Session | null;
   roles: AppRole[];
   loading: boolean;
+  rolesLoaded: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -25,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
 
   const fetchUserRoles = async (userId: string) => {
     try {
@@ -46,16 +48,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         // Defer role fetching to avoid deadlock
         if (session?.user) {
+          setRolesLoaded(false);
           setTimeout(() => {
-            fetchUserRoles(session.user.id).then(setRoles);
+            fetchUserRoles(session.user.id).then((r) => {
+              setRoles(r);
+              setRolesLoaded(true);
+            });
           }, 0);
         } else {
           setRoles([]);
+          setRolesLoaded(true);
         }
-        
+
         setLoading(false);
       }
     );
@@ -64,11 +71,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
+
       if (session?.user) {
-        fetchUserRoles(session.user.id).then(setRoles);
+        fetchUserRoles(session.user.id).then((r) => {
+          setRoles(r);
+          setRolesLoaded(true);
+        });
+      } else {
+        setRolesLoaded(true);
       }
-      
+
       setLoading(false);
     });
 
@@ -114,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       roles,
       loading,
+      rolesLoaded,
       signIn,
       signUp,
       signOut,
