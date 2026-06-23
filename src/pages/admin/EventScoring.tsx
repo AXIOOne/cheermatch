@@ -369,7 +369,7 @@ export default function EventScoring() {
                 <TableRow>
                   <TableHead className="w-20">Sub #</TableHead>
                   <TableHead>Team</TableHead>
-                  <TableHead>Team Level and Division</TableHead>
+                  <TableHead>Team Division</TableHead>
                   <TableHead>Coach</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[160px]">Action</TableHead>
@@ -405,9 +405,7 @@ export default function EventScoring() {
 
                       </TableCell>
                       <TableCell>
-                        {submission.team?.level?.name && submission.team?.division?.name
-                          ? `${submission.team.level.name} ${submission.team.division.name}`
-                          : '—'}
+                        {submission.team?.division?.name || '—'}
                       </TableCell>
                       <TableCell>
                         {coach?.full_name || coach?.email || '—'}
