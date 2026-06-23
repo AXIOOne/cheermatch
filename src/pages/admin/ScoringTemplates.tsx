@@ -153,7 +153,7 @@ export default function ScoringTemplates() {
     mutationFn: async (data: TemplateFormData) => {
       const { data: template, error } = await sb
         .from('scoring_templates')
-        .insert({ name: data.name, description: data.description, event_id: data.event_id, is_default: data.is_default })
+        .insert({ name: data.name, description: data.description, is_default: data.is_default })
         .select().single();
       if (error) throw error;
       await persistSectionsAndFields(template.id);
