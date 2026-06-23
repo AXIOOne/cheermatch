@@ -125,6 +125,7 @@ export default function ScoringTemplates() {
         description: f.description || null,
         display_order: idx,
         field_type: f.field_type,
+        score_type: f.score_type,
         min_value: f.min_value,
         max_value: f.max_value,
         step: f.step,
