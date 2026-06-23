@@ -136,9 +136,18 @@ export default function EventRegistrations() {
                     <TableCell className="font-medium">
                       <div>{team.name}</div>
                       {team.coach_name && (
-                        <div className="text-xs text-muted-foreground font-normal">
-                          {team.coach_name}
-                        </div>
+                        team.coach_email ? (
+                          <a
+                            href={`#coach-${team.coach_email}`}
+                            className="text-xs text-muted-foreground font-normal hover:text-primary hover:underline"
+                          >
+                            {team.coach_name}
+                          </a>
+                        ) : (
+                          <div className="text-xs text-muted-foreground font-normal">
+                            {team.coach_name}
+                          </div>
+                        )
                       )}
                     </TableCell>
                     <TableCell>{team.gym_name}</TableCell>
