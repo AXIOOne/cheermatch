@@ -214,20 +214,6 @@ export default function Events() {
       }).eq('id', id);
       if (error) throw error;
 
-      // Update default template if changed
-      if (data.default_template_id) {
-        // First, unset is_default for all templates of this event
-        await supabase
-          .from('scoring_templates')
-          .update({ is_default: false })
-          .eq('event_id', id);
-        
-        // Then set the selected template as default
-        await supabase
-          .from('scoring_templates')
-          .update({ is_default: true })
-          .eq('id', data.default_template_id);
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
