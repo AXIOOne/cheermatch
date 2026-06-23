@@ -16,64 +16,83 @@ interface AssignPanelsDialogProps {
 
 const UNASSIGNED = '__unassigned__';
 
+interface AssignmentDivision {
+  id: string;
+  name: string;
+  scoring_template_id: string | null;
+}
+
+interface AssignmentSection {
+  id: string;
+  template_id: string;
+  name: string;
+  abbreviation: string;
+  default_panel_abbreviation: string | null;
+  display_order: number;
+}
+
 export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Default scoring template for this event
-  const { data: template } = useQuery({
-    queryKey: ['event-default-template', eventId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('scoring_templates')
-        .select('id, name')
-        .eq('event_id', eventId)
-        .eq('is_default', true)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: sections, isLoading: sectionsLoading } = useQuery({
-    queryKey: ['template-sections', template?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('scoring_sections')
-        .select('id, name, abbreviation, default_panel_abbreviation, display_order')
-        .eq('template_id', template!.id)
-        .order('display_order');
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!template?.id,
-  });
-
-  // Divisions that have submissions for this event
+  // Divisions that have submitted teams for this event
   const { data: divisions, isLoading: divisionsLoading } = useQuery({
     queryKey: ['event-submission-divisions', eventId],
     queryFn: async () => {
       const { data: subs, error } = await supabase
         .from('video_submissions')
-        .select('team:teams(division_id)')
+        .select('team_id')
         .eq('event_id', eventId);
       if (error) throw error;
-      const divisionIds = [
-        ...new Set(
-          (subs || [])
-            .map((s: any) => s.team?.division_id)
-            .filter((id: string | null | undefined): id is string => !!id)
-        ),
-      ];
-      if (divisionIds.length === 0) return [];
-      const { data: divs, error: dErr } = await supabase
-        .from('divisions')
-        .select('id, name')
-        .in('id', divisionIds);
-      if (dErr) throw dErr;
-      return (divs || []).sort((a, b) => a.name.localeCompare(b.name));
+      const teamIds = [...new Set((subs || []).map(s => s.team_id).filter(Boolean))];
+      if (teamIds.length === 0) return [];
+
+      const { data: teams, error: teamsError } = await supabase
+        .from('teams')
+        .select('division:divisions(id, name, scoring_template_id)')
+        .eq('event_id', eventId)
+        .in('id', teamIds);
+      if (teamsError) throw teamsError;
+
+      const byId = new Map<string, AssignmentDivision>();
+      (teams || []).forEach((team: any) => {
+        if (team.division?.id) {
+          byId.set(team.division.id, team.division);
+        }
+      });
+
+      return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
     },
+    enabled: !!eventId,
   });
+
+  const templateIds = useMemo(
+    () => [...new Set((divisions || []).map(div => div.scoring_template_id).filter((id): id is string => !!id))],
+    [divisions]
+  );
+
+  const { data: sections, isLoading: sectionsLoading } = useQuery({
+    queryKey: ['division-template-sections', templateIds],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('scoring_sections')
+        .select('id, template_id, name, abbreviation, default_panel_abbreviation, display_order')
+        .in('template_id', templateIds)
+        .order('display_order');
+      if (error) throw error;
+      return data as AssignmentSection[];
+    },
+    enabled: templateIds.length > 0,
+  });
+
+  const sectionsByTemplate = useMemo(() => {
+    const grouped = new Map<string, AssignmentSection[]>();
+    (sections || []).forEach(section => {
+      const existing = grouped.get(section.template_id) || [];
+      grouped.set(section.template_id, [...existing, section]);
+    });
+    return grouped;
+  }, [sections]);
 
   // Judges (users with judge role)
   const { data: judges, isLoading: judgesLoading } = useQuery({
