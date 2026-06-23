@@ -48,6 +48,8 @@ Deno.serve(async (req) => {
     // Only flip to ready when the dynamic ingest job is done
     if (action === "dynamic-ingest" && status === "FINISHED") {
       update.status = "approved";
+      // Belt-and-braces: ensure the Brightcove video is ACTIVE so the player will play it.
+      try { await bcActivateVideo(videoId); } catch (_) { /* non-fatal */ }
     }
     if (Object.keys(update).length > 0) {
       await sb.from("video_submissions").update(update).eq("id", sub.id);
