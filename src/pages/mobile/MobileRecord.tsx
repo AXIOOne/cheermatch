@@ -366,14 +366,9 @@ export default function MobileRecord() {
           </Button>
         )}
         {phase === "preview" && (
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="secondary" onClick={discardCurrentPreview} className="h-14">
-              <RotateCcw className="h-5 w-5 mr-2" /> Retake
-            </Button>
-            <Button onClick={goChoose} className="h-14">
-              {attempts.length < maxAttempts ? "Keep & continue" : "Choose submission"}
-            </Button>
-          </div>
+          <Button onClick={goChoose} className="w-full h-14">
+            {attempts.length < maxAttempts ? "Keep & continue" : "Choose submission"}
+          </Button>
         )}
         <div className="flex items-center justify-between pt-1 text-xs text-white/70">
           <button
