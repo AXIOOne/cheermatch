@@ -37,13 +37,16 @@ export default function ScorePerformance() {
       const { data, error } = await supabase.from('video_submissions').select(`
         *, team:teams(id, name, gym_name, athlete_count, division_id, level_id,
           division:divisions(id, name, scoring_template_id), level:levels(name, level_number)),
-        event:events(id, name)
+        event:events(id, name, status)
       `).eq('id', submissionId!).maybeSingle();
       if (error) throw error;
       return data;
     },
     enabled: !!submissionId,
   });
+
+  const OPEN_STATUSES = new Set(['open_for_scoring', 'in_progress']);
+  const eventOpenForScoring = OPEN_STATUSES.has((submission as any)?.event?.status);
 
   // The judge's panel assignment for this event determines which fields they see
   const { data: judgePanel } = useQuery({
