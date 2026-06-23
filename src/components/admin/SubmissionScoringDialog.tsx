@@ -373,7 +373,7 @@ export default function SubmissionScoringDialog({
                           locked: 'bg-muted text-muted-foreground',
                           reviewed: 'bg-success text-success-foreground',
                         };
-                        const score: any = allScores?.find((s: any) => s.panel_id === panel.id);
+                        const score: any = allScores?.find((s: any) => resolveScorePanelId(s) === panel.id);
                         return (
                           <div key={panel.id}
                             className={`px-3 py-2 rounded-lg text-center cursor-pointer transition-all ${selectedPanelId === panel.id ? 'ring-2 ring-primary ring-offset-2' : ''} ${colors[status] || ''}`}
