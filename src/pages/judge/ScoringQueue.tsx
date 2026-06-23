@@ -27,6 +27,8 @@ const getAssignmentPanelLabel = (assignment: any): string | null => {
   return panel?.name || section?.name || null;
 };
 
+const isAllPanelsAssignment = (assignment: any): boolean => !assignment?.panel_id && !assignment?.section_id;
+
 export default function ScoringQueue() {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
@@ -186,6 +188,7 @@ export default function ScoringQueue() {
       if (!cov) return true; // template not loaded yet — show optimistically
       if (cov.hasUnrestricted) return true;
       return matchingAssignments.some((assignment: any) => {
+        if (isAllPanelsAssignment(assignment)) return true;
         const judgePanel = getAssignmentPanelAbbrev(assignment);
         return judgePanel ? cov.panels.has(judgePanel) : false;
       });
