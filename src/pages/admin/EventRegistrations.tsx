@@ -7,9 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Search, Loader2, Users, Plus, Pencil } from 'lucide-react';
+import { ArrowLeft, Search, Loader2, Users, Plus, Pencil, Upload } from 'lucide-react';
 import { AddTeamDialog } from '@/components/admin/AddTeamDialog';
 import { EditRegistrationDialog } from '@/components/admin/EditRegistrationDialog';
+import { BulkImportTeamsDialog } from '@/components/admin/BulkImportTeamsDialog';
+import { CoachAccountsPanel } from '@/components/admin/CoachAccountsPanel';
 
 export default function EventRegistrations() {
   const { eventId } = useParams<{ eventId: string }>();
