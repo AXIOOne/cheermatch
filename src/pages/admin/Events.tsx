@@ -600,7 +600,7 @@ export default function Events() {
                           {event.time_zone || '—'}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={statusVariants[event.status]}>
+                          <Badge variant={statusVariants[event.status]} className="whitespace-nowrap">
                             {statusLabels[event.status]}
                           </Badge>
                         </TableCell>
