@@ -13,6 +13,7 @@ export interface ScoringSection {
   abbreviation: string;
   description?: string;
   max_points: number;
+  default_panel_abbreviation?: string;
   categories: CategoryItem[];
 }
 
@@ -28,9 +29,11 @@ function generateTempId() {
 }
 
 const DEFAULT_SECTIONS: Omit<ScoringSection, 'temp_id'>[] = [
-  { name: 'Building', abbreviation: 'B', max_points: 22, categories: [], description: 'Stunts, Pyramids, and Tosses' },
-  { name: 'Tumbling', abbreviation: 'T', max_points: 20, categories: [], description: 'Standing, Running Tumbling, and Jumps' },
-  { name: 'Overall', abbreviation: 'OV', max_points: 4, categories: [], description: 'Dance, Formations & Transitions' },
+  { name: 'Building 1', abbreviation: 'B1', max_points: 22, categories: [], description: 'Stunts, Pyramids, and Tosses', default_panel_abbreviation: 'B1' },
+  { name: 'Building 2', abbreviation: 'B2', max_points: 22, categories: [], description: 'Stunts, Pyramids, and Tosses', default_panel_abbreviation: 'B2' },
+  { name: 'Tumbling 1', abbreviation: 'T1', max_points: 20, categories: [], description: 'Standing, Running Tumbling, and Jumps', default_panel_abbreviation: 'T1' },
+  { name: 'Tumbling 2', abbreviation: 'T2', max_points: 20, categories: [], description: 'Standing, Running Tumbling, and Jumps', default_panel_abbreviation: 'T2' },
+  { name: 'Overall', abbreviation: 'OV', max_points: 4, categories: [], description: 'Dance, Formations & Transitions', default_panel_abbreviation: 'OV' },
   { name: 'All Judges', abbreviation: 'ALL', max_points: 4, categories: [], description: 'Routine Creativity and Showmanship' },
 ];
 
