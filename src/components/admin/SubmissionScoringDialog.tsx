@@ -107,14 +107,21 @@ export default function SubmissionScoringDialog({
       const { data, error } = await sb.from('scores').select(`
         *,
         details:score_details(*),
-        deduction_items:score_deductions(*),
-        judge:profiles!scores_judge_user_id_fkey(full_name, email)
+        deduction_items:score_deductions(*)
       `).eq('submission_id', submissionId!);
       if (error) throw error;
-      return data;
+      const judgeIds = [...new Set((data || []).map((s: any) => s.judge_user_id).filter(Boolean))];
+      let judgeMap: Record<string, any> = {};
+      if (judgeIds.length) {
+        const { data: profs } = await sb.from('profiles')
+          .select('user_id, full_name, email').in('user_id', judgeIds);
+        judgeMap = (profs || []).reduce((acc: any, p: any) => { acc[p.user_id] = p; return acc; }, {});
+      }
+      return (data || []).map((s: any) => ({ ...s, judge: judgeMap[s.judge_user_id] || null }));
     },
     enabled: !!submissionId && open,
   });
+
 
   const { data: judgeAssignments } = useQuery({
     queryKey: ['event-judge-assignments', eventId],
