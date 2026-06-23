@@ -157,6 +157,9 @@ export default function ScorePerformance() {
 
   const saveMutation = useMutation({
     mutationFn: async (status: 'in_progress' | 'submitted') => {
+      if (!eventOpenForScoring) {
+        throw new Error('This event is not open for scoring yet. The admin must release it before scores can be saved.');
+      }
       setIsSaving(true);
       const totalScore = calculateTotalScore();
       const dedTotal = calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts);
