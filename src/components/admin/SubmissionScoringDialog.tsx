@@ -223,11 +223,15 @@ export default function SubmissionScoringDialog({
   const formatTime = (s: number) => `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
 
   const saveMutation = useMutation({
-    mutationFn: async (status: 'in_progress' | 'submitted') => {
-      if (!selectedPanelId || !template || !assignedJudge) throw new Error('Missing required data');
+    mutationFn: async (args: { markReviewed: boolean }) => {
+      if (!selectedPanelId || !template) throw new Error('Missing required data');
       setIsSaving(true);
+      const { data: userData } = await supabase.auth.getUser();
+      const adminUserId = userData.user?.id ?? null;
       const totalScore = calculateTotalScore();
-      const deductionsTotal = calculateStructuredDeductions((template.deduction_types || []) as any[], deductionCounts);
+      const deductionsTotal = isSdPanel
+        ? calculateStructuredDeductions((template.deduction_types || []) as any[], deductionCounts)
+        : 0;
 
       const detailRows = (scoreId: string) =>
         Object.values(fieldScores).map((fs) => ({
@@ -235,11 +239,16 @@ export default function SubmissionScoringDialog({
           points: fs.points, notes: fs.notes || null,
         }));
 
+      const reviewFields = args.markReviewed
+        ? { reviewed_at: new Date().toISOString(), reviewed_by: adminUserId }
+        : {};
+
       if (currentPanelScore) {
         const { error } = await sb.from('scores').update({
           total_score: totalScore, deductions: deductionsTotal, comments,
-          status, needs_review: needsReview,
-          submitted_at: status === 'submitted' ? new Date().toISOString() : null,
+          status: 'submitted', needs_review: needsReview,
+          submitted_at: new Date().toISOString(),
+          ...reviewFields,
         }).eq('id', currentPanelScore.id);
         if (error) throw error;
         await sb.from('score_details').delete().eq('score_id', currentPanelScore.id);
@@ -249,16 +258,21 @@ export default function SubmissionScoringDialog({
           if (dErr) throw dErr;
         }
         await sb.from('score_deductions').delete().eq('score_id', currentPanelScore.id);
-        const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
-          .map(([deduction_type_id, count]) => ({ score_id: currentPanelScore.id, deduction_type_id, count }));
-        if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
+        if (isSdPanel) {
+          const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
+            .map(([deduction_type_id, count]) => ({ score_id: currentPanelScore.id, deduction_type_id, count }));
+          if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
+        }
       } else {
+        const judgeUserId = assignedJudge?.judge_user_id ?? adminUserId;
+        if (!judgeUserId) throw new Error('Could not determine score author');
         const { data: newScore, error } = await sb.from('scores').insert([{
-          submission_id: submissionId, judge_user_id: assignedJudge.judge_user_id,
+          submission_id: submissionId, judge_user_id: judgeUserId,
           template_id: template.id, panel_id: selectedPanelId,
           total_score: totalScore, deductions: deductionsTotal, comments,
-          status, needs_review: needsReview,
-          submitted_at: status === 'submitted' ? new Date().toISOString() : null,
+          status: 'submitted', needs_review: needsReview,
+          submitted_at: new Date().toISOString(),
+          ...reviewFields,
         }]).select().single();
         if (error) throw error;
         const rows = detailRows(newScore.id);
@@ -266,15 +280,17 @@ export default function SubmissionScoringDialog({
           const { error: dErr } = await sb.from('score_details').insert(rows);
           if (dErr) throw dErr;
         }
-        const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
-          .map(([deduction_type_id, count]) => ({ score_id: newScore.id, deduction_type_id, count }));
-        if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
+        if (isSdPanel) {
+          const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
+            .map(([deduction_type_id, count]) => ({ score_id: newScore.id, deduction_type_id, count }));
+          if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
+        }
       }
     },
-    onSuccess: (_, status) => {
+    onSuccess: (_, args) => {
       queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
       queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
-      toast({ title: status === 'submitted' ? 'Score submitted!' : 'Progress saved' });
+      toast({ title: args.markReviewed ? 'Score saved & marked reviewed' : 'Score saved' });
     },
     onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
     onSettled: () => setIsSaving(false),
