@@ -77,10 +77,16 @@ export default function EventRegistrations() {
             </h1>
             <p className="text-muted-foreground mt-1">Team Registrations</p>
           </div>
-          <Button onClick={() => setAddOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Registration
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" />
+              Import CSV
+            </Button>
+            <Button onClick={() => setAddOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Registration
+            </Button>
+          </div>
         </div>
       </div>
 
