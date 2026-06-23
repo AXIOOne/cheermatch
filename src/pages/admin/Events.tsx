@@ -178,6 +178,8 @@ export default function Events() {
         discipline: data.discipline,
         accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
         status: data.status,
+        duration_of_capture: data.duration_of_capture,
+        screen_capture_cnt: data.screen_capture_cnt,
         created_by: user!.id,
       } as any]);
       if (error) throw error;
