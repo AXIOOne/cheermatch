@@ -175,17 +175,6 @@ export default function MobileRecord() {
     recorderRef.current = null;
   }
 
-  function discardCurrentPreview() {
-    if (previewAttemptId == null) return;
-    setAttempts((prev) => {
-      const found = prev.find((a) => a.id === previewAttemptId);
-      if (found) URL.revokeObjectURL(found.url);
-      return prev.filter((a) => a.id !== previewAttemptId);
-    });
-    setPreviewAttemptId(null);
-    setProgress(0);
-    setPhase("ready");
-  }
 
   function recordAnother() {
     setPreviewAttemptId(null);
