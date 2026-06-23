@@ -81,8 +81,9 @@ export default function MobileRecord() {
     })();
   }, [eventId]);
 
-  // Block access if a submission already exists for this team+event.
+  // Block access if a final submission already exists for this team+event.
   // Coaches get a single capture session with N attempts — no re-submissions.
+  // Exception: if the admin has requested a revision, the coach may re-record.
   useEffect(() => {
     (async () => {
       try {
@@ -91,8 +92,8 @@ export default function MobileRecord() {
           const t = (res.data as Array<Record<string, unknown>>).find(
             (x) => String(x.team_id) === teamId,
           );
-          const sub = t?.submission as { id?: string } | null | undefined;
-          if (sub && sub.id) {
+          const sub = t?.submission as { id?: string; status?: string } | null | undefined;
+          if (sub && sub.id && sub.status !== "revision_requested") {
             toast.error("This team has already submitted a video.");
             navigate(`/m/events/${eventId}/teams/${teamId}`, { replace: true });
           }
