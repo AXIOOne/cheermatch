@@ -478,7 +478,7 @@ export default function Events() {
                     <TableHead>Status</TableHead>
                     <TableHead>Scoring</TableHead>
                     <TableHead>Registrations</TableHead>
-                    <TableHead>Template</TableHead>
+                    
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
