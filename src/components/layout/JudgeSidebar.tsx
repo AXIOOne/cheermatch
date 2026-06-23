@@ -8,7 +8,7 @@ import {
   LogOut,
   LayoutDashboard,
   Play,
-  History,
+  FileText,
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -52,7 +52,7 @@ export function JudgeSidebar() {
       <nav className="flex-1 p-4 space-y-1">
         <NavItem to="/judge" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
         <NavItem to="/judge/queue" icon={<Play className="w-5 h-5" />} label="Scoring Queue" />
-        <NavItem to="/judge/history" icon={<History className="w-5 h-5" />} label="Score History" />
+        <NavItem to="/judge/rubrics" icon={<FileText className="w-5 h-5" />} label="Rubrics" />
       </nav>
 
       {/* User Section */}

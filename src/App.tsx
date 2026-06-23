@@ -36,6 +36,7 @@ import JudgeDashboard from "./pages/judge/Dashboard";
 import ScoringQueue from "./pages/judge/ScoringQueue";
 import ScorePerformance from "./pages/judge/ScorePerformance";
 import ScoreHistory from "./pages/judge/ScoreHistory";
+import JudgeRubrics from "./pages/judge/Rubrics";
 
 // Public review
 import ScoreReview from "./pages/review/ScoreReview";
@@ -82,6 +83,7 @@ const App = () => (
               <Route path="queue" element={<ScoringQueue />} />
               <Route path="score/:submissionId" element={<ScorePerformance />} />
               <Route path="history" element={<ScoreHistory />} />
+              <Route path="rubrics" element={<JudgeRubrics />} />
             </Route>
             
             {/* Public Review Route (no auth required) */}
