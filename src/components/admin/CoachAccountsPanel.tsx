@@ -32,6 +32,25 @@ export function CoachAccountsPanel({ eventId }: Props) {
     enabled: !!eventId,
   });
 
+  const [highlightedEmail, setHighlightedEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const applyHash = () => {
+      const hash = window.location.hash;
+      const prefix = '#coach-';
+      if (hash.startsWith(prefix)) {
+        const email = decodeURIComponent(hash.slice(prefix.length));
+        setHighlightedEmail(email);
+        const el = document.getElementById(`coach-row-${email}`);
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        window.setTimeout(() => setHighlightedEmail(null), 2500);
+      }
+    };
+    applyHash();
+    window.addEventListener('hashchange', applyHash);
+    return () => window.removeEventListener('hashchange', applyHash);
+  }, [rows]);
+
   const inviteMutation = useMutation({
     mutationFn: async ({ email, fullName }: { email: string; fullName: string | null }) => {
       const loginUrl = `${window.location.origin}/m/login`;
