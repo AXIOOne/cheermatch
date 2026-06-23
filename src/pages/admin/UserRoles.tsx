@@ -23,14 +23,14 @@ type AppRole = Database['public']['Enums']['app_role'];
 
 const addRoleSchema = z.object({
   email: z.string().email('Please enter a valid email'),
-  role: z.enum(['admin', 'judge', 'gym_coach'] as const),
+  role: z.enum(['admin', 'portal_admin', 'judge', 'gym_coach'] as const),
 });
 
 const createUserSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   fullName: z.string().min(1, 'Full name is required'),
-  role: z.enum(['admin', 'judge', 'gym_coach', 'none'] as const).optional(),
+  role: z.enum(['admin', 'portal_admin', 'judge', 'gym_coach', 'none'] as const).optional(),
   sendEmail: z.boolean().default(true),
 });
 
@@ -283,12 +283,14 @@ export default function UserRoles() {
 
   const roleColors: Record<AppRole, string> = {
     admin: 'bg-red-100 text-red-700 border-red-200',
+    portal_admin: 'bg-purple-100 text-purple-700 border-purple-200',
     judge: 'bg-blue-100 text-blue-700 border-blue-200',
     gym_coach: 'bg-green-100 text-green-700 border-green-200',
   };
 
   const roleLabels: Record<AppRole, string> = {
     admin: 'Admin',
+    portal_admin: 'Portal Admin',
     judge: 'Judge',
     gym_coach: 'Gym Coach',
   };
@@ -368,6 +370,7 @@ export default function UserRoles() {
                           <SelectContent>
                             <SelectItem value="none">No role</SelectItem>
                             <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="portal_admin">Portal Admin</SelectItem>
                             <SelectItem value="judge">Judge</SelectItem>
                             <SelectItem value="gym_coach">Gym Coach</SelectItem>
                           </SelectContent>
@@ -452,6 +455,7 @@ export default function UserRoles() {
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="portal_admin">Portal Admin</SelectItem>
                             <SelectItem value="judge">Judge</SelectItem>
                             <SelectItem value="gym_coach">Gym Coach</SelectItem>
                           </SelectContent>
@@ -477,7 +481,7 @@ export default function UserRoles() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Admins</CardTitle>
@@ -485,6 +489,16 @@ export default function UserRoles() {
           <CardContent>
             <p className="text-3xl font-bold">
               {users?.filter((u) => u.roles.includes('admin')).length || 0}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Portal Admins</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">
+              {users?.filter((u) => u.roles.includes('portal_admin')).length || 0}
             </p>
           </CardContent>
         </Card>
