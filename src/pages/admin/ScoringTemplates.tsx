@@ -218,7 +218,7 @@ export default function ScoringTemplates() {
       const { data: newTpl, error } = await sb.from('scoring_templates').insert({
         name: `${src.name} (Copy)`,
         description: src.description,
-        event_id: src.event_id,
+        
         is_default: false,
         is_locked: false,
       }).select().single();
