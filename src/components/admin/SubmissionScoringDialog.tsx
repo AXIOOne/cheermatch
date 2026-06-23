@@ -415,17 +415,23 @@ export default function SubmissionScoringDialog({
                                   <div className="text-right text-xs text-muted-foreground">max {Number(f.max_points).toFixed(2)}</div>
                                 </div>
                                 {f.field_type === 'dropdown' ? (() => {
+                                  const resolvePoints = (o: any) => {
+                                    const v = Number(o.value);
+                                    if (v) return v;
+                                    const lbl = parseFloat(String(o.label));
+                                    return Number.isFinite(lbl) ? lbl : 0;
+                                  };
                                   const opts = (f.options || [])
                                     .slice()
                                     .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
                                   const currentPoints = fieldScores[f.id]?.points;
-                                  const selectedOpt = opts.find((o: any) => Number(o.value) === Number(currentPoints));
+                                  const selectedOpt = opts.find((o: any) => resolvePoints(o) === Number(currentPoints));
                                   return (
                                     <Select
-                                      value={selectedOpt?.id ?? ''}
+                                      value={selectedOpt?.id ?? undefined}
                                       onValueChange={(optId) => {
                                         const picked = opts.find((o: any) => o.id === optId);
-                                        if (picked) updateFieldScore(f.id, Number(picked.value));
+                                        if (picked) updateFieldScore(f.id, resolvePoints(picked));
                                       }}
                                       disabled={isCurrentPanelLocked}
                                     >
@@ -433,7 +439,7 @@ export default function SubmissionScoringDialog({
                                       <SelectContent>
                                         {opts.map((opt: any) => (
                                           <SelectItem key={opt.id} value={opt.id}>
-                                            {opt.label} ({Number(opt.value)})
+                                            {opt.label} ({resolvePoints(opt)})
                                           </SelectItem>
                                         ))}
                                       </SelectContent>
