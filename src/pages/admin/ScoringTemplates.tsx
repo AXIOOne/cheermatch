@@ -144,6 +144,7 @@ export default function ScoringTemplates() {
         max_points: cat.max_points,
         category_type: cat.category_type,
         description: cat.description,
+        panel_abbreviation: cat.panel_abbreviation || null,
         display_order: cat.display_order,
         weight: cat.weight,
       }));
