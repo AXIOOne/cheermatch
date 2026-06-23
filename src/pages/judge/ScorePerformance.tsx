@@ -263,7 +263,10 @@ export default function ScorePerformance() {
                 </Button>
               </>
             )}
-            {isLocked && <span className="px-3 py-1 bg-muted rounded-full text-sm font-medium">Score Locked</span>}
+            {existingScore?.status === 'locked' && <span className="px-3 py-1 bg-muted rounded-full text-sm font-medium">Score Locked</span>}
+            {!eventOpenForScoring && existingScore?.status !== 'locked' && (
+              <span className="px-3 py-1 bg-warning/10 text-warning rounded-full text-sm font-medium">Event not open for scoring</span>
+            )}
           </div>
         </div>
       </div>
