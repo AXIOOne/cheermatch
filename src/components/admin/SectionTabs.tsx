@@ -121,7 +121,7 @@ export default function SectionTabs({
           </p>
           <Button type="button" onClick={addDefaultSections}>
             <Plus className="w-4 h-4 mr-2" />
-            Add Standard Sections (Building, Tumbling, Overall, All Judges)
+            Add Standard Sections (B1, B2, T1, T2, Overall, All Judges)
           </Button>
         </div>
       ) : (
