@@ -230,6 +230,9 @@ export default function ScorePerformance() {
 
   const saveMutation = useMutation({
     mutationFn: async (status: 'in_progress' | 'submitted') => {
+  const saveMutation = useMutation({
+    mutationFn: async (args: { status: 'in_progress' | 'submitted'; needsReview?: boolean; reviewReason?: string | null }) => {
+      const { status, needsReview = false, reviewReason = null } = args;
       if (!eventOpenForScoring) {
         throw new Error('This event is not open for scoring yet. The admin must release it before scores can be saved.');
       }
@@ -245,10 +248,15 @@ export default function ScorePerformance() {
           points: fs.points, notes: fs.notes || null,
         }));
 
+      const reviewFields = status === 'submitted'
+        ? { needs_review: needsReview, review_reason: needsReview ? reviewReason : null, reviewed_at: null, reviewed_by: null }
+        : {};
+
       if (existingScore) {
         const { error } = await sb.from('scores').update({
           total_score: totalScore, deductions: dedTotal, comments, status,
           submitted_at: status === 'submitted' ? new Date().toISOString() : null,
+          ...reviewFields,
         }).eq('id', existingScore.id);
         if (error) throw error;
         await sb.from('score_details').delete().eq('score_id', existingScore.id);
@@ -267,6 +275,7 @@ export default function ScorePerformance() {
           panel_id: assignedPanelId || null,
           total_score: totalScore, deductions: dedTotal, comments, status,
           submitted_at: status === 'submitted' ? new Date().toISOString() : null,
+          ...reviewFields,
         }]).select().single();
         if (error) throw error;
         const rows = detailRows(newScore.id);
@@ -279,12 +288,14 @@ export default function ScorePerformance() {
         if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
       }
     },
-    onSuccess: (_, status) => {
+    onSuccess: (_, args) => {
       queryClient.invalidateQueries({ queryKey: ['existing-score'] });
       queryClient.invalidateQueries({ queryKey: ['judge-scores'] });
       queryClient.invalidateQueries({ queryKey: ['judge-existing-scores'] });
-      if (status === 'submitted') { toast({ title: 'Score submitted!' }); navigate('/judge/queue'); }
-      else toast({ title: 'Progress saved' });
+      if (args.status === 'submitted') {
+        toast({ title: args.needsReview ? 'Score submitted & flagged for review' : 'Score submitted!' });
+        navigate('/judge/queue');
+      } else toast({ title: 'Progress saved' });
     },
     onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
     onSettled: () => setIsSaving(false),
