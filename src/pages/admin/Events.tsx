@@ -291,6 +291,12 @@ export default function Events() {
       status: event.status,
       duration_of_capture: event.duration_of_capture ?? 150,
       screen_capture_cnt: event.screen_capture_cnt ?? 2,
+      registration_open_at: fromIso(event.registration_open_at),
+      registration_close_at: fromIso(event.registration_close_at),
+      submission_open_at: fromIso(event.submission_open_at),
+      submission_close_at: fromIso(event.submission_close_at),
+      scoring_open_at: fromIso(event.scoring_open_at),
+      scoring_close_at: fromIso(event.scoring_close_at),
     });
     setIsDialogOpen(true);
   };
