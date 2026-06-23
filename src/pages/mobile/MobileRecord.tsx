@@ -299,7 +299,17 @@ export default function MobileRecord() {
   const remaining = Math.max(0, maxDuration - elapsed);
 
   return (
-    <div className="bg-black text-white min-h-[calc(100vh-3.5rem)] flex flex-col">
+    <div className="bg-black text-white min-h-[calc(100vh-3.5rem)] flex flex-col relative">
+      {isPortrait && phase !== "preview" && phase !== "uploading" && (
+        <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center text-center px-6 space-y-4">
+          <RotateCw className="h-16 w-16 text-primary animate-pulse" />
+          <h2 className="text-xl font-bold">Please rotate your device</h2>
+          <p className="text-sm text-white/80 max-w-xs">
+            Routines must be captured in <span className="font-semibold">landscape</span> mode.
+            Turn your phone sideways to continue.
+          </p>
+        </div>
+      )}
       <div className="relative flex-1 flex items-center justify-center bg-black">
         {phase !== "preview" && (
           <video ref={videoLiveRef} className="w-full h-full object-contain" playsInline muted autoPlay />
