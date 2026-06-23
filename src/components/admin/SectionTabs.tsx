@@ -154,7 +154,7 @@ export default function SectionTabs({
               {/* Section header fields */}
               <Card className="p-4">
                 <div className="flex items-start gap-4">
-                  <div className="flex-1 grid grid-cols-4 gap-3">
+                  <div className="flex-1 grid grid-cols-5 gap-3">
                     <div className="col-span-2">
                       <label className="text-xs font-medium text-muted-foreground">
                         Section Name
@@ -175,7 +175,21 @@ export default function SectionTabs({
                         onChange={(e) =>
                           updateSection(index, { abbreviation: e.target.value })
                         }
-                        placeholder="e.g., B"
+                        placeholder="e.g., B1"
+                        className="mt-1"
+                        maxLength={4}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-muted-foreground">
+                        Default Panel
+                      </label>
+                      <Input
+                        value={section.default_panel_abbreviation || ''}
+                        onChange={(e) =>
+                          updateSection(index, { default_panel_abbreviation: e.target.value.toUpperCase() })
+                        }
+                        placeholder="e.g., B1"
                         className="mt-1"
                         maxLength={4}
                       />
