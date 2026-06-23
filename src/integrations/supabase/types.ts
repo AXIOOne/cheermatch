@@ -237,9 +237,13 @@ export type Database = {
           name: string
           per_show_registrations: number
           reg_cost: number
+          registration_close_at: string | null
+          registration_open_at: string | null
           release_score_leaderboard: boolean
           sanctioned_event: boolean
           scoresheet_template_name: string | null
+          scoring_close_at: string | null
+          scoring_open_at: string | null
           screen_capture_cnt: number
           season_id: number
           show_teams_and_divisions: boolean
@@ -247,6 +251,8 @@ export type Database = {
           start_time: string
           status: Database["public"]["Enums"]["event_status"]
           sub_deadline: string | null
+          submission_close_at: string | null
+          submission_open_at: string | null
           time_zone: string
           updated_at: string
         }
@@ -274,9 +280,13 @@ export type Database = {
           name: string
           per_show_registrations?: number
           reg_cost?: number
+          registration_close_at?: string | null
+          registration_open_at?: string | null
           release_score_leaderboard?: boolean
           sanctioned_event?: boolean
           scoresheet_template_name?: string | null
+          scoring_close_at?: string | null
+          scoring_open_at?: string | null
           screen_capture_cnt?: number
           season_id?: number
           show_teams_and_divisions?: boolean
@@ -284,6 +294,8 @@ export type Database = {
           start_time?: string
           status?: Database["public"]["Enums"]["event_status"]
           sub_deadline?: string | null
+          submission_close_at?: string | null
+          submission_open_at?: string | null
           time_zone?: string
           updated_at?: string
         }
@@ -311,9 +323,13 @@ export type Database = {
           name?: string
           per_show_registrations?: number
           reg_cost?: number
+          registration_close_at?: string | null
+          registration_open_at?: string | null
           release_score_leaderboard?: boolean
           sanctioned_event?: boolean
           scoresheet_template_name?: string | null
+          scoring_close_at?: string | null
+          scoring_open_at?: string | null
           screen_capture_cnt?: number
           season_id?: number
           show_teams_and_divisions?: boolean
@@ -321,6 +337,8 @@ export type Database = {
           start_time?: string
           status?: Database["public"]["Enums"]["event_status"]
           sub_deadline?: string | null
+          submission_close_at?: string | null
+          submission_open_at?: string | null
           time_zone?: string
           updated_at?: string
         }
@@ -1382,6 +1400,9 @@ export type Database = {
           duration_seconds: number | null
           event_id: string
           id: string
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
           status: Database["public"]["Enums"]["submission_status"]
           submitted_at: string | null
           submitted_by: string | null
@@ -1399,6 +1420,9 @@ export type Database = {
           duration_seconds?: number | null
           event_id: string
           id?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: Database["public"]["Enums"]["submission_status"]
           submitted_at?: string | null
           submitted_by?: string | null
@@ -1416,6 +1440,9 @@ export type Database = {
           duration_seconds?: number | null
           event_id?: string
           id?: string
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: Database["public"]["Enums"]["submission_status"]
           submitted_at?: string | null
           submitted_by?: string | null
@@ -1448,6 +1475,17 @@ export type Database = {
     }
     Functions: {
       cleanup_expired_mobile_sessions: { Args: never; Returns: undefined }
+      coach_account_status: {
+        Args: { _event_id: string }
+        Returns: {
+          coach_email: string
+          coach_name: string
+          has_gym_coach_role: boolean
+          team_count: number
+          user_exists: boolean
+          user_id: string
+        }[]
+      }
       generate_short_uuid: { Args: never; Returns: string }
       get_review_by_token: {
         Args: { review_token: string }
@@ -1535,6 +1573,7 @@ export type Database = {
         | "denied"
         | "assigned"
         | "complete"
+        | "revision_requested"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1700,6 +1739,7 @@ export const Constants = {
         "denied",
         "assigned",
         "complete",
+        "revision_requested",
       ],
     },
   },
