@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus, AlertTriangle, Pencil, Mail } from 'lucide-react';
+import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus, AlertTriangle, Pencil, Mail, KeyRound } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import type { Database } from '@/integrations/supabase/types';
@@ -269,6 +269,20 @@ export default function UserRoles() {
     },
     onError: (error: any) => {
       toast({ variant: 'destructive', title: 'Failed to resend invite', description: error.message });
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const redirectTo = `${window.location.origin}/reset-password`;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: 'Password reset email sent', description: 'The user will receive a link to set a new password.' });
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Failed to send reset email', description: error.message });
     },
   });
 
@@ -612,6 +626,23 @@ export default function UserRoles() {
                             <Mail className="w-4 h-4 mr-1" />
                           )}
                           Resend Invite
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={resetPasswordMutation.isPending && resetPasswordMutation.variables === user.email}
+                          onClick={() => {
+                            if (confirm(`Send a password reset link to ${user.email}?`)) {
+                              resetPasswordMutation.mutate(user.email);
+                            }
+                          }}
+                        >
+                          {resetPasswordMutation.isPending && resetPasswordMutation.variables === user.email ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <KeyRound className="w-4 h-4 mr-1" />
+                          )}
+                          Reset Password
                         </Button>
                         <Button
                           variant="ghost"
