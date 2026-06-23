@@ -559,6 +559,34 @@ export default function SubmissionScoringDialog({
                         </>
                       )}
                     </div>
+
+                    {isCurrentPanelSubmitted && (
+                      <div className="flex items-center justify-between p-3 rounded-lg border bg-success/5 border-success/30">
+                        <div>
+                          <p className="text-sm font-medium">
+                            {isCurrentPanelReviewed ? 'Reviewed by admin' : 'Mark this panel as reviewed'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {isCurrentPanelReviewed
+                              ? `Reviewed ${new Date(currentPanelScore!.reviewed_at!).toLocaleString()}`
+                              : 'Confirms an admin has verified this score.'}
+                          </p>
+                        </div>
+                        <Button
+                          variant={isCurrentPanelReviewed ? 'outline' : 'default'}
+                          size="sm"
+                          onClick={() => reviewMutation.mutate(!isCurrentPanelReviewed)}
+                          disabled={reviewMutation.isPending}
+                        >
+                          {reviewMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                          )}
+                          {isCurrentPanelReviewed ? 'Unmark Reviewed' : 'Mark as Reviewed'}
+                        </Button>
+                      </div>
+                    )}
                     {!assignedJudge && (
                       <p className="text-xs text-destructive text-center">No judge assigned to this panel. Assign a judge first.</p>
                     )}
