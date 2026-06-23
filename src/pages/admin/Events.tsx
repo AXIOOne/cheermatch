@@ -494,6 +494,46 @@ export default function Events() {
                       )}
                     />
                   </div>
+
+                  {/* Lifecycle windows */}
+                  <div className="border-t pt-4 space-y-4">
+                    <div>
+                      <h3 className="text-sm font-semibold">Lifecycle Windows</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Optional. When set, these gate the registration / submission / scoring phases independently of Status.
+                      </p>
+                    </div>
+                    {([
+                      ['Registration', 'registration_open_at', 'registration_close_at'],
+                      ['Submission', 'submission_open_at', 'submission_close_at'],
+                      ['Scoring', 'scoring_open_at', 'scoring_close_at'],
+                    ] as const).map(([label, openKey, closeKey]) => (
+                      <div key={label} className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name={openKey as any}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{label} opens</FormLabel>
+                              <FormControl><Input type="datetime-local" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={closeKey as any}
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>{label} closes</FormLabel>
+                              <FormControl><Input type="datetime-local" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    ))}
+                  </div>
                   <FormField
                     control={form.control}
                     name="status"
