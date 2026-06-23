@@ -109,7 +109,6 @@ export default function Events() {
         .from('events')
         .select(`
           *,
-          scoring_templates(id, name, is_default),
           teams:teams(count)
         `)
         .order('created_at', { ascending: false });
