@@ -14,6 +14,7 @@ export interface CategoryItem {
   max_points: number;
   category_type: 'main' | 'difficulty' | 'execution' | 'driver';
   description?: string;
+  panel_abbreviation?: string;
   children: CategoryItem[];
 }
 
