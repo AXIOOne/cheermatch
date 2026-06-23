@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Camera, Square, Upload, RotateCcw, CheckCircle2, Plus } from "lucide-react";
+import { Camera, Square, Upload, RotateCcw, CheckCircle2, Plus, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -39,6 +39,25 @@ export default function MobileRecord() {
   // Event-driven capture settings
   const [maxDuration, setMaxDuration] = useState<number>(DEFAULT_DURATION);
   const [maxAttempts, setMaxAttempts] = useState<number>(DEFAULT_ATTEMPTS);
+  const [isPortrait, setIsPortrait] = useState<boolean>(
+    typeof window !== "undefined" ? window.innerHeight > window.innerWidth : false
+  );
+
+  // Track orientation and try to lock to landscape where supported
+  useEffect(() => {
+    const update = () => setIsPortrait(window.innerHeight > window.innerWidth);
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    // Best-effort lock (works in some Android browsers / installed PWAs)
+    const so = (screen as unknown as { orientation?: { lock?: (o: string) => Promise<void>; unlock?: () => void } }).orientation;
+    so?.lock?.("landscape").catch(() => { /* unsupported (iOS Safari) — we show a hint instead */ });
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+      so?.unlock?.();
+    };
+  }, []);
 
   // Load capture settings from the event
   useEffect(() => {
@@ -280,7 +299,17 @@ export default function MobileRecord() {
   const remaining = Math.max(0, maxDuration - elapsed);
 
   return (
-    <div className="bg-black text-white min-h-[calc(100vh-3.5rem)] flex flex-col">
+    <div className="bg-black text-white min-h-[calc(100vh-3.5rem)] flex flex-col relative">
+      {isPortrait && phase !== "preview" && (
+        <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center text-center px-6 space-y-4">
+          <RotateCw className="h-16 w-16 text-primary animate-pulse" />
+          <h2 className="text-xl font-bold">Please rotate your device</h2>
+          <p className="text-sm text-white/80 max-w-xs">
+            Routines must be captured in <span className="font-semibold">landscape</span> mode.
+            Turn your phone sideways to continue.
+          </p>
+        </div>
+      )}
       <div className="relative flex-1 flex items-center justify-center bg-black">
         {phase !== "preview" && (
           <video ref={videoLiveRef} className="w-full h-full object-contain" playsInline muted autoPlay />
