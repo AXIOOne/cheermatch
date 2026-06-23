@@ -41,61 +41,87 @@ import JudgeRubrics from "./pages/judge/Rubrics";
 // Public review
 import ScoreReview from "./pages/review/ScoreReview";
 
+// Mobile coach app
+import { MobileAuthProvider } from "@/hooks/useMobileAuth";
+import { MobileLayout } from "./components/layout/MobileLayout";
+import { MobileProtectedRoute } from "./components/mobile/MobileProtectedRoute";
+import MobileLogin from "./pages/mobile/MobileLogin";
+import MobileForgotPassword from "./pages/mobile/MobileForgotPassword";
+import MobileResetPassword from "./pages/mobile/MobileResetPassword";
+import MobileEvents from "./pages/mobile/MobileEvents";
+import MobileEventTeams from "./pages/mobile/MobileEventTeams";
+import MobileTeamDetail from "./pages/mobile/MobileTeamDetail";
+import MobileRecord from "./pages/mobile/MobileRecord";
+
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
-            
-            {/* Admin Routes */}
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="events" element={<Events />} />
-              <Route path="events/summary" element={<EventsSummary />} />
-              <Route path="events/:eventId/registrations" element={<EventRegistrations />} />
-              <Route path="events/:eventId/scoring" element={<EventScoring />} />
-              <Route path="events/:eventId/results" element={<EventResults />} />
-              <Route path="events/:eventId/participants" element={<EventParticipants />} />
-              <Route path="events/:eventId/reports" element={<EventReports />} />
-              <Route path="scoring" element={<ScoringTemplates />} />
-              <Route path="rubrics" element={<Rubrics />} />
-              <Route path="divisions" element={<Divisions />} />
-              
-              <Route path="submissions" element={<Submissions />} />
-              <Route path="submissions/:submissionId" element={<SubmissionScoresheet />} />
-              
-              <Route path="reviews" element={<ReviewRequests />} />
-              <Route path="roles" element={<UserRoles />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
-            
-            {/* Judge Routes */}
-            <Route path="/judge" element={<JudgeLayout />}>
-              <Route index element={<JudgeDashboard />} />
-              <Route path="queue" element={<ScoringQueue />} />
-              <Route path="score/:submissionId" element={<ScorePerformance />} />
-              <Route path="history" element={<ScoreHistory />} />
-              <Route path="rubrics" element={<JudgeRubrics />} />
-            </Route>
-            
-            {/* Public Review Route (no auth required) */}
-            <Route path="/review/:token" element={<ScoreReview />} />
-            
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <MobileAuthProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="events" element={<Events />} />
+                <Route path="events/summary" element={<EventsSummary />} />
+                <Route path="events/:eventId/registrations" element={<EventRegistrations />} />
+                <Route path="events/:eventId/scoring" element={<EventScoring />} />
+                <Route path="events/:eventId/results" element={<EventResults />} />
+                <Route path="events/:eventId/participants" element={<EventParticipants />} />
+                <Route path="events/:eventId/reports" element={<EventReports />} />
+                <Route path="scoring" element={<ScoringTemplates />} />
+                <Route path="rubrics" element={<Rubrics />} />
+                <Route path="divisions" element={<Divisions />} />
+
+                <Route path="submissions" element={<Submissions />} />
+                <Route path="submissions/:submissionId" element={<SubmissionScoresheet />} />
+
+                <Route path="reviews" element={<ReviewRequests />} />
+                <Route path="roles" element={<UserRoles />} />
+                <Route path="settings" element={<Settings />} />
+              </Route>
+
+              {/* Judge Routes */}
+              <Route path="/judge" element={<JudgeLayout />}>
+                <Route index element={<JudgeDashboard />} />
+                <Route path="queue" element={<ScoringQueue />} />
+                <Route path="score/:submissionId" element={<ScorePerformance />} />
+                <Route path="history" element={<ScoreHistory />} />
+                <Route path="rubrics" element={<JudgeRubrics />} />
+              </Route>
+
+              {/* Public Review Route (no auth required) */}
+              <Route path="/review/:token" element={<ScoreReview />} />
+
+              {/* Mobile Coach App */}
+              <Route path="/m" element={<MobileLayout />}>
+                <Route path="login" element={<MobileLogin />} />
+                <Route path="forgot-password" element={<MobileForgotPassword />} />
+                <Route path="reset-password" element={<MobileResetPassword />} />
+                <Route index element={<MobileProtectedRoute><MobileEvents /></MobileProtectedRoute>} />
+                <Route path="events/:eventId" element={<MobileProtectedRoute><MobileEventTeams /></MobileProtectedRoute>} />
+                <Route path="events/:eventId/teams/:teamId" element={<MobileProtectedRoute><MobileTeamDetail /></MobileProtectedRoute>} />
+                <Route path="events/:eventId/teams/:teamId/record" element={<MobileProtectedRoute><MobileRecord /></MobileProtectedRoute>} />
+              </Route>
+
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </MobileAuthProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
 
 export default App;
+

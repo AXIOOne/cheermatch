@@ -1464,6 +1464,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      hash_password: { Args: { _password: string }; Returns: string }
       legacy_session_lookup: {
         Args: { _token: string }
         Returns: {
@@ -1476,6 +1477,10 @@ export type Database = {
       mark_review_viewed: { Args: { review_token: string }; Returns: boolean }
       submit_review_request: {
         Args: { notes: string; review_token: string }
+        Returns: boolean
+      }
+      verify_password: {
+        Args: { _hash: string; _password: string }
         Returns: boolean
       }
     }
