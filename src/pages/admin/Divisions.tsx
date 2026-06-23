@@ -53,9 +53,21 @@ export default function Divisions() {
   const { data: divisions, isLoading: divisionsLoading } = useQuery({
     queryKey: ['divisions'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('divisions')
-        .select('*')
+        .select('*, template:scoring_templates(id, name)')
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: scoringTemplates } = useQuery({
+    queryKey: ['scoring-templates-select'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('scoring_templates')
+        .select('id, name, is_default')
         .order('name');
       if (error) throw error;
       return data;
