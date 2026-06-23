@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'https://esm.sh/resend@4.0.0'
+import { buildScoresheet, type RawField, type ScoreType } from '../_shared/build-scoresheet.ts'
+import { buildScoresheetPdf } from '../_shared/scoresheet-pdf.ts'
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
