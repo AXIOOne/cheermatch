@@ -10,17 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Video, Inbox, CheckCircle, XCircle, UserCheck, Flag, Search, ExternalLink, Mail } from 'lucide-react';
+import { Loader2, Video, Inbox, CheckCircle, XCircle, UserCheck, Flag, Search, ExternalLink, Mail, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { GenerateReviewLink } from '@/components/admin/GenerateReviewLink';
 import { BulkEmailDialog } from '@/components/admin/BulkEmailDialog';
+import { RequestRevisionDialog } from '@/components/admin/RequestRevisionDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
 
 // Lifecycle statuses we surface in the UI.
-type LifecycleStatus = 'imported' | 'approved' | 'denied' | 'assigned' | 'complete';
-const LIFECYCLE_STATUSES: LifecycleStatus[] = ['imported', 'approved', 'denied', 'assigned', 'complete'];
+type LifecycleStatus = 'imported' | 'approved' | 'denied' | 'revision_requested' | 'assigned' | 'complete';
+const LIFECYCLE_STATUSES: LifecycleStatus[] = ['imported', 'approved', 'denied', 'revision_requested', 'assigned', 'complete'];
 
 interface SubmissionWithDetails {
   id: string;
