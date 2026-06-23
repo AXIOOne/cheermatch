@@ -34,6 +34,7 @@ export default function ScoringQueue() {
   const [searchParams] = useSearchParams();
   const eventFilter = searchParams.get('event');
   const [selectedEvent, setSelectedEvent] = useState<string>(eventFilter || 'all');
+  const [statusFilter, setStatusFilter] = useState<'pending' | 'scored' | 'all'>('pending');
 
   // Judge's assignments — event, division, and panel
   const { data: assignments } = useQuery({
@@ -219,6 +220,16 @@ export default function ScoringQueue() {
 
   const uniqueEvents = [...new Map(assignments?.map((a: any) => [a.event_id, a.event]) || [])];
 
+  const filteredSubmissions = useMemo(() => {
+    return (visibleSubmissions || []).filter((sub: any) => {
+      const status = getScoreStatus(sub.id);
+      const isScored = status === 'submitted' || status === 'locked';
+      if (statusFilter === 'pending') return !isScored;
+      if (statusFilter === 'scored') return isScored;
+      return true;
+    });
+  }, [visibleSubmissions, existingScores, statusFilter]);
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
@@ -227,6 +238,16 @@ export default function ScoringQueue() {
           <p className="text-muted-foreground mt-1">Review and score team performances</p>
         </div>
         <div className="flex items-center gap-4">
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="scored">Scored</SelectItem>
+              <SelectItem value="all">All</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={selectedEvent} onValueChange={setSelectedEvent}>
             <SelectTrigger className="w-[200px]">
               <SelectValue placeholder="Filter by event" />
@@ -247,10 +268,11 @@ export default function ScoringQueue() {
         <div className="flex justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
-      ) : visibleSubmissions && visibleSubmissions.length > 0 ? (
+      ) : filteredSubmissions && filteredSubmissions.length > 0 ? (
         <div className="grid gap-4">
-          {visibleSubmissions.map((submission: any) => {
+          {filteredSubmissions.map((submission: any) => {
             const scoreStatus = getScoreStatus(submission.id);
+            const isScored = scoreStatus === 'submitted' || scoreStatus === 'locked';
             const panelBadges = [...new Map(
               getSubmissionAssignments(submission)
                 .map((assignment: any) => {
@@ -307,12 +329,19 @@ export default function ScoringQueue() {
                       </div>
                     </div>
 
-                    <Button asChild>
-                      <Link to={`/judge/score/${submission.id}`}>
-                        <Play className="w-4 h-4 mr-2" />
-                        {scoreStatus === 'in_progress' ? 'Continue' : scoreStatus === 'submitted' ? 'View' : 'Score'}
-                      </Link>
-                    </Button>
+                    {isScored ? (
+                      <Button variant="outline" disabled>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Submitted
+                      </Button>
+                    ) : (
+                      <Button asChild>
+                        <Link to={`/judge/score/${submission.id}`}>
+                          <Play className="w-4 h-4 mr-2" />
+                          {scoreStatus === 'in_progress' ? 'Continue' : 'Score'}
+                        </Link>
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
@@ -323,7 +352,13 @@ export default function ScoringQueue() {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No submissions available to score yet.</p>
+            <p>
+              {statusFilter === 'scored'
+                ? 'No scored submissions yet.'
+                : statusFilter === 'pending'
+                ? 'No pending submissions to score.'
+                : 'No submissions available to score yet.'}
+            </p>
             <p className="text-sm mt-1">Submissions appear here once an admin assigns you and releases the event for scoring.</p>
           </CardContent>
         </Card>

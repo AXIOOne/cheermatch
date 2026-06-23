@@ -1,59 +1,50 @@
-## Goals
+## Lock submitted scores from judges + add queue status filter
 
-1. Reformat `src/pages/judge/ScorePerformance.tsx` so the video is the primary focus, with team info stacked beside it and scoring fields below.
-2. Add a "Submit & Flag" button next to "Submit Score" that captures a flag reason, then submits the score with a "Needs Review" status visible in the admin scoring control panel.
+### 1. Judges cannot access scores after submission
 
-## Layout changes (judge scoring screen)
+**Queue (`src/pages/judge/ScoringQueue.tsx`)**
+- When the judge's score `status` is `submitted` or `locked`, render the row without a clickable "View" button — replace it with a non-interactive "Submitted" indicator. The "Scored" / "Locked" badge stays.
+- Pending / `in_progress` / no-score rows keep the existing "Score" / "Continue" button.
 
-New structure replacing the current `lg:grid-cols-2` split:
+**Score page (`src/pages/judge/ScorePerformance.tsx`)**
+- On load, if the existing score for this judge + submission is `submitted` or `locked`, redirect back to `/judge/queue` with a toast: "This score has already been submitted. Contact an admin to make changes."
+- Treat `submitted` the same as `locked` in `isLocked` as a defense-in-depth fallback (hides Save Draft / Submit / Submit & Flag).
+- Admin views (`EventScoring.tsx`, `SubmissionScoresheet.tsx`) are unchanged — admins keep full view/edit access.
 
-```text
-+--------------------------------------------+-----------------+
-|                                            | Team Info       |
-|              VIDEO PLAYER (large)          |  - Team name    |
-|              (≈ 2/3 width on desktop)      |  - Gym          |
-|                                            |  - Division     |
-|                                            |  - Level        |
-|                                            |  - Event        |
-|                                            |  - Athletes     |
-|                                            |  - Duration     |
-+--------------------------------------------+-----------------+
-|  SCORING FIELDS (sections + inputs)        | Judge Comments  |
-|  (≈ 2/3 width)                             | (textarea)      |
-|                                            |                 |
-|  Deductions block below scoring fields     |                 |
-+--------------------------------------------+-----------------+
+**Database guard (defense in depth)** — new migration replacing the judge UPDATE policy on `public.scores` so judges can only update rows where `status = 'in_progress'`:
+
+```sql
+DROP POLICY IF EXISTS "Judges can update their own scores" ON public.scores;
+
+CREATE POLICY "Judges can update their own in-progress scores"
+ON public.scores
+FOR UPDATE
+TO authenticated
+USING (
+  judge_user_id = auth.uid()
+  AND status = 'in_progress'
+)
+WITH CHECK (
+  judge_user_id = auth.uid()
+);
 ```
 
-- Top row: video left (col-span-2), team info card stacked right (col-span-1).
-- Bottom row: scoring sections left (col-span-2), comments card right (col-span-1, sticky).
-- Mobile: everything stacks single-column (video → team → scoring → comments).
-- Preserve existing rubric reference, panel badges, save/submit buttons, locked/closed states.
-- No changes to data fetching, visibility filtering, or score calculation logic.
+The exact existing policy name will be confirmed against `pg_policies` before the migration runs.
 
-## Submit & Flag flow
+### 2. Status filter on the scoring queue
 
-Header buttons (when not locked):
-`Save Draft` | `Submit Score` | `Submit & Flag` (warning-styled).
+Add a second filter `Select` next to the existing event filter in `ScoringQueue.tsx`:
 
-Clicking **Submit & Flag** opens a modal (`Dialog`) requiring a non-empty reason. On confirm, the score is saved with `status = 'submitted'`, `needs_review = true`, and the reason persisted.
+- Options: **All**, **Pending** (no score yet or `in_progress`), **Scored** (status `submitted` or `locked`).
+- Default: **Pending**, so judges land on the work they still need to do.
+- Filtering happens client-side over `visibleSubmissions` using the existing `getScoreStatus(submission.id)` lookup — no extra queries.
+- Empty-state copy updates to match the active filter (e.g., "No scored submissions yet.").
 
-### Reason storage
+### Files touched
+- `src/pages/judge/ScoringQueue.tsx`
+- `src/pages/judge/ScorePerformance.tsx`
+- New migration under `supabase/migrations/` for the RLS update
 
-Add a `review_reason` (text, nullable) column to `public.scores` via migration. The existing `needs_review` boolean is already in use by `EventScoring.tsx`, which already maps `needs_review` → orange/yellow "Needs review" status — no admin changes needed for the badge.
-
-### Mutation changes
-
-Extend `saveMutation` to accept `{ status, needsReview?, reviewReason? }`:
-- On insert/update, set `needs_review` and `review_reason` accordingly.
-- `Submit Score` clears `needs_review` to `false` and `review_reason` to `null`.
-- `Submit & Flag` sets `needs_review = true` and stores the reason; status `submitted`; navigates back to queue with a toast.
-
-## Technical details
-
-Files:
-- `src/pages/judge/ScorePerformance.tsx` — layout restructure, new flag button + dialog, mutation params.
-- New migration: `ALTER TABLE public.scores ADD COLUMN review_reason text;` (no new policies needed; existing scores policies cover it).
-- Optional: surface `review_reason` in `src/pages/admin/EventScoring.tsx` tooltip/dialog so admins see why the judge flagged it (small select-list addition + display in the existing score editor).
-
-No changes to RLS, GRANTS (column-level inherits), or other judge/admin pages beyond the optional reason display.
+### Out of scope
+- No changes to admin scoring screens, flag/review flow, or score history list.
+- No changes to scoring calculation, save logic, or templates.
