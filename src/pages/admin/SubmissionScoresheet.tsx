@@ -47,7 +47,7 @@ export default function SubmissionScoresheet() {
         panel:judge_panels(id, name, abbreviation),
         details:score_details(
           points, notes,
-          field:scoring_fields(id, name, max_points, section_id,
+          field:scoring_fields(id, name, max_points, section_id, score_type, display_order,
             section:scoring_sections(id, name, abbreviation, display_order),
             panel_links:scoring_field_panels(panel_abbreviation))
         ),
@@ -58,6 +58,52 @@ export default function SubmissionScoresheet() {
     },
     enabled: !!submissionId,
   });
+
+  const handleDownloadPdf = async () => {
+    try {
+      if (!submission) return;
+      const submitted = (scores || []).filter((s: any) => s.status === 'submitted');
+      const fieldMap = new Map<string, RawField>();
+      submitted.forEach((s: any) => {
+        (s.details || []).forEach((d: any) => {
+          const f = Array.isArray(d.field) ? d.field[0] : d.field;
+          if (!f || fieldMap.has(f.id)) return;
+          const section = Array.isArray(f.section) ? f.section[0] : f.section;
+          fieldMap.set(f.id, {
+            id: f.id,
+            name: f.name,
+            max_points: Number(f.max_points || 0),
+            score_type: ((f.score_type as ScoreType) || 'difficulty'),
+            section_id: f.section_id,
+            section_name: section?.name || '',
+            section_order: section?.display_order ?? 0,
+            field_order: f.display_order ?? 0,
+          });
+        });
+      });
+      const data = buildScoresheet({
+        team_name: submission.team?.name || 'Team',
+        gym_name: submission.team?.gym_name,
+        division_name: submission.team?.division?.name,
+        event_name: submission.event?.name || 'Event',
+        accuscore_end_at: submission.event?.accuscore_end_at || null,
+        fields: Array.from(fieldMap.values()),
+        submitted_scores: submitted.map((s: any) => ({
+          deductions: Number(s.deductions || 0),
+          details: (s.details || []).map((d: any) => ({
+            field_id: (Array.isArray(d.field) ? d.field[0] : d.field)?.id,
+            points: Number(d.points || 0),
+          })),
+        })),
+      });
+      const bytes = await buildScoresheetPdf(data);
+      const safeName = `${data.team_name} - ${data.event_name}`.replace(/[^\w\s-]/g, '').trim();
+      downloadPdf(bytes, `${safeName || 'scoresheet'}.pdf`);
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'PDF failed', description: err.message });
+    }
+  };
+
 
   // Build aggregated view per field across all submitted panel scores
   type AggField = {
