@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Camera, Square, Upload, RotateCcw, CheckCircle2, Plus, RotateCw, ChevronLeft, LogOut } from "lucide-react";
+import { Camera, Square, Upload, CheckCircle2, Plus, RotateCw, ChevronLeft, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
