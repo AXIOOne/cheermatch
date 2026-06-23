@@ -172,8 +172,6 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const ops: Promise<any>[] = [];
-
       for (const key of Object.keys(pending)) {
         const [divisionId, sectionId] = key.split(':');
         if (!isModified(divisionId, sectionId)) continue;
@@ -183,42 +181,30 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
 
         if (!newJudge) {
           if (existing) {
-            ops.push(
-              supabase.from('judge_assignments').delete().eq('id', existing.id).then(({ error }) => {
-                if (error) throw error;
-              })
-            );
+            const { error } = await supabase
+              .from('judge_assignments')
+              .delete()
+              .eq('id', existing.id);
+            if (error) throw error;
           }
         } else if (existing) {
-          ops.push(
-            supabase
-              .from('judge_assignments')
-              .update({ judge_user_id: newJudge })
-              .eq('id', existing.id)
-              .then(({ error }) => {
-                if (error) throw error;
-              })
-          );
+          const { error } = await supabase
+            .from('judge_assignments')
+            .update({ judge_user_id: newJudge })
+            .eq('id', existing.id);
+          if (error) throw error;
         } else {
-          ops.push(
-            supabase
-              .from('judge_assignments')
-              .insert({
-                event_id: eventId,
-                division_id: divisionId,
-                section_id: sectionId,
-                judge_user_id: newJudge,
-                level_id: null,
-                panel_id: null,
-              })
-              .then(({ error }) => {
-                if (error) throw error;
-              })
-          );
+          const { error } = await supabase.from('judge_assignments').insert({
+            event_id: eventId,
+            division_id: divisionId,
+            section_id: sectionId,
+            judge_user_id: newJudge,
+            level_id: null,
+            panel_id: null,
+          });
+          if (error) throw error;
         }
       }
-
-      await Promise.all(ops);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['section-assignments', eventId] });
