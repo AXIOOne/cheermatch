@@ -204,8 +204,8 @@ export default function ScoringQueue() {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>No performances ready for scoring.</p>
-            <p className="text-sm mt-1">Submissions will appear here once teams upload their videos.</p>
+            <p>No submissions assigned to you yet.</p>
+            <p className="text-sm mt-1">An admin will assign you to divisions under Events → Assign Panels.</p>
           </CardContent>
         </Card>
       )}
