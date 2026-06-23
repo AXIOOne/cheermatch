@@ -221,19 +221,24 @@ export default function Divisions() {
 
         <TabsContent value="divisions">
           <div className="flex justify-end mb-4">
-            <Dialog open={isDivisionDialogOpen} onOpenChange={setIsDivisionDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Division
-                </Button>
-              </DialogTrigger>
+            <Dialog open={isDivisionDialogOpen} onOpenChange={handleDivisionDialogChange}>
+              <Button onClick={openCreateDivision}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Division
+              </Button>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Create Division</DialogTitle>
+                  <DialogTitle>{editingDivision ? 'Edit Division' : 'Create Division'}</DialogTitle>
                 </DialogHeader>
                 <Form {...divisionForm}>
-                  <form onSubmit={divisionForm.handleSubmit((d) => createDivisionMutation.mutate(d))} className="space-y-4">
+                  <form
+                    onSubmit={divisionForm.handleSubmit((d) =>
+                      editingDivision
+                        ? updateDivisionMutation.mutate(d)
+                        : createDivisionMutation.mutate(d)
+                    )}
+                    className="space-y-4"
+                  >
                     <FormField
                       control={divisionForm.control}
                       name="name"
@@ -255,7 +260,7 @@ export default function Divisions() {
                           <FormItem>
                             <FormLabel>Min Age</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="5" {...field} />
+                              <Input type="number" placeholder="5" {...field} value={field.value ?? ''} />
                             </FormControl>
                           </FormItem>
                         )}
@@ -267,7 +272,7 @@ export default function Divisions() {
                           <FormItem>
                             <FormLabel>Max Age</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="18" {...field} />
+                              <Input type="number" placeholder="18" {...field} value={field.value ?? ''} />
                             </FormControl>
                           </FormItem>
                         )}
@@ -297,12 +302,17 @@ export default function Divisions() {
                       )}
                     />
                     <div className="flex justify-end gap-2 pt-4">
-                      <Button type="button" variant="outline" onClick={() => setIsDivisionDialogOpen(false)}>
+                      <Button type="button" variant="outline" onClick={() => handleDivisionDialogChange(false)}>
                         Cancel
                       </Button>
-                      <Button type="submit" disabled={createDivisionMutation.isPending}>
-                        {createDivisionMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                        Create
+                      <Button
+                        type="submit"
+                        disabled={createDivisionMutation.isPending || updateDivisionMutation.isPending}
+                      >
+                        {(createDivisionMutation.isPending || updateDivisionMutation.isPending) && (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        )}
+                        {editingDivision ? 'Save Changes' : 'Create'}
                       </Button>
                     </div>
                   </form>
