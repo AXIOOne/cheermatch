@@ -76,19 +76,14 @@ export default function EventsSummary() {
   const totalSubmissions = events?.reduce((sum, e) => sum + getSubmissionsCount(e.submissions), 0) || 0;
   const totalScores = scores?.length || 0;
 
-  // Upcoming deadlines (next 30 days)
+  // Upcoming events (start date in next 30 days)
   const today = new Date();
   const thirtyDaysOut = addDays(today, 30);
-  
+
   const upcomingDeadlines = events
     ?.filter(e => {
-      const regDeadline = new Date(e.registration_deadline);
-      const broadcastDeadline = e.broadcast_deadline ? new Date(e.broadcast_deadline) : null;
-      
-      return (
-        (isAfter(regDeadline, today) && isBefore(regDeadline, thirtyDaysOut)) ||
-        (broadcastDeadline && isAfter(broadcastDeadline, today) && isBefore(broadcastDeadline, thirtyDaysOut))
-      );
+      const startDate = new Date(e.start_date);
+      return isAfter(startDate, today) && isBefore(startDate, thirtyDaysOut);
     })
     .slice(0, 5) || [];
 
