@@ -46,6 +46,7 @@ export default function EventScoring() {
   const { eventId } = useParams<{ eventId: string }>();
   const [isPanelsDialogOpen, setIsPanelsDialogOpen] = useState(false);
   const [sendingScoreFor, setSendingScoreFor] = useState<string | null>(null);
+  const [downloadingPdfFor, setDownloadingPdfFor] = useState<string | null>(null);
   const [scoringSubmissionId, setScoringSubmissionId] = useState<string | null>(null);
   const [scoringPanelId, setScoringPanelId] = useState<string | null>(null);
   const { toast } = useToast();
