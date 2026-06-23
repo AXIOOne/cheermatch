@@ -380,6 +380,19 @@ export default function EventScoring() {
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-warning/10 rounded-full">
+                <AlertCircle className="w-6 h-6 text-warning" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Needs Review</p>
+                <p className="text-2xl font-bold">{stats.needsReview}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Panel Legend */}
