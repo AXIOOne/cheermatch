@@ -98,6 +98,7 @@ export default function Events() {
       end_date: '',
       registration_deadline: '',
       broadcast_deadline: '',
+      accuscore_end_at: '',
       status: 'draft',
     },
   });
