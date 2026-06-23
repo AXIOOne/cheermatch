@@ -344,6 +344,7 @@ export default function ScoringTemplates() {
             id: f.id, temp_id: f.id,
             name: f.name, description: f.description,
             field_type: f.field_type,
+            score_type: f.score_type || 'difficulty',
             min_value: Number(f.min_value), max_value: Number(f.max_value),
             step: Number(f.step), max_points: Number(f.max_points),
             aggregation: f.aggregation,
