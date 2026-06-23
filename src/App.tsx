@@ -65,7 +65,7 @@ const App = () => (
               <Route path="scoring" element={<ScoringTemplates />} />
               <Route path="rubrics" element={<Rubrics />} />
               <Route path="divisions" element={<Divisions />} />
-              <Route path="teams" element={<Teams />} />
+              
               <Route path="submissions" element={<Submissions />} />
               <Route path="submissions/:submissionId" element={<SubmissionScoresheet />} />
               <Route path="judges" element={<Judges />} />
