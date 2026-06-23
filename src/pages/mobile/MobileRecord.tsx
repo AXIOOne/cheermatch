@@ -21,6 +21,7 @@ function fmt(s: number) {
 export default function MobileRecord() {
   const { eventId = "", teamId = "" } = useParams();
   const navigate = useNavigate();
+  const { signOut } = useMobileAuth();
 
   const videoLiveRef = useRef<HTMLVideoElement>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
