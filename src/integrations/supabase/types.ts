@@ -504,6 +504,7 @@ export type Database = {
           id: string
           max_points: number
           name: string
+          panel_abbreviation: string | null
           parent_category_id: string | null
           section_id: string | null
           template_id: string
@@ -517,6 +518,7 @@ export type Database = {
           id?: string
           max_points: number
           name: string
+          panel_abbreviation?: string | null
           parent_category_id?: string | null
           section_id?: string | null
           template_id: string
@@ -530,6 +532,7 @@ export type Database = {
           id?: string
           max_points?: number
           name?: string
+          panel_abbreviation?: string | null
           parent_category_id?: string | null
           section_id?: string | null
           template_id?: string
@@ -686,6 +689,7 @@ export type Database = {
         Row: {
           abbreviation: string
           created_at: string
+          default_panel_abbreviation: string | null
           description: string | null
           display_order: number
           id: string
@@ -696,6 +700,7 @@ export type Database = {
         Insert: {
           abbreviation: string
           created_at?: string
+          default_panel_abbreviation?: string | null
           description?: string | null
           display_order?: number
           id?: string
@@ -706,6 +711,7 @@ export type Database = {
         Update: {
           abbreviation?: string
           created_at?: string
+          default_panel_abbreviation?: string | null
           description?: string | null
           display_order?: number
           id?: string

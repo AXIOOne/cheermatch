@@ -14,6 +14,7 @@ export interface CategoryItem {
   max_points: number;
   category_type: 'main' | 'difficulty' | 'execution' | 'driver';
   description?: string;
+  panel_abbreviation?: string;
   children: CategoryItem[];
 }
 
@@ -163,7 +164,7 @@ function CategoryFields({
   isMain: boolean;
 }) {
   return (
-    <div className="flex-1 grid grid-cols-3 gap-2">
+    <div className="flex-1 grid grid-cols-4 gap-2">
       <div>
         <label className="text-xs text-muted-foreground">Name</label>
         <Input
@@ -208,6 +209,18 @@ function CategoryFields({
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div>
+        <label className="text-xs text-muted-foreground">Panel</label>
+        <Input
+          value={category.panel_abbreviation || ''}
+          onChange={(e) =>
+            onUpdate({ ...category, panel_abbreviation: e.target.value.toUpperCase() })
+          }
+          placeholder="inherit"
+          maxLength={4}
+          className="h-8 text-sm"
+        />
       </div>
     </div>
   );

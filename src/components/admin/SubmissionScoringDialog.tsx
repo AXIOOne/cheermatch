@@ -111,6 +111,7 @@ export default function SubmissionScoringDialog({
         .from('scoring_templates')
         .select(`
           *,
+          sections:scoring_sections(*),
           categories:scoring_categories(*),
           deduction_types:deduction_types(*)
         `)
@@ -124,6 +125,7 @@ export default function SubmissionScoringDialog({
           .from('scoring_templates')
           .select(`
             *,
+              sections:scoring_sections(*),
               categories:scoring_categories(*),
               deduction_types:deduction_types(*)
           `)
@@ -195,11 +197,40 @@ export default function SubmissionScoringDialog({
   // Get judge assigned to selected panel
   const assignedJudge = judgeAssignments?.find(ja => ja.panel_id === selectedPanelId);
 
+  // Selected panel's abbreviation, used to filter categories that target a specific panel
+  const selectedPanelAbbrev = panels.find(p => p.id === selectedPanelId)?.abbreviation || null;
+
+  // Build lookup maps + effective-panel resolver (category -> parent -> section default)
+  const categoriesById = new Map<string, any>(
+    ((template?.categories as any[]) || []).map((c: any) => [c.id, c])
+  );
+  const sectionsById = new Map<string, any>(
+    ((template?.sections as any[]) || []).map((s: any) => [s.id, s])
+  );
+  const getEffectivePanel = (cat: any): string | null => {
+    if (cat?.panel_abbreviation) return cat.panel_abbreviation;
+    if (cat?.parent_category_id) {
+      const parent = categoriesById.get(cat.parent_category_id);
+      if (parent) return getEffectivePanel(parent);
+    }
+    if (cat?.section_id) {
+      return sectionsById.get(cat.section_id)?.default_panel_abbreviation || null;
+    }
+    return null;
+  };
+  const isCategoryVisible = (cat: any) => {
+    const eff = getEffectivePanel(cat);
+    if (!eff) return true; // unassigned categories visible to all panels (back-compat)
+    if (!selectedPanelAbbrev) return true;
+    return eff.toUpperCase() === selectedPanelAbbrev.toUpperCase();
+  };
+
   // Initialize/reset scores when panel changes
   useEffect(() => {
     if (!template?.categories) return;
 
-    const leafCategories = sortByDisplayOrder(getLeafCategories(template.categories as any[]));
+    const leafCategories = sortByDisplayOrder(getLeafCategories(template.categories as any[]))
+      .filter((cat: any) => isCategoryVisible(cat));
     
     const panelScore = allScores?.find(s => s.panel_id === selectedPanelId);
     
@@ -259,7 +290,8 @@ export default function SubmissionScoringDialog({
 
   const calculateTotalScore = () => {
     if (!template?.categories) return 0;
-    const leafCategories = getLeafCategories(template.categories as any[]);
+    const leafCategories = getLeafCategories(template.categories as any[])
+      .filter((cat: any) => isCategoryVisible(cat));
     const deductionsTotal = calculateStructuredDeductions(template.deduction_types as any[], deductionCounts);
     let total = 0;
     leafCategories.forEach((cat: any) => {
@@ -638,8 +670,9 @@ export default function SubmissionScoringDialog({
                   <>
                     {/* Category Scores */}
                     <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                      {template.categories
-                        ?.sort((a: any, b: any) => a.display_order - b.display_order)
+                      {(template.categories as any[])
+                        ?.filter((category: any) => isCategoryVisible(category))
+                        .sort((a: any, b: any) => a.display_order - b.display_order)
                         .map((category: any) => (
                         <Card key={category.id} className="overflow-hidden">
                           <CardHeader className="py-3 pb-2">
