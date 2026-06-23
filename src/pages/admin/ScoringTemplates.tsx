@@ -410,6 +410,7 @@ export default function ScoringTemplates() {
           abbreviation: s.abbreviation,
           description: s.description,
           max_points: s.max_points,
+          default_panel_abbreviation: s.default_panel_abbreviation ?? null,
           display_order: s.display_order ?? index,
         }));
 
