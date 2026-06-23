@@ -7,13 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Search, Loader2, Users, Plus } from 'lucide-react';
+import { ArrowLeft, Search, Loader2, Users, Plus, Pencil } from 'lucide-react';
 import { AddTeamDialog } from '@/components/admin/AddTeamDialog';
+import { EditRegistrationDialog } from '@/components/admin/EditRegistrationDialog';
 
 export default function EventRegistrations() {
   const { eventId } = useParams<{ eventId: string }>();
   const [searchQuery, setSearchQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [editTeam, setEditTeam] = useState<any>(null);
 
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ['event', eventId],
@@ -116,6 +118,7 @@ export default function EventRegistrations() {
                   <TableHead>Division</TableHead>
                   <TableHead>Level</TableHead>
                   <TableHead className="text-right">Athletes</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -130,6 +133,12 @@ export default function EventRegistrations() {
                       <Badge variant="secondary">{team.level?.name || '—'}</Badge>
                     </TableCell>
                     <TableCell className="text-right">{team.athlete_count}</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setEditTeam(team)}>
+                        <Pencil className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -149,6 +158,13 @@ export default function EventRegistrations() {
 
       {eventId && (
         <AddTeamDialog open={addOpen} onOpenChange={setAddOpen} eventId={eventId} />
+      )}
+      {editTeam && (
+        <EditRegistrationDialog
+          open={!!editTeam}
+          onOpenChange={(o) => !o && setEditTeam(null)}
+          team={editTeam}
+        />
       )}
     </div>
   );
