@@ -269,7 +269,16 @@ export default function SubmissionScoresheet() {
           <CardContent>
             {submission.video_url ? (
               <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                <video src={submission.video_url} controls className="w-full h-full" poster={submission.thumbnail_url || undefined} />
+                {/players\.brightcove\.net|player\.vimeo\.com|youtube\.com\/embed|youtu\.be/.test(submission.video_url) ? (
+                  <iframe
+                    src={submission.video_url}
+                    className="w-full h-full"
+                    allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video src={submission.video_url} controls className="w-full h-full" poster={submission.thumbnail_url || undefined} />
+                )}
               </div>
             ) : (
               <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
