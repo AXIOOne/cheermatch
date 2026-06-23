@@ -48,7 +48,7 @@ export default function ScoringQueue() {
           level_id,
           panel_id,
           section_id,
-          event:events(id, name, status),
+          event:events(id, name, status, scoring_open_at, scoring_close_at),
           panel:judge_panels(id, abbreviation, name),
           section:scoring_sections(id, name, abbreviation, default_panel_abbreviation)
         `)
@@ -60,9 +60,16 @@ export default function ScoringQueue() {
   });
 
   const openAssignments = useMemo(() => {
-    return (assignments || []).filter((assignment: any) =>
-      assignment.event_id && OPEN_STATUSES.has(single(assignment.event)?.status)
-    );
+    const now = Date.now();
+    return (assignments || []).filter((assignment: any) => {
+      const ev = single(assignment.event) as any;
+      if (!assignment.event_id || !OPEN_STATUSES.has(ev?.status)) return false;
+      const openAt = ev?.scoring_open_at ? new Date(ev.scoring_open_at).getTime() : null;
+      const closeAt = ev?.scoring_close_at ? new Date(ev.scoring_close_at).getTime() : null;
+      if (openAt != null && now < openAt) return false;
+      if (closeAt != null && now > closeAt) return false;
+      return true;
+    });
   }, [assignments]);
 
   const assignedEventIds = useMemo(
