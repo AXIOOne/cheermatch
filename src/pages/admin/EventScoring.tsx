@@ -469,7 +469,7 @@ export default function EventScoring() {
                             <DropdownMenuContent align="end" className="w-52">
                               <DropdownMenuItem
                                 onClick={() => handleSendScoreSheet(submission.id)}
-                                disabled={sendingScoreFor === submission.id || !overallStatus.allComplete}
+                                disabled={sendingScoreFor === submission.id || !overallStatus.allReviewed}
                               >
                                 {sendingScoreFor === submission.id ? (
                                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -486,7 +486,7 @@ export default function EventScoring() {
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleDownloadPdf(submission.id)}
-                                disabled={downloadingPdfFor === submission.id || !overallStatus.allComplete}
+                                disabled={downloadingPdfFor === submission.id || !overallStatus.allReviewed}
                               >
                                 {downloadingPdfFor === submission.id ? (
                                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
