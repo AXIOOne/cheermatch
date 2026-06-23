@@ -148,6 +148,7 @@ export default function SubmissionScoringDialog({
   const currentPanelScore = allScores?.find((s: any) => resolveScorePanelId(s) === selectedPanelId);
   const assignedJudge = judgeAssignments?.find((ja: any) => ja.panel_id === selectedPanelId);
   const selectedPanelAbbrev = panels.find(p => p.id === selectedPanelId)?.abbreviation || null;
+  const isSdPanel = (selectedPanelAbbrev || '').toUpperCase() === 'SD';
 
   // Flatten visible fields for this panel, grouped by section
   const visibleSections = useMemo(() => {
