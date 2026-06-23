@@ -670,8 +670,9 @@ export default function SubmissionScoringDialog({
                   <>
                     {/* Category Scores */}
                     <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                      {template.categories
-                        ?.sort((a: any, b: any) => a.display_order - b.display_order)
+                      {(template.categories as any[])
+                        ?.filter((category: any) => isCategoryVisible(category))
+                        .sort((a: any, b: any) => a.display_order - b.display_order)
                         .map((category: any) => (
                         <Card key={category.id} className="overflow-hidden">
                           <CardHeader className="py-3 pb-2">
