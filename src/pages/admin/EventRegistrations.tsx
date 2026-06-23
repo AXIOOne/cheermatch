@@ -65,11 +65,20 @@ export default function EventRegistrations() {
           <ArrowLeft className="w-4 h-4" />
           Back to Events
         </Link>
-        <h1 className="text-3xl font-bold text-foreground">
-          {eventLoading ? 'Loading...' : event?.name}
-        </h1>
-        <p className="text-muted-foreground mt-1">Team Registrations</p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">
+              {eventLoading ? 'Loading...' : event?.name}
+            </h1>
+            <p className="text-muted-foreground mt-1">Team Registrations</p>
+          </div>
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Add Registration
+          </Button>
+        </div>
       </div>
+
 
       {/* Search */}
       <Card className="mb-4">
