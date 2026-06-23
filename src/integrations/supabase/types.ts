@@ -14,6 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
+      content_categories: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      content_videos: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          status: string
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          user_id: string
+          video_url: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+          video_url?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          status?: string
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_videos_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "content_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deduction_types: {
         Row: {
           category: Database["public"]["Enums"]["deduction_category"]
@@ -141,43 +215,112 @@ export type Database = {
       events: {
         Row: {
           accuscore_end_at: string | null
+          broadcast_channel: string
+          broadcast_deadline_date: string | null
+          broadcast_deadline_time: string
           created_at: string
           created_by: string
+          current_match: string | null
           description: string | null
           discipline: string | null
+          dont_show_scoresheet: boolean
+          duration_of_capture: number
           end_date: string
+          end_time: string
+          event_uuid: string | null
+          hide_from_leaderboard: boolean
+          hide_from_website: boolean
+          hide_video_from_team_gym_division: boolean
           id: string
+          list_on_special_events_page: boolean
+          long_description: string | null
           name: string
+          per_show_registrations: number
+          reg_cost: number
+          release_score_leaderboard: boolean
+          sanctioned_event: boolean
+          scoresheet_template_name: string | null
+          screen_capture_cnt: number
+          season_id: number
+          show_teams_and_divisions: boolean
           start_date: string
+          start_time: string
           status: Database["public"]["Enums"]["event_status"]
+          sub_deadline: string | null
           time_zone: string
           updated_at: string
         }
         Insert: {
           accuscore_end_at?: string | null
+          broadcast_channel?: string
+          broadcast_deadline_date?: string | null
+          broadcast_deadline_time?: string
           created_at?: string
           created_by: string
+          current_match?: string | null
           description?: string | null
           discipline?: string | null
+          dont_show_scoresheet?: boolean
+          duration_of_capture?: number
           end_date: string
+          end_time?: string
+          event_uuid?: string | null
+          hide_from_leaderboard?: boolean
+          hide_from_website?: boolean
+          hide_video_from_team_gym_division?: boolean
           id?: string
+          list_on_special_events_page?: boolean
+          long_description?: string | null
           name: string
+          per_show_registrations?: number
+          reg_cost?: number
+          release_score_leaderboard?: boolean
+          sanctioned_event?: boolean
+          scoresheet_template_name?: string | null
+          screen_capture_cnt?: number
+          season_id?: number
+          show_teams_and_divisions?: boolean
           start_date: string
+          start_time?: string
           status?: Database["public"]["Enums"]["event_status"]
+          sub_deadline?: string | null
           time_zone?: string
           updated_at?: string
         }
         Update: {
           accuscore_end_at?: string | null
+          broadcast_channel?: string
+          broadcast_deadline_date?: string | null
+          broadcast_deadline_time?: string
           created_at?: string
           created_by?: string
+          current_match?: string | null
           description?: string | null
           discipline?: string | null
+          dont_show_scoresheet?: boolean
+          duration_of_capture?: number
           end_date?: string
+          end_time?: string
+          event_uuid?: string | null
+          hide_from_leaderboard?: boolean
+          hide_from_website?: boolean
+          hide_video_from_team_gym_division?: boolean
           id?: string
+          list_on_special_events_page?: boolean
+          long_description?: string | null
           name?: string
+          per_show_registrations?: number
+          reg_cost?: number
+          release_score_leaderboard?: boolean
+          sanctioned_event?: boolean
+          scoresheet_template_name?: string | null
+          screen_capture_cnt?: number
+          season_id?: number
+          show_teams_and_divisions?: boolean
           start_date?: string
+          start_time?: string
           status?: Database["public"]["Enums"]["event_status"]
+          sub_deadline?: string | null
           time_zone?: string
           updated_at?: string
         }
@@ -314,6 +457,60 @@ export type Database = {
         }
         Relationships: []
       }
+      mobile_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          last_seen_at: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          last_seen_at?: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          last_seen_at?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      password_reset_codes: {
+        Row: {
+          code: string
+          consumed_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          code: string
+          consumed_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          code?: string
+          consumed_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           id: string
@@ -345,6 +542,7 @@ export type Database = {
           full_name: string | null
           id: string
           organization_name: string | null
+          password_hash: string | null
           phone: string | null
           updated_at: string
           user_id: string
@@ -355,6 +553,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           organization_name?: string | null
+          password_hash?: string | null
           phone?: string | null
           updated_at?: string
           user_id: string
@@ -365,6 +564,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           organization_name?: string | null
+          password_hash?: string | null
           phone?: string | null
           updated_at?: string
           user_id?: string
@@ -1223,6 +1423,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_mobile_sessions: { Args: never; Returns: undefined }
+      generate_short_uuid: { Args: never; Returns: string }
       get_review_by_token: {
         Args: { review_token: string }
         Returns: {
@@ -1253,6 +1455,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      legacy_session_lookup: {
+        Args: { _token: string }
+        Returns: {
+          email: string
+          full_name: string
+          organization_name: string
+          user_id: string
+        }[]
+      }
       mark_review_viewed: { Args: { review_token: string }; Returns: boolean }
       submit_review_request: {
         Args: { notes: string; review_token: string }
@@ -1260,7 +1471,12 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "judge" | "gym_coach" | "portal_admin"
+      app_role:
+        | "admin"
+        | "judge"
+        | "gym_coach"
+        | "portal_admin"
+        | "content_contributor"
       category_type: "main" | "difficulty" | "execution" | "driver"
       deduction_category: "athlete" | "building" | "rule_violation" | "legality"
       event_status:
@@ -1417,7 +1633,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "judge", "gym_coach", "portal_admin"],
+      app_role: [
+        "admin",
+        "judge",
+        "gym_coach",
+        "portal_admin",
+        "content_contributor",
+      ],
       category_type: ["main", "difficulty", "execution", "driver"],
       deduction_category: ["athlete", "building", "rule_violation", "legality"],
       event_status: [
