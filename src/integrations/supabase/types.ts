@@ -134,6 +134,7 @@ export type Database = {
       }
       events: {
         Row: {
+          accuscore_end_at: string | null
           broadcast_deadline: string | null
           created_at: string
           created_by: string
@@ -147,6 +148,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accuscore_end_at?: string | null
           broadcast_deadline?: string | null
           created_at?: string
           created_by: string
@@ -160,6 +162,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accuscore_end_at?: string | null
           broadcast_deadline?: string | null
           created_at?: string
           created_by?: string
