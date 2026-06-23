@@ -499,12 +499,6 @@ export default function ScorePerformance() {
                   </Card>
                 )}
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Comments</Label>
-                  <Textarea placeholder="Overall feedback..." value={comments}
-                    onChange={(e) => setComments(e.target.value)} rows={3} disabled={isLocked} />
-                </div>
-
                 <Card className="border-2 border-primary">
                   <CardContent className="py-4 flex items-center justify-between">
                     <span className="font-semibold text-lg">Final Score</span>
@@ -514,8 +508,64 @@ export default function ScorePerformance() {
               </>
             )}
           </div>
+
+          {/* Comments side panel */}
+          <div className="lg:col-span-1">
+            <Card className="lg:sticky lg:top-24">
+              <CardHeader className="pb-2"><CardTitle className="text-base">Judge Comments</CardTitle></CardHeader>
+              <CardContent>
+                <Textarea
+                  placeholder="Overall feedback..."
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  rows={14}
+                  disabled={isLocked}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
+
+      <Dialog open={flagDialogOpen} onOpenChange={setFlagDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Flag className="w-4 h-4 text-warning" /> Flag score for review</DialogTitle>
+            <DialogDescription>
+              Submit this score and flag it for admin review. Please explain why this score needs a second look.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="flag-reason">Reason for flag</Label>
+            <Textarea
+              id="flag-reason"
+              value={flagReason}
+              onChange={(e) => setFlagReason(e.target.value)}
+              placeholder="e.g. Unclear performance, possible deduction, scoring uncertainty..."
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFlagDialogOpen(false)} disabled={isSaving}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!flagReason.trim()) {
+                  toast({ variant: 'destructive', title: 'Reason required', description: 'Please describe why this score needs review.' });
+                  return;
+                }
+                setFlagDialogOpen(false);
+                saveMutation.mutate({ status: 'submitted', needsReview: true, reviewReason: flagReason.trim() });
+              }}
+              disabled={isSaving || !flagReason.trim()}
+              className="bg-warning text-warning-foreground hover:bg-warning/90"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Flag className="w-4 h-4 mr-2" />}
+              Submit & Flag
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+
 }
