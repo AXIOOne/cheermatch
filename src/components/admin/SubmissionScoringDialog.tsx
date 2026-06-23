@@ -401,33 +401,55 @@ export default function SubmissionScoringDialog({
               <div className="space-y-4">
                 <Card>
                   <CardContent className="p-0">
-                    <div className="aspect-video bg-black rounded-t-lg relative">
-                      {submission?.video_url ? (
-                        <video ref={videoRef} src={submission.video_url} className="w-full h-full rounded-t-lg"
-                          onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)}
-                          onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-                          onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)} />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white/50">
-                          <div className="text-center"><Play className="w-16 h-16 mx-auto mb-2" /><p>Video not available</p></div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-4 space-y-3">
-                      <Slider value={[currentTime]} min={0} max={duration || 100} step={0.1} onValueChange={handleSeek} className="cursor-pointer" />
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="icon" onClick={() => skipTime(-10)}><SkipBack className="w-4 h-4" /></Button>
-                          <Button variant="default" size="icon" onClick={togglePlay}>{isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}</Button>
-                          <Button variant="outline" size="icon" onClick={() => skipTime(10)}><SkipForward className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={toggleMute}>{isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}</Button>
-                        </div>
-                        <span className="text-sm text-muted-foreground font-mono">{formatTime(currentTime)} / {formatTime(duration)}</span>
-                        <Button variant="ghost" size="icon" onClick={() => videoRef.current?.requestFullscreen()}><Maximize2 className="w-4 h-4" /></Button>
-                      </div>
-                    </div>
+                    {(() => {
+                      const url = submission?.video_url || '';
+                      const isEmbed = /players\.brightcove\.net|player\.vimeo\.com|youtube\.com\/embed|youtu\.be/.test(url);
+                      if (!url) {
+                        return (
+                          <div className="aspect-video bg-black rounded-t-lg flex items-center justify-center text-white/50">
+                            <div className="text-center"><Play className="w-16 h-16 mx-auto mb-2" /><p>Video not available</p></div>
+                          </div>
+                        );
+                      }
+                      if (isEmbed) {
+                        return (
+                          <div className="aspect-video bg-black rounded-t-lg overflow-hidden">
+                            <iframe
+                              src={url}
+                              className="w-full h-full"
+                              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                              allowFullScreen
+                            />
+                          </div>
+                        );
+                      }
+                      return (
+                        <>
+                          <div className="aspect-video bg-black rounded-t-lg relative">
+                            <video ref={videoRef} src={url} className="w-full h-full rounded-t-lg"
+                              onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)}
+                              onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                              onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)} />
+                          </div>
+                          <div className="p-4 space-y-3">
+                            <Slider value={[currentTime]} min={0} max={duration || 100} step={0.1} onValueChange={handleSeek} className="cursor-pointer" />
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Button variant="outline" size="icon" onClick={() => skipTime(-10)}><SkipBack className="w-4 h-4" /></Button>
+                                <Button variant="default" size="icon" onClick={togglePlay}>{isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}</Button>
+                                <Button variant="outline" size="icon" onClick={() => skipTime(10)}><SkipForward className="w-4 h-4" /></Button>
+                                <Button variant="ghost" size="icon" onClick={toggleMute}>{isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}</Button>
+                              </div>
+                              <span className="text-sm text-muted-foreground font-mono">{formatTime(currentTime)} / {formatTime(duration)}</span>
+                              <Button variant="ghost" size="icon" onClick={() => videoRef.current?.requestFullscreen()}><Maximize2 className="w-4 h-4" /></Button>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
+
 
                 <Card>
                   <CardHeader className="pb-2"><CardTitle className="text-base">Panel Scoring Status</CardTitle></CardHeader>
