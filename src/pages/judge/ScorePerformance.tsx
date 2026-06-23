@@ -12,7 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Send, Loader2, Play, RotateCcw } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ArrowLeft, Save, Send, Loader2, Play, RotateCcw, Flag } from 'lucide-react';
 import { calculateStructuredDeductions, sortByDisplayOrder } from '@/lib/scoring';
 import { RubricReferenceSheet } from '@/components/judge/RubricReferenceSheet';
 
@@ -47,6 +48,8 @@ export default function ScorePerformance() {
   const [deductionCounts, setDeductionCounts] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [flagDialogOpen, setFlagDialogOpen] = useState(false);
+  const [flagReason, setFlagReason] = useState('');
 
   const { data: submission, isLoading: submissionLoading } = useQuery({
     queryKey: ['submission', submissionId],
@@ -226,7 +229,8 @@ export default function ScorePerformance() {
   };
 
   const saveMutation = useMutation({
-    mutationFn: async (status: 'in_progress' | 'submitted') => {
+    mutationFn: async (args: { status: 'in_progress' | 'submitted'; needsReview?: boolean; reviewReason?: string | null }) => {
+      const { status, needsReview = false, reviewReason = null } = args;
       if (!eventOpenForScoring) {
         throw new Error('This event is not open for scoring yet. The admin must release it before scores can be saved.');
       }
@@ -242,10 +246,15 @@ export default function ScorePerformance() {
           points: fs.points, notes: fs.notes || null,
         }));
 
+      const reviewFields = status === 'submitted'
+        ? { needs_review: needsReview, review_reason: needsReview ? reviewReason : null, reviewed_at: null, reviewed_by: null }
+        : {};
+
       if (existingScore) {
         const { error } = await sb.from('scores').update({
           total_score: totalScore, deductions: dedTotal, comments, status,
           submitted_at: status === 'submitted' ? new Date().toISOString() : null,
+          ...reviewFields,
         }).eq('id', existingScore.id);
         if (error) throw error;
         await sb.from('score_details').delete().eq('score_id', existingScore.id);
@@ -264,6 +273,7 @@ export default function ScorePerformance() {
           panel_id: assignedPanelId || null,
           total_score: totalScore, deductions: dedTotal, comments, status,
           submitted_at: status === 'submitted' ? new Date().toISOString() : null,
+          ...reviewFields,
         }]).select().single();
         if (error) throw error;
         const rows = detailRows(newScore.id);
@@ -276,12 +286,14 @@ export default function ScorePerformance() {
         if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
       }
     },
-    onSuccess: (_, status) => {
+    onSuccess: (_, args) => {
       queryClient.invalidateQueries({ queryKey: ['existing-score'] });
       queryClient.invalidateQueries({ queryKey: ['judge-scores'] });
       queryClient.invalidateQueries({ queryKey: ['judge-existing-scores'] });
-      if (status === 'submitted') { toast({ title: 'Score submitted!' }); navigate('/judge/queue'); }
-      else toast({ title: 'Progress saved' });
+      if (args.status === 'submitted') {
+        toast({ title: args.needsReview ? 'Score submitted & flagged for review' : 'Score submitted!' });
+        navigate('/judge/queue');
+      } else toast({ title: 'Progress saved' });
     },
     onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
     onSettled: () => setIsSaving(false),
@@ -326,13 +338,22 @@ export default function ScorePerformance() {
               levelId={(submission.team as any)?.level_id} />
             {!isLocked && (
               <>
-                <Button variant="outline" onClick={() => saveMutation.mutate('in_progress')} disabled={isSaving}>
+                <Button variant="outline" onClick={() => saveMutation.mutate({ status: 'in_progress' })} disabled={isSaving}>
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                   Save Draft
                 </Button>
-                <Button onClick={() => saveMutation.mutate('submitted')} disabled={isSaving}>
+                <Button onClick={() => saveMutation.mutate({ status: 'submitted' })} disabled={isSaving}>
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                   Submit Score
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-warning text-warning hover:bg-warning/10 hover:text-warning"
+                  onClick={() => { setFlagReason(''); setFlagDialogOpen(true); }}
+                  disabled={isSaving}
+                >
+                  <Flag className="w-4 h-4 mr-2" />
+                  Submit & Flag
                 </Button>
               </>
             )}
@@ -344,43 +365,48 @@ export default function ScorePerformance() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <Card>
-              <CardContent className="p-0">
-                <div className="aspect-video bg-black rounded-t-lg flex items-center justify-center">
-                  {submission.video_url ? (
-                    <video src={submission.video_url} controls className="w-full h-full rounded-t-lg" />
-                  ) : (
-                    <div className="text-white/50 text-center">
-                      <Play className="w-16 h-16 mx-auto mb-2" /><p>Video not available</p>
-                    </div>
-                  )}
-                </div>
-                <div className="p-4 flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground">
-                    {submission.duration_seconds
-                      ? `${Math.floor(submission.duration_seconds / 60)}:${(submission.duration_seconds % 60).toString().padStart(2, '0')}`
-                      : 'Duration unknown'}
+      <div className="container mx-auto px-4 py-6 space-y-6">
+        {/* Top row: large video + stacked team info */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <Card className="lg:col-span-2">
+            <CardContent className="p-0">
+              <div className="aspect-video bg-black rounded-t-lg flex items-center justify-center">
+                {submission.video_url ? (
+                  <video src={submission.video_url} controls className="w-full h-full rounded-t-lg" />
+                ) : (
+                  <div className="text-white/50 text-center">
+                    <Play className="w-16 h-16 mx-auto mb-2" /><p>Video not available</p>
                   </div>
-                  <Button variant="outline" size="sm"><RotateCcw className="w-4 h-4 mr-1" /> Replay</Button>
+                )}
+              </div>
+              <div className="p-4 flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {submission.duration_seconds
+                    ? `${Math.floor(submission.duration_seconds / 60)}:${(submission.duration_seconds % 60).toString().padStart(2, '0')}`
+                    : 'Duration unknown'}
                 </div>
-              </CardContent>
-            </Card>
+                <Button variant="outline" size="sm"><RotateCcw className="w-4 h-4 mr-1" /> Replay</Button>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader><CardTitle className="text-lg">Team Information</CardTitle></CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-muted-foreground">Event</span><p className="font-medium">{submission.event?.name}</p></div>
-                <div><span className="text-muted-foreground">Division</span><p className="font-medium">{submission.team?.division?.name}</p></div>
-                <div><span className="text-muted-foreground">Level</span><p className="font-medium">Level {submission.team?.level?.level_number}</p></div>
-                <div><span className="text-muted-foreground">Athletes</span><p className="font-medium">{submission.team?.athlete_count}</p></div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="lg:col-span-1">
+            <CardHeader><CardTitle className="text-lg">Team Information</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div><span className="text-muted-foreground">Team</span><p className="font-medium">{submission.team?.name}</p></div>
+              <div><span className="text-muted-foreground">Gym</span><p className="font-medium">{submission.team?.gym_name}</p></div>
+              <div><span className="text-muted-foreground">Event</span><p className="font-medium">{submission.event?.name}</p></div>
+              <div><span className="text-muted-foreground">Division</span><p className="font-medium">{submission.team?.division?.name}</p></div>
+              <div><span className="text-muted-foreground">Level</span><p className="font-medium">Level {submission.team?.level?.level_number}</p></div>
+              <div><span className="text-muted-foreground">Athletes</span><p className="font-medium">{submission.team?.athlete_count}</p></div>
+            </CardContent>
+          </Card>
+        </div>
 
-          <div className="space-y-4">
+        {/* Bottom row: scoring fields + comments side panel */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-4 lg:col-span-2">
+
             {visibleSections.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
@@ -473,12 +499,6 @@ export default function ScorePerformance() {
                   </Card>
                 )}
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Comments</Label>
-                  <Textarea placeholder="Overall feedback..." value={comments}
-                    onChange={(e) => setComments(e.target.value)} rows={3} disabled={isLocked} />
-                </div>
-
                 <Card className="border-2 border-primary">
                   <CardContent className="py-4 flex items-center justify-between">
                     <span className="font-semibold text-lg">Final Score</span>
@@ -488,8 +508,64 @@ export default function ScorePerformance() {
               </>
             )}
           </div>
+
+          {/* Comments side panel */}
+          <div className="lg:col-span-1">
+            <Card className="lg:sticky lg:top-24">
+              <CardHeader className="pb-2"><CardTitle className="text-base">Judge Comments</CardTitle></CardHeader>
+              <CardContent>
+                <Textarea
+                  placeholder="Overall feedback..."
+                  value={comments}
+                  onChange={(e) => setComments(e.target.value)}
+                  rows={14}
+                  disabled={isLocked}
+                />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
+
+      <Dialog open={flagDialogOpen} onOpenChange={setFlagDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Flag className="w-4 h-4 text-warning" /> Flag score for review</DialogTitle>
+            <DialogDescription>
+              Submit this score and flag it for admin review. Please explain why this score needs a second look.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="flag-reason">Reason for flag</Label>
+            <Textarea
+              id="flag-reason"
+              value={flagReason}
+              onChange={(e) => setFlagReason(e.target.value)}
+              placeholder="e.g. Unclear performance, possible deduction, scoring uncertainty..."
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFlagDialogOpen(false)} disabled={isSaving}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!flagReason.trim()) {
+                  toast({ variant: 'destructive', title: 'Reason required', description: 'Please describe why this score needs review.' });
+                  return;
+                }
+                setFlagDialogOpen(false);
+                saveMutation.mutate({ status: 'submitted', needsReview: true, reviewReason: flagReason.trim() });
+              }}
+              disabled={isSaving || !flagReason.trim()}
+              className="bg-warning text-warning-foreground hover:bg-warning/90"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Flag className="w-4 h-4 mr-2" />}
+              Submit & Flag
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+
 }
