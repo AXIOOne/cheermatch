@@ -98,7 +98,6 @@ export default function Events() {
       registration_deadline: '',
       broadcast_deadline: '',
       status: 'draft',
-      default_template_id: '',
     },
   });
 
