@@ -371,12 +371,14 @@ export default function EventScoring() {
                   <TableHead>Team</TableHead>
                   <TableHead>Team Level and Division</TableHead>
                   <TableHead>Coach</TableHead>
-                  <TableHead>Action</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-[160px]">Action</TableHead>
                   {panels?.map((panel) => (
                     <TableHead key={panel.id} className="text-center w-12">
                       {panel.abbreviation}
                     </TableHead>
                   ))}
+
                 </TableRow>
               </TableHeader>
               <TableBody>
