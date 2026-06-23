@@ -131,7 +131,21 @@ export default function SubmissionScoringDialog({
     enabled: !!eventId && open,
   });
 
-  const currentPanelScore = allScores?.find((s: any) => s.panel_id === selectedPanelId);
+  // Resolve each score's effective panel. Falls back to the judge's assignment's
+  // panel_id when the score row itself is missing one (older rows from before
+  // section assignments were panel-linked).
+  const judgePanelByUser = useMemo(() => {
+    const map: Record<string, string> = {};
+    (judgeAssignments || []).forEach((a: any) => {
+      if (a.judge_user_id && a.panel_id) map[a.judge_user_id] = a.panel_id;
+    });
+    return map;
+  }, [judgeAssignments]);
+
+  const resolveScorePanelId = (s: any): string | null =>
+    s?.panel_id ?? judgePanelByUser[s?.judge_user_id] ?? null;
+
+  const currentPanelScore = allScores?.find((s: any) => resolveScorePanelId(s) === selectedPanelId);
   const assignedJudge = judgeAssignments?.find((ja: any) => ja.panel_id === selectedPanelId);
   const selectedPanelAbbrev = panels.find(p => p.id === selectedPanelId)?.abbreviation || null;
 
