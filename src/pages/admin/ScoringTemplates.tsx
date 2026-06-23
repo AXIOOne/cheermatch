@@ -549,6 +549,7 @@ export default function ScoringTemplates() {
       max_points: Number(cat.max_points),
       category_type: cat.category_type || 'main',
       description: cat.description,
+      panel_abbreviation: cat.panel_abbreviation || '',
       children: sectionCats
         .filter((c) => c.parent_category_id === cat.id)
         .map((child) => ({
@@ -558,6 +559,7 @@ export default function ScoringTemplates() {
           max_points: Number(child.max_points),
           category_type: child.category_type || 'difficulty',
           description: child.description,
+          panel_abbreviation: child.panel_abbreviation || '',
           children: [],
         })),
     }));
@@ -589,6 +591,7 @@ export default function ScoringTemplates() {
       abbreviation: s.abbreviation,
       description: s.description,
       max_points: Number(s.max_points),
+      default_panel_abbreviation: s.default_panel_abbreviation || '',
       categories: buildCategoryTree(template.categories || [], s.id),
     }));
     setSections(loadedSections);
