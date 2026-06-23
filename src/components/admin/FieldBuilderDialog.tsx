@@ -15,12 +15,15 @@ export interface FieldOption {
   value: number;
 }
 
+export type ScoreType = 'difficulty' | 'execution';
+
 export interface ScoringField {
   temp_id: string;
   id?: string;
   name: string;
   description?: string;
   field_type: 'number' | 'dropdown';
+  score_type: ScoreType;
   min_value: number;
   max_value: number;
   step: number;
@@ -41,6 +44,7 @@ export function blankField(): ScoringField {
     temp_id: tempId(),
     name: '',
     field_type: 'number',
+    score_type: 'difficulty',
     min_value: 0,
     max_value: 10,
     step: 0.25,
