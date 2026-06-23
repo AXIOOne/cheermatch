@@ -459,6 +459,7 @@ export default function Events() {
                         </FormItem>
                       )}
                     />
+                  </div>
                   <FormField
                     control={form.control}
                     name="status"
