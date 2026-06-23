@@ -338,13 +338,22 @@ export default function ScorePerformance() {
               levelId={(submission.team as any)?.level_id} />
             {!isLocked && (
               <>
-                <Button variant="outline" onClick={() => saveMutation.mutate('in_progress')} disabled={isSaving}>
+                <Button variant="outline" onClick={() => saveMutation.mutate({ status: 'in_progress' })} disabled={isSaving}>
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                   Save Draft
                 </Button>
-                <Button onClick={() => saveMutation.mutate('submitted')} disabled={isSaving}>
+                <Button onClick={() => saveMutation.mutate({ status: 'submitted' })} disabled={isSaving}>
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                   Submit Score
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-warning text-warning hover:bg-warning/10 hover:text-warning"
+                  onClick={() => { setFlagReason(''); setFlagDialogOpen(true); }}
+                  disabled={isSaving}
+                >
+                  <Flag className="w-4 h-4 mr-2" />
+                  Submit & Flag
                 </Button>
               </>
             )}
