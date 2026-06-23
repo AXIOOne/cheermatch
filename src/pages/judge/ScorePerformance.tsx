@@ -155,6 +155,14 @@ export default function ScorePerformance() {
     );
   }, [judgeAssignments]);
 
+  const assignedSectionIds = useMemo(() => {
+    return new Set(
+      (judgeAssignments || [])
+        .map((assignment: any) => assignment.section_id)
+        .filter(Boolean) as string[]
+    );
+  }, [judgeAssignments]);
+
   const hasAllPanelsAssignment = useMemo(
     () => (judgeAssignments || []).some((assignment: any) => isAllPanelsAssignment(assignment)),
     [judgeAssignments]
@@ -167,6 +175,7 @@ export default function ScorePerformance() {
       .map((s: any) => {
         const fields = ((s.fields as any[]) || [])
           .filter((f: any) => {
+            if (assignedSectionIds.has(s.id)) return true;
             const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
             if (abbrs.length === 0) return true;
             if (hasAllPanelsAssignment) return true;
@@ -176,7 +185,7 @@ export default function ScorePerformance() {
           .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
         return { ...s, visibleFields: fields };
       }).filter((s: any) => s.visibleFields.length > 0);
-  }, [template, assignedPanelAbbrevs, hasAllPanelsAssignment]);
+  }, [template, assignedPanelAbbrevs, assignedSectionIds, hasAllPanelsAssignment]);
 
   useEffect(() => {
     if (!template) return;
