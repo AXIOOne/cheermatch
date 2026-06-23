@@ -167,9 +167,15 @@ export default function SubmissionScoresheet() {
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
-      <Button variant="ghost" size="sm" onClick={() => navigate('/admin/submissions')} className="mb-4">
-        <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
-      </Button>
+      <div className="flex items-center justify-between mb-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/admin/submissions')}>
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
+        </Button>
+        <Button size="sm" onClick={handleDownloadPdf} disabled={submittedScores.length === 0}>
+          <Download className="w-4 h-4 mr-2" /> Download PDF
+        </Button>
+      </div>
+
 
       <div className="mb-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
