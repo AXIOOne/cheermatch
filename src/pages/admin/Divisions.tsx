@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
@@ -14,11 +15,14 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Layers, Loader2, Trash2 } from 'lucide-react';
 
+const UNASSIGNED_TEMPLATE = '__none__';
+
 const divisionSchema = z.object({
   name: z.string().min(1, 'Division name is required'),
   min_age: z.coerce.number().optional(),
   max_age: z.coerce.number().optional(),
   description: z.string().optional(),
+  scoring_template_id: z.string().optional(),
 });
 
 const levelSchema = z.object({
