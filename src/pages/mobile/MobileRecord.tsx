@@ -79,6 +79,28 @@ export default function MobileRecord() {
     })();
   }, [eventId]);
 
+  // Block access if a submission already exists for this team+event.
+  // Coaches get a single capture session with N attempts — no re-submissions.
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await mobileApi.teams(eventId);
+        if (res.status && Array.isArray(res.data)) {
+          const t = (res.data as Array<Record<string, unknown>>).find(
+            (x) => String(x.team_id) === teamId,
+          );
+          const sub = t?.submission as { id?: string } | null | undefined;
+          if (sub && sub.id) {
+            toast.error("This team has already submitted a video.");
+            navigate(`/m/events/${eventId}/teams/${teamId}`, { replace: true });
+          }
+        }
+      } catch {
+        /* if the check fails, allow the page to load normally */
+      }
+    })();
+  }, [eventId, teamId, navigate]);
+
   // Initialize camera on mount
   useEffect(() => {
     let cancelled = false;
