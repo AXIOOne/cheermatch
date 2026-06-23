@@ -23,7 +23,7 @@ type AppRole = Database['public']['Enums']['app_role'];
 
 const addRoleSchema = z.object({
   email: z.string().email('Please enter a valid email'),
-  role: z.enum(['admin', 'judge', 'gym_coach'] as const),
+  role: z.enum(['admin', 'portal_admin', 'judge', 'gym_coach'] as const),
 });
 
 const createUserSchema = z.object({
