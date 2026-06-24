@@ -20,8 +20,8 @@ import type { Database } from '@/integrations/supabase/types';
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
 
 // Lifecycle statuses we surface in the UI.
-type LifecycleStatus = 'imported' | 'approved' | 'denied' | 'revision_requested' | 'assigned' | 'complete';
-const LIFECYCLE_STATUSES: LifecycleStatus[] = ['imported', 'approved', 'denied', 'revision_requested', 'assigned', 'complete'];
+type LifecycleStatus = 'imported' | 'approved' | 'denied' | 'revision_requested';
+const LIFECYCLE_STATUSES: LifecycleStatus[] = ['imported', 'approved', 'denied', 'revision_requested'];
 
 interface SubmissionWithDetails {
   id: string;
