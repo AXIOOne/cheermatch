@@ -173,23 +173,6 @@ export function buildScoresheet(input: ScoresheetInput): ScoresheetData {
   total_max = round2(total_max);
   raw_score = round2(raw_score);
 
-  const deductions = input.submitted_scores.length
-    ? round2(input.submitted_scores.reduce((s, x) => s + Number(x.deductions || 0), 0) /
-        input.submitted_scores.length)
-    : 0;
-
-  const perfection = total_max > 0
-    ? round2((raw_score / total_max) * 100 - deductions)
-    : 0;
-
-  const show_comments = input.show_comments !== false;
-  const judge_comments: JudgeComment[] = input.submitted_scores
-    .map((s, i) => ({
-      judge_label: (s.judge_label ?? '').trim() || `Judge ${i + 1}`,
-      comments: (s.comments ?? '').trim(),
-    }))
-    .sort((a, b) => a.judge_label.localeCompare(b.judge_label, undefined, { numeric: true, sensitivity: 'base' }));
-
   // Designated safety/deduction judge: panel abbrev "SD" or name containing "safety"/"deduction".
   // Fall back to first submitted score so the report still renders.
   const isSdPanel = (s: RawSubmittedScore) => {
@@ -218,6 +201,24 @@ export function buildScoresheet(input: ScoresheetInput): ScoresheetData {
   });
   const deduction_report: DeductionReport = { rows: reportRows, total: round2(dedTotal) };
   const safety_comments = (sdScore?.comments ?? '').trim();
+
+  // Total deductions are taken from the designated safety/deduction judge
+  // (sum of catalog point value × occurrences), NOT an average across all
+  // judges. Deductions are subtracted from the %Perfection (100-pt) score.
+  const deductions = deduction_report.total;
+
+  const perfection = total_max > 0
+    ? round2((raw_score / total_max) * 100 - deductions)
+    : 0;
+
+  const show_comments = input.show_comments !== false;
+  const judge_comments: JudgeComment[] = input.submitted_scores
+    .map((s, i) => ({
+      judge_label: (s.judge_label ?? '').trim() || `Judge ${i + 1}`,
+      comments: (s.comments ?? '').trim(),
+    }))
+    .sort((a, b) => a.judge_label.localeCompare(b.judge_label, undefined, { numeric: true, sensitivity: 'base' }));
+
 
   return {
     team_name: input.team_name,
