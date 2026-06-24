@@ -55,6 +55,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
           comments,
           status,
           submitted_at,
+          template_id,
+          template:scoring_templates(show_comments_on_scoresheet),
           panel:judge_panels(name, abbreviation),
           score_details:score_details(
             points,
@@ -193,20 +195,33 @@ Deno.serve(async (req: Request): Promise<Response> => {
         });
       });
     });
+    // Derive show_comments from any submitted score's template
+    const tplWithFlag = submittedScores
+      .map((s: any) => Array.isArray(s.template) ? s.template[0] : s.template)
+      .find((t: any) => t && t.show_comments_on_scoresheet);
+    const showComments = !!tplWithFlag;
+
     const sheetData = buildScoresheet({
       team_name: team.name || 'Team',
       gym_name: team.gym_name,
       division_name: division?.name || null,
+      level_name: level?.name || null,
       event_name: event?.name || 'Event',
       accuscore_end_at: (event as any)?.accuscore_end_at || null,
       fields: Array.from(fieldMap.values()),
-      submitted_scores: submittedScores.map((s: any) => ({
-        deductions: Number(s.deductions || 0),
-        details: (s.score_details || []).map((d: any) => ({
-          field_id: (Array.isArray(d.field) ? d.field[0] : d.field)?.id,
-          points: Number(d.points || 0),
-        })),
-      })),
+      show_comments: showComments,
+      submitted_scores: submittedScores.map((s: any) => {
+        const panel = Array.isArray(s.panel) ? s.panel[0] : s.panel;
+        return {
+          deductions: Number(s.deductions || 0),
+          comments: s.comments || null,
+          judge_label: panel?.abbreviation || panel?.name || null,
+          details: (s.score_details || []).map((d: any) => ({
+            field_id: (Array.isArray(d.field) ? d.field[0] : d.field)?.id,
+            points: Number(d.points || 0),
+          })),
+        };
+      }),
     });
     const pdfBytes = await buildScoresheetPdf(sheetData);
     let binary = '';

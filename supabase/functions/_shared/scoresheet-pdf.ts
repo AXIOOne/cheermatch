@@ -5,109 +5,173 @@ import type { ScoresheetData } from './build-scoresheet.ts';
 const PAGE_W = 612;
 const PAGE_H = 792;
 const MARGIN = 36;
+const CONTENT_W = PAGE_W - MARGIN * 2;
 
 const COLS = { criteria: 260, max: 70, diff: 70, exec: 70, score: 70 };
-const HEADER_H = 24;
 const GRAY = rgb(0.85, 0.85, 0.85);
-const BORDER = rgb(0.1, 0.1, 0.1);
+const BORDER = rgb(0, 0, 0);
 const TEXT = rgb(0, 0, 0);
-const HEADER_BG = rgb(0.93, 0.93, 0.93);
+const MUTED = rgb(0.35, 0.35, 0.35);
 
 function formatDateTime(iso?: string | null): string {
   if (!iso) return '—';
   try {
     const d = new Date(iso);
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
-      hour: 'numeric', minute: '2-digit', timeZoneName: 'short',
+    const date = new Intl.DateTimeFormat('en-US', {
+      month: '2-digit', day: '2-digit', year: 'numeric',
     }).format(d);
+    const time = new Intl.DateTimeFormat('en-US', {
+      hour: 'numeric', minute: '2-digit', hour12: true,
+    }).format(d).toLowerCase();
+    return `${date} ${time}`;
   } catch { return iso; }
 }
+const formatGenerated = (d = new Date()) => formatDateTime(d.toISOString());
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
-  const words = text.split(/\s+/);
+  const paragraphs = text.split(/\r?\n/);
   const lines: string[] = [];
-  let cur = '';
-  for (const w of words) {
-    const test = cur ? `${cur} ${w}` : w;
-    if (font.widthOfTextAtSize(test, size) <= maxWidth) cur = test;
-    else { if (cur) lines.push(cur); cur = w; }
+  for (const para of paragraphs) {
+    const words = para.split(/\s+/).filter(Boolean);
+    if (!words.length) { lines.push(''); continue; }
+    let cur = '';
+    for (const w of words) {
+      const test = cur ? `${cur} ${w}` : w;
+      if (font.widthOfTextAtSize(test, size) <= maxWidth) cur = test;
+      else { if (cur) lines.push(cur); cur = w; }
+    }
+    if (cur) lines.push(cur);
   }
-  if (cur) lines.push(cur);
   return lines.length ? lines : [''];
 }
 
-function drawCellBorder(page: PDFPage, x: number, y: number, w: number, h: number) {
-  page.drawRectangle({ x, y, width: w, height: h, borderColor: BORDER, borderWidth: 0.75 });
+function drawRule(page: PDFPage, x: number, y: number, w: number, thickness = 1.25) {
+  page.drawLine({ start: { x, y }, end: { x: x + w, y }, thickness, color: BORDER });
 }
-
+function drawCellBorder(page: PDFPage, x: number, y: number, w: number, h: number, thickness = 0.75) {
+  page.drawRectangle({ x, y, width: w, height: h, borderColor: BORDER, borderWidth: thickness });
+}
 function drawTextCentered(page: PDFPage, text: string, x: number, y: number, w: number, h: number,
-  font: PDFFont, size: number) {
+  font: PDFFont, size: number, color = TEXT) {
   const tw = font.widthOfTextAtSize(text, size);
   page.drawText(text, {
     x: x + (w - tw) / 2,
-    y: y + (h - size) / 2 + size * 0.15,
-    size, font, color: TEXT,
+    y: y + (h - size) / 2 + size * 0.22,
+    size, font, color,
   });
 }
-
 function drawTextLeft(page: PDFPage, lines: string[], x: number, y: number, h: number,
-  font: PDFFont, size: number, padX = 6) {
-  const totalH = lines.length * (size + 2);
+  font: PDFFont, size: number, padX = 5) {
+  const lineH = size + 1.5;
+  const totalH = lines.length * lineH;
   let cy = y + (h - totalH) / 2 + totalH - size;
   for (const line of lines) {
     page.drawText(line, { x: x + padX, y: cy, size, font, color: TEXT });
-    cy -= (size + 2);
+    cy -= lineH;
   }
 }
-
+function drawTextRight(page: PDFPage, text: string, xRight: number, y: number,
+  font: PDFFont, size: number, color = TEXT) {
+  const tw = font.widthOfTextAtSize(text, size);
+  page.drawText(text, { x: xRight - tw, y, size, font, color });
+}
 const fmt = (n: number, dp = 2) => n.toFixed(dp);
 
 export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const font = await doc.embedFont(StandardFonts.TimesRoman);
+  const bold = await doc.embedFont(StandardFonts.TimesRomanBold);
+  const italic = await doc.embedFont(StandardFonts.TimesRomanItalic);
 
-  const cellFontSize = 9.5;
+  const cellFontSize = 9;
   const headerFontSize = 10;
-  const titleFontSize = 18;
+  const titleFontSize = 22;
   const metaFontSize = 10;
-
-  type ComputedRow = { idx: number; lines: string[]; height: number };
-  const rows: ComputedRow[] = data.rows.map((r, idx) => {
-    const lines = wrapText(r.name, font, cellFontSize, COLS.criteria - 12);
-    const h = Math.max(22, lines.length * (cellFontSize + 2) + 8);
-    return { idx, lines, height: h };
-  });
+  const smallSize = 8;
 
   let page = doc.addPage([PAGE_W, PAGE_H]);
-  let cursorY = PAGE_H - MARGIN;
 
-  page.drawText(data.team_name || 'Team', {
-    x: MARGIN, y: cursorY - titleFontSize, size: titleFontSize, font: bold, color: TEXT,
+  const drawPageFooter = (p: PDFPage) => {
+    const y = MARGIN - 14;
+    drawRule(p, MARGIN, y + 10, CONTENT_W, 0.75);
+    p.drawText('SUM', { x: MARGIN, y, size: smallSize, font: italic, color: MUTED });
+    const mid = data.event_name || '';
+    const mw = italic.widthOfTextAtSize(mid, smallSize);
+    p.drawText(mid, { x: MARGIN + (CONTENT_W - mw) / 2, y, size: smallSize, font: italic, color: MUTED });
+    const gen = `Generated: ${formatGenerated()}`;
+    drawTextRight(p, gen, PAGE_W - MARGIN, y, italic, smallSize, MUTED);
+  };
+
+  // Header
+  let cursorY = PAGE_H - MARGIN;
+  const colW = CONTENT_W / 3;
+  const xLeft = MARGIN;
+  const xCenter = MARGIN + colW;
+  const xRight = MARGIN + colW * 2;
+
+  const topY = cursorY - titleFontSize;
+  const shortCode = (data.gym_name || data.team_name || '').slice(0, 3).toUpperCase();
+  page.drawText(shortCode, {
+    x: xLeft, y: topY, size: titleFontSize - 4, font: bold, color: TEXT,
   });
   {
-    const label = `Event: ${data.event_name || ''}`;
-    const tw = bold.widthOfTextAtSize(label, metaFontSize);
-    page.drawText(label, {
-      x: PAGE_W - MARGIN - tw, y: cursorY - titleFontSize + 2,
+    const t = data.event_name || '';
+    const tw = bold.widthOfTextAtSize(t, titleFontSize);
+    page.drawText(t, { x: xCenter + (colW - tw) / 2, y: topY, size: titleFontSize, font: bold, color: TEXT });
+  }
+  {
+    const t = data.event_phase || '';
+    if (t) {
+      const tw = bold.widthOfTextAtSize(t, titleFontSize - 4);
+      page.drawText(t, { x: xRight + colW - tw, y: topY, size: titleFontSize - 4, font: bold, color: TEXT });
+    }
+  }
+
+  const subStartY = topY - 18;
+  const leftLines: Array<[string, PDFFont]> = [];
+  if (data.gym_name) leftLines.push([data.gym_name, bold]);
+  if (data.team_name) leftLines.push([data.team_name, font]);
+  const ld = [data.level_name, data.division_name].filter(Boolean).join(' - ');
+  if (ld) leftLines.push([ld, font]);
+
+  let ly = subStartY;
+  for (const [line, f] of leftLines) {
+    const wrapped = wrapText(line, f, metaFontSize, colW - 6);
+    for (const ln of wrapped) {
+      page.drawText(ln, { x: xLeft, y: ly, size: metaFontSize, font: f, color: TEXT });
+      ly -= metaFontSize + 3;
+    }
+  }
+
+  if (data.hall_name) {
+    const t = `Hall Name: ${data.hall_name}`;
+    const tw = bold.widthOfTextAtSize(t, metaFontSize);
+    page.drawText(t, {
+      x: xCenter + (colW - tw) / 2, y: subStartY,
       size: metaFontSize, font: bold, color: TEXT,
     });
   }
-  cursorY -= titleFontSize + 8;
 
-  page.drawText(`Division: ${data.division_name || '—'}`, {
-    x: MARGIN, y: cursorY - metaFontSize, size: metaFontSize, font, color: TEXT,
-  });
   {
-    const label = `AccuScore Ends: ${formatDateTime(data.accuscore_end_at)}`;
-    const tw = font.widthOfTextAtSize(label, metaFontSize);
-    page.drawText(label, {
-      x: PAGE_W - MARGIN - tw, y: cursorY - metaFontSize,
-      size: metaFontSize, font, color: TEXT,
-    });
+    const label = 'AccuScore End Time:';
+    const value = formatDateTime(data.accuscore_end_at);
+    drawTextRight(page, label, PAGE_W - MARGIN, subStartY, bold, metaFontSize, TEXT);
+    drawTextRight(page, value, PAGE_W - MARGIN, subStartY - (metaFontSize + 3), font, metaFontSize, TEXT);
   }
-  cursorY -= metaFontSize + 16;
+
+  const headerBottom = Math.min(ly, subStartY - (metaFontSize + 3) * 2) - 6;
+  drawRule(page, MARGIN, headerBottom, CONTENT_W, 1.5);
+  cursorY = headerBottom - 10;
+
+  // Table
+  type ComputedRow = { idx: number; lines: string[]; height: number };
+  const HEADER_H = 18;
+  const ROW_MIN_H = 16;
+  const rows: ComputedRow[] = data.rows.map((r, idx) => {
+    const lines = wrapText(r.name, font, cellFontSize, COLS.criteria - 10);
+    const h = Math.max(ROW_MIN_H, lines.length * (cellFontSize + 1.5) + 4);
+    return { idx, lines, height: h };
+  });
 
   const drawTableHeader = (y: number): number => {
     const headers: Array<[string, number, number]> = [
@@ -118,7 +182,6 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
       ['Score', MARGIN + COLS.criteria + COLS.max + COLS.diff + COLS.exec, COLS.score],
     ];
     for (const [label, x, w] of headers) {
-      page.drawRectangle({ x, y: y - HEADER_H, width: w, height: HEADER_H, color: HEADER_BG });
       drawCellBorder(page, x, y - HEADER_H, w, HEADER_H);
       drawTextCentered(page, label, x, y - HEADER_H, w, HEADER_H, bold, headerFontSize);
     }
@@ -127,9 +190,10 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
 
   cursorY = drawTableHeader(cursorY);
 
-  const FOOTER_RESERVED = 110;
+  const FOOTER_RESERVED = 140;
   for (const row of rows) {
     if (cursorY - row.height < MARGIN + FOOTER_RESERVED) {
+      drawPageFooter(page);
       page = doc.addPage([PAGE_W, PAGE_H]);
       cursorY = PAGE_H - MARGIN;
       cursorY = drawTableHeader(cursorY);
@@ -168,35 +232,108 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     cursorY = yBot;
   }
 
-  cursorY -= 10;
-  const totalsRows: Array<[string, string, boolean]> = [
-    ['Total Max', fmt(data.total_max), false],
-    ['Raw Score:', fmt(data.raw_score), true],
-    ['Deductions:', data.deductions ? `-${fmt(data.deductions)}` : fmt(0), true],
-    ['% Perfection:', fmt(data.perfection), true],
-    ['Event Score:', fmt(data.perfection), true],
-  ];
-  const labelW = COLS.diff + COLS.exec;
-  const valueW = COLS.score;
-  const totalsX = MARGIN + COLS.criteria + COLS.max;
-  const rowH = 20;
+  // Summary rows
+  const sumRowH = 18;
+  const xMax = MARGIN + COLS.criteria;
+  const xDiff = xMax + COLS.max;
+  const xExec = xDiff + COLS.diff;
+  const xScore = xExec + COLS.exec;
 
-  for (let i = 0; i < totalsRows.length; i++) {
-    const [label, value, emphasize] = totalsRows[i];
-    const yTop = cursorY - rowH * i;
-    const yBot = yTop - rowH;
-    if (yBot < MARGIN) break;
-    drawCellBorder(page, totalsX, yBot, labelW, rowH);
-    drawCellBorder(page, totalsX + labelW, yBot, valueW, rowH);
-    const f = emphasize ? bold : font;
-    const tw = f.widthOfTextAtSize(label, headerFontSize);
-    page.drawText(label, {
-      x: totalsX + labelW - 8 - tw,
-      y: yBot + (rowH - headerFontSize) / 2 + headerFontSize * 0.15,
-      size: headerFontSize, font: f, color: TEXT,
+  let yTop = cursorY;
+  let yBot = yTop - sumRowH;
+  drawCellBorder(page, xMax, yBot, COLS.max, sumRowH, 1.25);
+  drawTextCentered(page, fmt(data.total_max, 2), xMax, yBot, COLS.max, sumRowH, bold, headerFontSize);
+  drawCellBorder(page, xExec, yBot, COLS.exec, sumRowH);
+  drawTextRight(page, 'Raw Score:', xExec + COLS.exec - 5,
+    yBot + (sumRowH - headerFontSize) / 2 + headerFontSize * 0.22,
+    bold, headerFontSize);
+  drawCellBorder(page, xScore, yBot, COLS.score, sumRowH);
+  drawTextCentered(page, fmt(data.raw_score), xScore, yBot, COLS.score, sumRowH, bold, headerFontSize);
+  cursorY = yBot;
+
+  yTop = cursorY;
+  yBot = yTop - sumRowH;
+  drawCellBorder(page, xExec, yBot, COLS.exec, sumRowH);
+  drawTextRight(page, '%:', xExec + COLS.exec - 5,
+    yBot + (sumRowH - headerFontSize) / 2 + headerFontSize * 0.22,
+    bold, headerFontSize);
+  drawCellBorder(page, xScore, yBot, COLS.score, sumRowH);
+  drawTextCentered(page, fmt(data.perfection, 4), xScore, yBot, COLS.score, sumRowH, bold, headerFontSize);
+  cursorY = yBot - 24;
+
+  // Totals breakout
+  const totLabelW = 80;
+  const totCellW = (CONTENT_W - totLabelW) / 4;
+  const totals: Array<[string, string]> = [
+    ['Raw Score', fmt(data.raw_score)],
+    ['Deductions', fmt(data.deductions || 0)],
+    ['% Perfection', fmt(data.perfection, 4)],
+    ['Event Score', fmt(data.perfection, 4)],
+  ];
+  const totHeaderH = 18;
+  yBot = cursorY - totHeaderH;
+  drawCellBorder(page, MARGIN, yBot, totLabelW, totHeaderH);
+  for (let i = 0; i < totals.length; i++) {
+    const x = MARGIN + totLabelW + totCellW * i;
+    drawCellBorder(page, x, yBot, totCellW, totHeaderH);
+    drawTextCentered(page, totals[i][0], x, yBot, totCellW, totHeaderH, bold, headerFontSize);
+  }
+  cursorY = yBot;
+  const totRowH = 20;
+  yBot = cursorY - totRowH;
+  drawCellBorder(page, MARGIN, yBot, totLabelW, totRowH);
+  drawTextCentered(page, data.event_phase || 'Finals', MARGIN, yBot, totLabelW, totRowH, font, headerFontSize);
+  for (let i = 0; i < totals.length; i++) {
+    const x = MARGIN + totLabelW + totCellW * i;
+    drawCellBorder(page, x, yBot, totCellW, totRowH);
+    drawTextCentered(page, totals[i][1], x, yBot, totCellW, totRowH, font, headerFontSize);
+  }
+  cursorY = yBot - 16;
+
+  // Judge comments
+  if (data.show_comments && data.judge_comments.length > 0) {
+    const headingSize = 12;
+    const labelSize = 10;
+    const bodySize = 9.5;
+
+    const ensureSpace = (needed: number) => {
+      if (cursorY - needed < MARGIN + 24) {
+        drawPageFooter(page);
+        page = doc.addPage([PAGE_W, PAGE_H]);
+        cursorY = PAGE_H - MARGIN;
+      }
+    };
+
+    ensureSpace(headingSize + 10);
+    page.drawText('Judge Comments', {
+      x: MARGIN, y: cursorY - headingSize,
+      size: headingSize, font: bold, color: TEXT,
     });
-    drawTextCentered(page, value, totalsX + labelW, yBot, valueW, rowH, f, headerFontSize);
+    cursorY -= headingSize + 4;
+    drawRule(page, MARGIN, cursorY, CONTENT_W, 0.5);
+    cursorY -= 10;
+
+    for (const jc of data.judge_comments) {
+      const lines = wrapText(jc.comments, italic, bodySize, CONTENT_W - 10);
+      const blockH = labelSize + 4 + lines.length * (bodySize + 2) + 10;
+      ensureSpace(blockH);
+
+      page.drawText(`Judge ${jc.judge_label}`, {
+        x: MARGIN, y: cursorY - labelSize,
+        size: labelSize, font: bold, color: TEXT,
+      });
+      cursorY -= labelSize + 4;
+      for (const ln of lines) {
+        page.drawText(ln, {
+          x: MARGIN + 6, y: cursorY - bodySize,
+          size: bodySize, font: italic, color: TEXT,
+        });
+        cursorY -= bodySize + 2;
+      }
+      cursorY -= 8;
+    }
   }
 
+  drawPageFooter(page);
   return await doc.save();
 }

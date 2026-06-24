@@ -25,6 +25,7 @@ const templateSchema = z.object({
   name: z.string().min(2, 'Template name must be at least 2 characters'),
   description: z.string().optional(),
   is_default: z.boolean(),
+  show_comments_on_scoresheet: z.boolean(),
 });
 
 type TemplateFormData = z.infer<typeof templateSchema>;
@@ -46,7 +47,7 @@ export default function ScoringTemplates() {
 
   const form = useForm<TemplateFormData>({
     resolver: zodResolver(templateSchema),
-    defaultValues: { name: '', description: '', is_default: false },
+    defaultValues: { name: '', description: '', is_default: false, show_comments_on_scoresheet: false },
   });
 
   const eventPanels: string[] | undefined = undefined;
@@ -153,7 +154,12 @@ export default function ScoringTemplates() {
     mutationFn: async (data: TemplateFormData) => {
       const { data: template, error } = await sb
         .from('scoring_templates')
-        .insert({ name: data.name, description: data.description, is_default: data.is_default })
+        .insert({
+          name: data.name,
+          description: data.description,
+          is_default: data.is_default,
+          show_comments_on_scoresheet: data.show_comments_on_scoresheet,
+        })
         .select().single();
       if (error) throw error;
       await persistSectionsAndFields(template.id);
@@ -171,7 +177,10 @@ export default function ScoringTemplates() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: TemplateFormData }) => {
       const { error: tErr } = await sb.from('scoring_templates').update({
-        name: data.name, description: data.description, is_default: data.is_default,
+        name: data.name,
+        description: data.description,
+        is_default: data.is_default,
+        show_comments_on_scoresheet: data.show_comments_on_scoresheet,
       }).eq('id', id);
       if (tErr) throw tErr;
       // wipe and recreate sections+fields (cascade handles fields/options/panels)
@@ -293,7 +302,7 @@ export default function ScoringTemplates() {
 
   const handleNewTemplate = () => {
     setEditingTemplate(null);
-    form.reset({ name: '', description: '', is_default: false });
+    form.reset({ name: '', description: '', is_default: false, show_comments_on_scoresheet: false });
     setSections([]); setDeductions([]);
     setIsDialogOpen(true);
   };
@@ -307,6 +316,7 @@ export default function ScoringTemplates() {
     form.reset({
       name: tpl.name, description: tpl.description || '',
       is_default: tpl.is_default,
+      show_comments_on_scoresheet: !!tpl.show_comments_on_scoresheet,
     });
     const loadedSections: ScoringSection[] = (tpl.sections || [])
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
@@ -390,6 +400,26 @@ export default function ScoringTemplates() {
                     <FormMessage />
                   </FormItem>
                 )} />
+
+                <FormField control={form.control} name="show_comments_on_scoresheet" render={({ field }) => (
+                  <FormItem className="flex flex-row items-start gap-3 rounded-md border p-3">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 accent-primary"
+                        checked={!!field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="cursor-pointer">Show judge comments on scoresheet PDF</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        When enabled, each judge's comments are appended to the PDF scoresheet, grouped by judge panel.
+                      </p>
+                    </div>
+                  </FormItem>
+                )} />
+
 
                 <Tabs defaultValue="editor" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
