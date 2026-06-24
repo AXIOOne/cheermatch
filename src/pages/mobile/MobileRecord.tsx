@@ -352,7 +352,7 @@ export default function MobileRecord() {
         )}
         {phase === "ready" && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/60 px-3 py-1.5 rounded-full text-xs">
-            Attempt {attempts.length + 1} of {maxAttempts} · Limit {fmt(maxDuration)}
+            Your Are Recording Attempt {attempts.length + 1} of {maxAttempts} · Limit {fmt(maxDuration)}
           </div>
         )}
       </div>
@@ -360,7 +360,7 @@ export default function MobileRecord() {
       <div className="p-4 bg-black/80 backdrop-blur space-y-3" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 1rem)" }}>
         {phase === "ready" && (
           <Button onClick={startRecording} className="w-full h-14 text-base bg-destructive hover:bg-destructive/90">
-            <Camera className="h-5 w-5 mr-2" /> Start recording
+            <Camera className="h-5 w-5 mr-2" /> Start Your Recording
           </Button>
         )}
         {phase === "recording" && (
@@ -386,7 +386,7 @@ export default function MobileRecord() {
             className="flex items-center gap-1 px-2 py-1 -mr-2 rounded hover:text-white"
             aria-label="Sign out"
           >
-            <LogOut className="h-4 w-4" /> Sign out
+            <LogOut className="h-4 w-4" /> Sign Out
           </button>
         </div>
       </div>
