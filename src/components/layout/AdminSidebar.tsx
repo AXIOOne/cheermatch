@@ -91,11 +91,12 @@ export function AdminSidebar() {
       {/* User Section */}
       <div className="p-4 border-t border-sidebar-border">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-9 h-9 rounded-full bg-sidebar-accent flex items-center justify-center">
-            <span className="text-sm font-medium text-sidebar-foreground">
-              {user?.email?.[0].toUpperCase() || 'A'}
-            </span>
-          </div>
+          <Avatar className="h-9 w-9">
+            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile?.full_name || user?.email || ''} />}
+            <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground text-sm">
+              {(profile?.full_name?.[0] || user?.email?.[0] || 'A').toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">
               {user?.email || 'Admin'}
