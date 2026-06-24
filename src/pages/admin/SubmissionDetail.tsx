@@ -142,7 +142,7 @@ export default function SubmissionDetail() {
           <Badge variant="secondary" className="gap-1">{submission.event?.name}</Badge>
           <Badge variant="outline" className="gap-1"><Award className="w-3 h-3" /> {submission.team?.division?.name}</Badge>
           <Badge variant="outline" className="gap-1"><Award className="w-3 h-3" /> {submission.team?.level?.name}</Badge>
-          <Badge variant="outline" className="gap-1"><Users className="w-3 h-3" /> {submission.team?.athlete_count} athletes</Badge>
+          <Badge variant="outline" className="gap-1"><Users className="w-3 h-3" /> {(submission.team?.athletes_female ?? 0) + (submission.team?.athletes_male ?? 0)} athletes ({submission.team?.athletes_female ?? 0}F / {submission.team?.athletes_male ?? 0}M)</Badge>
           {submission.submitted_at && (
             <Badge variant="outline" className="gap-1">
               <Calendar className="w-3 h-3" /> Submitted {format(new Date(submission.submitted_at), 'MMM d, yyyy')}
