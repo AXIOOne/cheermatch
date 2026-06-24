@@ -1,0 +1,1 @@
+ALTER TABLE public.score_deductions ADD COLUMN IF NOT EXISTS warnings integer NOT NULL DEFAULT 0;

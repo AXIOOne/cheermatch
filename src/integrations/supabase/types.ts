@@ -597,6 +597,7 @@ export type Database = {
           id: string
           notes: string | null
           score_id: string
+          warnings: number
         }
         Insert: {
           count?: number
@@ -605,6 +606,7 @@ export type Database = {
           id?: string
           notes?: string | null
           score_id: string
+          warnings?: number
         }
         Update: {
           count?: number
@@ -613,6 +615,7 @@ export type Database = {
           id?: string
           notes?: string | null
           score_id?: string
+          warnings?: number
         }
         Relationships: [
           {
