@@ -86,7 +86,7 @@ export default function EventParticipants() {
   }, [teams, searchQuery, divisionFilter, levelFilter]);
 
   const totalAthletes = useMemo(() => {
-    return filteredTeams.reduce((sum, team) => sum + team.athlete_count, 0);
+    return filteredTeams.reduce((sum, team) => sum + (team.athletes_female || 0) + (team.athletes_male || 0), 0);
   }, [filteredTeams]);
 
   const isLoading = eventLoading || teamsLoading;
