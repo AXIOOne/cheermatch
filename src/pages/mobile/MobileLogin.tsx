@@ -38,7 +38,7 @@ export default function MobileLogin() {
         <div className="mx-auto w-full max-w-sm">
           <div className="text-center mb-8">
             <div className="h-16 w-16 rounded-2xl bg-primary text-primary-foreground mx-auto flex items-center justify-center text-3xl font-bold mb-4">C</div>
-            <h1 className="text-2xl font-bold">Cheermatch Coach</h1>
+            <h1 className="text-2xl font-bold">Routine Submission Application</h1>
             <p className="text-sm text-sidebar-foreground/60 mt-1">Capture and submit your team's performance</p>
           </div>
           <form onSubmit={submit} className="space-y-4">
