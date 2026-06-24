@@ -99,6 +99,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRolesLoaded(true);
     } else if (data.session) {
       await applySession(data.session);
+      // Fire-and-forget: log the login event (last 30 days kept via cleanup)
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, email')
+          .eq('user_id', data.session.user.id)
+          .maybeSingle();
+        await supabase.from('login_events').insert({
+          user_id: data.session.user.id,
+          email: profile?.email ?? data.session.user.email ?? null,
+          full_name: profile?.full_name ?? null,
+        });
+        await supabase.rpc('cleanup_old_login_events');
+      } catch (e) {
+        console.warn('Failed to record login event', e);
+      }
     }
     return { error: error as Error | null };
   };

@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Calendar, Users, Trophy, ClipboardList, Plus, Loader2 } from 'lucide-react';
+import { Calendar, Users, Trophy, ClipboardList, Plus, Loader2, LogIn } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
 export default function Dashboard() {
   const { data: events, isLoading: eventsLoading } = useQuery({
@@ -47,6 +48,21 @@ export default function Dashboard() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(5);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: recentLogins, isLoading: loginsLoading } = useQuery({
+    queryKey: ['recent-logins'],
+    queryFn: async () => {
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('login_events')
+        .select('id, user_id, email, full_name, created_at')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(10);
       if (error) throw error;
       return data;
     },
@@ -175,6 +191,48 @@ export default function Dashboard() {
                   Create Event
                 </Link>
               </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Recent Logins */}
+      <Card className="mt-8">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <LogIn className="w-5 h-5" />
+              Recent Logins
+            </CardTitle>
+            <span className="text-xs text-muted-foreground">Last 30 days</span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loginsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : recentLogins && recentLogins.length > 0 ? (
+            <div className="divide-y divide-border">
+              {recentLogins.map((login) => (
+                <div key={login.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="font-medium text-sm">
+                      {login.full_name || login.email || 'Unknown user'}
+                    </p>
+                    {login.full_name && login.email && (
+                      <p className="text-xs text-muted-foreground">{login.email}</p>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground" title={new Date(login.created_at).toLocaleString()}>
+                    {formatDistanceToNow(new Date(login.created_at), { addSuffix: true })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No logins recorded in the last 30 days.
             </div>
           )}
         </CardContent>

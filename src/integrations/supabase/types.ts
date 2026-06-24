@@ -475,6 +475,30 @@ export type Database = {
         }
         Relationships: []
       }
+      login_events: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       mobile_sessions: {
         Row: {
           created_at: string
@@ -1600,6 +1624,7 @@ export type Database = {
     }
     Functions: {
       cleanup_expired_mobile_sessions: { Args: never; Returns: undefined }
+      cleanup_old_login_events: { Args: never; Returns: undefined }
       coach_account_status: {
         Args: { _event_id: string }
         Returns: {
