@@ -270,7 +270,12 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     cx += COLS.exec;
 
     drawCellBorder(page, cx, yBot, COLS.score, rowH);
-    drawTextCentered(page, fmt(r.score), cx, yBot, COLS.score, rowH, bold, cellFontSize);
+    if (r.score === null) {
+      page.drawRectangle({ x: cx, y: yBot, width: COLS.score, height: rowH, color: GRAY });
+      drawCellBorder(page, cx, yBot, COLS.score, rowH);
+    } else {
+      drawTextCentered(page, fmt(r.score), cx, yBot, COLS.score, rowH, bold, cellFontSize);
+    }
 
     cursorY = yBot;
   }
