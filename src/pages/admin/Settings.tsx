@@ -768,6 +768,89 @@ export default function Settings() {
         open={emailTemplatesOpen}
         onOpenChange={setEmailTemplatesOpen}
       />
+
+      {/* Branding Settings Dialog */}
+      <Dialog open={brandingDialogOpen} onOpenChange={setBrandingDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Branding</DialogTitle>
+            <DialogDescription>Customize the portal logo and color scheme</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label>Portal Logo</Label>
+              <div className="flex items-center gap-4">
+                <div className="w-32 h-16 rounded-md bg-black flex items-center justify-center overflow-hidden border">
+                  {brandingLogoUrl ? (
+                    <img src={brandingLogoUrl} alt="Logo preview" className="max-w-full max-h-full object-contain" />
+                  ) : (
+                    <span className="text-xs text-white/50">No logo</span>
+                  )}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <Input
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    disabled={brandingUploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleLogoUpload(file);
+                    }}
+                  />
+                  {brandingLogoUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setBrandingLogoUrl('')}
+                    >
+                      Remove logo
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Recommended: transparent PNG or SVG, 200×60px. Shown on the dark sidebar.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="primaryColor">Primary Color</Label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={brandingPrimaryHex}
+                  onChange={(e) => setBrandingPrimaryHex(e.target.value)}
+                  className="w-12 h-10 rounded border cursor-pointer bg-transparent"
+                />
+                <Input
+                  id="primaryColor"
+                  value={brandingPrimaryHex}
+                  onChange={(e) => setBrandingPrimaryHex(e.target.value)}
+                  placeholder="#1ddbb1"
+                  className="w-40 font-mono"
+                />
+                <div
+                  className="flex-1 h-10 rounded-md border"
+                  style={{ backgroundColor: brandingPrimaryHex }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Used for buttons, links, and accent highlights across the portal.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setBrandingDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveBrandingSettings} disabled={saveMutation.isPending || brandingUploading}>
+              {saveMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
