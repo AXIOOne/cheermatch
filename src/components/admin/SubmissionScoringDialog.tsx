@@ -87,7 +87,9 @@ export default function SubmissionScoringDialog({
         *,
         sections:scoring_sections(
           *,
-          fields:scoring_fields(*, options:scoring_field_options(*), panel_links:scoring_field_panels(*))
+          fields:scoring_fields(*, options:scoring_field_options(*), panel_links:scoring_field_panels(*),
+            skills:scoring_field_skills(*, options:scoring_field_skill_options(*))
+          )
         ),
         deduction_types:deduction_types(*)
       `;
