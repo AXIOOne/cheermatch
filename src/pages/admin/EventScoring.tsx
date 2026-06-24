@@ -70,6 +70,12 @@ export default function EventScoring() {
   const [downloadingPdfFor, setDownloadingPdfFor] = useState<string | null>(null);
   const [scoringSubmissionId, setScoringSubmissionId] = useState<string | null>(null);
   const [scoringPanelId, setScoringPanelId] = useState<string | null>(null);
+  const [confirmSendFor, setConfirmSendFor] = useState<{ id: string; teamName: string } | null>(null);
+  const [previewFor, setPreviewFor] = useState<{ id: string; teamName: string } | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewBytes, setPreviewBytes] = useState<Uint8Array | null>(null);
+  const [previewFileName, setPreviewFileName] = useState<string>('scoresheet.pdf');
+  const [previewLoading, setPreviewLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
