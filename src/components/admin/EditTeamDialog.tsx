@@ -82,7 +82,8 @@ export function EditTeamDialog({ open, onOpenChange, team, onSaved }: EditTeamDi
         .update({
           name: data.name,
           division_id: data.division_id,
-          athlete_count: data.athlete_count,
+          athletes_female: data.athletes_female,
+          athletes_male: data.athletes_male,
         })
         .eq('id', team.id);
       if (error) throw error;
