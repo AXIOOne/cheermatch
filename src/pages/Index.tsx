@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Users, ClipboardCheck, Video, Loader2 } from 'lucide-react';
 import logoBlack from '@/assets/logo-black.png';
-import logoWhite from '@/assets/logo-white.png';
+import logoWhite from '@/assets/logo-white.png.asset.json';
 
 export default function Index() {
   const { user, loading, rolesLoaded, isAdmin, isJudge, isGymCoach } = useAuth();
