@@ -285,7 +285,10 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     bold, headerFontSize);
   drawCellBorder(page, xScore, yBot, COLS.score, sumRowH);
   drawTextCentered(page, fmt(data.perfection, 4), xScore, yBot, COLS.score, sumRowH, bold, headerFontSize);
-  cursorY = yBot - 24;
+  cursorY = yBot - 12;
+  drawRule(page, MARGIN, cursorY, CONTENT_W, 1.75);
+  cursorY -= 18;
+
 
   // Totals breakout
   const totLabelW = 80;
