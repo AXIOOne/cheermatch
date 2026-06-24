@@ -362,6 +362,122 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     }
   }
 
+  // Deduction Report (final page)
+  {
+    drawPageFooter(page);
+    page = doc.addPage([PAGE_W, PAGE_H]);
+    cursorY = drawPageHeader(page);
+
+    const headingSize = 14;
+    const sectionGap = 14;
+
+    page.drawText('Deduction Report', {
+      x: MARGIN, y: cursorY - headingSize,
+      size: headingSize, font: bold, color: TEXT,
+    });
+    cursorY -= headingSize + 6;
+    drawRule(page, MARGIN, cursorY, CONTENT_W, 0.75);
+    cursorY -= 12;
+
+    const DR_COLS = { name: 220, value: 70, occ: 100, warn: 80, score: 70 };
+    const xName = MARGIN;
+    const xVal = xName + DR_COLS.name;
+    const xOcc = xVal + DR_COLS.value;
+    const xWarn = xOcc + DR_COLS.occ;
+    const xScore = xWarn + DR_COLS.warn;
+    const DR_HEADER_H = 20;
+    const DR_ROW_MIN_H = 18;
+
+    const ensureSpace = (needed: number) => {
+      if (cursorY - needed < MARGIN + 24) {
+        drawPageFooter(page);
+        page = doc.addPage([PAGE_W, PAGE_H]);
+        cursorY = drawPageHeader(page);
+      }
+    };
+
+    const drawDrHeader = () => {
+      const y = cursorY - DR_HEADER_H;
+      const cells: Array<[string, number, number]> = [
+        ['Deduction Name', xName, DR_COLS.name],
+        ['Value', xVal, DR_COLS.value],
+        ['# Occurrences', xOcc, DR_COLS.occ],
+        ['# Warnings', xWarn, DR_COLS.warn],
+        ['Score', xScore, DR_COLS.score],
+      ];
+      for (const [label, x, w] of cells) {
+        drawCellBorder(page, x, y, w, DR_HEADER_H);
+        drawTextCentered(page, label, x, y, w, DR_HEADER_H, bold, headerFontSize);
+      }
+      cursorY = y;
+    };
+
+    drawDrHeader();
+
+    const report = data.deduction_report;
+    for (const dr of report.rows) {
+      const nameLines = wrapText(dr.name, font, cellFontSize, DR_COLS.name - 10);
+      const rowH = Math.max(DR_ROW_MIN_H, nameLines.length * (cellFontSize + 1.5) + 6);
+      ensureSpace(rowH + 60);
+      const yBot = cursorY - rowH;
+      drawCellBorder(page, xName, yBot, DR_COLS.name, rowH);
+      drawTextLeft(page, nameLines, xName, yBot, rowH, font, cellFontSize);
+      drawCellBorder(page, xVal, yBot, DR_COLS.value, rowH);
+      drawTextCentered(page, fmt(dr.value, 2), xVal, yBot, DR_COLS.value, rowH, font, cellFontSize);
+      drawCellBorder(page, xOcc, yBot, DR_COLS.occ, rowH);
+      drawTextCentered(page, String(dr.occurrences), xOcc, yBot, DR_COLS.occ, rowH, font, cellFontSize);
+      drawCellBorder(page, xWarn, yBot, DR_COLS.warn, rowH);
+      drawTextCentered(page, String(dr.warnings), xWarn, yBot, DR_COLS.warn, rowH, font, cellFontSize);
+      drawCellBorder(page, xScore, yBot, DR_COLS.score, rowH);
+      drawTextCentered(page, fmt(dr.score, 2), xScore, yBot, DR_COLS.score, rowH, bold, cellFontSize);
+      cursorY = yBot;
+    }
+
+    ensureSpace(DR_ROW_MIN_H + 60);
+    {
+      const yBot = cursorY - DR_ROW_MIN_H;
+      drawCellBorder(page, xScore, yBot, DR_COLS.score, DR_ROW_MIN_H, 1.25);
+      drawTextCentered(page, fmt(report.total, 2), xScore, yBot, DR_COLS.score, DR_ROW_MIN_H, bold, headerFontSize);
+      cursorY = yBot - sectionGap;
+    }
+
+    const labelSize = 11;
+    const bodySize = 10;
+    const boxPad = 8;
+    const hasComment = data.safety_comments.trim().length > 0;
+    const bodyFont = hasComment ? font : italic;
+    const bodyColor = hasComment ? TEXT : MUTED;
+    const text = hasComment ? data.safety_comments : 'No comments provided.';
+    const lines = wrapText(text, bodyFont, bodySize, CONTENT_W - boxPad * 2);
+    const minLines = Math.max(lines.length, 4);
+    const textBlockH = minLines * (bodySize + 3);
+    const innerH = textBlockH + boxPad * 2;
+    const boxH = labelSize + 6 + innerH;
+
+    ensureSpace(boxH);
+
+    page.drawText('Safety & Deduction Comments', {
+      x: MARGIN, y: cursorY - labelSize,
+      size: labelSize, font: bold, color: TEXT,
+    });
+    const innerTop = cursorY - labelSize - 6;
+    const innerBot = innerTop - innerH;
+    page.drawRectangle({
+      x: MARGIN, y: innerBot, width: CONTENT_W, height: innerH,
+      borderColor: BORDER, borderWidth: 0.75,
+    });
+    let ty = innerTop - boxPad - bodySize;
+    for (const ln of lines) {
+      page.drawText(ln, {
+        x: MARGIN + boxPad, y: ty,
+        size: bodySize, font: bodyFont, color: bodyColor,
+      });
+      ty -= bodySize + 3;
+    }
+    cursorY = innerBot - 4;
+  }
+
   drawPageFooter(page);
   return await doc.save();
 }
+
