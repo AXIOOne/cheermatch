@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import logoWhite from '@/assets/logo-white.png';
+import logoWhite from '@/assets/logo-white.png.asset.json';
 import {
   ClipboardList,
   LogOut,
@@ -44,7 +44,7 @@ export function JudgeSidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <img src={logoWhite} alt="CheerMatch" className="h-8" />
+          <img src={logoWhite.url} alt="CheerMatch" className="h-8" />
         </div>
       </div>
 

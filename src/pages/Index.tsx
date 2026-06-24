@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Users, ClipboardCheck, Video, Loader2 } from 'lucide-react';
 import logoBlack from '@/assets/logo-black.png';
-import logoWhite from '@/assets/logo-white.png';
+import logoWhite from '@/assets/logo-white.png.asset.json';
 
 export default function Index() {
   const { user, loading, rolesLoaded, isAdmin, isJudge, isGymCoach } = useAuth();
@@ -39,7 +39,7 @@ export default function Index() {
       <div className="gradient-champion text-white">
         <div className="container mx-auto px-4 py-20 text-center">
           <div className="flex items-center justify-center mb-6">
-            <img src={logoWhite} alt="CheerMatch" className="h-16" />
+            <img src={logoWhite.url} alt="CheerMatch" className="h-16" />
           </div>
           <p className="text-xl text-white/80 max-w-2xl mx-auto mb-8">
             The complete virtual cheerleading competition platform. Manage events, score performances, and celebrate champions.
