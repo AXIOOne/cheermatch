@@ -379,6 +379,11 @@ export default function SubmissionScoringDialog({
             .filter((d) => (d.count || 0) > 0 || (d.warnings || 0) > 0);
           if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
         }
+        const skSel = skillRowsFor(newScore.id);
+        if (skSel.length) {
+          const { error: sErr } = await sb.from('score_skill_selections').insert(skSel);
+          if (sErr) throw sErr;
+        }
       }
     },
     onSuccess: (_, args) => {
