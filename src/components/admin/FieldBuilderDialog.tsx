@@ -302,6 +302,72 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
             </div>
           )}
 
+          {draft.field_type === 'difficulty_driver' && (
+            <div className="space-y-3 bg-muted/30 p-3 rounded-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>Skills</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Each skill is a radio group. The field's value is the sum of selected option values.
+                  </p>
+                </div>
+                <Button type="button" size="sm" variant="outline" onClick={addSkill}>
+                  <Plus className="w-3 h-3 mr-1" /> Add Skill
+                </Button>
+              </div>
+              {draft.skills.length === 0 && (
+                <p className="text-xs text-muted-foreground">Add at least one skill.</p>
+              )}
+              {draft.skills.map((sk, skillIdx) => (
+                <div key={sk.temp_id} className="border rounded-md bg-background p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="Skill name (e.g., Standing Tumbling)"
+                      value={sk.name}
+                      onChange={(e) => updateSkill(skillIdx, { name: e.target.value })}
+                      className="flex-1"
+                    />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => removeSkill(skillIdx)}>
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                  <div className="pl-2 border-l-2 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Radio options</span>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => addSkillOption(skillIdx)}>
+                        <Plus className="w-3 h-3 mr-1" /> Add Option
+                      </Button>
+                    </div>
+                    {sk.options.length === 0 && (
+                      <p className="text-xs text-muted-foreground">Add at least one option.</p>
+                    )}
+                    {sk.options.map((opt, optIdx) => (
+                      <div key={opt.temp_id} className="flex items-center gap-2">
+                        <Input
+                          placeholder="Label (e.g., Level 4)"
+                          value={opt.label}
+                          onChange={(e) => updateSkillOption(skillIdx, optIdx, { label: e.target.value })}
+                          className="flex-1"
+                        />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Value"
+                          value={opt.value}
+                          onChange={(e) => updateSkillOption(skillIdx, optIdx, { value: parseFloat(e.target.value) || 0 })}
+                          className="w-28"
+                        />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeSkillOption(skillIdx, optIdx)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>Assigned Judge Panels</Label>
             <p className="text-xs text-muted-foreground">
