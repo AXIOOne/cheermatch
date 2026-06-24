@@ -341,6 +341,12 @@ export default function SubmissionScoringDialog({
             .filter((d) => (d.count || 0) > 0 || (d.warnings || 0) > 0);
           if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
         }
+        await sb.from('score_skill_selections').delete().eq('score_id', currentPanelScore.id);
+        const skSel = skillRowsFor(currentPanelScore.id);
+        if (skSel.length) {
+          const { error: sErr } = await sb.from('score_skill_selections').insert(skSel);
+          if (sErr) throw sErr;
+        }
       } else {
         const judgeUserId = assignedJudge?.judge_user_id ?? adminUserId;
         if (!judgeUserId) throw new Error('Could not determine score author');
