@@ -13,7 +13,7 @@ export async function generateSubmissionScoresheetBytes(
     .select(`
       id, event_id,
       team:teams!inner(id, name, gym_name,
-        division:divisions!inner(id, name),
+        division:divisions!inner(id, name, scoring_template_id),
         level:levels(id, name)),
       event:events!inner(id, name, accuscore_end_at)
     `)
@@ -21,6 +21,7 @@ export async function generateSubmissionScoresheetBytes(
     .maybeSingle();
   if (subErr) throw subErr;
   if (!submission) throw new Error('Submission not found');
+
 
   const { data: scores, error: scoresErr } = await sb
     .from('scores')
@@ -45,8 +46,13 @@ export async function generateSubmissionScoresheetBytes(
   let deduction_catalog: Array<{ id: string; name: string; points: number; display_order: number }> = [];
   let templateId: string | null = usable[0]?.template_id ?? null;
 
-  // If no submitted scores yet, resolve the template from the event so the
-  // sheet still shows every criterion row (blank) with correct max totals.
+  // If no submitted scores yet, resolve the template the same way the judge UI
+  // does: prefer the division's template, then any event-bound template, then
+  // the global default. This ensures every criterion row renders even before
+  // scores are submitted.
+  if (!templateId) {
+    templateId = (submission as any).team?.division?.scoring_template_id ?? null;
+  }
   if (!templateId) {
     const { data: tpls } = await sb
       .from('scoring_templates')
@@ -56,6 +62,16 @@ export async function generateSubmissionScoresheetBytes(
       .limit(1);
     templateId = tpls?.[0]?.id ?? null;
   }
+  if (!templateId) {
+    const { data: tpls } = await sb
+      .from('scoring_templates')
+      .select('id')
+      .eq('is_default', true)
+      .order('created_at')
+      .limit(1);
+    templateId = tpls?.[0]?.id ?? null;
+  }
+
 
   const fieldMap = new Map<string, RawField>();
   if (templateId) {
