@@ -149,7 +149,7 @@ export default function ScorePerformance() {
   const { data: existingScore } = useQuery({
     queryKey: ['existing-score', submissionId, user?.id, assignedPanelId],
     queryFn: async () => {
-      let q = sb.from('scores').select(`*, details:score_details(*), deduction_items:score_deductions(*)`)
+      let q = sb.from('scores').select(`*, details:score_details(*), deduction_items:score_deductions(*), skill_selections:score_skill_selections(*)`)
         .eq('submission_id', submissionId!).eq('judge_user_id', user!.id);
       if (assignedPanelId) q = q.eq('panel_id', assignedPanelId);
       const { data, error } = await q.maybeSingle();
