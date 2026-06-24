@@ -60,6 +60,7 @@ const App = () => (
     <AuthProvider>
       <MobileAuthProvider>
         <TooltipProvider>
+          <BrandingApplier />
           <Toaster />
           <Sonner />
           <BrowserRouter>
