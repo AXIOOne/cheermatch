@@ -298,6 +298,24 @@ export default function ScoringTemplates() {
               links.map((l) => ({ field_id: fIns.id, panel_abbreviation: l.panel_abbreviation }))
             );
           }
+          const srcSkills = (f.skills || []) as any[];
+          for (let si = 0; si < srcSkills.length; si++) {
+            const sk = srcSkills[si];
+            const { data: skIns, error: skErr } = await sb.from('scoring_field_skills').insert({
+              field_id: fIns.id, name: sk.name, description: sk.description,
+              display_order: sk.display_order ?? si,
+            }).select().single();
+            if (skErr) throw skErr;
+            const skOpts = (sk.options || []) as any[];
+            if (skOpts.length) {
+              await sb.from('scoring_field_skill_options').insert(
+                skOpts.map((o, oi) => ({
+                  skill_id: skIns.id, label: o.label, value: o.value,
+                  display_order: o.display_order ?? oi,
+                }))
+              );
+            }
+          }
         }
       }
 
