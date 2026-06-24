@@ -198,12 +198,13 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
               <Label>Field Type</Label>
               <Select
                 value={draft.field_type}
-                onValueChange={(v) => setDraft(d => ({ ...d, field_type: v as 'number' | 'dropdown' }))}
+                onValueChange={(v) => setDraft(d => ({ ...d, field_type: v as 'number' | 'dropdown' | 'difficulty_driver' }))}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="number">Number (+/-)</SelectItem>
                   <SelectItem value="dropdown">Dropdown</SelectItem>
+                  <SelectItem value="difficulty_driver">Difficulty Driver (skills)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
