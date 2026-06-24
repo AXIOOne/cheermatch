@@ -197,6 +197,19 @@ export default function MobileRecord() {
     }
   }, [phase, previewAttemptId, attempts]);
 
+  // Re-attach the live camera stream whenever the live <video> is shown.
+  // The live element unmounts during "preview", so after "Record again" we
+  // need to re-bind srcObject or the new element stays black.
+  useEffect(() => {
+    if (phase === "preview") return;
+    const el = videoLiveRef.current;
+    const stream = streamRef.current;
+    if (el && stream && el.srcObject !== stream) {
+      el.srcObject = stream;
+      el.play().catch(() => {});
+    }
+  }, [phase]);
+
   async function uploadSelected() {
     const chosen = attempts.find((a) => a.id === selectedAttemptId);
     if (!chosen) { toast.error("Pick an attempt to submit"); return; }
