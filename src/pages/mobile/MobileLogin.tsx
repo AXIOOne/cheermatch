@@ -38,7 +38,7 @@ export default function MobileLogin() {
       <div className="flex-1 flex flex-col justify-center px-6 py-12">
         <div className="mx-auto w-full max-w-sm">
           <div className="text-center mb-8">
-            <img src={logoWhite.url} alt="Logo" className="mx-auto h-16 w-auto mb-4" />
+            <img src={logoWhite.url} alt="Logo" className="mx-auto w-full max-w-[280px] h-auto mb-4 object-contain" />
             <h1 className="text-2xl font-bold">Routine Submission Application</h1>
             <p className="text-sm text-sidebar-foreground/60 mt-1">Capture and submit your team's performance</p>
           </div>
