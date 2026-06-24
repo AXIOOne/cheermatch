@@ -38,9 +38,10 @@ export default function Settings() {
   const [notificationsDialogOpen, setNotificationsDialogOpen] = useState(false);
   const [integrationsDialogOpen, setIntegrationsDialogOpen] = useState(false);
   const [emailTemplatesOpen, setEmailTemplatesOpen] = useState(false);
+  const [brandingDialogOpen, setBrandingDialogOpen] = useState(false);
 
   // Use the reusable hook
-  const { security, notifications, integrations, isLoading } = usePlatformSettings();
+  const { security, notifications, integrations, branding, isLoading } = usePlatformSettings();
 
   // Security settings state
   const [requireStrongPassword, setRequireStrongPassword] = useState(true);
