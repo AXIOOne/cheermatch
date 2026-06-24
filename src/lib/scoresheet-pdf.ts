@@ -120,7 +120,7 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
   const drawPageFooter = (p: PDFPage) => {
     const y = MARGIN - 14;
     drawRule(p, MARGIN, y + 10, CONTENT_W, 0.75);
-    p.drawText('SUM', { x: MARGIN, y, size: smallSize, font: italic, color: MUTED });
+    p.drawText('VIRTUAL', { x: MARGIN, y, size: smallSize, font: italic, color: MUTED });
     const mid = data.event_name || '';
     const mw = italic.widthOfTextAtSize(mid, smallSize);
     p.drawText(mid, { x: MARGIN + (CONTENT_W - mw) / 2, y, size: smallSize, font: italic, color: MUTED });
@@ -135,12 +135,9 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
   const xCenter = MARGIN + colW;
   const xRight = MARGIN + colW * 2;
 
-  // Row 1: gym short / event name / phase
+  // Row 1: event name / phase
   const topY = cursorY - titleFontSize;
-  const shortCode = (data.gym_name || data.team_name || '').slice(0, 3).toUpperCase();
-  page.drawText(shortCode, {
-    x: xLeft, y: topY, size: titleFontSize - 4, font: bold, color: TEXT,
-  });
+
   // event_name centered (bold serif)
   {
     const t = data.event_name || '';
