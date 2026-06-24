@@ -328,11 +328,15 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     bold, headerFontSize);
   drawCellBorder(page, xScore, yBot, COLS.score, sumRowH);
   drawTextCentered(page, fmt(data.perfection, 4), xScore, yBot, COLS.score, sumRowH, bold, headerFontSize);
-  cursorY = yBot - 24;
+  cursorY = yBot - 12;
+  // Heavy rule separating scores table from totals breakout (full page width)
+  drawRule(page, MARGIN, cursorY, CONTENT_W, 1.75);
+  cursorY -= 18;
 
   // ---------- Totals breakout table ----------
   const totLabelW = 80;
   const totCellW = (CONTENT_W - totLabelW) / 4;
+
   const totals: Array<[string, string]> = [
     ['Raw Score', fmt(data.raw_score)],
     ['Deductions', fmt(data.deductions || 0)],
