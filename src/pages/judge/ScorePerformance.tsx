@@ -414,7 +414,7 @@ export default function ScorePerformance() {
               <div><span className="text-muted-foreground">Event</span><p className="font-medium">{submission.event?.name}</p></div>
               <div><span className="text-muted-foreground">Division</span><p className="font-medium">{submission.team?.division?.name}</p></div>
               <div><span className="text-muted-foreground">Level</span><p className="font-medium">Level {submission.team?.level?.level_number}</p></div>
-              <div><span className="text-muted-foreground">Athletes</span><p className="font-medium">{submission.team?.athlete_count}</p></div>
+              <div><span className="text-muted-foreground">Athletes</span><p className="font-medium">{(submission.team?.athletes_female ?? 0) + (submission.team?.athletes_male ?? 0)} <span className="text-muted-foreground font-normal">({submission.team?.athletes_female ?? 0}F / {submission.team?.athletes_male ?? 0}M)</span></p></div>
             </CardContent>
           </Card>
         </div>
