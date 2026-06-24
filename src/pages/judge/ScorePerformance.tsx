@@ -46,6 +46,7 @@ export default function ScorePerformance() {
 
   const [fieldScores, setFieldScores] = useState<Record<string, FieldScore>>({});
   const [deductionCounts, setDeductionCounts] = useState<Record<string, number>>({});
+  const [deductionWarnings, setDeductionWarnings] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [flagDialogOpen, setFlagDialogOpen] = useState(false);
