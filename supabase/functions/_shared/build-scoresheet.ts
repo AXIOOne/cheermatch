@@ -142,15 +142,16 @@ export function buildScoresheet(input: ScoresheetInput): ScoresheetData {
     const diffAvg = g.diff ? averagePoints(g.diff.id, input.submitted_scores) : null;
     const execAvg = g.exec ? averagePoints(g.exec.id, input.submitted_scores) : null;
     const max_value = round2((g.diff?.max_points || 0) + (g.exec?.max_points || 0));
-    const score = round2((diffAvg || 0) + (execAvg || 0));
+    const hasAny = diffAvg !== null || execAvg !== null;
+    const score = hasAny ? round2((diffAvg ?? 0) + (execAvg ?? 0)) : null;
     rows.push({
       name: g.name, max_value,
-      difficulty: g.diff ? (diffAvg ?? 0) : null,
-      execution: g.exec ? (execAvg ?? 0) : null,
+      difficulty: g.diff ? diffAvg : null,
+      execution: g.exec ? execAvg : null,
       score,
     });
     total_max += max_value;
-    raw_score += score;
+    raw_score += (diffAvg ?? 0) + (execAvg ?? 0);
   }
   total_max = round2(total_max);
   raw_score = round2(raw_score);
