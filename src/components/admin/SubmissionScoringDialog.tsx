@@ -50,6 +50,7 @@ export default function SubmissionScoringDialog({
 
   const [selectedPanelId, setSelectedPanelId] = useState<string>('');
   const [fieldScores, setFieldScores] = useState<Record<string, FieldScore>>({});
+  const [skillSelections, setSkillSelections] = useState<Record<string, string>>({});
   const [deductionCounts, setDeductionCounts] = useState<Record<string, number>>({});
   const [deductionWarnings, setDeductionWarnings] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
