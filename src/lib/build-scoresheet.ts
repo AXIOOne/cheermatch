@@ -63,7 +63,7 @@ export interface ScoresheetRow {
   max_value: number;
   difficulty: number | null;
   execution: number | null;
-  score: number;
+  score: number | null;
 }
 
 export interface JudgeComment {
