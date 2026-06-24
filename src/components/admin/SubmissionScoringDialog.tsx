@@ -582,8 +582,9 @@ export default function SubmissionScoringDialog({
                               {panel.abbreviation}
                             </p>
                             {score?.total_score !== null && score?.total_score !== undefined && (
-                              <p className="text-xs opacity-90">{Number(score.total_score).toFixed(2)}%</p>
+                              <p className="text-xs opacity-90">{Number(score.raw_score ?? 0).toFixed(2)} / {Number(score.total_max ?? 0).toFixed(2)}</p>
                             )}
+
                           </div>
                         );
                       })}
