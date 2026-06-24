@@ -178,8 +178,9 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
 
   // Table
   type ComputedRow = { idx: number; lines: string[]; height: number };
-  const HEADER_H = 18;
-  const ROW_MIN_H = 16;
+  const HEADER_H = 22;
+  const ROW_MIN_H = 22;
+
   const rows: ComputedRow[] = data.rows.map((r, idx) => {
     const lines = wrapText(r.name, font, cellFontSize, COLS.criteria - 10);
     const h = Math.max(ROW_MIN_H, lines.length * (cellFontSize + 1.5) + 4);
