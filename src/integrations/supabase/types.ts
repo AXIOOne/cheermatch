@@ -676,6 +676,52 @@ export type Database = {
           },
         ]
       }
+      score_skill_selections: {
+        Row: {
+          created_at: string
+          id: string
+          option_id: string
+          score_id: string
+          skill_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_id: string
+          score_id: string
+          skill_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_id?: string
+          score_id?: string
+          skill_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_skill_selections_option_id_fkey"
+            columns: ["option_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_field_skill_options"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_skill_selections_score_id_fkey"
+            columns: ["score_id"]
+            isOneToOne: false
+            referencedRelation: "scores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_skill_selections_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_field_skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scores: {
         Row: {
           comments: string | null
@@ -812,6 +858,79 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "scoring_field_panels_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_fields"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scoring_field_skill_options: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          label: string
+          skill_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          label: string
+          skill_id: string
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          label?: string
+          skill_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scoring_field_skill_options_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_field_skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scoring_field_skills: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          field_id: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          field_id: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          field_id?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scoring_field_skills_field_id_fkey"
             columns: ["field_id"]
             isOneToOne: false
             referencedRelation: "scoring_fields"
