@@ -94,7 +94,11 @@ export default function Settings() {
     setAwsSecretAccessKey(integrations.awsSecretAccessKey);
     setAwsS3Bucket(integrations.awsS3Bucket);
     setAwsS3Region(integrations.awsS3Region);
-  }, [security, notifications, integrations]);
+
+    // Branding settings
+    setBrandingLogoUrl(branding.logoUrl);
+    setBrandingPrimaryHex(hslStringToHex(branding.primaryColor) || '#1ddbb1');
+  }, [security, notifications, integrations, branding]);
 
   // Mutation to save settings
   const saveMutation = useMutation({
