@@ -596,31 +596,42 @@ export default function MobileRecord() {
             </div>
           </div>
         )}
+
+        {/* Centered floating capture controls */}
+        {phase === "ready" && !isPortrait && !needsDeviceConfirm && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+            <button
+              onClick={beginCountdown}
+              aria-label="Start Recording"
+              className="pointer-events-auto group flex flex-col items-center justify-center h-28 w-28 rounded-full bg-black/40 backdrop-blur-sm border-4 border-white/90 shadow-2xl active:scale-95 transition"
+            >
+              <span className="h-16 w-16 rounded-full bg-destructive group-hover:bg-destructive/90" />
+            </button>
+          </div>
+        )}
+        {phase === "recording" && (
+          <div className="absolute inset-0 z-40 flex items-end justify-center pb-8 pointer-events-none">
+            <button
+              onClick={stopRecording}
+              aria-label={`Stop Recording, ${fmt(remaining)} left`}
+              className="pointer-events-auto group flex items-center justify-center h-24 w-24 rounded-full bg-black/40 backdrop-blur-sm border-4 border-white/90 shadow-2xl active:scale-95 transition"
+            >
+              <span className="h-10 w-10 rounded-md bg-destructive group-hover:bg-destructive/90" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Bottom action area */}
       <div className="p-4 bg-black/80 backdrop-blur space-y-3" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 1rem)" }}>
-        {phase === "ready" && (
-          <Button
-            onClick={beginCountdown}
-            className={`w-full text-base bg-destructive hover:bg-destructive/90 ${isTablet ? "h-16" : "h-14"}`}
-          >
-            <Camera className="h-5 w-5 mr-2" /> Start Recording
-          </Button>
-        )}
         {phase === "countdown" && (
           <Button onClick={cancelCountdown} variant="secondary" className="w-full h-14 text-base">
             Cancel
           </Button>
         )}
         {phase === "recording" && (
-          <div className={`flex ${isTablet ? "justify-center" : "justify-end"}`}>
-            <Button
-              onClick={stopRecording}
-              className={`text-base bg-destructive hover:bg-destructive/90 ${isTablet ? "h-16 w-2/3" : "h-14 w-full"}`}
-            >
-              <Square className="h-5 w-5 mr-2 fill-white" /> Stop · {fmt(remaining)} left
-            </Button>
+          <div className="text-center text-xs text-white/70 font-mono">
+            Tap the stop button to end · {fmt(remaining)} left
           </div>
         )}
         {phase === "preview" && (
