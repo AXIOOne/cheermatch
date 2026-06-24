@@ -11,6 +11,7 @@ import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { calculateStructuredDeductions, sortByDisplayOrder } from '@/lib/scoring';
@@ -49,6 +50,7 @@ export default function SubmissionScoringDialog({
 
   const [selectedPanelId, setSelectedPanelId] = useState<string>('');
   const [fieldScores, setFieldScores] = useState<Record<string, FieldScore>>({});
+  const [skillSelections, setSkillSelections] = useState<Record<string, string>>({});
   const [deductionCounts, setDeductionCounts] = useState<Record<string, number>>({});
   const [deductionWarnings, setDeductionWarnings] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
@@ -85,7 +87,9 @@ export default function SubmissionScoringDialog({
         *,
         sections:scoring_sections(
           *,
-          fields:scoring_fields(*, options:scoring_field_options(*), panel_links:scoring_field_panels(*))
+          fields:scoring_fields(*, options:scoring_field_options(*), panel_links:scoring_field_panels(*),
+            skills:scoring_field_skills(*, options:scoring_field_skill_options(*))
+          )
         ),
         deduction_types:deduction_types(*)
       `;
@@ -108,7 +112,8 @@ export default function SubmissionScoringDialog({
       const { data, error } = await sb.from('scores').select(`
         *,
         details:score_details(*),
-        deduction_items:score_deductions(*)
+        deduction_items:score_deductions(*),
+        skill_selections:score_skill_selections(*)
       `).eq('submission_id', submissionId!);
       if (error) throw error;
       const judgeIds = [...new Set((data || []).map((s: any) => s.judge_user_id).filter(Boolean))];
@@ -186,6 +191,11 @@ export default function SubmissionScoringDialog({
         loaded[d.field_id] = { field_id: d.field_id, points: Number(d.points), notes: d.notes || '' };
       });
       setFieldScores(loaded);
+      const sel: Record<string, string> = {};
+      (panelScore.skill_selections || []).forEach((s: any) => {
+        sel[s.skill_id] = s.option_id;
+      });
+      setSkillSelections(sel);
       const loadedDed: Record<string, number> = {};
       const loadedWarn: Record<string, number> = {};
       panelScore.deduction_items?.forEach((it: any) => {
@@ -202,6 +212,7 @@ export default function SubmissionScoringDialog({
         init[f.id] = { field_id: f.id, points: 0, notes: '' };
       });
       setFieldScores(init);
+      setSkillSelections({});
       const initDed: Record<string, number> = {};
       const initWarn: Record<string, number> = {};
       (sortByDisplayOrder((template.deduction_types || []) as any[])).forEach((dt: any) => {
@@ -213,6 +224,41 @@ export default function SubmissionScoringDialog({
       setNeedsReview(false);
     }
   }, [selectedPanelId, allScores, template, visibleSections]);
+
+  // Derive difficulty-driver field points from selected radio options
+  const driverFieldsById = useMemo(() => {
+    const map: Record<string, any> = {};
+    visibleSections.forEach((s: any) => s.visibleFields.forEach((f: any) => {
+      if (f.field_type === 'difficulty_driver') map[f.id] = f;
+    }));
+    return map;
+  }, [visibleSections]);
+
+  useEffect(() => {
+    const updates: Record<string, number> = {};
+    Object.values(driverFieldsById).forEach((f: any) => {
+      const sum = (f.skills || []).reduce((acc: number, sk: any) => {
+        const optId = skillSelections[sk.id];
+        if (!optId) return acc;
+        const opt = (sk.options || []).find((o: any) => o.id === optId);
+        return acc + (opt ? Number(opt.value) : 0);
+      }, 0);
+      updates[f.id] = sum;
+    });
+    if (Object.keys(updates).length === 0) return;
+    setFieldScores(prev => {
+      let changed = false;
+      const next = { ...prev };
+      for (const [fid, pts] of Object.entries(updates)) {
+        const cur = prev[fid];
+        if (!cur || Number(cur.points) !== pts) {
+          next[fid] = { field_id: fid, points: pts, notes: cur?.notes || '' };
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [skillSelections, driverFieldsById]);
 
   const updateFieldScore = (fieldId: string, points: number) =>
     setFieldScores(prev => ({ ...prev, [fieldId]: { ...prev[fieldId], field_id: fieldId, points, notes: prev[fieldId]?.notes || '' } }));
@@ -256,6 +302,11 @@ export default function SubmissionScoringDialog({
           points: fs.points, notes: fs.notes || null,
         }));
 
+      const skillRowsFor = (scoreId: string) =>
+        Object.entries(skillSelections)
+          .filter(([, optId]) => !!optId)
+          .map(([skill_id, option_id]) => ({ score_id: scoreId, skill_id, option_id }));
+
       const reviewFields = args.markReviewed
         ? { reviewed_at: new Date().toISOString(), reviewed_by: adminUserId }
         : {};
@@ -290,6 +341,12 @@ export default function SubmissionScoringDialog({
             .filter((d) => (d.count || 0) > 0 || (d.warnings || 0) > 0);
           if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
         }
+        await sb.from('score_skill_selections').delete().eq('score_id', currentPanelScore.id);
+        const skSel = skillRowsFor(currentPanelScore.id);
+        if (skSel.length) {
+          const { error: sErr } = await sb.from('score_skill_selections').insert(skSel);
+          if (sErr) throw sErr;
+        }
       } else {
         const judgeUserId = assignedJudge?.judge_user_id ?? adminUserId;
         if (!judgeUserId) throw new Error('Could not determine score author');
@@ -321,6 +378,11 @@ export default function SubmissionScoringDialog({
             }))
             .filter((d) => (d.count || 0) > 0 || (d.warnings || 0) > 0);
           if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
+        }
+        const skSel = skillRowsFor(newScore.id);
+        if (skSel.length) {
+          const { error: sErr } = await sb.from('score_skill_selections').insert(skSel);
+          if (sErr) throw sErr;
         }
       }
     },
@@ -586,7 +648,12 @@ export default function SubmissionScoringDialog({
                                     <p className="text-sm font-medium">{f.name}</p>
                                     {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
                                   </div>
-                                  <div className="text-right text-xs text-muted-foreground">max {Number(f.max_points).toFixed(2)}</div>
+                                  <div className="text-right text-xs text-muted-foreground">
+                                    {f.field_type === 'difficulty_driver' && (
+                                      <span className="text-sm font-semibold mr-2 text-foreground">{Number(fieldScores[f.id]?.points || 0).toFixed(2)}</span>
+                                    )}
+                                    max {Number(f.max_points).toFixed(2)}
+                                  </div>
                                 </div>
                                 {f.field_type === 'dropdown' ? (() => {
                                   const resolvePoints = (o: any) => {
@@ -619,7 +686,42 @@ export default function SubmissionScoringDialog({
                                       </SelectContent>
                                     </Select>
                                   );
-                                })() : (
+                                })() : f.field_type === 'difficulty_driver' ? (
+                                  <div className="space-y-2">
+                                    {(f.skills || [])
+                                      .slice()
+                                      .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+                                      .map((sk: any) => {
+                                        const opts = (sk.options || [])
+                                          .slice()
+                                          .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
+                                        const selected = skillSelections[sk.id];
+                                        return (
+                                          <div key={sk.id} className="rounded-md border p-2">
+                                            <p className="text-xs font-medium mb-2">{sk.name}</p>
+                                            <RadioGroup
+                                              value={selected || ''}
+                                              onValueChange={(val) => setSkillSelections(prev => ({ ...prev, [sk.id]: val }))}
+                                              disabled={isCurrentPanelLocked}
+                                              className="flex flex-wrap gap-3"
+                                            >
+                                              {opts.map((opt: any) => (
+                                                <label
+                                                  key={opt.id}
+                                                  htmlFor={`adm-sk-${sk.id}-${opt.id}`}
+                                                  className="flex items-center gap-1.5 text-xs cursor-pointer"
+                                                >
+                                                  <RadioGroupItem id={`adm-sk-${sk.id}-${opt.id}`} value={opt.id} />
+                                                  <span>{opt.label}</span>
+                                                  <span className="text-muted-foreground">({Number(opt.value)})</span>
+                                                </label>
+                                              ))}
+                                            </RadioGroup>
+                                          </div>
+                                        );
+                                      })}
+                                  </div>
+                                ) : (
                                   <ScoreInput
                                     value={fieldScores[f.id]?.points || 0}
                                     onChange={(v) => updateFieldScore(f.id, v)}

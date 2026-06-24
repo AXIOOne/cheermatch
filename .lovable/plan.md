@@ -1,87 +1,84 @@
-## Deduction Report on Final Page of Scoresheet PDF
+## Difficulty Driver Field Type
 
-Add a deduction summary table to the last page of the PDF scoresheet, listing every deduction type from the scoring template with columns for Value, # Occurrences, # Warnings, and Score. Then add a single "Safety & Deduction Comments" box below it.
+Adds a new `difficulty_driver` field type to scoring templates. Each difficulty driver field contains a list of "skills" (subfields); each skill has its own set of radio options (label + point value). When scoring, the judge picks one radio per skill. The field's final value is the **sum of selected option values, with no cap**.
 
-### Visual layout (final page)
+### 1. Database
 
-```text
-+----------------------- Page header -------------------------+
-| Judge Comments (only if enabled — existing behavior)        |
-|   [judge comment boxes per panel, as today]                 |
-+-------------------------------------------------------------+
-| Deduction Report                                            |
-| +--------------------+-------+-------------+----------+-----+
-| | Deduction Name     | Value | Occurrences | Warnings |Score|
-| +--------------------+-------+-------------+----------+-----+
-| | Athlete Fall       | 0.15  |     0       |    0     | 0.00|
-| | ... every deduction_type from the template, in order ...  |
-| +--------------------+-------+-------------+----------+-----+
-|                                            Total: | 0.00    |
-+-------------------------------------------------------------+
-| Safety & Deduction Comments                                 |
-| +---------------------------------------------------------+ |
-| | [free text from the safety/deduction judge]             | |
-| +---------------------------------------------------------+ |
-+-------------------------------------------------------------+
-```
+Migration adds:
 
-The report appears on its own page (a new last page) after the existing scores page and any judge-comments pages. If it doesn't fit, it paginates.
+- Extend enum `scoring_field_type` with value `'difficulty_driver'`.
+- New table `public.scoring_field_skills`
+  - `field_id` → `scoring_fields.id` (cascade delete)
+  - `name`, `description`, `display_order`
+  - timestamps + RLS mirroring `scoring_fields` (admins manage, judges/coaches read)
+  - `GRANT`s for `authenticated` and `service_role`
+- New table `public.scoring_field_skill_options`
+  - `skill_id` → `scoring_field_skills.id` (cascade delete)
+  - `label`, `value` (numeric, can be negative), `display_order`
+  - timestamps + RLS + grants
+- New table `public.score_skill_selections`
+  - `score_id` → `scores.id` (cascade delete)
+  - `skill_id` → `scoring_field_skills.id`
+  - `option_id` → `scoring_field_skill_options.id`
+  - unique (`score_id`, `skill_id`)
+  - RLS: judge can write rows for their own score; admins read all; coaches read via review token (mirror existing `score_details` policies)
 
-### Data rules
+Existing `scoring_field_options` is unchanged — radio options live on the new `scoring_field_skill_options` table because they belong to a skill, not the field.
 
-- The deductions table renders every `deduction_type` defined on the team's scoring template, in `display_order`, even when the count is zero — matching the sample.
-- **# Occurrences:** count entered by the designated safety/deduction judge (see "Designated judge" below). If no judge has recorded that deduction, show 0.
-- **# Warnings:** new field captured per deduction (also recorded by the safety/deduction judge). Defaults to 0 if not present.
-- **Value:** the deduction's `points` (absolute value, two decimals).
-- **Score:** `value × occurrences` (two decimals, shown as a positive number to match the sample). The bottom-right total cell sums the Score column.
-- **Safety & Deduction Comments:** the `comments` string from the safety/deduction judge's score row. Empty box if none.
+### 2. Template builder UI
 
-### Designated judge
+`FieldBuilderDialog.tsx`:
 
-Only one judge per team should record deductions and warnings. We'll treat the judge whose panel `abbreviation` is `SD` (or panel `name` matching "Safety" / "Deductions" case-insensitively) as the designated safety/deduction judge. Their `score_deductions` rows feed Occurrences/Warnings, and their `comments` feed the comments box. If no SD panel exists for the event, fall back to the first submitted score so the report still renders.
+- Add `'difficulty_driver'` to the `field_type` Select.
+- When selected, hide the number-range and flat-options blocks and show a new **Skills** section:
+  - Add Skill button.
+  - Each skill row: name input + nested list of `{label, value}` radio options + Add Option / Remove buttons.
+  - Validation: must have ≥1 skill, each skill must have ≥1 option, names non-empty.
+- Extend `ScoringField` type with `skills: { temp_id, id?, name, display_order, options: { temp_id, id?, label, value, display_order }[] }[]`.
 
-(No UI is changed for restricting who *can* enter deductions in this plan — let me know if you also want the judge UI gated so only the SD panel sees the deductions section.)
+`ScoringTemplates.tsx`:
 
-### Technical changes
+- Persist `skills` and nested `options` on save (insert/update/delete cascading).
+- Load skills + options when editing an existing template.
 
-**1. Database migration — add warnings to `score_deductions`**
+`SectionFieldsTable.tsx` + `TemplatePreview.tsx`:
 
-- `ALTER TABLE public.score_deductions ADD COLUMN warnings integer NOT NULL DEFAULT 0`.
-- No new RLS policies needed (existing 3 policies on `score_deductions` continue to apply).
-- Re-uses existing GRANTs.
+- Show a "Difficulty Driver" badge for the new type.
+- Preview renders each skill with its radio choices.
 
-**2. Judge scoring UI (`src/pages/judge/ScorePerformance.tsx` and `src/components/admin/SubmissionScoringDialog.tsx`)**
+### 3. Judge scoring UI
 
-- Add a second numeric input ("Warnings") next to the existing "Count" input for each deduction row.
-- Load/save the new `warnings` field alongside `count` in `score_deductions`.
-- Warnings do not affect score totals — they're informational on the scoresheet only.
+`ScorePerformance.tsx` and `SubmissionScoringDialog.tsx`:
 
-**3. Shared scoresheet data layer (`src/lib/build-scoresheet.ts` + `supabase/functions/_shared/build-scoresheet.ts`)**
+- Render difficulty driver fields with one radio group per skill (`<RadioGroup>` from shadcn).
+- Local state map `{ [skillId]: optionId }`. The field's `points` value is computed live as `sum(selectedOption.value)` and shown next to the field name.
+- On submit, write rows into `score_skill_selections` and a single `score_details` row carrying the computed sum (so existing aggregation/totals keep working unchanged).
 
-- Extend `ScoresheetInput` with `deduction_catalog: { id, name, points, display_order }[]` and per-submitted-score `deduction_items: { deduction_type_id, count, warnings }[]` plus `panel_abbreviation`/`panel_name`.
-- Extend `ScoresheetData` with `deduction_report: { rows: { name, value, occurrences, warnings, score }[]; total: number }` and `safety_comments: string`.
-- `buildScoresheet` picks the SD judge (panel match, else first), maps catalog → report rows, computes total.
+### 4. Scoresheet / PDF
 
-**4. Loader (`src/lib/download-submission-scoresheet.ts`)**
+`build-scoresheet.ts` (client + edge-function copy) and `scoresheet-pdf.ts`:
 
-- Fetch the template's `deduction_types` (catalog) once via the existing `template_id`.
-- Include `deduction_items:score_deductions(deduction_type_id, count, warnings)` and `panel:judge_panels(name, abbreviation)` on the scores query (panel is already selected today).
-- Pass both into `buildScoresheet`.
+- Load skill selections only to compute the value (already stored on `score_details`).
+- PDF row renders **total only**: field name + computed value, exactly like other fields. No skill breakdown in the PDF per the answer.
 
-**5. Edge function loader (`supabase/functions/send-scoresheet-email/index.ts`)**
+### 5. Out of scope
 
-- Mirror the same fetches and pass through to the shared `buildScoresheet`.
+- Capping or averaging behavior (sum with no cap).
+- Per-skill required/optional flags ("just name + radio options").
+- Skill breakdown in the PDF ("total only").
 
-**6. PDF rendering (`src/lib/scoresheet-pdf.ts` + `supabase/functions/_shared/scoresheet-pdf.ts`)**
+### Files touched
 
-- After judge comments rendering completes, start a new page via `drawPageHeader` and draw:
-  - Heading "Deduction Report" + rule.
-  - 5-column table (Deduction Name | Value | # Occurrences | # Warnings | Score) with column widths summing to `CONTENT_W`. Header row in bold; one row per catalog entry; auto wrap long names with `wrapText`; paginate to additional pages with footer + header reused.
-  - Final right-aligned Total cell under the Score column.
-  - A "Safety & Deduction Comments" heading, then a bordered box containing the comments text (italic "No comments provided." in muted gray when empty).
-
-Both files (`src/lib/...` and `supabase/functions/_shared/...`) stay in sync — same logic, mirrored.
-
-### QA
-
-After the edits, generate a sample PDF for an event/team that has a template with several deduction types, render with `pdftoppm`, and visually verify: deduction table renders on its own page, all rows fit, total adds up, comments box appears below, header/footer ("VIRTUAL") still on every page.
+- `supabase/migrations/<new>.sql`
+- `src/integrations/supabase/types.ts` (auto-regenerated)
+- `src/components/admin/FieldBuilderDialog.tsx`
+- `src/components/admin/SectionFieldsTable.tsx`
+- `src/components/admin/TemplatePreview.tsx`
+- `src/pages/admin/ScoringTemplates.tsx`
+- `src/pages/judge/ScorePerformance.tsx`
+- `src/components/admin/SubmissionScoringDialog.tsx`
+- `src/lib/build-scoresheet.ts`
+- `src/lib/scoresheet-pdf.ts`
+- `supabase/functions/_shared/build-scoresheet.ts`
+- `supabase/functions/_shared/scoresheet-pdf.ts`
+- `supabase/functions/send-scoresheet-email/index.ts` (fetch shape)

@@ -87,7 +87,9 @@ export default function TemplatePreview({ templateName, sections, deductions }: 
                         <td className="py-3 px-4 text-sm text-muted-foreground">
                           {f.field_type === 'number'
                             ? `${f.min_value}–${f.max_value} (step ${f.step})`
-                            : `${f.options.length} dropdown options`}
+                            : f.field_type === 'difficulty_driver'
+                              ? `${f.skills?.length || 0} skill${(f.skills?.length || 0) === 1 ? '' : 's'} (sum)`
+                              : `${f.options.length} dropdown options`}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex flex-wrap gap-1">

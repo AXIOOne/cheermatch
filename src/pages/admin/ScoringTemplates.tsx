@@ -65,7 +65,8 @@ export default function ScoringTemplates() {
             fields:scoring_fields(
               *,
               options:scoring_field_options(*),
-              panel_links:scoring_field_panels(*)
+              panel_links:scoring_field_panels(*),
+              skills:scoring_field_skills(*, options:scoring_field_skill_options(*))
             )
           ),
           deduction_types:deduction_types(*)
@@ -115,6 +116,7 @@ export default function ScoringTemplates() {
 
       const optionRows: any[] = [];
       const panelRows: any[] = [];
+      const skillsToInsert: { fieldId: string; skills: any[] }[] = [];
       for (let j = 0; j < sec.fields.length; j++) {
         const fId = insertedFields![j].id;
         const f = sec.fields[j];
@@ -124,6 +126,9 @@ export default function ScoringTemplates() {
         f.panels.forEach((abbr) => {
           panelRows.push({ field_id: fId, panel_abbreviation: abbr });
         });
+        if (f.field_type === 'difficulty_driver' && f.skills && f.skills.length > 0) {
+          skillsToInsert.push({ fieldId: fId, skills: f.skills });
+        }
       }
       if (optionRows.length > 0) {
         const { error } = await sb.from('scoring_field_options').insert(optionRows);
@@ -132,6 +137,33 @@ export default function ScoringTemplates() {
       if (panelRows.length > 0) {
         const { error } = await sb.from('scoring_field_panels').insert(panelRows);
         if (error) throw error;
+      }
+      for (const { fieldId, skills } of skillsToInsert) {
+        const skillRows = skills.map((sk: any, si: number) => ({
+          field_id: fieldId,
+          name: sk.name,
+          description: sk.description || null,
+          display_order: si,
+        }));
+        const { data: insertedSkills, error: skErr } = await sb
+          .from('scoring_field_skills').insert(skillRows).select();
+        if (skErr) throw skErr;
+        const skillOptRows: any[] = [];
+        skills.forEach((sk: any, si: number) => {
+          const newSkillId = insertedSkills![si].id;
+          (sk.options || []).forEach((opt: any, oi: number) => {
+            skillOptRows.push({
+              skill_id: newSkillId,
+              label: opt.label,
+              value: opt.value,
+              display_order: oi,
+            });
+          });
+        });
+        if (skillOptRows.length > 0) {
+          const { error: soErr } = await sb.from('scoring_field_skill_options').insert(skillOptRows);
+          if (soErr) throw soErr;
+        }
       }
     }
   };
@@ -266,6 +298,24 @@ export default function ScoringTemplates() {
               links.map((l) => ({ field_id: fIns.id, panel_abbreviation: l.panel_abbreviation }))
             );
           }
+          const srcSkills = (f.skills || []) as any[];
+          for (let si = 0; si < srcSkills.length; si++) {
+            const sk = srcSkills[si];
+            const { data: skIns, error: skErr } = await sb.from('scoring_field_skills').insert({
+              field_id: fIns.id, name: sk.name, description: sk.description,
+              display_order: sk.display_order ?? si,
+            }).select().single();
+            if (skErr) throw skErr;
+            const skOpts = (sk.options || []) as any[];
+            if (skOpts.length) {
+              await sb.from('scoring_field_skill_options').insert(
+                skOpts.map((o, oi) => ({
+                  skill_id: skIns.id, label: o.label, value: o.value,
+                  display_order: o.display_order ?? oi,
+                }))
+              );
+            }
+          }
         }
       }
 
@@ -338,6 +388,17 @@ export default function ScoringTemplates() {
             options: (f.options || [])
               .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
               .map((o: any) => ({ id: o.id, temp_id: o.id, label: o.label, value: Number(o.value) })),
+            skills: (f.skills || [])
+              .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+              .map((sk: any) => ({
+                id: sk.id,
+                temp_id: sk.id,
+                name: sk.name,
+                description: sk.description || undefined,
+                options: (sk.options || [])
+                  .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+                  .map((o: any) => ({ id: o.id, temp_id: o.id, label: o.label, value: Number(o.value) })),
+              })),
           })),
       }));
     setSections(loadedSections);
