@@ -341,6 +341,12 @@ export default function ScorePerformance() {
           }))
           .filter((d) => (d.count || 0) > 0 || (d.warnings || 0) > 0);
         if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
+        await sb.from('score_skill_selections').delete().eq('score_id', existingScore.id);
+        const skSel = skillRowsFor(existingScore.id);
+        if (skSel.length) {
+          const { error: sErr } = await sb.from('score_skill_selections').insert(skSel);
+          if (sErr) throw sErr;
+        }
       } else {
         const { data: newScore, error } = await sb.from('scores').insert([{
           submission_id: submissionId, judge_user_id: user!.id, template_id: template!.id,
