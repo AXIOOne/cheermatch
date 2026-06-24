@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Calendar, ChevronRight, Trophy } from "lucide-react";
+import { Calendar, CalendarDays, ChevronRight, Trophy } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { mobileApi } from "@/lib/mobile-api";
@@ -50,7 +50,10 @@ export default function MobileEvents() {
             <Card className="p-4 active:bg-muted transition-colors">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold truncate">{e.description}</div>
+                  <div className="flex items-center gap-2 font-semibold min-w-0">
+                    <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="truncate">{e.description}</span>
+                  </div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                     <Calendar className="h-3 w-3" />
                     {e.start_date} → {e.end_date}
