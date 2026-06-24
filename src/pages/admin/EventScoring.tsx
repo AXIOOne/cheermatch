@@ -196,9 +196,12 @@ export default function EventScoring() {
     },
   });
 
-  const handleSendScoreSheet = (submissionId: string) => {
-    setSendingScoreFor(submissionId);
-    sendScoreSheetMutation.mutate(submissionId);
+  const handleConfirmSend = () => {
+    if (!confirmSendFor) return;
+    const id = confirmSendFor.id;
+    setSendingScoreFor(id);
+    setConfirmSendFor(null);
+    sendScoreSheetMutation.mutate(id);
   };
 
   const handleDownloadPdf = async (submissionId: string) => {
@@ -211,6 +214,44 @@ export default function EventScoring() {
       setDownloadingPdfFor(null);
     }
   };
+
+  // Generate preview PDF when previewFor changes
+  useEffect(() => {
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    if (!previewFor) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+      setPreviewBytes(null);
+      return;
+    }
+    setPreviewLoading(true);
+    setPreviewUrl(null);
+    setPreviewBytes(null);
+    generateSubmissionScoresheetBytes(previewFor.id, { includeAllScores: true })
+      .then(({ bytes, fileName }) => {
+        if (cancelled) return;
+        const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
+        createdUrl = URL.createObjectURL(blob);
+        setPreviewBytes(bytes);
+        setPreviewFileName(fileName);
+        setPreviewUrl(createdUrl);
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        toast({ variant: 'destructive', title: 'Preview failed', description: err.message });
+        setPreviewFor(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewFor?.id]);
+
 
   const isLoading = eventLoading || panelsLoading || submissionsLoading;
 
