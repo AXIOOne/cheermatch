@@ -1,77 +1,67 @@
 
-# Plan: Mobile video capture UX upgrades
+# Proposed Scoresheet PDF — Front Page Mockup
 
-Targeting `src/pages/mobile/MobileRecord.tsx` plus a small device-detection helper. iPhone is the primary device; iPad allowed; laptops blocked from capture.
+ASCII mockup applying the top three recommendations: team-as-hero, Final Score callout, and collapsed totals. Numbers are illustrative.
 
-## 1. Device gate (block laptops, auto-detect iPhone/iPad)
+```text
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  [logo]                                                                       │
+│                                                                               │
+│  Stars Elite — Senior 5                          ┌────────────────────────┐  │
+│  Cheer Athletics Plano · Large Coed              │     EVENT SCORE        │  │
+│                                                  │                        │  │
+│  Spring Showdown 2026 · Day 2 — Finals           │        92.45          │  │
+│                                                  │     % Perfection       │  │
+│  Submitted 6/20/26 · AccuScore ends 6/24/26      └────────────────────────┘  │
+│  ──────────────────────────────────────────────────────────────────────────  │
+│  Panel B1  ·  Judges: Smith, Jones, Lee                                       │
+│                                                                               │
+│   Raw Score: 94.00      Deductions: 0.15      % Perfection: 93.85             │
+│  ──────────────────────────────────────────────────────────────────────────  │
+│                                                                               │
+│  ┌──────────────────────┬──────────────┬──────────────┬─────────┬──────────┐ │
+│  │ CRITERIA             │ DIFFICULTY   │ EXECUTION    │  MAX    │  SCORE   │ │
+│  │                      │  (Judge In)  │  (Judge In)  │         │          │ │
+│  ├──────────────────────┼──────────────┼──────────────┼─────────┼──────────┤ │
+│  │ Standing Tumbling    │     8.5      │      9.0     │  10.00  │   8.75   │ │
+│  │ Running Tumbling     │     9.0      │      9.0     │  10.00  │   9.00   │ │
+│  │ Jumps                │     8.5      │      8.5     │  10.00  │   8.50   │ │
+│  │ Stunts               │     9.5      │      9.0     │  10.00  │   9.25   │ │
+│  │ Pyramids             │     9.0      │      9.0     │  10.00  │   9.00   │ │
+│  │ Tosses               │     9.5      │      9.5     │  10.00  │   9.50   │ │
+│  │ Dance                │     8.0      │      8.5     │  10.00  │   8.25   │ │
+│  │ Overall Performance  │     9.0      │      9.0     │  10.00  │   9.00   │ │
+│  └──────────────────────┴──────────────┴──────────────┴─────────┴──────────┘ │
+│                                                                               │
+│  Deductions                                                                   │
+│  ┌──────────────────────────────────────────────────────────┬──────────────┐ │
+│  │ Fall — stunt group 2                                      │     0.10     │ │
+│  │ Out of bounds                                             │     0.05     │ │
+│  └──────────────────────────────────────────────────────────┴──────────────┘ │
+│                                                                               │
+│  ────────────────────────────────────────────────────────────────────────────│
+│  Spring Showdown 2026 · Generated 6/24/26                          Page 1/3  │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
 
-New helper `src/lib/device-detect.ts`:
-- Returns `{ kind: "phone" | "tablet" | "desktop", os: "ios" | "android" | "other" }` from `navigator.userAgent` + `navigator.maxTouchPoints` (catches iPad masquerading as desktop Safari).
+## What changes vs. the current layout
 
-In `MobileRecord.tsx`:
-- On mount, if `kind === "desktop"`, short-circuit before `getUserMedia` and render a blocking card: "Video capture is only available on a phone or tablet. Please open this link on your iPhone or iPad." with a Back button. No webcam fallback.
-- First-launch confirmation: after detection, show a one-time sheet "Detected: iPhone — is that right?" with Yes / Pick another (Phone | Tablet). Persist answer in `localStorage` under `cm.captureDevice`. Skip the sheet on subsequent visits.
-- The detected/confirmed device tunes UI density (larger HUD on tablet, thumb-reach Stop placement on phone).
+1. **Team is the hero** — team name in the largest type at top-left; gym + division on the line below; event/phase smaller above the metadata strip.
+2. **Final Score callout (top-right)** — bordered box with the % Perfection number set in ~28pt and a small "% Perfection" label. Instantly answers "what did they score?"
+3. **Single totals strip** — Raw / Deductions / % Perfection on one line directly under the panel summary. The duplicate totals rows currently appended to the criteria table are removed, so the table ends cleanly.
+4. **Panel summary line** — `Panel B1 · Judges: Smith, Jones, Lee` replaces scattered judge metadata.
+5. **Metadata strip** — Submitted / AccuScore End / (optional Generated) on a single thin line under the header.
+6. **Deductions get their own small table** below the criteria table, instead of being mixed in.
+7. **Footer** unchanged in spirit — event + generated date + page number.
 
-## 2. Core capture hardening
+## Out of scope for this first cut
 
-In the existing `getUserMedia` call:
-- Request `frameRate: { ideal: 30, max: 30 }` alongside current 1920×1080 / `facingMode: environment`.
-- Add `audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }` so music isn't ducked.
-- Pick MediaRecorder bitrate: `videoBitsPerSecond: 6_000_000`, `audioBitsPerSecond: 128_000`.
+- Column grouping shading and "Judge Inputs" supergroup label (recommendation #5).
+- Alternating row shading / accent bar on the score callout (recommendation #8).
+- Per-judge breakdown pages (page 2+) — left as-is.
 
-Keep-awake + interruption:
-- Acquire `navigator.wakeLock.request("screen")` when entering `recording`; release on `stop`/unmount. Re-acquire on `visibilitychange` if still recording.
-- Listen for `stream` track `ended` / `mute` events; if fired mid-recording, auto-stop and toast "Recording interrupted — please retake."
+## If approved
 
-Landscape:
-- Keep the existing rotate-prompt overlay. Already correct for iOS Safari (lock unsupported).
+I'll implement this in `src/lib/scoresheet-pdf.ts` and mirror it in `supabase/functions/_shared/scoresheet-pdf.ts` so admin downloads and the automated email attachment stay in sync. Same jsPDF + autoTable patterns already in use — no new dependencies.
 
-## 3. Safe-zone + level overlay
-
-New presentational component `CaptureOverlay` rendered absolutely over the live `<video>` during `ready` and `recording` phases only (hidden in `preview`):
-- Outer dashed rectangle aligned to video bounds = full frame.
-- Inner solid rectangle inset 8% on each side = safe zone (semantic `border-primary/70`).
-- Rule-of-thirds grid (two vertical + two horizontal thin lines at 33%/66%) at 30% opacity.
-- Center crosshair (12px).
-- Horizon level: subscribe to `DeviceOrientationEvent` (request permission on iOS 13+ via `DeviceOrientationEvent.requestPermission()` on first Start tap). Render a thin horizontal bar that tilts opposite to `gamma`; turns `text-primary` when |gamma - 90| < 2° (landscape held level), otherwise muted.
-- Toggle button (grid icon) in the top-right of the capture HUD, persisted to `localStorage` under `cm.captureOverlay` (default on).
-
-All colors use existing semantic tokens; no hardcoded hex.
-
-## 4. Pre-roll countdown + post-capture review
-
-Add a new phase `"countdown"` between `ready` and `recording`:
-- `startRecording()` becomes `beginCountdown()`: sets phase to `countdown`, shows large 3 → 2 → 1 in the center of the live view (1s each), then calls the existing recorder start logic.
-- During countdown the Stop/Start button is replaced by a Cancel button that aborts the countdown back to `ready`.
-
-Post-capture (existing `preview` phase) — minor polish only:
-- Rename the primary button to **Use This Take** and add a secondary **Retake** button (`recordAnother()` already exists; just expose it inline instead of only after `Continue`).
-- Auto-show playback at full size (already wired via `videoPreviewRef`).
-
-Tail capture: don't auto-extend the file (codec complexity); instead nudge the user via existing UI — out of scope for this iteration.
-
-## 5. Operator HUD
-
-Replace the small top pill with a full HUD bar overlaid on the live view:
-- **Top strip** (landscape): REC dot + `MM:SS / MM:SS` timer (large, `font-mono`), attempt counter `Take {n}/{max}`, battery % via `navigator.getBattery()` (graceful fallback if undefined), storage estimate via `navigator.storage.estimate()` shown as "Free: X GB" (refreshed once on mount).
-- **Audio VU meter**: 8-segment vertical bar driven by `AudioContext` + `AnalyserNode` reading from the mic track. Lights green at normal levels, amber when clipping. Warn (toast once) if RMS stays below threshold for 2s pre-record.
-- **Stop button placement**: in landscape, render the big Stop button anchored bottom-right within thumb reach (right-hand grip assumed). On tablet, render centered and larger.
-- Re-uses existing semantic tokens (`bg-destructive`, `text-primary`, `bg-background/70`, etc.).
-
-## 6. Technical notes
-
-- All new state is local to `MobileRecord`; no backend, schema, or edge-function changes.
-- New file: `src/lib/device-detect.ts` (~30 lines).
-- New file: `src/components/mobile/CaptureOverlay.tsx` (safe zone + grid + level).
-- New file: `src/components/mobile/AudioMeter.tsx` (reads `streamRef.current`).
-- Edits: `src/pages/mobile/MobileRecord.tsx` (phase enum gains `"blocked" | "countdown"`, HUD restructured, device gate, wake lock, overlay toggle, Retake button).
-- No package additions; everything uses Web APIs already supported in iOS Safari 16+ (target for current Capacitor build).
-- iOS DeviceOrientation permission must be requested from a user gesture — wire it into the first Start tap and cache the grant.
-
-## Out of scope (can be follow-ups)
-
-- Tap-to-focus / AE-AF lock (requires `ImageCapture` API quirks on iOS, may need Capacitor plugin).
-- Burn-in metadata overlay on the recorded file (would need canvas re-encode).
-- Background-upload resume beyond the current Brightcove flow.
-- Filename sidecar metadata changes (already partly handled in `uploadComplete`).
+Want me to render an actual sample PDF first so you can see the real typography and spacing before I touch the code, or go straight to the implementation?
