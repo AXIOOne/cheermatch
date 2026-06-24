@@ -279,13 +279,26 @@ export default function ScorePerformance() {
   const updateFieldNotes = (id: string, notes: string) =>
     setFieldScores(prev => ({ ...prev, [id]: { ...prev[id], field_id: id, points: prev[id]?.points || 0, notes } }));
 
-  const calculateTotalScore = () => {
-    const dedTotal = calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts);
+  const calculateRawScore = () => {
     let total = 0;
     visibleSections.forEach((s: any) => s.visibleFields.forEach((f: any) => {
       total += Number(fieldScores[f.id]?.points || 0);
     }));
-    return Math.max(0, total - dedTotal);
+    return total;
+  };
+  const calculateTotalMax = () => {
+    let total = 0;
+    visibleSections.forEach((s: any) => s.visibleFields.forEach((f: any) => {
+      total += Number(f.max_points || 0);
+    }));
+    return total;
+  };
+  const calculateTotalScore = () => {
+    const dedTotal = calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts);
+    const raw = calculateRawScore();
+    const max = calculateTotalMax();
+    const perfection = max > 0 ? (raw / max) * 100 - dedTotal : 0;
+    return Math.max(0, perfection);
   };
 
   const saveMutation = useMutation({
@@ -659,9 +672,21 @@ export default function ScorePerformance() {
                 )}
 
                 <Card className="border-2 border-primary">
-                  <CardContent className="py-4 flex items-center justify-between">
-                    <span className="font-semibold text-lg">Final Score</span>
-                    <span className="text-3xl font-bold text-primary">{calculateTotalScore().toFixed(2)}</span>
+                  <CardContent className="py-4 space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Raw Score</span>
+                      <span className="font-medium">{calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Deductions</span>
+                      <span className="font-medium text-destructive">
+                        -{calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <span className="font-semibold text-lg">% Perfection Score</span>
+                      <span className="text-3xl font-bold text-primary">{calculateTotalScore().toFixed(2)}%</span>
+                    </div>
                   </CardContent>
                 </Card>
               </>

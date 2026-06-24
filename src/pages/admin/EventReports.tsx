@@ -133,8 +133,8 @@ export default function EventReports() {
                     <TrendingUp className="w-6 h-6 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Average Score</p>
-                    <p className="text-2xl font-bold">{stats.avgScore.toFixed(2)}</p>
+                    <p className="text-sm text-muted-foreground">Avg % Perfection</p>
+                    <p className="text-2xl font-bold">{stats.avgScore.toFixed(2)}%</p>
                   </div>
                 </div>
               </CardContent>
@@ -146,8 +146,8 @@ export default function EventReports() {
                     <Target className="w-6 h-6 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Score Range</p>
-                    <p className="text-2xl font-bold">{stats.minScore.toFixed(0)} - {stats.maxScore.toFixed(0)}</p>
+                    <p className="text-sm text-muted-foreground">% Perfection Range</p>
+                    <p className="text-2xl font-bold">{stats.minScore.toFixed(0)}% - {stats.maxScore.toFixed(0)}%</p>
                   </div>
                 </div>
               </CardContent>
@@ -171,7 +171,7 @@ export default function EventReports() {
             {/* Score Distribution */}
             <Card>
               <CardHeader>
-                <CardTitle>Score Distribution</CardTitle>
+                <CardTitle>% Perfection Distribution</CardTitle>
               </CardHeader>
               <CardContent>
                 {stats.totalScores > 0 ? (
@@ -195,7 +195,7 @@ export default function EventReports() {
             {/* Average by Division */}
             <Card>
               <CardHeader>
-                <CardTitle>Average Score by Division</CardTitle>
+                <CardTitle>Avg % Perfection by Division</CardTitle>
               </CardHeader>
               <CardContent>
                 {divisionAverages.length > 0 ? (

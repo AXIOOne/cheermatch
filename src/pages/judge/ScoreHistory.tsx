@@ -74,7 +74,9 @@ export default function ScoreHistory() {
                     <TableCell>{score.submission?.team?.gym_name || '-'}</TableCell>
                     <TableCell>{score.template?.name || '-'}</TableCell>
                     <TableCell>
-                      <span className="font-bold text-primary">{score.total_score?.toFixed(2) || '-'}</span>
+                      <span className="font-bold text-primary">
+                        {score.total_score != null ? `${score.total_score.toFixed(2)}%` : '-'}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Badge className={statusColors[score.status] || ''}>

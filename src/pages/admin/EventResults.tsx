@@ -48,6 +48,7 @@ export default function EventResults() {
       const processedResults = data
         ?.map(submission => {
           const submittedScores = submission.scores?.filter((s: any) => s.status === 'submitted') || [];
+          // total_score is stored as % perfection; average across judges gives avg % perfection.
           const avgScore = submittedScores.length > 0
             ? submittedScores.reduce((sum: number, s: any) => sum + (s.total_score || 0), 0) / submittedScores.length
             : null;
