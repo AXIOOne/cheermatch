@@ -2,8 +2,11 @@ import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import logoWhite from '@/assets/logo-white.png.asset.json';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Calendar,
   Users,
@@ -49,6 +52,19 @@ export function AdminSidebar() {
   const { branding } = usePlatformSettings();
   const logoSrc = branding?.logoUrl || logoWhite.url;
 
+  const { data: profile } = useQuery({
+    queryKey: ['sidebar-profile', user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url, full_name')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+      return data;
+    },
+  });
+
   return (
     <aside className="w-64 min-h-screen bg-black flex flex-col">
       {/* Logo */}
@@ -75,11 +91,12 @@ export function AdminSidebar() {
       {/* User Section */}
       <div className="p-4 border-t border-sidebar-border">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-9 h-9 rounded-full bg-sidebar-accent flex items-center justify-center">
-            <span className="text-sm font-medium text-sidebar-foreground">
-              {user?.email?.[0].toUpperCase() || 'A'}
-            </span>
-          </div>
+          <Avatar className="h-9 w-9">
+            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} alt={profile?.full_name || user?.email || ''} />}
+            <AvatarFallback className="bg-sidebar-accent text-sidebar-foreground text-sm">
+              {(profile?.full_name?.[0] || user?.email?.[0] || 'A').toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-sidebar-foreground truncate">
               {user?.email || 'Admin'}
