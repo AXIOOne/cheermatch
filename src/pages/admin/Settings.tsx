@@ -232,6 +232,46 @@ export default function Settings() {
     }
   };
 
+  const handleLogoUpload = async (file: File) => {
+    setBrandingUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `branding/logo-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('email-assets')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from('email-assets').getPublicUrl(path);
+      setBrandingLogoUrl(data.publicUrl);
+      toast({ title: 'Logo uploaded!' });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Upload failed', description: error.message });
+    } finally {
+      setBrandingUploading(false);
+    }
+  };
+
+  const handleSaveBrandingSettings = async () => {
+    try {
+      const hsl = hexToHslString(brandingPrimaryHex);
+      if (!hsl) {
+        toast({ variant: 'destructive', title: 'Invalid color', description: 'Please enter a valid hex color.' });
+        return;
+      }
+      await saveMutation.mutateAsync({
+        key: 'branding',
+        value: {
+          logoUrl: brandingLogoUrl,
+          primaryColor: hsl,
+        },
+      });
+      toast({ title: 'Branding saved!' });
+      setBrandingDialogOpen(false);
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    }
+  };
+
   const getProviderStatus = (provider: string) => {
     switch (provider) {
       case 'brightcove':
