@@ -51,7 +51,7 @@ export default function SubmissionDetail() {
           id, video_url, thumbnail_url, status, submitted_at, created_at, duration_seconds,
           review_notes, reviewed_at,
           event_id,
-          team:teams!inner(id, name, gym_name, athlete_count, division_id,
+          team:teams!inner(id, name, gym_name, athletes_female, athletes_male, division_id,
             division:divisions!inner(id, name), level:levels!inner(name, level_number)),
           event:events!inner(id, name, start_date, end_date)
         `)
@@ -142,7 +142,7 @@ export default function SubmissionDetail() {
           <Badge variant="secondary" className="gap-1">{submission.event?.name}</Badge>
           <Badge variant="outline" className="gap-1"><Award className="w-3 h-3" /> {submission.team?.division?.name}</Badge>
           <Badge variant="outline" className="gap-1"><Award className="w-3 h-3" /> {submission.team?.level?.name}</Badge>
-          <Badge variant="outline" className="gap-1"><Users className="w-3 h-3" /> {submission.team?.athlete_count} athletes</Badge>
+          <Badge variant="outline" className="gap-1"><Users className="w-3 h-3" /> {(submission.team?.athletes_female ?? 0) + (submission.team?.athletes_male ?? 0)} athletes ({submission.team?.athletes_female ?? 0}F / {submission.team?.athletes_male ?? 0}M)</Badge>
           {submission.submitted_at && (
             <Badge variant="outline" className="gap-1">
               <Calendar className="w-3 h-3" /> Submitted {format(new Date(submission.submitted_at), 'MMM d, yyyy')}
@@ -185,7 +185,8 @@ export default function SubmissionDetail() {
           team={{
             id: submission.team.id,
             name: submission.team.name,
-            athlete_count: submission.team.athlete_count,
+            athletes_female: submission.team.athletes_female,
+            athletes_male: submission.team.athletes_male,
             division_id: submission.team.division_id,
           }}
           onSaved={() => queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] })}

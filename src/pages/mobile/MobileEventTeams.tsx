@@ -7,7 +7,8 @@ import { mobileApi } from "@/lib/mobile-api";
 import { toast } from "sonner";
 
 type Team = {
-  team_id: string; team_name: string; gym_name: string; athlete_count: string;
+  team_id: string; team_name: string; gym_name: string;
+  athletes_female: string; athletes_male: string;
   division_name: string; level_name: string;
   submission: null | {
     id: string; status: string; video_url: string; thumbnail_url: string;
@@ -66,7 +67,7 @@ export default function MobileEventTeams() {
                   <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs">
                     <Badge variant="outline">{t.division_name}</Badge>
                     <Badge variant="outline">{t.level_name}</Badge>
-                    <Badge variant="outline">{t.athlete_count} athletes</Badge>
+                    <Badge variant="outline">{Number(t.athletes_female || 0) + Number(t.athletes_male || 0)} athletes ({Number(t.athletes_female || 0)}F / {Number(t.athletes_male || 0)}M)</Badge>
                   </div>
                   <div className="flex items-center gap-1 text-xs mt-2">
                     <Video className="h-3 w-3" />

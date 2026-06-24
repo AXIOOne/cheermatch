@@ -1299,7 +1299,6 @@ export type Database = {
       }
       teams: {
         Row: {
-          athlete_count: number
           athletes_female: number
           athletes_male: number
           coach_email: string | null
@@ -1316,7 +1315,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          athlete_count: number
           athletes_female?: number
           athletes_male?: number
           coach_email?: string | null
@@ -1333,7 +1331,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          athlete_count?: number
           athletes_female?: number
           athletes_male?: number
           coach_email?: string | null

@@ -55,7 +55,7 @@ export default function ScorePerformance() {
     queryKey: ['submission', submissionId],
     queryFn: async () => {
       const { data, error } = await supabase.from('video_submissions').select(`
-        *, team:teams(id, name, gym_name, athlete_count, division_id, level_id,
+        *, team:teams(id, name, gym_name, athletes_female, athletes_male, division_id, level_id,
           division:divisions(id, name, scoring_template_id), level:levels(name, level_number)),
         event:events(id, name, status, scoring_open_at, scoring_close_at)
       `).eq('id', submissionId!).maybeSingle();
@@ -414,7 +414,7 @@ export default function ScorePerformance() {
               <div><span className="text-muted-foreground">Event</span><p className="font-medium">{submission.event?.name}</p></div>
               <div><span className="text-muted-foreground">Division</span><p className="font-medium">{submission.team?.division?.name}</p></div>
               <div><span className="text-muted-foreground">Level</span><p className="font-medium">Level {submission.team?.level?.level_number}</p></div>
-              <div><span className="text-muted-foreground">Athletes</span><p className="font-medium">{submission.team?.athlete_count}</p></div>
+              <div><span className="text-muted-foreground">Athletes</span><p className="font-medium">{(submission.team?.athletes_female ?? 0) + (submission.team?.athletes_male ?? 0)} <span className="text-muted-foreground font-normal">({submission.team?.athletes_female ?? 0}F / {submission.team?.athletes_male ?? 0}M)</span></p></div>
             </CardContent>
           </Card>
         </div>

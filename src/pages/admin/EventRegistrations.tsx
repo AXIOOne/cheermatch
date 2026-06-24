@@ -157,7 +157,7 @@ export default function EventRegistrations() {
                     <TableCell>
                       <Badge variant="secondary">{team.level?.name || '—'}</Badge>
                     </TableCell>
-                    <TableCell className="text-right">{team.athlete_count}</TableCell>
+                    <TableCell className="text-right">{(team.athletes_female || 0) + (team.athletes_male || 0)} <span className="text-muted-foreground">({team.athletes_female || 0}F / {team.athletes_male || 0}M)</span></TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm" onClick={() => setEditTeam(team)}>
                         <Pencil className="w-4 h-4 mr-1" />

@@ -15,7 +15,8 @@ import { Loader2 } from 'lucide-react';
 const schema = z.object({
   name: z.string().trim().min(1, 'Team name is required').max(120),
   division_id: z.string().min(1, 'Division is required'),
-  athlete_count: z.coerce.number().int().min(0, 'Must be 0 or greater').max(500),
+  athletes_female: z.coerce.number().int().min(0, 'Must be 0 or greater').max(500),
+  athletes_male: z.coerce.number().int().min(0, 'Must be 0 or greater').max(500),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -27,7 +28,8 @@ interface EditTeamDialogProps {
     id: string;
     name: string;
     division_id: string;
-    athlete_count: number | null;
+    athletes_female?: number | null;
+    athletes_male?: number | null;
   };
   onSaved?: () => void;
 }
@@ -43,7 +45,8 @@ export function EditTeamDialog({ open, onOpenChange, team, onSaved }: EditTeamDi
     defaultValues: {
       name: team.name,
       division_id: team.division_id,
-      athlete_count: team.athlete_count ?? 0,
+      athletes_female: team.athletes_female ?? 0,
+      athletes_male: team.athletes_male ?? 0,
     },
   });
 
@@ -52,10 +55,12 @@ export function EditTeamDialog({ open, onOpenChange, team, onSaved }: EditTeamDi
       form.reset({
         name: team.name,
         division_id: team.division_id,
-        athlete_count: team.athlete_count ?? 0,
+        athletes_female: team.athletes_female ?? 0,
+        athletes_male: team.athletes_male ?? 0,
       });
     }
   }, [open, team.id]);
+
 
   const { data: divisions } = useQuery({
     queryKey: ['divisions-edit-team'],
@@ -77,7 +82,8 @@ export function EditTeamDialog({ open, onOpenChange, team, onSaved }: EditTeamDi
         .update({
           name: data.name,
           division_id: data.division_id,
-          athlete_count: data.athlete_count,
+          athletes_female: data.athletes_female,
+          athletes_male: data.athletes_male,
         })
         .eq('id', team.id);
       if (error) throw error;
@@ -137,19 +143,37 @@ export function EditTeamDialog({ open, onOpenChange, team, onSaved }: EditTeamDi
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="athlete_count"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Participant Total</FormLabel>
-                  <FormControl>
-                    <Input type="number" min={0} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="athletes_female"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel># Female Athletes</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="athletes_male"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel># Male Athletes</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Total: {(form.watch('athletes_female') || 0) + (form.watch('athletes_male') || 0)}
+            </p>
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel

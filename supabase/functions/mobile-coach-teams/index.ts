@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
     const { data: teams, error } = await sb
       .from("teams")
       .select(`
-        id, name, gym_name, athlete_count,
+        id, name, gym_name, athletes_female, athletes_male,
         division:divisions(id, name),
         level:levels(id, name),
         video_submissions(id, event_id, status, video_url, thumbnail_url, brightcove_video_id, submitted_at, captured_at, submitted_via, duration_seconds, review_notes, reviewed_at)
@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
         team_id: asId(t.id),
         team_name: (t.name as string) ?? "",
         gym_name: (t.gym_name as string) ?? "",
-        athlete_count: asId(t.athlete_count ?? 0),
+        athletes_female: asId(t.athletes_female ?? 0), athletes_male: asId(t.athletes_male ?? 0),
         division_id: asId(div?.id),
         division_name: (div?.name as string) ?? "",
         level_id: asId(lvl?.id),

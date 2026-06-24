@@ -21,7 +21,6 @@ type CsvRow = {
   gym_name?: string;
   division?: string;
   level?: string;
-  athlete_count?: string;
   athletes_male?: string;
   athletes_female?: string;
   coach_name?: string;
@@ -34,14 +33,15 @@ type ParsedRow = {
   errors: string[];
   payload?: {
     name: string; gym_name: string; division_id: string; level_id: string;
-    athlete_count: number; athletes_male: number; athletes_female: number;
+    athletes_male: number; athletes_female: number;
     coach_name: string | null; coach_email: string | null; coach_phone: string | null;
   };
 };
 
 const SAMPLE_HEADERS = [
-  'team_name','gym_name','division','level','athlete_count','athletes_male','athletes_female','coach_name','coach_email','coach_phone'
+  'team_name','gym_name','division','level','athletes_male','athletes_female','coach_name','coach_email','coach_phone'
 ];
+
 
 export function BulkImportTeamsDialog({ open, onOpenChange, eventId }: Props) {
   const [rows, setRows] = useState<ParsedRow[]>([]);
@@ -88,7 +88,6 @@ export function BulkImportTeamsDialog({ open, onOpenChange, eventId }: Props) {
       const division = (raw.division || '').trim();
       const level = (raw.level || '').trim();
       const coachEmail = (raw.coach_email || '').trim().toLowerCase();
-      const athletes = Number(raw.athlete_count ?? 0);
       const male = Number(raw.athletes_male ?? 0);
       const female = Number(raw.athletes_female ?? 0);
 
@@ -102,14 +101,14 @@ export function BulkImportTeamsDialog({ open, onOpenChange, eventId }: Props) {
       if (teamName && existing.has(teamName.toLowerCase())) errors.push('team name already exists');
       if (teamName && seen.has(teamName.toLowerCase())) errors.push('duplicate in CSV');
       if (teamName) seen.add(teamName.toLowerCase());
-      if (!Number.isFinite(athletes) || athletes < 0) errors.push('athlete_count invalid');
+      if (!Number.isFinite(male) || male < 0) errors.push('athletes_male invalid');
+      if (!Number.isFinite(female) || female < 0) errors.push('athletes_female invalid');
 
       const payload = errors.length === 0 ? {
         name: teamName,
         gym_name: gymName,
         division_id: divMap.get(division.toLowerCase())!,
         level_id: lvlMap.get(level.toLowerCase())!,
-        athlete_count: athletes || (male + female),
         athletes_male: Number.isFinite(male) ? male : 0,
         athletes_female: Number.isFinite(female) ? female : 0,
         coach_name: (raw.coach_name || '').trim() || null,
