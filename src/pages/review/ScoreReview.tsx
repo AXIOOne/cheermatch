@@ -225,11 +225,11 @@ export default function ScoreReview() {
                           </p>
                         )}
                         
-                        {/* Total Score */}
+                        {/* % Perfection Score */}
                         <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
-                          <span className="font-medium">Total Score</span>
+                          <span className="font-medium">% Perfection Score</span>
                           <span className="text-2xl font-bold text-primary">
-                            {score.total_score?.toFixed(2) || 'N/A'}
+                            {score.total_score != null ? `${score.total_score.toFixed(2)}%` : 'N/A'}
                           </span>
                         </div>
 

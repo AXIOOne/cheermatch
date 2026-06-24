@@ -265,17 +265,32 @@ export default function SubmissionScoringDialog({
   const updateFieldNotes = (fieldId: string, notes: string) =>
     setFieldScores(prev => ({ ...prev, [fieldId]: { ...prev[fieldId], field_id: fieldId, points: prev[fieldId]?.points || 0, notes } }));
 
-  const calculateTotalScore = () => {
-    const deductionsTotal = isSdPanel
-      ? calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts)
-      : 0;
+  const calculateRawScore = () => {
     let total = 0;
     visibleSections.forEach((s: any) => {
       s.visibleFields.forEach((f: any) => {
         total += Number(fieldScores[f.id]?.points || 0);
       });
     });
-    return Math.max(0, total - deductionsTotal);
+    return total;
+  };
+  const calculateTotalMax = () => {
+    let total = 0;
+    visibleSections.forEach((s: any) => {
+      s.visibleFields.forEach((f: any) => {
+        total += Number(f.max_points || 0);
+      });
+    });
+    return total;
+  };
+  const calculateTotalScore = () => {
+    const deductionsTotal = isSdPanel
+      ? calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts)
+      : 0;
+    const raw = calculateRawScore();
+    const max = calculateTotalMax();
+    const perfection = max > 0 ? (raw / max) * 100 - deductionsTotal : 0;
+    return Math.max(0, perfection);
   };
 
   // Video controls
@@ -567,7 +582,7 @@ export default function SubmissionScoringDialog({
                               {panel.abbreviation}
                             </p>
                             {score?.total_score !== null && score?.total_score !== undefined && (
-                              <p className="text-xs opacity-90">{Number(score.total_score).toFixed(1)}</p>
+                              <p className="text-xs opacity-90">{Number(score.total_score).toFixed(2)}%</p>
                             )}
                           </div>
                         );
@@ -743,9 +758,10 @@ export default function SubmissionScoringDialog({
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <label className="text-sm font-medium text-destructive">Deductions</label>
-                          <div className="text-right">
-                            <p className="text-sm text-muted-foreground">Total Score</p>
-                            <p className="text-3xl font-bold text-primary">{calculateTotalScore().toFixed(2)}</p>
+                          <div className="text-right space-y-0.5">
+                            <p className="text-xs text-muted-foreground">Raw {calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</p>
+                            <p className="text-sm text-muted-foreground">% Perfection</p>
+                            <p className="text-3xl font-bold text-primary">{calculateTotalScore().toFixed(2)}%</p>
                           </div>
                         </div>
 
@@ -788,9 +804,10 @@ export default function SubmissionScoringDialog({
                       </div>
                     ) : (
                       <div className="flex items-center justify-end">
-                        <div className="text-right">
-                          <p className="text-sm text-muted-foreground">Total Score</p>
-                          <p className="text-3xl font-bold text-primary">{calculateTotalScore().toFixed(2)}</p>
+                        <div className="text-right space-y-0.5">
+                          <p className="text-xs text-muted-foreground">Raw {calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</p>
+                          <p className="text-sm text-muted-foreground">% Perfection</p>
+                          <p className="text-3xl font-bold text-primary">{calculateTotalScore().toFixed(2)}%</p>
                         </div>
                       </div>
                     )}
