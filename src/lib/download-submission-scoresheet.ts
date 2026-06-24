@@ -9,7 +9,9 @@ export async function downloadSubmissionScoresheet(submissionId: string) {
     .from('video_submissions')
     .select(`
       id, event_id,
-      team:teams!inner(id, name, gym_name, division:divisions!inner(id, name)),
+      team:teams!inner(id, name, gym_name,
+        division:divisions!inner(id, name),
+        level:levels(id, name)),
       event:events!inner(id, name, accuscore_end_at)
     `)
     .eq('id', submissionId)
@@ -20,7 +22,8 @@ export async function downloadSubmissionScoresheet(submissionId: string) {
   const { data: scores, error: scoresErr } = await sb
     .from('scores')
     .select(`
-      id, deductions, status,
+      id, deductions, status, comments, template_id,
+      panel:judge_panels(name, abbreviation),
       details:score_details(
         points,
         field:scoring_fields(id, name, max_points, section_id, score_type, display_order,
@@ -31,6 +34,19 @@ export async function downloadSubmissionScoresheet(submissionId: string) {
   if (scoresErr) throw scoresErr;
 
   const submitted = (scores || []).filter((s: any) => s.status === 'submitted');
+
+  // Look up the template's show_comments setting (use first submitted score's template)
+  let show_comments = false;
+  const templateId = submitted[0]?.template_id;
+  if (templateId) {
+    const { data: tpl } = await sb
+      .from('scoring_templates')
+      .select('show_comments_on_scoresheet')
+      .eq('id', templateId)
+      .maybeSingle();
+    show_comments = !!tpl?.show_comments_on_scoresheet;
+  }
+
   const fieldMap = new Map<string, RawField>();
   submitted.forEach((s: any) => {
     (s.details || []).forEach((d: any) => {
@@ -50,20 +66,28 @@ export async function downloadSubmissionScoresheet(submissionId: string) {
     });
   });
 
+  const team = submission.team;
   const data = buildScoresheet({
-    team_name: submission.team?.name || 'Team',
-    gym_name: submission.team?.gym_name,
-    division_name: submission.team?.division?.name,
+    team_name: team?.name || 'Team',
+    gym_name: team?.gym_name,
+    division_name: team?.division?.name,
+    level_name: team?.level?.name,
     event_name: submission.event?.name || 'Event',
     accuscore_end_at: submission.event?.accuscore_end_at || null,
     fields: Array.from(fieldMap.values()),
-    submitted_scores: submitted.map((s: any) => ({
-      deductions: Number(s.deductions || 0),
-      details: (s.details || []).map((d: any) => ({
-        field_id: (Array.isArray(d.field) ? d.field[0] : d.field)?.id,
-        points: Number(d.points || 0),
-      })),
-    })),
+    show_comments,
+    submitted_scores: submitted.map((s: any) => {
+      const panel = Array.isArray(s.panel) ? s.panel[0] : s.panel;
+      return {
+        deductions: Number(s.deductions || 0),
+        comments: s.comments || null,
+        judge_label: panel?.abbreviation || panel?.name || null,
+        details: (s.details || []).map((d: any) => ({
+          field_id: (Array.isArray(d.field) ? d.field[0] : d.field)?.id,
+          points: Number(d.points || 0),
+        })),
+      };
+    }),
   });
 
   const bytes = await buildScoresheetPdf(data);
