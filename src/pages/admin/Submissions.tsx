@@ -49,8 +49,6 @@ const lifecycleConfig: Record<LifecycleStatus, { label: string; icon: React.Elem
   approved: { label: 'Approved', icon: CheckCircle, className: 'bg-green-100 text-green-700' },
   denied: { label: 'Denied', icon: XCircle, className: 'bg-destructive/10 text-destructive' },
   revision_requested: { label: 'Revision Requested', icon: RotateCcw, className: 'bg-amber-100 text-amber-700' },
-  assigned: { label: 'Assigned', icon: UserCheck, className: 'bg-blue-100 text-blue-700' },
-  complete: { label: 'Complete', icon: Flag, className: 'bg-primary/10 text-primary' },
 };
 
 // Map any legacy status onto the new lifecycle for display.
