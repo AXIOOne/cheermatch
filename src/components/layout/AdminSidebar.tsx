@@ -46,13 +46,15 @@ function NavItem({ to, icon, label }: NavItemProps) {
 
 export function AdminSidebar() {
   const { signOut, user } = useAuth();
+  const { branding } = usePlatformSettings();
+  const logoSrc = branding?.logoUrl || logoWhite.url;
 
   return (
     <aside className="w-64 min-h-screen bg-black flex flex-col">
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <img src={logoWhite.url} alt="CheerMatch" className="h-8" />
+          <img src={logoSrc} alt="Portal" className="h-8 max-w-full object-contain" />
         </div>
       </div>
 
