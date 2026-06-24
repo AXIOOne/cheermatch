@@ -816,11 +816,11 @@ export default function SubmissionScoringDialog({
                     ) : (
                       <div className="flex items-center justify-end">
                         <div className="text-right space-y-0.5">
-                          <p className="text-xs text-muted-foreground">Raw {calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</p>
-                          <p className="text-sm text-muted-foreground">% Perfection</p>
-                          <p className="text-3xl font-bold text-primary">{calculateTotalScore().toFixed(2)}%</p>
+                          <p className="text-sm text-muted-foreground">Total Points</p>
+                          <p className="text-3xl font-bold text-primary">{calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</p>
                         </div>
                       </div>
+
                     )}
 
                     <div>
