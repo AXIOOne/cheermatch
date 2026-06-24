@@ -660,6 +660,53 @@ export default function EventScoring() {
         panels={panels || []}
         initialPanelId={scoringPanelId}
       />
+
+      {/* Confirm send score sheet */}
+      <AlertDialog open={!!confirmSendFor} onOpenChange={(open) => !open && setConfirmSendFor(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send score sheet?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will immediately email the finalized score sheet to the coach for{' '}
+              <strong>{confirmSendFor?.teamName}</strong>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSend}>
+              <Send className="w-4 h-4 mr-2" /> Send Score Sheet
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Scoresheet PDF preview */}
+      <Dialog open={!!previewFor} onOpenChange={(open) => !open && setPreviewFor(null)}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Scoresheet Preview — {previewFor?.teamName}</DialogTitle>
+          </DialogHeader>
+          <div className="w-full h-[70vh] bg-muted rounded-md overflow-hidden flex items-center justify-center">
+            {previewLoading || !previewUrl ? (
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="text-sm">Generating preview…</span>
+              </div>
+            ) : (
+              <iframe src={previewUrl} title="Scoresheet preview" className="w-full h-full bg-white" />
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewFor(null)}>Close</Button>
+            <Button
+              disabled={!previewBytes}
+              onClick={() => previewBytes && downloadPdf(previewBytes, previewFileName)}
+            >
+              <Download className="w-4 h-4 mr-2" /> Download PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
