@@ -573,6 +573,16 @@ export default function SubmissionScoringDialog({
                           reviewed: 'bg-success text-success-foreground',
                         };
                         const score: any = allScores?.find((s: any) => resolveScorePanelId(s) === panel.id);
+                        const panelAbbr = (panel.abbreviation || '').toUpperCase();
+                        const panelMax = (template?.sections || []).reduce((sum: number, sec: any) => {
+                          const fields = (sec.fields || []).filter((f: any) => {
+                            const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
+                            if (abbrs.length === 0) return true;
+                            return abbrs.includes(panelAbbr);
+                          });
+                          return sum + fields.reduce((a: number, f: any) => a + Number(f.max_points || 0), 0);
+                        }, 0);
+                        const panelRaw = (score?.details || []).reduce((a: number, d: any) => a + Number(d.points || 0), 0);
                         return (
                           <div key={panel.id}
                             className={`px-3 py-2 rounded-lg text-center cursor-pointer transition-all ${selectedPanelId === panel.id ? 'ring-2 ring-primary ring-offset-2' : ''} ${colors[status] || ''}`}
@@ -581,11 +591,12 @@ export default function SubmissionScoringDialog({
                               {status === 'reviewed' && <CheckCircle className="w-3.5 h-3.5" />}
                               {panel.abbreviation}
                             </p>
-                            {score?.total_score !== null && score?.total_score !== undefined && (
-                              <p className="text-xs opacity-90">{Number(score.total_score).toFixed(2)}%</p>
+                            {score && (
+                              <p className="text-xs opacity-90">{panelRaw.toFixed(2)} / {panelMax.toFixed(2)}</p>
                             )}
                           </div>
                         );
+
                       })}
                     </div>
                   </CardContent>
@@ -759,11 +770,11 @@ export default function SubmissionScoringDialog({
                         <div className="flex items-center justify-between">
                           <label className="text-sm font-medium text-destructive">Deductions</label>
                           <div className="text-right space-y-0.5">
-                            <p className="text-xs text-muted-foreground">Raw {calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</p>
-                            <p className="text-sm text-muted-foreground">% Perfection</p>
-                            <p className="text-3xl font-bold text-primary">{calculateTotalScore().toFixed(2)}%</p>
+                            <p className="text-sm text-muted-foreground">Total Points</p>
+                            <p className="text-3xl font-bold text-primary">{calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</p>
                           </div>
                         </div>
+
 
                         {template.deduction_types && template.deduction_types.length > 0 ? (
                           <div className="space-y-2">
@@ -805,11 +816,11 @@ export default function SubmissionScoringDialog({
                     ) : (
                       <div className="flex items-center justify-end">
                         <div className="text-right space-y-0.5">
-                          <p className="text-xs text-muted-foreground">Raw {calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</p>
-                          <p className="text-sm text-muted-foreground">% Perfection</p>
-                          <p className="text-3xl font-bold text-primary">{calculateTotalScore().toFixed(2)}%</p>
+                          <p className="text-sm text-muted-foreground">Total Points</p>
+                          <p className="text-3xl font-bold text-primary">{calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</p>
                         </div>
                       </div>
+
                     )}
 
                     <div>
