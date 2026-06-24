@@ -110,10 +110,6 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
   const xRight = MARGIN + colW * 2;
 
   const topY = cursorY - titleFontSize;
-  const shortCode = (data.gym_name || data.team_name || '').slice(0, 3).toUpperCase();
-  page.drawText(shortCode, {
-    x: xLeft, y: topY, size: titleFontSize - 4, font: bold, color: TEXT,
-  });
   {
     const t = data.event_name || '';
     const tw = bold.widthOfTextAtSize(t, titleFontSize);
