@@ -302,6 +302,11 @@ export default function SubmissionScoringDialog({
           points: fs.points, notes: fs.notes || null,
         }));
 
+      const skillRowsFor = (scoreId: string) =>
+        Object.entries(skillSelections)
+          .filter(([, optId]) => !!optId)
+          .map(([skill_id, option_id]) => ({ score_id: scoreId, skill_id, option_id }));
+
       const reviewFields = args.markReviewed
         ? { reviewed_at: new Date().toISOString(), reviewed_by: adminUserId }
         : {};
