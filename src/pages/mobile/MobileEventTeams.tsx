@@ -7,7 +7,8 @@ import { mobileApi } from "@/lib/mobile-api";
 import { toast } from "sonner";
 
 type Team = {
-  team_id: string; team_name: string; gym_name: string; athlete_count: string;
+  team_id: string; team_name: string; gym_name: string;
+  athletes_female: string; athletes_male: string;
   division_name: string; level_name: string;
   submission: null | {
     id: string; status: string; video_url: string; thumbnail_url: string;
