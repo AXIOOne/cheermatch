@@ -291,7 +291,7 @@ export default function MobileRecord() {
                 className={`p-3 cursor-pointer border-2 transition ${active ? "border-primary" : "border-transparent"}`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="font-medium">Attempt {idx + 1}</div>
+                  <div className="font-medium">Choose Attempt #{idx + 1}</div>
                   <div className="text-xs text-muted-foreground font-mono">{fmt(a.durationSec)}</div>
                 </div>
                 <video src={a.url} controls playsInline className="w-full rounded bg-black aspect-video" />
@@ -309,13 +309,13 @@ export default function MobileRecord() {
           <div className="grid grid-cols-2 gap-3 sticky bottom-0 pt-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] bg-background">
             {attempts.length < maxAttempts ? (
               <Button variant="secondary" onClick={recordAnother} className="h-12">
-                <Plus className="h-4 w-4 mr-2" /> Record again
+                <Plus className="h-4 w-4 mr-2" /> Record Second Capture
               </Button>
             ) : (
               <Button variant="secondary" disabled className="h-12">Max attempts reached</Button>
             )}
             <Button onClick={uploadSelected} disabled={selectedAttemptId == null} className="h-12">
-              <Upload className="h-4 w-4 mr-2" /> Submit selected
+              <Upload className="h-4 w-4 mr-2" /> Submit Selected For Scoring
             </Button>
           </div>
         )}
