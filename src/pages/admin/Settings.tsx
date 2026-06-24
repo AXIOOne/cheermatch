@@ -416,6 +416,28 @@ export default function Settings() {
               </Button>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Palette className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Branding</CardTitle>
+                  <CardDescription>Portal logo and color scheme</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Customize the portal logo and primary color used across the app.
+              </p>
+              <Button variant="outline" onClick={() => setBrandingDialogOpen(true)}>
+                Configure Branding
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       )}
 
