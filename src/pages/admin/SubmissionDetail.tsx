@@ -185,7 +185,8 @@ export default function SubmissionDetail() {
           team={{
             id: submission.team.id,
             name: submission.team.name,
-            athlete_count: submission.team.athlete_count,
+            athletes_female: submission.team.athletes_female,
+            athletes_male: submission.team.athletes_male,
             division_id: submission.team.division_id,
           }}
           onSaved={() => queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] })}
