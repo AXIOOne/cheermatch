@@ -108,7 +108,7 @@ export default function ScoringQueue() {
         .select(`
           *,
           team:teams(
-            id, name, gym_name, athlete_count, division_id, level_id,
+            id, name, gym_name, athletes_female, athletes_male, division_id, level_id,
             division:divisions(id, name, scoring_template_id),
             level:levels(name, level_number)
           ),

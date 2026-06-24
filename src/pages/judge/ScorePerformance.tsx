@@ -55,7 +55,7 @@ export default function ScorePerformance() {
     queryKey: ['submission', submissionId],
     queryFn: async () => {
       const { data, error } = await supabase.from('video_submissions').select(`
-        *, team:teams(id, name, gym_name, athlete_count, division_id, level_id,
+        *, team:teams(id, name, gym_name, athletes_female, athletes_male, division_id, level_id,
           division:divisions(id, name, scoring_template_id), level:levels(name, level_number)),
         event:events(id, name, status, scoring_open_at, scoring_close_at)
       `).eq('id', submissionId!).maybeSingle();
