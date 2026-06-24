@@ -145,9 +145,8 @@ export default function Submissions() {
     total: submissions?.length || 0,
     imported: countBy('imported'),
     approved: countBy('approved'),
+    denied: countBy('denied'),
     revision_requested: countBy('revision_requested'),
-    assigned: countBy('assigned'),
-    complete: countBy('complete'),
   };
 
   const toggleSelection = (id: string) => {
