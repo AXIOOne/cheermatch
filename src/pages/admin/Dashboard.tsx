@@ -72,7 +72,16 @@ export default function Dashboard() {
         .order('created_at', { ascending: false })
         .limit(10);
       if (error) throw error;
-      return data;
+      const userIds = Array.from(new Set((data ?? []).map((d) => d.user_id)));
+      let avatarMap = new Map<string, string | null>();
+      if (userIds.length) {
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('user_id, avatar_url')
+          .in('user_id', userIds);
+        avatarMap = new Map((profs ?? []).map((p: any) => [p.user_id, p.avatar_url]));
+      }
+      return (data ?? []).map((d) => ({ ...d, avatar_url: avatarMap.get(d.user_id) ?? null }));
     },
   });
 
