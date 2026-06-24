@@ -187,8 +187,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .find((t: any) => t && t.show_comments_on_scoresheet);
     const showComments = !!tplWithFlag;
 
-    // Resolve template (prefer submitted score template; fall back to event default)
+    // Resolve template: prefer submitted score's template, then the division's
+    // template, then any event-bound template, then the global default.
     let templateId: string | null = submittedScores[0]?.template_id ?? null;
+    if (!templateId) {
+      templateId = (division as any)?.scoring_template_id ?? null;
+    }
     if (!templateId && event?.id) {
       const { data: tpls } = await supabase
         .from('scoring_templates')
@@ -198,6 +202,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
         .limit(1);
       templateId = tpls?.[0]?.id ?? null;
     }
+    if (!templateId) {
+      const { data: tpls } = await supabase
+        .from('scoring_templates')
+        .select('id')
+        .eq('is_default', true)
+        .order('created_at')
+        .limit(1);
+      templateId = tpls?.[0]?.id ?? null;
+    }
+
 
     let deductionCatalog: Array<{ id: string; name: string; points: number; display_order: number }> = [];
     if (templateId) {
