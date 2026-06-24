@@ -276,8 +276,18 @@ export default function SubmissionScoringDialog({
         }
         await sb.from('score_deductions').delete().eq('score_id', currentPanelScore.id);
         if (isSdPanel) {
-          const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
-            .map(([deduction_type_id, count]) => ({ score_id: currentPanelScore.id, deduction_type_id, count }));
+          const allDedIds = new Set<string>([
+            ...Object.keys(deductionCounts),
+            ...Object.keys(deductionWarnings),
+          ]);
+          const deds = Array.from(allDedIds)
+            .map((deduction_type_id) => ({
+              score_id: currentPanelScore.id,
+              deduction_type_id,
+              count: deductionCounts[deduction_type_id] || 0,
+              warnings: deductionWarnings[deduction_type_id] || 0,
+            }))
+            .filter((d) => (d.count || 0) > 0 || (d.warnings || 0) > 0);
           if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
         }
       } else {
@@ -298,8 +308,18 @@ export default function SubmissionScoringDialog({
           if (dErr) throw dErr;
         }
         if (isSdPanel) {
-          const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
-            .map(([deduction_type_id, count]) => ({ score_id: newScore.id, deduction_type_id, count }));
+          const allDedIds = new Set<string>([
+            ...Object.keys(deductionCounts),
+            ...Object.keys(deductionWarnings),
+          ]);
+          const deds = Array.from(allDedIds)
+            .map((deduction_type_id) => ({
+              score_id: newScore.id,
+              deduction_type_id,
+              count: deductionCounts[deduction_type_id] || 0,
+              warnings: deductionWarnings[deduction_type_id] || 0,
+            }))
+            .filter((d) => (d.count || 0) > 0 || (d.warnings || 0) > 0);
           if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
         }
       }
