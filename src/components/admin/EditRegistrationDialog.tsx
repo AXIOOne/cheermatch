@@ -110,7 +110,6 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
           level_id: data.level_id,
           athletes_male: data.athletes_male,
           athletes_female: data.athletes_female,
-          athlete_count: athleteTotal,
         })
         .eq('id', team.id);
       if (error) throw error;
