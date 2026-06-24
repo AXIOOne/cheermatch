@@ -233,7 +233,12 @@ export default function Dashboard() {
             <div className="divide-y divide-border">
               {recentLogins.map((login) => (
                 <div key={login.id} className="flex items-center justify-between py-3">
-                  <div>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      {login.avatar_url && <AvatarImage src={login.avatar_url} alt={login.full_name || login.email || ''} />}
+                      <AvatarFallback className="text-xs">{initialsOf(login.full_name, login.email)}</AvatarFallback>
+                    </Avatar>
+                    <div>
                     <p className="font-medium text-sm">
                       {login.full_name || login.email || 'Unknown user'}
                     </p>
