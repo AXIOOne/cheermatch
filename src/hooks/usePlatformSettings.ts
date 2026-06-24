@@ -103,15 +103,22 @@ export function usePlatformSettings() {
     ...(query.data?.integrations as Partial<IntegrationSettings> | undefined),
   }), [query.data]);
 
+  const branding: BrandingSettings = useMemo(() => ({
+    ...DEFAULT_BRANDING,
+    ...(query.data?.branding as Partial<BrandingSettings> | undefined),
+  }), [query.data]);
+
   return {
     ...query,
     security,
     notifications,
     integrations,
+    branding,
     settings: {
       security,
       notifications,
       integrations,
+      branding,
     } as PlatformSettings,
   };
 }
