@@ -231,51 +231,52 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
 
   cursorY = drawTableHeader(cursorY);
 
-  const FOOTER_RESERVED = 140; // summary rows + totals table + comments cushion + footer
+  // Pre-scale row heights so the entire scores table + summary + totals
+  // always fits on page 1 (no page break inside the table).
+  const SUMMARY_AND_TOTALS_RESERVE = 18 * 2 + 24 + 18 + 20 + 16; // summary + totals breakout + footer cushion
+  const availableForRows = cursorY - MARGIN - SUMMARY_AND_TOTALS_RESERVE - 24;
+  const naturalRowsH = rows.reduce((a, r) => a + r.height, 0);
+  const rowScale = naturalRowsH > availableForRows && naturalRowsH > 0
+    ? availableForRows / naturalRowsH
+    : 1;
+
   for (const row of rows) {
-    if (cursorY - row.height < MARGIN + FOOTER_RESERVED) {
-      drawPageFooter(page);
-      page = doc.addPage([PAGE_W, PAGE_H]);
-      cursorY = PAGE_H - MARGIN;
-      cursorY = drawTableHeader(cursorY);
-    }
+    const rowH = Math.max(10, row.height * rowScale);
     const r = data.rows[row.idx];
-    const yBot = cursorY - row.height;
+    const yBot = cursorY - rowH;
 
     let cx = MARGIN;
-    drawCellBorder(page, cx, yBot, COLS.criteria, row.height);
-    drawTextLeft(page, row.lines, cx, yBot, row.height, font, cellFontSize);
+    drawCellBorder(page, cx, yBot, COLS.criteria, rowH);
+    drawTextLeft(page, row.lines, cx, yBot, rowH, font, cellFontSize);
     cx += COLS.criteria;
 
-    drawCellBorder(page, cx, yBot, COLS.max, row.height);
-    drawTextCentered(page, fmt(r.max_value, 1), cx, yBot, COLS.max, row.height, font, cellFontSize);
+    drawCellBorder(page, cx, yBot, COLS.max, rowH);
+    drawTextCentered(page, fmt(r.max_value, 1), cx, yBot, COLS.max, rowH, font, cellFontSize);
     cx += COLS.max;
 
     if (r.difficulty === null) {
-      page.drawRectangle({ x: cx, y: yBot, width: COLS.diff, height: row.height, color: GRAY });
+      page.drawRectangle({ x: cx, y: yBot, width: COLS.diff, height: rowH, color: GRAY });
     } else {
-      drawTextCentered(page, fmt(r.difficulty), cx, yBot, COLS.diff, row.height, font, cellFontSize);
+      drawTextCentered(page, fmt(r.difficulty), cx, yBot, COLS.diff, rowH, font, cellFontSize);
     }
-    drawCellBorder(page, cx, yBot, COLS.diff, row.height);
+    drawCellBorder(page, cx, yBot, COLS.diff, rowH);
     cx += COLS.diff;
 
     if (r.execution === null) {
-      page.drawRectangle({ x: cx, y: yBot, width: COLS.exec, height: row.height, color: GRAY });
+      page.drawRectangle({ x: cx, y: yBot, width: COLS.exec, height: rowH, color: GRAY });
     } else {
-      drawTextCentered(page, fmt(r.execution), cx, yBot, COLS.exec, row.height, font, cellFontSize);
+      drawTextCentered(page, fmt(r.execution), cx, yBot, COLS.exec, rowH, font, cellFontSize);
     }
-    drawCellBorder(page, cx, yBot, COLS.exec, row.height);
+    drawCellBorder(page, cx, yBot, COLS.exec, rowH);
     cx += COLS.exec;
 
-    drawCellBorder(page, cx, yBot, COLS.score, row.height);
-    drawTextCentered(page, fmt(r.score), cx, yBot, COLS.score, row.height, bold, cellFontSize);
+    drawCellBorder(page, cx, yBot, COLS.score, rowH);
+    drawTextCentered(page, fmt(r.score), cx, yBot, COLS.score, rowH, bold, cellFontSize);
 
     cursorY = yBot;
   }
 
   // ---------- Summary rows (inside the table grid) ----------
-  // Row A: blank criteria | total_max (bold) | blank diff | "Raw Score:" right | raw_score
-  // Row B:               blank             | blank        | blank      | "%:" right     | perfection
   const sumRowH = 18;
   const xMax = MARGIN + COLS.criteria;
   const xDiff = xMax + COLS.max;
@@ -295,7 +296,7 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
   drawTextCentered(page, fmt(data.raw_score), xScore, yBot, COLS.score, sumRowH, bold, headerFontSize);
   cursorY = yBot;
 
-  // Row B (just exec/score columns)
+  // Row B
   yTop = cursorY;
   yBot = yTop - sumRowH;
   drawCellBorder(page, xExec, yBot, COLS.exec, sumRowH);
@@ -315,10 +316,8 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     ['% Perfection', fmt(data.perfection, 4)],
     ['Event Score', fmt(data.perfection, 4)],
   ];
-  // Header row
   const totHeaderH = 18;
   yBot = cursorY - totHeaderH;
-  // empty label cell
   drawCellBorder(page, MARGIN, yBot, totLabelW, totHeaderH);
   for (let i = 0; i < totals.length; i++) {
     const x = MARGIN + totLabelW + totCellW * i;
@@ -326,7 +325,6 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     drawTextCentered(page, totals[i][0], x, yBot, totCellW, totHeaderH, bold, headerFontSize);
   }
   cursorY = yBot;
-  // Data row
   const totRowH = 20;
   yBot = cursorY - totRowH;
   drawCellBorder(page, MARGIN, yBot, totLabelW, totRowH);
@@ -336,13 +334,26 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     drawCellBorder(page, x, yBot, totCellW, totRowH);
     drawTextCentered(page, totals[i][1], x, yBot, totCellW, totRowH, font, headerFontSize);
   }
-  cursorY = yBot - 16;
 
-  // ---------- Judge comments ----------
-  if (data.show_comments && data.judge_comments.length > 0) {
-    const headingSize = 12;
-    const labelSize = 10;
-    const bodySize = 9.5;
+  // ---------- Judge comments (always start on page 2) ----------
+  if (data.show_comments !== false && data.judge_comments.length > 0) {
+    drawPageFooter(page);
+    page = doc.addPage([PAGE_W, PAGE_H]);
+    cursorY = PAGE_H - MARGIN;
+
+    const headingSize = 14;
+    const labelSize = 11;
+    const bodySize = 10;
+    const boxPad = 8;
+    const boxGap = 12;
+
+    page.drawText('Judge Comments', {
+      x: MARGIN, y: cursorY - headingSize,
+      size: headingSize, font: bold, color: TEXT,
+    });
+    cursorY -= headingSize + 6;
+    drawRule(page, MARGIN, cursorY, CONTENT_W, 0.75);
+    cursorY -= 14;
 
     const ensureSpace = (needed: number) => {
       if (cursorY - needed < MARGIN + 24) {
@@ -352,33 +363,45 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
       }
     };
 
-    ensureSpace(headingSize + 10);
-    page.drawText('Judge Comments', {
-      x: MARGIN, y: cursorY - headingSize,
-      size: headingSize, font: bold, color: TEXT,
-    });
-    cursorY -= headingSize + 4;
-    drawRule(page, MARGIN, cursorY, CONTENT_W, 0.5);
-    cursorY -= 10;
-
     for (const jc of data.judge_comments) {
-      const lines = wrapText(jc.comments, italic, bodySize, CONTENT_W - 10);
-      const blockH = labelSize + 4 + lines.length * (bodySize + 2) + 10;
-      ensureSpace(blockH);
+      const hasComment = jc.comments.trim().length > 0;
+      const bodyFont = hasComment ? font : italic;
+      const bodyColor = hasComment ? TEXT : MUTED;
+      const text = hasComment ? jc.comments : 'No comments provided.';
+      const lines = wrapText(text, bodyFont, bodySize, CONTENT_W - boxPad * 2);
+      const textBlockH = lines.length * (bodySize + 3);
+      const boxH = labelSize + 6 + textBlockH + boxPad * 2;
 
+      ensureSpace(boxH + boxGap);
+
+      const boxTop = cursorY;
+      const boxBot = boxTop - boxH;
+
+      // Judge label header
       page.drawText(`Judge ${jc.judge_label}`, {
-        x: MARGIN, y: cursorY - labelSize,
+        x: MARGIN, y: boxTop - labelSize,
         size: labelSize, font: bold, color: TEXT,
       });
-      cursorY -= labelSize + 4;
+
+      // Bordered comment box (below the label)
+      const innerTop = boxTop - labelSize - 6;
+      const innerH = textBlockH + boxPad * 2;
+      const innerBot = innerTop - innerH;
+      page.drawRectangle({
+        x: MARGIN, y: innerBot, width: CONTENT_W, height: innerH,
+        borderColor: BORDER, borderWidth: 0.75,
+      });
+
+      let ty = innerTop - boxPad - bodySize;
       for (const ln of lines) {
         page.drawText(ln, {
-          x: MARGIN + 6, y: cursorY - bodySize,
-          size: bodySize, font: italic, color: TEXT,
+          x: MARGIN + boxPad, y: ty,
+          size: bodySize, font: bodyFont, color: bodyColor,
         });
-        cursorY -= bodySize + 2;
+        ty -= bodySize + 3;
       }
-      cursorY -= 8;
+
+      cursorY = boxBot - boxGap;
     }
   }
 
