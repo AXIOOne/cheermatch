@@ -66,11 +66,15 @@ export default function SectionFieldsTable({ fields, onChange, availablePanels }
                     </div>
                     {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
                   </td>
-                  <td className="px-3 py-2 capitalize">{f.field_type}</td>
+                  <td className="px-3 py-2 capitalize">
+                    {f.field_type === 'difficulty_driver' ? 'Difficulty Driver' : f.field_type}
+                  </td>
                   <td className="px-3 py-2 text-muted-foreground">
                     {f.field_type === 'number'
                       ? `${f.min_value}–${f.max_value} / ${f.step}`
-                      : `${f.options.length} opt${f.options.length === 1 ? '' : 's'}`}
+                      : f.field_type === 'difficulty_driver'
+                        ? `${f.skills?.length || 0} skill${(f.skills?.length || 0) === 1 ? '' : 's'}`
+                        : `${f.options.length} opt${f.options.length === 1 ? '' : 's'}`}
                     <span className="ml-2 text-xs">max {f.max_points}</span>
                   </td>
                   <td className="px-3 py-2">
