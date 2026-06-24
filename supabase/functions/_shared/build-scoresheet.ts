@@ -21,16 +21,22 @@ export interface RawScoreDetail {
 export interface RawSubmittedScore {
   deductions: number;
   details: RawScoreDetail[];
+  judge_label?: string | null;
+  comments?: string | null;
 }
 
 export interface ScoresheetInput {
   team_name: string;
   gym_name?: string | null;
   division_name?: string | null;
+  level_name?: string | null;
   event_name: string;
+  event_phase?: string | null;
+  hall_name?: string | null;
   accuscore_end_at?: string | null;
   fields: RawField[];
   submitted_scores: RawSubmittedScore[];
+  show_comments?: boolean;
 }
 
 export interface ScoresheetRow {
@@ -41,17 +47,27 @@ export interface ScoresheetRow {
   score: number;
 }
 
+export interface JudgeComment {
+  judge_label: string;
+  comments: string;
+}
+
 export interface ScoresheetData {
   team_name: string;
   gym_name?: string | null;
   division_name?: string | null;
+  level_name?: string | null;
   event_name: string;
+  event_phase?: string | null;
+  hall_name?: string | null;
   accuscore_end_at?: string | null;
   rows: ScoresheetRow[];
   total_max: number;
   raw_score: number;
   deductions: number;
   perfection: number;
+  show_comments: boolean;
+  judge_comments: JudgeComment[];
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -108,12 +124,27 @@ export function buildScoresheet(input: ScoresheetInput): ScoresheetData {
         input.submitted_scores.length)
     : 0;
   const perfection = total_max > 0 ? round2((raw_score / total_max) * 100 - deductions) : 0;
+
+  const show_comments = !!input.show_comments;
+  const judge_comments: JudgeComment[] = show_comments
+    ? input.submitted_scores
+        .filter((s) => (s.comments ?? '').trim().length > 0)
+        .map((s, i) => ({
+          judge_label: (s.judge_label ?? '').trim() || `Judge ${i + 1}`,
+          comments: (s.comments ?? '').trim(),
+        }))
+    : [];
+
   return {
     team_name: input.team_name,
     gym_name: input.gym_name,
     division_name: input.division_name,
+    level_name: input.level_name,
     event_name: input.event_name,
+    event_phase: input.event_phase ?? null,
+    hall_name: input.hall_name ?? null,
     accuscore_end_at: input.accuscore_end_at,
     rows, total_max, raw_score, deductions, perfection,
+    show_comments, judge_comments,
   };
 }
