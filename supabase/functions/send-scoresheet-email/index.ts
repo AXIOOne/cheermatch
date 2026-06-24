@@ -180,6 +180,60 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     // Build PDF scoresheet
     const fieldMap = new Map<string, RawField>();
+
+    // Derive show_comments from any submitted score's template
+    const tplWithFlag = submittedScores
+      .map((s: any) => Array.isArray(s.template) ? s.template[0] : s.template)
+      .find((t: any) => t && t.show_comments_on_scoresheet);
+    const showComments = !!tplWithFlag;
+
+    // Resolve template (prefer submitted score template; fall back to event default)
+    let templateId: string | null = submittedScores[0]?.template_id ?? null;
+    if (!templateId && event?.id) {
+      const { data: tpls } = await supabase
+        .from('scoring_templates')
+        .select('id, is_default')
+        .eq('event_id', event.id)
+        .order('is_default', { ascending: false })
+        .limit(1);
+      templateId = tpls?.[0]?.id ?? null;
+    }
+
+    let deductionCatalog: Array<{ id: string; name: string; points: number; display_order: number }> = [];
+    if (templateId) {
+      const { data: dts } = await supabase
+        .from('deduction_types')
+        .select('id, name, points, display_order')
+        .eq('template_id', templateId);
+      deductionCatalog = (dts || []).map((d: any) => ({
+        id: d.id,
+        name: d.name,
+        points: Number(d.points || 0),
+        display_order: Number(d.display_order ?? 0),
+      }));
+
+      // Load ALL template fields so unscored criteria still render as blank rows.
+      const { data: tplFields } = await supabase
+        .from('scoring_fields')
+        .select(`id, name, max_points, section_id, score_type, display_order,
+                 section:scoring_sections!inner(id, name, display_order, template_id)`)
+        .eq('section.template_id', templateId);
+      (tplFields || []).forEach((f: any) => {
+        const section = Array.isArray(f.section) ? f.section[0] : f.section;
+        fieldMap.set(f.id, {
+          id: f.id,
+          name: f.name,
+          max_points: Number(f.max_points || 0),
+          score_type: ((f.score_type as ScoreType) || 'difficulty'),
+          section_id: f.section_id,
+          section_name: section?.name || '',
+          section_order: section?.display_order ?? 0,
+          field_order: f.display_order ?? 0,
+        });
+      });
+    }
+
+    // Safety net: pull in any legacy field referenced by score_details
     submittedScores.forEach((s: any) => {
       (s.score_details || []).forEach((d: any) => {
         const f = Array.isArray(d.field) ? d.field[0] : d.field;
@@ -197,27 +251,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
         });
       });
     });
-    // Derive show_comments from any submitted score's template
-    const tplWithFlag = submittedScores
-      .map((s: any) => Array.isArray(s.template) ? s.template[0] : s.template)
-      .find((t: any) => t && t.show_comments_on_scoresheet);
-    const showComments = !!tplWithFlag;
-
-    // Fetch deduction catalog for the template used on submitted scores
-    const templateId = submittedScores[0]?.template_id;
-    let deductionCatalog: Array<{ id: string; name: string; points: number; display_order: number }> = [];
-    if (templateId) {
-      const { data: dts } = await supabase
-        .from('deduction_types')
-        .select('id, name, points, display_order')
-        .eq('template_id', templateId);
-      deductionCatalog = (dts || []).map((d: any) => ({
-        id: d.id,
-        name: d.name,
-        points: Number(d.points || 0),
-        display_order: Number(d.display_order ?? 0),
-      }));
-    }
 
     const sheetData = buildScoresheet({
       team_name: team.name || 'Team',

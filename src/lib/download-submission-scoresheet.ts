@@ -43,7 +43,21 @@ export async function generateSubmissionScoresheetBytes(
 
   let show_comments = false;
   let deduction_catalog: Array<{ id: string; name: string; points: number; display_order: number }> = [];
-  const templateId = usable[0]?.template_id;
+  let templateId: string | null = usable[0]?.template_id ?? null;
+
+  // If no submitted scores yet, resolve the template from the event so the
+  // sheet still shows every criterion row (blank) with correct max totals.
+  if (!templateId) {
+    const { data: tpls } = await sb
+      .from('scoring_templates')
+      .select('id, is_default')
+      .eq('event_id', submission.event_id)
+      .order('is_default', { ascending: false })
+      .limit(1);
+    templateId = tpls?.[0]?.id ?? null;
+  }
+
+  const fieldMap = new Map<string, RawField>();
   if (templateId) {
     const { data: tpl } = await sb
       .from('scoring_templates')
@@ -62,9 +76,30 @@ export async function generateSubmissionScoresheetBytes(
       points: Number(d.points || 0),
       display_order: Number(d.display_order ?? 0),
     }));
+
+    // Load ALL template fields so unscored criteria still render as blank rows.
+    const { data: tplFields } = await sb
+      .from('scoring_fields')
+      .select(`id, name, max_points, section_id, score_type, display_order,
+               section:scoring_sections!inner(id, name, display_order, template_id)`)
+      .eq('section.template_id', templateId);
+    (tplFields || []).forEach((f: any) => {
+      const section = Array.isArray(f.section) ? f.section[0] : f.section;
+      fieldMap.set(f.id, {
+        id: f.id,
+        name: f.name,
+        max_points: Number(f.max_points || 0),
+        score_type: ((f.score_type as ScoreType) || 'difficulty'),
+        section_id: f.section_id,
+        section_name: section?.name || '',
+        section_order: section?.display_order ?? 0,
+        field_order: f.display_order ?? 0,
+      });
+    });
   }
 
-  const fieldMap = new Map<string, RawField>();
+  // Safety net: include any field referenced by an existing score detail that
+  // isn't in the template lookup (e.g. a legacy field that was deleted).
   usable.forEach((s: any) => {
     (s.details || []).forEach((d: any) => {
       const f = Array.isArray(d.field) ? d.field[0] : d.field;
