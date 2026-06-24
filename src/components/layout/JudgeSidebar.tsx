@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import logoWhite from '@/assets/logo-white.png.asset.json';
+import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 import {
   ClipboardList,
   LogOut,
