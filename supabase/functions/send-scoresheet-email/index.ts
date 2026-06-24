@@ -63,8 +63,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
             notes,
             field:scoring_fields(id, name, max_points, section_id, score_type, display_order,
               section:scoring_sections(id, name, display_order))
-          )
+          ),
+          deduction_items:score_deductions(deduction_type_id, count, warnings)
         )
+
       `)
       .eq("id", submissionId)
       .single();
