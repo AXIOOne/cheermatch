@@ -1,0 +1,1 @@
+ALTER TABLE public.scoring_templates ADD COLUMN IF NOT EXISTS show_comments_on_scoresheet boolean NOT NULL DEFAULT false;

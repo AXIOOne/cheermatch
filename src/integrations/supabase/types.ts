@@ -1061,6 +1061,7 @@ export type Database = {
           is_default: boolean
           is_locked: boolean
           name: string
+          show_comments_on_scoresheet: boolean
           updated_at: string
         }
         Insert: {
@@ -1071,6 +1072,7 @@ export type Database = {
           is_default?: boolean
           is_locked?: boolean
           name: string
+          show_comments_on_scoresheet?: boolean
           updated_at?: string
         }
         Update: {
@@ -1081,6 +1083,7 @@ export type Database = {
           is_default?: boolean
           is_locked?: boolean
           name?: string
+          show_comments_on_scoresheet?: boolean
           updated_at?: string
         }
         Relationships: [
