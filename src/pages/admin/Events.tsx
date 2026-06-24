@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Calendar, Loader2, Pencil, Trash2, Search, BarChart3, Users, Trophy, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Calendar, Loader2, Pencil, Trash2, Search, BarChart3, Users, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 const DISCIPLINES = [
@@ -135,10 +135,7 @@ export default function Events() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('events')
-        .select(`
-          *,
-          teams:teams(count)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -308,12 +305,6 @@ export default function Events() {
   };
 
 
-  const getTeamsCount = (teams: any) => {
-    if (Array.isArray(teams) && teams.length > 0 && teams[0]?.count !== undefined) {
-      return teams[0].count;
-    }
-    return 0;
-  };
 
   return (
     <div className="p-8">
@@ -644,91 +635,62 @@ export default function Events() {
                   <TableRow>
                     <TableHead>Event Name</TableHead>
                     <TableHead>Dates</TableHead>
-                    <TableHead>Discipline</TableHead>
-                    <TableHead>Time Zone</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Scoring</TableHead>
-                    <TableHead>Registrations</TableHead>
-                    
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedEvents.map((event) => {
-                    const teamsCount = getTeamsCount(event.teams);
-                    
-                    return (
-                      <TableRow key={event.id}>
-                        <TableCell className="font-medium">
-                          <Link to={`/admin/events/${event.id}/registrations`} className="text-primary hover:underline">
-                            {event.name}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{disciplineLabel(event.discipline)}</Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {event.time_zone || '—'}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={statusVariants[event.status]} className="whitespace-nowrap">
-                            {statusLabels[event.status]}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Link to={`/admin/events/${event.id}/scoring`}>
-                            <Badge variant="default" className="hover:bg-primary/80 cursor-pointer">
-                              Scoring
-                            </Badge>
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <Link to={`/admin/events/${event.id}/registrations`}>
-                            <Badge variant="default" className="hover:bg-primary/80 cursor-pointer">
-                              {teamsCount} teams
-                            </Badge>
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="sm" asChild title="Results">
-                              <Link to={`/admin/events/${event.id}/results`}>
-                                <Trophy className="w-4 h-4" />
-                              </Link>
-                            </Button>
-                            <Button variant="ghost" size="sm" asChild title="Participants">
-                              <Link to={`/admin/events/${event.id}/participants`}>
-                                <Users className="w-4 h-4" />
-                              </Link>
-                            </Button>
-                            <Button variant="ghost" size="sm" asChild title="Average Report">
-                              <Link to={`/admin/events/${event.id}/reports`}>
-                                <FileText className="w-4 h-4" />
-                              </Link>
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleEdit(event)} title="Edit">
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                if (confirm('Are you sure you want to delete this event?')) {
-                                  deleteMutation.mutate(event.id);
-                                }
-                              }}
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {paginatedEvents.map((event) => (
+                    <TableRow key={event.id}>
+                      <TableCell className="font-medium">
+                        <Link to={`/admin/events/${event.id}/registrations`} className="text-primary hover:underline">
+                          {event.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariants[event.status]} className="whitespace-nowrap">
+                          {statusLabels[event.status]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" asChild title="Scoring Control Panel">
+                            <Link to={`/admin/events/${event.id}/scoring`}>
+                              <BarChart3 className="w-4 h-4" />
+                            </Link>
+                          </Button>
+                          <Button variant="ghost" size="icon" asChild title="Registrations">
+                            <Link to={`/admin/events/${event.id}/registrations`}>
+                              <Users className="w-4 h-4" />
+                            </Link>
+                          </Button>
+                          <Button variant="ghost" size="icon" asChild title="Results">
+                            <Link to={`/admin/events/${event.id}/results`}>
+                              <Trophy className="w-4 h-4" />
+                            </Link>
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(event)} title="Edit Event">
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              if (confirm('Are you sure you want to delete this event?')) {
+                                deleteMutation.mutate(event.id);
+                              }
+                            }}
+                            title="Delete Event"
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
               
