@@ -20,11 +20,27 @@ export interface RawScoreDetail {
   points: number;
 }
 
+export interface RawDeductionItem {
+  deduction_type_id: string;
+  count: number;
+  warnings: number;
+}
+
 export interface RawSubmittedScore {
   deductions: number;
   details: RawScoreDetail[];
   judge_label?: string | null;
   comments?: string | null;
+  panel_abbreviation?: string | null;
+  panel_name?: string | null;
+  deduction_items?: RawDeductionItem[];
+}
+
+export interface DeductionCatalogEntry {
+  id: string;
+  name: string;
+  points: number;
+  display_order: number;
 }
 
 export interface ScoresheetInput {
@@ -39,6 +55,7 @@ export interface ScoresheetInput {
   fields: RawField[];
   submitted_scores: RawSubmittedScore[];
   show_comments?: boolean;
+  deduction_catalog?: DeductionCatalogEntry[];
 }
 
 export interface ScoresheetRow {
@@ -52,6 +69,19 @@ export interface ScoresheetRow {
 export interface JudgeComment {
   judge_label: string;
   comments: string;
+}
+
+export interface DeductionReportRow {
+  name: string;
+  value: number;
+  occurrences: number;
+  warnings: number;
+  score: number;
+}
+
+export interface DeductionReport {
+  rows: DeductionReportRow[];
+  total: number;
 }
 
 export interface ScoresheetData {
@@ -70,7 +100,10 @@ export interface ScoresheetData {
   perfection: number;
   show_comments: boolean;
   judge_comments: JudgeComment[];
+  deduction_report: DeductionReport;
+  safety_comments: string;
 }
+
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -152,6 +185,35 @@ export function buildScoresheet(input: ScoresheetInput): ScoresheetData {
     }))
     .sort((a, b) => a.judge_label.localeCompare(b.judge_label, undefined, { numeric: true, sensitivity: 'base' }));
 
+  // Designated safety/deduction judge: panel abbrev "SD" or name containing "safety"/"deduction".
+  // Fall back to first submitted score so the report still renders.
+  const isSdPanel = (s: RawSubmittedScore) => {
+    const ab = (s.panel_abbreviation ?? '').trim().toLowerCase();
+    const nm = (s.panel_name ?? '').trim().toLowerCase();
+    return ab === 'sd' || /safety|deduction/.test(nm);
+  };
+  const sdScore = input.submitted_scores.find(isSdPanel) || input.submitted_scores[0];
+
+  const catalog = (input.deduction_catalog ?? [])
+    .slice()
+    .sort((a, b) => a.display_order - b.display_order || a.name.localeCompare(b.name));
+
+  const dedItemsById = new Map<string, RawDeductionItem>();
+  (sdScore?.deduction_items ?? []).forEach((it) => dedItemsById.set(it.deduction_type_id, it));
+
+  let dedTotal = 0;
+  const reportRows: DeductionReportRow[] = catalog.map((c) => {
+    const it = dedItemsById.get(c.id);
+    const occurrences = Number(it?.count || 0);
+    const warnings = Number(it?.warnings || 0);
+    const value = Math.abs(Number(c.points || 0));
+    const score = round2(value * occurrences);
+    dedTotal += score;
+    return { name: c.name, value, occurrences, warnings, score };
+  });
+  const deduction_report: DeductionReport = { rows: reportRows, total: round2(dedTotal) };
+  const safety_comments = (sdScore?.comments ?? '').trim();
+
   return {
     team_name: input.team_name,
     gym_name: input.gym_name,
@@ -168,5 +230,8 @@ export function buildScoresheet(input: ScoresheetInput): ScoresheetData {
     perfection,
     show_comments,
     judge_comments,
+    deduction_report,
+    safety_comments,
   };
 }
+

@@ -63,8 +63,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
             notes,
             field:scoring_fields(id, name, max_points, section_id, score_type, display_order,
               section:scoring_sections(id, name, display_order))
-          )
+          ),
+          deduction_items:score_deductions(deduction_type_id, count, warnings)
         )
+
       `)
       .eq("id", submissionId)
       .single();
@@ -201,6 +203,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .find((t: any) => t && t.show_comments_on_scoresheet);
     const showComments = !!tplWithFlag;
 
+    // Fetch deduction catalog for the template used on submitted scores
+    const templateId = submittedScores[0]?.template_id;
+    let deductionCatalog: Array<{ id: string; name: string; points: number; display_order: number }> = [];
+    if (templateId) {
+      const { data: dts } = await supabase
+        .from('deduction_types')
+        .select('id, name, points, display_order')
+        .eq('template_id', templateId);
+      deductionCatalog = (dts || []).map((d: any) => ({
+        id: d.id,
+        name: d.name,
+        points: Number(d.points || 0),
+        display_order: Number(d.display_order ?? 0),
+      }));
+    }
+
     const sheetData = buildScoresheet({
       team_name: team.name || 'Team',
       gym_name: team.gym_name,
@@ -210,12 +228,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
       accuscore_end_at: (event as any)?.accuscore_end_at || null,
       fields: Array.from(fieldMap.values()),
       show_comments: showComments,
+      deduction_catalog: deductionCatalog,
       submitted_scores: submittedScores.map((s: any) => {
         const panel = Array.isArray(s.panel) ? s.panel[0] : s.panel;
         return {
           deductions: Number(s.deductions || 0),
           comments: s.comments || null,
           judge_label: panel?.name || panel?.abbreviation || null,
+          panel_name: panel?.name || null,
+          panel_abbreviation: panel?.abbreviation || null,
+          deduction_items: (s.deduction_items || []).map((it: any) => ({
+            deduction_type_id: it.deduction_type_id,
+            count: Number(it.count || 0),
+            warnings: Number(it.warnings || 0),
+          })),
           details: (s.score_details || []).map((d: any) => ({
             field_id: (Array.isArray(d.field) ? d.field[0] : d.field)?.id,
             points: Number(d.points || 0),
@@ -223,6 +249,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         };
       }),
     });
+
     const pdfBytes = await buildScoresheetPdf(sheetData);
     let binary = '';
     const CHUNK = 0x8000;

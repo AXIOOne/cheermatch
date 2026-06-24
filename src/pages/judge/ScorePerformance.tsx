@@ -46,6 +46,7 @@ export default function ScorePerformance() {
 
   const [fieldScores, setFieldScores] = useState<Record<string, FieldScore>>({});
   const [deductionCounts, setDeductionCounts] = useState<Record<string, number>>({});
+  const [deductionWarnings, setDeductionWarnings] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [flagDialogOpen, setFlagDialogOpen] = useState(false);
@@ -206,16 +207,25 @@ export default function ScorePerformance() {
       });
       setFieldScores(loaded);
       const dc: Record<string, number> = {};
-      (existingScore.deduction_items || []).forEach((it: any) => { dc[it.deduction_type_id] = it.count || 0; });
+      const dw: Record<string, number> = {};
+      (existingScore.deduction_items || []).forEach((it: any) => {
+        dc[it.deduction_type_id] = it.count || 0;
+        dw[it.deduction_type_id] = it.warnings || 0;
+      });
       setDeductionCounts(dc);
+      setDeductionWarnings(dw);
       setComments(existingScore.comments || '');
     } else {
       const init: Record<string, FieldScore> = {};
       allFields.forEach((f: any) => { init[f.id] = { field_id: f.id, points: 0, notes: '' }; });
       setFieldScores(init);
       const dc: Record<string, number> = {};
-      (sortByDisplayOrder((template.deduction_types || []) as any[])).forEach((dt: any) => { dc[dt.id] = 0; });
+      const dw: Record<string, number> = {};
+      (sortByDisplayOrder((template.deduction_types || []) as any[])).forEach((dt: any) => {
+        dc[dt.id] = 0; dw[dt.id] = 0;
+      });
       setDeductionCounts(dc);
+      setDeductionWarnings(dw);
     }
   }, [template, existingScore, visibleSections]);
 
@@ -269,8 +279,18 @@ export default function ScorePerformance() {
           if (dErr) throw dErr;
         }
         await sb.from('score_deductions').delete().eq('score_id', existingScore.id);
-        const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
-          .map(([deduction_type_id, count]) => ({ score_id: existingScore.id, deduction_type_id, count }));
+        const allDedIds = new Set<string>([
+          ...Object.keys(deductionCounts),
+          ...Object.keys(deductionWarnings),
+        ]);
+        const deds = Array.from(allDedIds)
+          .map((deduction_type_id) => ({
+            score_id: existingScore.id,
+            deduction_type_id,
+            count: deductionCounts[deduction_type_id] || 0,
+            warnings: deductionWarnings[deduction_type_id] || 0,
+          }))
+          .filter((d) => (d.count || 0) > 0 || (d.warnings || 0) > 0);
         if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
       } else {
         const { data: newScore, error } = await sb.from('scores').insert([{
@@ -286,8 +306,18 @@ export default function ScorePerformance() {
           const { error: dErr } = await sb.from('score_details').insert(rows);
           if (dErr) throw dErr;
         }
-        const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
-          .map(([deduction_type_id, count]) => ({ score_id: newScore.id, deduction_type_id, count }));
+        const allDedIds = new Set<string>([
+          ...Object.keys(deductionCounts),
+          ...Object.keys(deductionWarnings),
+        ]);
+        const deds = Array.from(allDedIds)
+          .map((deduction_type_id) => ({
+            score_id: newScore.id,
+            deduction_type_id,
+            count: deductionCounts[deduction_type_id] || 0,
+            warnings: deductionWarnings[deduction_type_id] || 0,
+          }))
+          .filter((d) => (d.count || 0) > 0 || (d.warnings || 0) > 0);
         if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
       }
     },
@@ -500,15 +530,27 @@ export default function ScorePerformance() {
                     <CardHeader className="pb-2"><CardTitle className="text-base text-destructive">Deductions</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
                       {sortByDisplayOrder(template.deduction_types as any[]).map((dt: any) => (
-                        <div key={dt.id} className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium">{dt.name}</p>
+                        <div key={dt.id} className="flex items-center justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium truncate">{dt.name}</p>
                             <p className="text-xs text-muted-foreground">{Number(dt.points).toFixed(2)} each</p>
                           </div>
-                          <Input type="number" min={0} step={1}
-                            value={deductionCounts[dt.id] || 0}
-                            onChange={(e) => setDeductionCounts(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
-                            className="w-20" disabled={isLocked} />
+                          <div className="flex items-end gap-2">
+                            <div className="flex flex-col items-center">
+                              <span className="text-[10px] uppercase text-muted-foreground">Count</span>
+                              <Input type="number" min={0} step={1}
+                                value={deductionCounts[dt.id] || 0}
+                                onChange={(e) => setDeductionCounts(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
+                                className="w-16" disabled={isLocked} />
+                            </div>
+                            <div className="flex flex-col items-center">
+                              <span className="text-[10px] uppercase text-muted-foreground">Warnings</span>
+                              <Input type="number" min={0} step={1}
+                                value={deductionWarnings[dt.id] || 0}
+                                onChange={(e) => setDeductionWarnings(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
+                                className="w-16" disabled={isLocked} />
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </CardContent>

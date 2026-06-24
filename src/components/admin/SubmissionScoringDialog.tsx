@@ -50,6 +50,7 @@ export default function SubmissionScoringDialog({
   const [selectedPanelId, setSelectedPanelId] = useState<string>('');
   const [fieldScores, setFieldScores] = useState<Record<string, FieldScore>>({});
   const [deductionCounts, setDeductionCounts] = useState<Record<string, number>>({});
+  const [deductionWarnings, setDeductionWarnings] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
   const [needsReview, setNeedsReview] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -186,8 +187,13 @@ export default function SubmissionScoringDialog({
       });
       setFieldScores(loaded);
       const loadedDed: Record<string, number> = {};
-      panelScore.deduction_items?.forEach((it: any) => { loadedDed[it.deduction_type_id] = it.count || 0; });
+      const loadedWarn: Record<string, number> = {};
+      panelScore.deduction_items?.forEach((it: any) => {
+        loadedDed[it.deduction_type_id] = it.count || 0;
+        loadedWarn[it.deduction_type_id] = it.warnings || 0;
+      });
       setDeductionCounts(loadedDed);
+      setDeductionWarnings(loadedWarn);
       setComments(panelScore.comments || '');
       setNeedsReview(Boolean(panelScore.needs_review));
     } else {
@@ -197,8 +203,12 @@ export default function SubmissionScoringDialog({
       });
       setFieldScores(init);
       const initDed: Record<string, number> = {};
-      (sortByDisplayOrder((template.deduction_types || []) as any[])).forEach((dt: any) => { initDed[dt.id] = 0; });
+      const initWarn: Record<string, number> = {};
+      (sortByDisplayOrder((template.deduction_types || []) as any[])).forEach((dt: any) => {
+        initDed[dt.id] = 0; initWarn[dt.id] = 0;
+      });
       setDeductionCounts(initDed);
+      setDeductionWarnings(initWarn);
       setComments('');
       setNeedsReview(false);
     }
@@ -266,8 +276,18 @@ export default function SubmissionScoringDialog({
         }
         await sb.from('score_deductions').delete().eq('score_id', currentPanelScore.id);
         if (isSdPanel) {
-          const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
-            .map(([deduction_type_id, count]) => ({ score_id: currentPanelScore.id, deduction_type_id, count }));
+          const allDedIds = new Set<string>([
+            ...Object.keys(deductionCounts),
+            ...Object.keys(deductionWarnings),
+          ]);
+          const deds = Array.from(allDedIds)
+            .map((deduction_type_id) => ({
+              score_id: currentPanelScore.id,
+              deduction_type_id,
+              count: deductionCounts[deduction_type_id] || 0,
+              warnings: deductionWarnings[deduction_type_id] || 0,
+            }))
+            .filter((d) => (d.count || 0) > 0 || (d.warnings || 0) > 0);
           if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
         }
       } else {
@@ -288,8 +308,18 @@ export default function SubmissionScoringDialog({
           if (dErr) throw dErr;
         }
         if (isSdPanel) {
-          const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
-            .map(([deduction_type_id, count]) => ({ score_id: newScore.id, deduction_type_id, count }));
+          const allDedIds = new Set<string>([
+            ...Object.keys(deductionCounts),
+            ...Object.keys(deductionWarnings),
+          ]);
+          const deds = Array.from(allDedIds)
+            .map((deduction_type_id) => ({
+              score_id: newScore.id,
+              deduction_type_id,
+              count: deductionCounts[deduction_type_id] || 0,
+              warnings: deductionWarnings[deduction_type_id] || 0,
+            }))
+            .filter((d) => (d.count || 0) > 0 || (d.warnings || 0) > 0);
           if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
         }
       }
@@ -621,14 +651,26 @@ export default function SubmissionScoringDialog({
                           <div className="space-y-2">
                             {sortByDisplayOrder(template.deduction_types as any[]).map((dt: any) => (
                               <div key={dt.id} className="flex items-center justify-between gap-3">
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                   <p className="text-sm font-medium truncate">{dt.name}</p>
                                   <p className="text-xs text-muted-foreground">{Number(dt.points).toFixed(2)} each</p>
                                 </div>
-                                <Input type="number" min={0} step={1}
-                                  value={deductionCounts[dt.id] || 0}
-                                  onChange={(e) => setDeductionCounts(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
-                                  className="w-20" disabled={isCurrentPanelLocked} />
+                                <div className="flex items-end gap-2">
+                                  <div className="flex flex-col items-center">
+                                    <span className="text-[10px] uppercase text-muted-foreground">Count</span>
+                                    <Input type="number" min={0} step={1}
+                                      value={deductionCounts[dt.id] || 0}
+                                      onChange={(e) => setDeductionCounts(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
+                                      className="w-16" disabled={isCurrentPanelLocked} />
+                                  </div>
+                                  <div className="flex flex-col items-center">
+                                    <span className="text-[10px] uppercase text-muted-foreground">Warnings</span>
+                                    <Input type="number" min={0} step={1}
+                                      value={deductionWarnings[dt.id] || 0}
+                                      onChange={(e) => setDeductionWarnings(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
+                                      className="w-16" disabled={isCurrentPanelLocked} />
+                                  </div>
+                                </div>
                               </div>
                             ))}
                             <div className="pt-2 border-t flex items-center justify-between">

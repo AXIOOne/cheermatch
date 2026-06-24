@@ -31,7 +31,8 @@ export async function generateSubmissionScoresheetBytes(
         points,
         field:scoring_fields(id, name, max_points, section_id, score_type, display_order,
           section:scoring_sections(id, name, display_order))
-      )
+      ),
+      deduction_items:score_deductions(deduction_type_id, count, warnings)
     `)
     .eq('submission_id', submissionId);
   if (scoresErr) throw scoresErr;
@@ -41,6 +42,7 @@ export async function generateSubmissionScoresheetBytes(
   );
 
   let show_comments = false;
+  let deduction_catalog: Array<{ id: string; name: string; points: number; display_order: number }> = [];
   const templateId = usable[0]?.template_id;
   if (templateId) {
     const { data: tpl } = await sb
@@ -49,6 +51,17 @@ export async function generateSubmissionScoresheetBytes(
       .eq('id', templateId)
       .maybeSingle();
     show_comments = !!tpl?.show_comments_on_scoresheet;
+
+    const { data: dts } = await sb
+      .from('deduction_types')
+      .select('id, name, points, display_order')
+      .eq('template_id', templateId);
+    deduction_catalog = (dts || []).map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      points: Number(d.points || 0),
+      display_order: Number(d.display_order ?? 0),
+    }));
   }
 
   const fieldMap = new Map<string, RawField>();
@@ -80,12 +93,20 @@ export async function generateSubmissionScoresheetBytes(
     accuscore_end_at: submission.event?.accuscore_end_at || null,
     fields: Array.from(fieldMap.values()),
     show_comments,
+    deduction_catalog,
     submitted_scores: usable.map((s: any) => {
       const panel = Array.isArray(s.panel) ? s.panel[0] : s.panel;
       return {
         deductions: Number(s.deductions || 0),
         comments: s.comments || null,
         judge_label: panel?.name || panel?.abbreviation || null,
+        panel_name: panel?.name || null,
+        panel_abbreviation: panel?.abbreviation || null,
+        deduction_items: (s.deduction_items || []).map((it: any) => ({
+          deduction_type_id: it.deduction_type_id,
+          count: Number(it.count || 0),
+          warnings: Number(it.warnings || 0),
+        })),
         details: (s.details || []).map((d: any) => ({
           field_id: (Array.isArray(d.field) ? d.field[0] : d.field)?.id,
           points: Number(d.points || 0),
@@ -98,6 +119,7 @@ export async function generateSubmissionScoresheetBytes(
   const safeName = `${data.team_name} - ${data.event_name}`.replace(/[^\w\s-]/g, '').trim();
   return { bytes, fileName: `${safeName || 'scoresheet'}.pdf` };
 }
+
 
 export async function downloadSubmissionScoresheet(submissionId: string) {
   const { bytes, fileName } = await generateSubmissionScoresheetBytes(submissionId);
