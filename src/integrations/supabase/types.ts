@@ -1308,11 +1308,9 @@ export type Database = {
           created_at: string
           division_id: string
           event_id: string
-          female_count: number
           gym_name: string
           id: string
           level_id: string
-          male_count: number
           name: string
           updated_at: string
         }
@@ -1326,11 +1324,9 @@ export type Database = {
           created_at?: string
           division_id: string
           event_id: string
-          female_count?: number
           gym_name: string
           id?: string
           level_id: string
-          male_count?: number
           name: string
           updated_at?: string
         }
@@ -1344,11 +1340,9 @@ export type Database = {
           created_at?: string
           division_id?: string
           event_id?: string
-          female_count?: number
           gym_name?: string
           id?: string
           level_id?: string
-          male_count?: number
           name?: string
           updated_at?: string
         }
