@@ -13,7 +13,7 @@ export async function generateSubmissionScoresheetBytes(
     .select(`
       id, event_id,
       team:teams!inner(id, name, gym_name,
-        division:divisions!inner(id, name),
+        division:divisions!inner(id, name, scoring_template_id),
         level:levels(id, name)),
       event:events!inner(id, name, accuscore_end_at)
     `)
@@ -21,6 +21,7 @@ export async function generateSubmissionScoresheetBytes(
     .maybeSingle();
   if (subErr) throw subErr;
   if (!submission) throw new Error('Submission not found');
+
 
   const { data: scores, error: scoresErr } = await sb
     .from('scores')
