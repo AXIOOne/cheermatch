@@ -185,11 +185,10 @@ export default function SubmissionDetail() {
           team={{
             id: submission.team.id,
             name: submission.team.name,
-            gym_name: submission.team.gym_name,
             athlete_count: submission.team.athlete_count,
             division_id: submission.team.division_id,
           }}
-          onUpdated={() => queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] })}
+          onSaved={() => queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] })}
         />
       )}
 
@@ -198,10 +197,6 @@ export default function SubmissionDetail() {
         onOpenChange={setRevisionOpen}
         submissionId={submissionId!}
         teamName={submission.team?.name || ''}
-        onSubmitted={() => {
-          queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] });
-          queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
-        }}
       />
     </div>
   );
