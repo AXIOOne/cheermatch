@@ -332,7 +332,7 @@ export default function ScoringQueue() {
                         <span>•</span>
                         <span>Level {submission.team?.level?.level_number}</span>
                         <span>•</span>
-                        <span>{submission.team?.athlete_count} athletes</span>
+                        <span>{(submission.team?.athletes_female ?? 0) + (submission.team?.athletes_male ?? 0)} athletes ({submission.team?.athletes_female ?? 0}F / {submission.team?.athletes_male ?? 0}M)</span>
                       </div>
                     </div>
 
