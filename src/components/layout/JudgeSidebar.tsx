@@ -44,7 +44,7 @@ export function JudgeSidebar() {
       {/* Logo */}
       <div className="p-6 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <img src={logoWhite} alt="CheerMatch" className="h-8" />
+          <img src={logoWhite.url} alt="CheerMatch" className="h-8" />
         </div>
       </div>
 
