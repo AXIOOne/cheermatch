@@ -334,7 +334,7 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
       const boxTop = cursorY;
       const boxBot = boxTop - boxH;
 
-      page.drawText(`Judge ${jc.judge_label}`, {
+      page.drawText(`${jc.judge_label} Comments`, {
         x: MARGIN, y: boxTop - labelSize,
         size: labelSize, font: bold, color: TEXT,
       });

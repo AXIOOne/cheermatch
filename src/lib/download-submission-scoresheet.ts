@@ -85,7 +85,7 @@ export async function generateSubmissionScoresheetBytes(
       return {
         deductions: Number(s.deductions || 0),
         comments: s.comments || null,
-        judge_label: panel?.abbreviation || panel?.name || null,
+        judge_label: panel?.name || panel?.abbreviation || null,
         details: (s.details || []).map((d: any) => ({
           field_id: (Array.isArray(d.field) ? d.field[0] : d.field)?.id,
           points: Number(d.points || 0),
