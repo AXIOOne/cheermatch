@@ -187,8 +187,13 @@ export default function SubmissionScoringDialog({
       });
       setFieldScores(loaded);
       const loadedDed: Record<string, number> = {};
-      panelScore.deduction_items?.forEach((it: any) => { loadedDed[it.deduction_type_id] = it.count || 0; });
+      const loadedWarn: Record<string, number> = {};
+      panelScore.deduction_items?.forEach((it: any) => {
+        loadedDed[it.deduction_type_id] = it.count || 0;
+        loadedWarn[it.deduction_type_id] = it.warnings || 0;
+      });
       setDeductionCounts(loadedDed);
+      setDeductionWarnings(loadedWarn);
       setComments(panelScore.comments || '');
       setNeedsReview(Boolean(panelScore.needs_review));
     } else {
@@ -198,8 +203,12 @@ export default function SubmissionScoringDialog({
       });
       setFieldScores(init);
       const initDed: Record<string, number> = {};
-      (sortByDisplayOrder((template.deduction_types || []) as any[])).forEach((dt: any) => { initDed[dt.id] = 0; });
+      const initWarn: Record<string, number> = {};
+      (sortByDisplayOrder((template.deduction_types || []) as any[])).forEach((dt: any) => {
+        initDed[dt.id] = 0; initWarn[dt.id] = 0;
+      });
       setDeductionCounts(initDed);
+      setDeductionWarnings(initWarn);
       setComments('');
       setNeedsReview(false);
     }
