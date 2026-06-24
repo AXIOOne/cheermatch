@@ -1,22 +1,44 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Camera, Square, Upload, CheckCircle2, Plus, RotateCw, ChevronLeft, LogOut } from "lucide-react";
+import {
+  Camera,
+  Square,
+  Upload,
+  CheckCircle2,
+  Plus,
+  RotateCw,
+  ChevronLeft,
+  LogOut,
+  Grid3x3,
+  Laptop,
+  RefreshCw,
+  BatteryMedium,
+  HardDrive,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { mobileApi } from "@/lib/mobile-api";
 import { useMobileAuth } from "@/hooks/useMobileAuth";
+import { detectDevice, deviceLabel, type DetectedDevice } from "@/lib/device-detect";
+import { CaptureOverlay } from "@/components/mobile/CaptureOverlay";
+import { AudioMeter } from "@/components/mobile/AudioMeter";
 
-type Phase = "ready" | "recording" | "preview" | "choose" | "uploading" | "done";
+type Phase = "ready" | "countdown" | "recording" | "preview" | "choose" | "uploading" | "done";
 type Attempt = { id: number; blob: Blob; url: string; durationSec: number };
 
 const DEFAULT_DURATION = 150; // 2:30
 const DEFAULT_ATTEMPTS = 2;
+const DEVICE_CONFIRM_KEY = "cm.captureDevice";
+const OVERLAY_KEY = "cm.captureOverlay";
 
 function fmt(s: number) {
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 }
+
+type BatteryLike = { level: number; charging: boolean };
+type NavigatorWithBattery = Navigator & { getBattery?: () => Promise<BatteryLike> };
 
 export default function MobileRecord() {
   const { eventId = "", teamId = "" } = useParams();
@@ -29,6 +51,8 @@ export default function MobileRecord() {
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
   const autoStopRef = useRef<number | null>(null);
+  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
+  const countdownTimerRef = useRef<number | null>(null);
 
   const [phase, setPhase] = useState<Phase>("ready");
   const [elapsed, setElapsed] = useState(0);
@@ -38,22 +62,47 @@ export default function MobileRecord() {
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  // Event-driven capture settings
+  // Capture settings
   const [maxDuration, setMaxDuration] = useState<number>(DEFAULT_DURATION);
   const [maxAttempts, setMaxAttempts] = useState<number>(DEFAULT_ATTEMPTS);
   const [isPortrait, setIsPortrait] = useState<boolean>(
     typeof window !== "undefined" ? window.innerHeight > window.innerWidth : false
   );
 
-  // Track orientation and try to lock to landscape where supported
+  // Device gate
+  const [device, setDevice] = useState<DetectedDevice>(() => detectDevice());
+  const [needsDeviceConfirm, setNeedsDeviceConfirm] = useState<boolean>(false);
+
+  // HUD widgets
+  const [overlayOn, setOverlayOn] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem(OVERLAY_KEY) !== "0";
+  });
+  const [battery, setBattery] = useState<BatteryLike | null>(null);
+  const [storageGb, setStorageGb] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState<number>(0);
+
+  // First-launch device confirm
+  useEffect(() => {
+    const saved = typeof window !== "undefined" ? localStorage.getItem(DEVICE_CONFIRM_KEY) : null;
+    if (!saved && device.kind !== "desktop") setNeedsDeviceConfirm(true);
+  }, [device.kind]);
+
+  function confirmDevice(kind: DetectedDevice["kind"]) {
+    const next: DetectedDevice = { ...device, kind };
+    setDevice(next);
+    localStorage.setItem(DEVICE_CONFIRM_KEY, JSON.stringify(next));
+    setNeedsDeviceConfirm(false);
+  }
+
+  // Orientation tracking + best-effort lock
   useEffect(() => {
     const update = () => setIsPortrait(window.innerHeight > window.innerWidth);
     update();
     window.addEventListener("resize", update);
     window.addEventListener("orientationchange", update);
-    // Best-effort lock (works in some Android browsers / installed PWAs)
     const so = (screen as unknown as { orientation?: { lock?: (o: string) => Promise<void>; unlock?: () => void } }).orientation;
-    so?.lock?.("landscape").catch(() => { /* unsupported (iOS Safari) — we show a hint instead */ });
+    so?.lock?.("landscape").catch(() => { /* iOS Safari: not supported */ });
     return () => {
       window.removeEventListener("resize", update);
       window.removeEventListener("orientationchange", update);
@@ -81,9 +130,7 @@ export default function MobileRecord() {
     })();
   }, [eventId]);
 
-  // Block access if a final submission already exists for this team+event.
-  // Coaches get a single capture session with N attempts — no re-submissions.
-  // Exception: if the admin has requested a revision, the coach may re-record.
+  // Block re-submissions
   useEffect(() => {
     (async () => {
       try {
@@ -99,19 +146,29 @@ export default function MobileRecord() {
           }
         }
       } catch {
-        /* if the check fails, allow the page to load normally */
+        /* allow page to load normally */
       }
     })();
   }, [eventId, teamId, navigate]);
 
-  // Initialize camera on mount
+  // Initialize camera (skip on desktop — capture is disallowed)
   useEffect(() => {
+    if (device.kind === "desktop") return;
     let cancelled = false;
     (async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: true,
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            frameRate: { ideal: 30, max: 30 },
+          },
+          audio: {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+          },
         });
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
         streamRef.current = stream;
@@ -119,6 +176,15 @@ export default function MobileRecord() {
           videoLiveRef.current.srcObject = stream;
           videoLiveRef.current.play().catch(() => {});
         }
+        // Auto-stop on track interruption (call comes in, app backgrounded, etc.)
+        stream.getTracks().forEach((t) => {
+          t.addEventListener("ended", () => {
+            if (recorderRef.current?.state === "recording") {
+              try { recorderRef.current.stop(); } catch { /* noop */ }
+              toast.error("Recording interrupted — please retake.");
+            }
+          });
+        });
       } catch (e) {
         setError((e as Error).message);
       }
@@ -127,8 +193,55 @@ export default function MobileRecord() {
       cancelled = true;
       streamRef.current?.getTracks().forEach(t => t.stop());
       if (autoStopRef.current) window.clearTimeout(autoStopRef.current);
+      if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
+      wakeLockRef.current?.release().catch(() => {});
     };
-  }, []);
+  }, [device.kind]);
+
+  // Battery + storage estimates (one-shot)
+  useEffect(() => {
+    if (device.kind === "desktop") return;
+    const nav = navigator as NavigatorWithBattery;
+    nav.getBattery?.().then((b) => {
+      setBattery({ level: b.level, charging: b.charging });
+    }).catch(() => {});
+    if (navigator.storage?.estimate) {
+      navigator.storage.estimate().then((e) => {
+        const free = (e.quota ?? 0) - (e.usage ?? 0);
+        setStorageGb(free / 1e9);
+      }).catch(() => {});
+    }
+  }, [device.kind]);
+
+  // Re-acquire wake lock on visibility change while recording
+  useEffect(() => {
+    const onVis = async () => {
+      if (document.visibilityState === "visible" && phase === "recording" && !wakeLockRef.current) {
+        await acquireWakeLock();
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [phase]);
+
+  async function acquireWakeLock() {
+    try {
+      const wl = (navigator as Navigator & { wakeLock?: { request: (t: string) => Promise<{ release: () => Promise<void> }> } }).wakeLock;
+      if (wl?.request) {
+        wakeLockRef.current = await wl.request("screen");
+      }
+    } catch { /* ignored */ }
+  }
+
+  async function requestOrientationPermission() {
+    type DOEventCtor = typeof DeviceOrientationEvent & {
+      requestPermission?: () => Promise<"granted" | "denied">;
+    };
+    const ctor = (typeof DeviceOrientationEvent !== "undefined" ? DeviceOrientationEvent : undefined) as DOEventCtor | undefined;
+    if (ctor?.requestPermission) {
+      try { await ctor.requestPermission(); } catch { /* user declined */ }
+    }
+  }
 
   // elapsed timer
   useEffect(() => {
@@ -137,16 +250,47 @@ export default function MobileRecord() {
     return () => clearInterval(id);
   }, [phase]);
 
-  function startRecording() {
+  function beginCountdown() {
     if (!streamRef.current) { toast.error("Camera not ready"); return; }
     if (attempts.length >= maxAttempts) {
       toast.error(`Maximum ${maxAttempts} attempts reached`);
       return;
     }
+    void requestOrientationPermission();
+    setCountdown(3);
+    setPhase("countdown");
+    countdownTimerRef.current = window.setInterval(() => {
+      setCountdown((n) => {
+        if (n <= 1) {
+          if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
+          countdownTimerRef.current = null;
+          startRecording();
+          return 0;
+        }
+        return n - 1;
+      });
+    }, 1000);
+  }
+
+  function cancelCountdown() {
+    if (countdownTimerRef.current) {
+      window.clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+    setCountdown(0);
+    setPhase("ready");
+  }
+
+  function startRecording() {
+    if (!streamRef.current) { toast.error("Camera not ready"); return; }
     chunksRef.current = [];
     const mimeCandidates = ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=h264", "video/webm"];
     const mimeType = mimeCandidates.find((t) => MediaRecorder.isTypeSupported?.(t)) ?? "";
-    const rec = new MediaRecorder(streamRef.current, mimeType ? { mimeType } : undefined);
+    const rec = new MediaRecorder(streamRef.current, {
+      ...(mimeType ? { mimeType } : {}),
+      videoBitsPerSecond: 6_000_000,
+      audioBitsPerSecond: 128_000,
+    });
     const startedAt = Date.now();
     rec.ondataavailable = (e) => e.data && e.data.size > 0 && chunksRef.current.push(e.data);
     rec.onstop = () => {
@@ -159,12 +303,14 @@ export default function MobileRecord() {
       setPreviewAttemptId(id);
       setPhase("preview");
       if (autoStopRef.current) { window.clearTimeout(autoStopRef.current); autoStopRef.current = null; }
+      wakeLockRef.current?.release().catch(() => {});
+      wakeLockRef.current = null;
     };
     recorderRef.current = rec;
     setElapsed(0);
     rec.start(1000);
     setPhase("recording");
-    // Auto-stop at event's configured duration
+    void acquireWakeLock();
     autoStopRef.current = window.setTimeout(() => {
       try { rec.state === "recording" && rec.stop(); } catch { /* noop */ }
       toast.message(`Recording auto-stopped at ${fmt(maxDuration)}`);
@@ -175,7 +321,6 @@ export default function MobileRecord() {
     try { recorderRef.current?.stop(); } catch { /* noop */ }
     recorderRef.current = null;
   }
-
 
   function recordAnother() {
     setPreviewAttemptId(null);
@@ -189,7 +334,15 @@ export default function MobileRecord() {
     setPhase("choose");
   }
 
-  // Bind preview video to current attempt
+  function toggleOverlay() {
+    setOverlayOn((on) => {
+      const next = !on;
+      localStorage.setItem(OVERLAY_KEY, next ? "1" : "0");
+      return next;
+    });
+  }
+
+  // Bind preview video
   useEffect(() => {
     if (phase === "preview" && previewAttemptId != null && videoPreviewRef.current) {
       const att = attempts.find((a) => a.id === previewAttemptId);
@@ -197,9 +350,7 @@ export default function MobileRecord() {
     }
   }, [phase, previewAttemptId, attempts]);
 
-  // Re-attach the live camera stream whenever the live <video> is shown.
-  // The live element unmounts during "preview", so after "Record again" we
-  // need to re-bind srcObject or the new element stays black.
+  // Re-attach live stream when returning from preview
   useEffect(() => {
     if (phase === "preview") return;
     const el = videoLiveRef.current;
@@ -233,7 +384,6 @@ export default function MobileRecord() {
       });
       if (!completeRes.status) throw new Error(completeRes.message);
       setProgress(100);
-      // Free remaining preview URLs
       attempts.forEach((a) => URL.revokeObjectURL(a.url));
       setPhase("done");
     } catch (e) {
@@ -241,6 +391,23 @@ export default function MobileRecord() {
       setPhase("choose");
       setProgress(0);
     }
+  }
+
+  // ---------- Blocking states ----------
+
+  if (device.kind === "desktop") {
+    return (
+      <div className="p-6">
+        <Card className="p-6 text-center max-w-md mx-auto">
+          <Laptop className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+          <div className="text-lg font-semibold">Video capture isn't available on laptops</div>
+          <p className="text-sm text-muted-foreground mt-2">
+            Please open this link on an iPhone or iPad to record your team's performance.
+          </p>
+          <Button className="mt-4 w-full" onClick={() => navigate(-1)}>Go back</Button>
+        </Card>
+      </div>
+    );
   }
 
   if (error) {
@@ -271,7 +438,6 @@ export default function MobileRecord() {
     );
   }
 
-  // Choose-attempt screen
   if (phase === "choose" || phase === "uploading") {
     return (
       <div className="min-h-[calc(100vh-3.5rem)] bg-background px-4 py-4 space-y-4 max-w-xl mx-auto">
@@ -309,7 +475,7 @@ export default function MobileRecord() {
           <div className="grid grid-cols-2 gap-3 sticky bottom-0 pt-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] bg-background">
             {attempts.length < maxAttempts ? (
               <Button variant="secondary" onClick={recordAnother} className="h-12">
-                <Plus className="h-4 w-4 mr-2" /> Record Second Capture
+                <Plus className="h-4 w-4 mr-2" /> Record Another Take
               </Button>
             ) : (
               <Button variant="secondary" disabled className="h-12">Max Attempts Reached</Button>
@@ -324,54 +490,152 @@ export default function MobileRecord() {
   }
 
   const remaining = Math.max(0, maxDuration - elapsed);
+  const isTablet = device.kind === "tablet";
 
   return (
     <div className="bg-black text-white min-h-[calc(100vh-3.5rem)] flex flex-col relative">
+      {/* First-launch device confirmation */}
+      {needsDeviceConfirm && (
+        <div className="absolute inset-0 z-[60] bg-black/90 flex items-center justify-center p-6">
+          <Card className="bg-background text-foreground p-5 max-w-sm w-full space-y-4">
+            <div>
+              <div className="text-lg font-semibold">Detected: {deviceLabel(device)}</div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Is that the device you're using to record? We tune the capture experience for it.
+              </p>
+            </div>
+            <Button className="w-full h-11" onClick={() => confirmDevice(device.kind)}>
+              Yes, use {deviceLabel(device)}
+            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="secondary" className="h-10" onClick={() => confirmDevice("phone")}>
+                I'm on a Phone
+              </Button>
+              <Button variant="secondary" className="h-10" onClick={() => confirmDevice("tablet")}>
+                I'm on a Tablet
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Portrait warning */}
       {isPortrait && phase !== "preview" && (
         <div className="absolute inset-0 z-50 bg-black/95 flex flex-col items-center justify-center text-center px-6 space-y-4">
           <RotateCw className="h-16 w-16 text-primary animate-pulse" />
           <h2 className="text-xl font-bold">Please rotate your device</h2>
           <p className="text-sm text-white/80 max-w-xs">
             Routines must be captured in <span className="font-semibold">landscape</span> mode.
-            Turn your phone sideways to continue.
+            Turn your {deviceLabel(device).toLowerCase()} sideways to continue.
           </p>
         </div>
       )}
+
+      {/* Live / preview viewport */}
       <div className="relative flex-1 flex items-center justify-center bg-black">
         {phase !== "preview" && (
-          <video ref={videoLiveRef} className="w-full h-full object-contain" playsInline muted autoPlay />
+          <>
+            <video ref={videoLiveRef} className="w-full h-full object-contain" playsInline muted autoPlay />
+            {overlayOn && <CaptureOverlay showLevel />}
+          </>
         )}
         {phase === "preview" && (
           <video ref={videoPreviewRef} className="w-full h-full object-contain" playsInline controls />
         )}
-        {phase === "recording" && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-destructive/90 px-3 py-1.5 rounded-full text-sm font-mono">
-            <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
-            REC {fmt(elapsed)} / {fmt(maxDuration)}
+
+        {/* Top HUD strip */}
+        {phase !== "preview" && (
+          <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between gap-2 px-3 py-2 bg-gradient-to-b from-black/70 to-transparent">
+            <div className="flex items-center gap-3">
+              {phase === "recording" ? (
+                <div className="flex items-center gap-2 bg-destructive/90 px-3 py-1.5 rounded-full text-sm font-mono">
+                  <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
+                  REC {fmt(elapsed)} / {fmt(maxDuration)}
+                </div>
+              ) : (
+                <div className="bg-black/60 px-3 py-1.5 rounded-full text-xs font-mono">
+                  Take {attempts.length + 1}/{maxAttempts} · Limit {fmt(maxDuration)}
+                </div>
+              )}
+              <AudioMeter
+                stream={streamRef.current}
+                monitorSilence={phase === "ready"}
+                onSilent={() => toast.warning("No audio detected — check your mic.")}
+              />
+            </div>
+            <div className="flex items-center gap-3 text-[11px] font-mono text-white/80">
+              {storageGb != null && (
+                <span className="flex items-center gap-1">
+                  <HardDrive className="h-3.5 w-3.5" />
+                  {storageGb.toFixed(1)} GB
+                </span>
+              )}
+              {battery && (
+                <span className="flex items-center gap-1">
+                  <BatteryMedium className="h-3.5 w-3.5" />
+                  {Math.round(battery.level * 100)}%
+                </span>
+              )}
+              <button
+                onClick={toggleOverlay}
+                className={`p-1.5 rounded-md ${overlayOn ? "bg-white/20" : "bg-black/40"} hover:bg-white/30`}
+                aria-label="Toggle framing overlay"
+                title="Toggle framing overlay"
+              >
+                <Grid3x3 className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         )}
-        {phase === "ready" && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/60 px-3 py-1.5 rounded-full text-xs">
-            Your Are Recording Attempt {attempts.length + 1} of {maxAttempts} · Limit {fmt(maxDuration)}
+
+        {/* Countdown */}
+        {phase === "countdown" && (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/30">
+            <div className="text-white font-bold text-[12rem] leading-none drop-shadow-lg">
+              {countdown}
+            </div>
           </div>
         )}
       </div>
 
+      {/* Bottom action area */}
       <div className="p-4 bg-black/80 backdrop-blur space-y-3" style={{ paddingBottom: "max(env(safe-area-inset-bottom), 1rem)" }}>
         {phase === "ready" && (
-          <Button onClick={startRecording} className="w-full h-14 text-base bg-destructive hover:bg-destructive/90">
-            <Camera className="h-5 w-5 mr-2" /> Start Your Recording
+          <Button
+            onClick={beginCountdown}
+            className={`w-full text-base bg-destructive hover:bg-destructive/90 ${isTablet ? "h-16" : "h-14"}`}
+          >
+            <Camera className="h-5 w-5 mr-2" /> Start Recording
+          </Button>
+        )}
+        {phase === "countdown" && (
+          <Button onClick={cancelCountdown} variant="secondary" className="w-full h-14 text-base">
+            Cancel
           </Button>
         )}
         {phase === "recording" && (
-          <Button onClick={stopRecording} className="w-full h-14 text-base bg-destructive hover:bg-destructive/90">
-            <Square className="h-5 w-5 mr-2 fill-white" /> Stop · {fmt(remaining)} left
-          </Button>
+          <div className={`flex ${isTablet ? "justify-center" : "justify-end"}`}>
+            <Button
+              onClick={stopRecording}
+              className={`text-base bg-destructive hover:bg-destructive/90 ${isTablet ? "h-16 w-2/3" : "h-14 w-full"}`}
+            >
+              <Square className="h-5 w-5 mr-2 fill-white" /> Stop · {fmt(remaining)} left
+            </Button>
+          </div>
         )}
         {phase === "preview" && (
-          <Button onClick={goChoose} className="w-full h-14">
-            {attempts.length < maxAttempts ? "Recording Ended - Continue Capture Process" : "Continue With Submission Process"}
-          </Button>
+          <div className="grid grid-cols-2 gap-3">
+            {attempts.length < maxAttempts ? (
+              <Button onClick={recordAnother} variant="secondary" className="h-14">
+                <RefreshCw className="h-4 w-4 mr-2" /> Retake
+              </Button>
+            ) : (
+              <Button variant="secondary" disabled className="h-14">Max Takes</Button>
+            )}
+            <Button onClick={goChoose} className="h-14">
+              Use This Take
+            </Button>
+          </div>
         )}
         <div className="flex items-center justify-between pt-1 text-xs text-white/70">
           <button
