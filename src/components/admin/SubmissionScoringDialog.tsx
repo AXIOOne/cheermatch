@@ -648,7 +648,12 @@ export default function SubmissionScoringDialog({
                                     <p className="text-sm font-medium">{f.name}</p>
                                     {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
                                   </div>
-                                  <div className="text-right text-xs text-muted-foreground">max {Number(f.max_points).toFixed(2)}</div>
+                                  <div className="text-right text-xs text-muted-foreground">
+                                    {f.field_type === 'difficulty_driver' && (
+                                      <span className="text-sm font-semibold mr-2 text-foreground">{Number(fieldScores[f.id]?.points || 0).toFixed(2)}</span>
+                                    )}
+                                    max {Number(f.max_points).toFixed(2)}
+                                  </div>
                                 </div>
                                 {f.field_type === 'dropdown' ? (() => {
                                   const resolvePoints = (o: any) => {
@@ -681,7 +686,42 @@ export default function SubmissionScoringDialog({
                                       </SelectContent>
                                     </Select>
                                   );
-                                })() : (
+                                })() : f.field_type === 'difficulty_driver' ? (
+                                  <div className="space-y-2">
+                                    {(f.skills || [])
+                                      .slice()
+                                      .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+                                      .map((sk: any) => {
+                                        const opts = (sk.options || [])
+                                          .slice()
+                                          .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
+                                        const selected = skillSelections[sk.id];
+                                        return (
+                                          <div key={sk.id} className="rounded-md border p-2">
+                                            <p className="text-xs font-medium mb-2">{sk.name}</p>
+                                            <RadioGroup
+                                              value={selected || ''}
+                                              onValueChange={(val) => setSkillSelections(prev => ({ ...prev, [sk.id]: val }))}
+                                              disabled={isCurrentPanelLocked}
+                                              className="flex flex-wrap gap-3"
+                                            >
+                                              {opts.map((opt: any) => (
+                                                <label
+                                                  key={opt.id}
+                                                  htmlFor={`adm-sk-${sk.id}-${opt.id}`}
+                                                  className="flex items-center gap-1.5 text-xs cursor-pointer"
+                                                >
+                                                  <RadioGroupItem id={`adm-sk-${sk.id}-${opt.id}`} value={opt.id} />
+                                                  <span>{opt.label}</span>
+                                                  <span className="text-muted-foreground">({Number(opt.value)})</span>
+                                                </label>
+                                              ))}
+                                            </RadioGroup>
+                                          </div>
+                                        );
+                                      })}
+                                  </div>
+                                ) : (
                                   <ScoreInput
                                     value={fieldScores[f.id]?.points || 0}
                                     onChange={(v) => updateFieldScore(f.id, v)}
