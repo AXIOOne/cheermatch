@@ -562,14 +562,18 @@ export default function EventScoring() {
                           <Button
                             variant="default"
                             size="sm"
-                            className="h-8"
-                            onClick={() => {
-                              setScoringPanelId(null);
-                              setScoringSubmissionId(submission.id);
-                            }}
+                            className="h-8 bg-success text-success-foreground hover:bg-success/90"
+                            disabled={sendingScoreFor === submission.id || !overallStatus.allReviewed}
+                            onClick={() =>
+                              setConfirmSendFor({ id: submission.id, teamName: submission.team?.name || 'this team' })
+                            }
                           >
-                            <ClipboardList className="w-3.5 h-3.5 mr-1" />
-                            Score
+                            {sendingScoreFor === submission.id ? (
+                              <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                            ) : (
+                              <Send className="w-3.5 h-3.5 mr-1" />
+                            )}
+                            Send Score Sheet
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -584,25 +588,16 @@ export default function EventScoring() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-52">
                               <DropdownMenuItem
-                                onClick={() => handleSendScoreSheet(submission.id)}
-                                disabled={sendingScoreFor === submission.id || !overallStatus.allReviewed}
+                                onClick={() =>
+                                  setPreviewFor({ id: submission.id, teamName: submission.team?.name || 'Team' })
+                                }
                               >
-                                {sendingScoreFor === submission.id ? (
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Send className="w-4 h-4 mr-2" />
-                                )}
-                                Send Score Sheet
-                              </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link to={`/admin/submissions/${submission.id}`}>
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  Preview
-                                </Link>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Preview
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleDownloadPdf(submission.id)}
-                                disabled={downloadingPdfFor === submission.id || !overallStatus.allReviewed}
+                                disabled={downloadingPdfFor === submission.id}
                               >
                                 {downloadingPdfFor === submission.id ? (
                                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -615,6 +610,7 @@ export default function EventScoring() {
                           </DropdownMenu>
                         </div>
                       </TableCell>
+
 
                       {panels?.map((panel) => (
                         <TableCell key={panel.id} className="text-center">
