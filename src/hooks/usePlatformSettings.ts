@@ -65,6 +65,11 @@ const DEFAULT_INTEGRATIONS: IntegrationSettings = {
   activeVideoProvider: 'brightcove',
 };
 
+const DEFAULT_BRANDING: BrandingSettings = {
+  logoUrl: '',
+  primaryColor: '168 76% 50%',
+};
+
 export function usePlatformSettings() {
   const query = useQuery({
     queryKey: ['platform-settings'],
