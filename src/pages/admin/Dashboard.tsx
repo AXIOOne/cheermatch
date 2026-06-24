@@ -245,6 +245,7 @@ export default function Dashboard() {
                     {login.full_name && login.email && (
                       <p className="text-xs text-muted-foreground">{login.email}</p>
                     )}
+                    </div>
                   </div>
                   <span className="text-xs text-muted-foreground" title={new Date(login.created_at).toLocaleString()}>
                     {formatDistanceToNow(new Date(login.created_at), { addSuffix: true })}
