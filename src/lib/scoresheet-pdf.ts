@@ -94,6 +94,19 @@ function drawTextLeft(page: PDFPage, lines: string[], x: number, y: number, h: n
   }
 }
 
+function drawTextCenteredMultiline(page: PDFPage, lines: string[], x: number, y: number,
+  w: number, h: number, font: PDFFont, size: number) {
+  const lineH = size + 1.5;
+  const totalH = lines.length * lineH;
+  let cy = y + (h - totalH) / 2 + totalH - size;
+  for (const line of lines) {
+    const tw = font.widthOfTextAtSize(line, size);
+    page.drawText(line, { x: x + (w - tw) / 2, y: cy, size, font, color: TEXT });
+    cy -= lineH;
+  }
+}
+
+
 function drawTextRight(page: PDFPage, text: string, xRight: number, y: number,
   font: PDFFont, size: number, color = TEXT) {
   const tw = font.widthOfTextAtSize(text, size);
@@ -204,8 +217,10 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
 
   // ---------- Table ----------
   type ComputedRow = { idx: number; lines: string[]; height: number };
-  const HEADER_H = 18;
-  const ROW_MIN_H = 16;
+  const HEADER_H = 22;
+  const ROW_MIN_H = 22;
+
+
 
   const rows: ComputedRow[] = data.rows.map((r, idx) => {
     const lines = wrapText(r.name, font, cellFontSize, COLS.criteria - 10);
@@ -228,6 +243,9 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     return y - HEADER_H;
   };
 
+  // Heavy rule above the table block (full page width)
+  drawRule(page, MARGIN, cursorY + 4, CONTENT_W, 1.75);
+
   cursorY = drawTableHeader(cursorY);
 
   // Pre-scale row heights so the entire scores table + summary + totals
@@ -246,8 +264,9 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
 
     let cx = MARGIN;
     drawCellBorder(page, cx, yBot, COLS.criteria, rowH);
-    drawTextLeft(page, row.lines, cx, yBot, rowH, font, cellFontSize);
+    drawTextCenteredMultiline(page, row.lines, cx, yBot, COLS.criteria, rowH, font, cellFontSize);
     cx += COLS.criteria;
+
 
     drawCellBorder(page, cx, yBot, COLS.max, rowH);
     drawTextCentered(page, fmt(r.max_value, 1), cx, yBot, COLS.max, rowH, font, cellFontSize);
@@ -309,11 +328,15 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     bold, headerFontSize);
   drawCellBorder(page, xScore, yBot, COLS.score, sumRowH);
   drawTextCentered(page, fmt(data.perfection, 4), xScore, yBot, COLS.score, sumRowH, bold, headerFontSize);
-  cursorY = yBot - 24;
+  cursorY = yBot - 12;
+  // Heavy rule separating scores table from totals breakout (full page width)
+  drawRule(page, MARGIN, cursorY, CONTENT_W, 1.75);
+  cursorY -= 18;
 
   // ---------- Totals breakout table ----------
   const totLabelW = 80;
   const totCellW = (CONTENT_W - totLabelW) / 4;
+
   const totals: Array<[string, string]> = [
     ['Raw Score', fmt(data.raw_score)],
     ['Deductions', fmt(data.deductions || 0)],
@@ -338,6 +361,10 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     drawCellBorder(page, x, yBot, totCellW, totRowH);
     drawTextCentered(page, totals[i][1], x, yBot, totCellW, totRowH, font, headerFontSize);
   }
+  // Heavy rule below totals breakout (matches top rule)
+  drawRule(page, MARGIN, yBot - 6, CONTENT_W, 1.75);
+
+
 
   // ---------- Judge comments (always start on page 2) ----------
   if (data.show_comments !== false && data.judge_comments.length > 0) {
