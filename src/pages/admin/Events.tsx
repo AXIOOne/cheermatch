@@ -16,7 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Calendar, Loader2, Pencil, Trash2, BarChart3, Users, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Calendar, Loader2, Pencil, Trash2, Search, BarChart3, Users, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 const DISCIPLINES = [
