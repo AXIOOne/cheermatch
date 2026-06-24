@@ -125,15 +125,13 @@ export function buildScoresheet(input: ScoresheetInput): ScoresheetData {
     : 0;
   const perfection = total_max > 0 ? round2((raw_score / total_max) * 100 - deductions) : 0;
 
-  const show_comments = !!input.show_comments;
-  const judge_comments: JudgeComment[] = show_comments
-    ? input.submitted_scores
-        .filter((s) => (s.comments ?? '').trim().length > 0)
-        .map((s, i) => ({
-          judge_label: (s.judge_label ?? '').trim() || `Judge ${i + 1}`,
-          comments: (s.comments ?? '').trim(),
-        }))
-    : [];
+  const show_comments = input.show_comments !== false;
+  const judge_comments: JudgeComment[] = input.submitted_scores
+    .map((s, i) => ({
+      judge_label: (s.judge_label ?? '').trim() || `Judge ${i + 1}`,
+      comments: (s.comments ?? '').trim(),
+    }))
+    .sort((a, b) => a.judge_label.localeCompare(b.judge_label, undefined, { numeric: true, sensitivity: 'base' }));
 
   return {
     team_name: input.team_name,
