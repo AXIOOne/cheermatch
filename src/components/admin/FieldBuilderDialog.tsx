@@ -15,6 +15,21 @@ export interface FieldOption {
   value: number;
 }
 
+export interface SkillOption {
+  temp_id: string;
+  id?: string;
+  label: string;
+  value: number;
+}
+
+export interface DriverSkill {
+  temp_id: string;
+  id?: string;
+  name: string;
+  description?: string;
+  options: SkillOption[];
+}
+
 export type ScoreType = 'difficulty' | 'execution';
 
 export interface ScoringField {
@@ -22,7 +37,7 @@ export interface ScoringField {
   id?: string;
   name: string;
   description?: string;
-  field_type: 'number' | 'dropdown';
+  field_type: 'number' | 'dropdown' | 'difficulty_driver';
   score_type: ScoreType;
   min_value: number;
   max_value: number;
@@ -31,6 +46,7 @@ export interface ScoringField {
   aggregation: AggregationMode;
   panels: string[]; // array of panel abbreviations
   options: FieldOption[];
+  skills: DriverSkill[];
 }
 
 const DEFAULT_PANELS = ['B1', 'B2', 'T1', 'T2', 'OV', 'ALL'];
@@ -52,6 +68,7 @@ export function blankField(): ScoringField {
     aggregation: 'average',
     panels: [],
     options: [],
+    skills: [],
   };
 }
 
