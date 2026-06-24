@@ -44,7 +44,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           name,
           gym_name,
           coach_user_id,
-          division:divisions(id, name),
+          division:divisions(id, name, scoring_template_id),
           level:levels(name)
         ),
         event:events(id, name, accuscore_end_at),
