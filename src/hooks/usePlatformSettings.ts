@@ -27,18 +27,6 @@ export interface IntegrationSettings {
   activeVideoProvider: 'brightcove' | 'vimeo' | 'aws_s3';
 }
 
-export interface IntegrationSettings {
-  brightcoveAccountId: string;
-  brightcoveApiKey: string;
-  vimeoAccessToken: string;
-  vimeoClientId: string;
-  vimeoClientSecret: string;
-  awsAccessKeyId: string;
-  awsSecretAccessKey: string;
-  awsS3Bucket: string;
-  awsS3Region: string;
-  activeVideoProvider: 'brightcove' | 'vimeo' | 'aws_s3';
-}
 
 export interface BrandingSettings {
   logoUrl: string;
