@@ -100,7 +100,6 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
         level_id: data.level_id,
         athletes_male: data.athletes_male,
         athletes_female: data.athletes_female,
-        athlete_count: athleteTotal,
       });
       if (error) throw error;
     },
