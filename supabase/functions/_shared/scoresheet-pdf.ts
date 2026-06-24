@@ -94,7 +94,7 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
   const drawPageFooter = (p: PDFPage) => {
     const y = MARGIN - 14;
     drawRule(p, MARGIN, y + 10, CONTENT_W, 0.75);
-    p.drawText('SUM', { x: MARGIN, y, size: smallSize, font: italic, color: MUTED });
+    p.drawText('VIRTUAL', { x: MARGIN, y, size: smallSize, font: italic, color: MUTED });
     const mid = data.event_name || '';
     const mw = italic.widthOfTextAtSize(mid, smallSize);
     p.drawText(mid, { x: MARGIN + (CONTENT_W - mw) / 2, y, size: smallSize, font: italic, color: MUTED });
