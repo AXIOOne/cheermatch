@@ -17,6 +17,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus, AlertTriangle, Pencil, Mail, KeyRound } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -41,6 +42,7 @@ interface UserWithRoles {
   user_id: string;
   email: string;
   full_name: string | null;
+  avatar_url: string | null;
   roles: AppRole[];
 }
 
@@ -78,7 +80,7 @@ export default function UserRoles() {
       // Get all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('user_id, email, full_name')
+        .select('user_id, email, full_name, avatar_url')
         .order('email');
 
       if (profilesError) throw profilesError;
@@ -91,10 +93,11 @@ export default function UserRoles() {
       if (rolesError) throw rolesError;
 
       // Combine profiles with roles
-      const usersWithRoles: UserWithRoles[] = profiles.map((profile) => ({
+      const usersWithRoles: UserWithRoles[] = profiles.map((profile: any) => ({
         user_id: profile.user_id,
         email: profile.email,
         full_name: profile.full_name,
+        avatar_url: profile.avatar_url ?? null,
         roles: roles
           .filter((r) => r.user_id === profile.user_id)
           .map((r) => r.role),
@@ -556,12 +559,20 @@ export default function UserRoles() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {users.map((user) => {
+                  const initials = ((user.full_name || user.email || '?').trim().split(/\s+/).slice(0, 2).map(s => s[0]).join('') || '?').toUpperCase();
+                  return (
                   <TableRow key={user.user_id}>
                     <TableCell>
-                      <div>
-                        <p className="font-medium">{user.full_name || 'No name'}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9">
+                          <AvatarImage src={user.avatar_url || undefined} alt={user.full_name || user.email} />
+                          <AvatarFallback>{initials}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{user.full_name || 'No name'}</p>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -657,7 +668,8 @@ export default function UserRoles() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           ) : (
