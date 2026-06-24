@@ -51,7 +51,7 @@ export default function SubmissionDetail() {
           id, video_url, thumbnail_url, status, submitted_at, created_at, duration_seconds,
           review_notes, reviewed_at,
           event_id,
-          team:teams!inner(id, name, gym_name, athlete_count, division_id,
+          team:teams!inner(id, name, gym_name, athletes_female, athletes_male, division_id,
             division:divisions!inner(id, name), level:levels!inner(name, level_number)),
           event:events!inner(id, name, start_date, end_date)
         `)
