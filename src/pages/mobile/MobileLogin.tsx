@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { mobileApi } from "@/lib/mobile-api";
 import { useMobileAuth } from "@/hooks/useMobileAuth";
+import logoWhite from "@/assets/logo-white.png.asset.json";
 
 export default function MobileLogin() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export default function MobileLogin() {
       <div className="flex-1 flex flex-col justify-center px-6 py-12">
         <div className="mx-auto w-full max-w-sm">
           <div className="text-center mb-8">
-            <div className="h-16 w-16 rounded-2xl bg-primary text-primary-foreground mx-auto flex items-center justify-center text-3xl font-bold mb-4">C</div>
+            <img src={logoWhite.url} alt="Logo" className="mx-auto h-16 w-auto mb-4" />
             <h1 className="text-2xl font-bold">Routine Submission Application</h1>
             <p className="text-sm text-sidebar-foreground/60 mt-1">Capture and submit your team's performance</p>
           </div>
