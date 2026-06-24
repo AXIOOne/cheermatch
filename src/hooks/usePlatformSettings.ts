@@ -27,10 +27,29 @@ export interface IntegrationSettings {
   activeVideoProvider: 'brightcove' | 'vimeo' | 'aws_s3';
 }
 
+export interface IntegrationSettings {
+  brightcoveAccountId: string;
+  brightcoveApiKey: string;
+  vimeoAccessToken: string;
+  vimeoClientId: string;
+  vimeoClientSecret: string;
+  awsAccessKeyId: string;
+  awsSecretAccessKey: string;
+  awsS3Bucket: string;
+  awsS3Region: string;
+  activeVideoProvider: 'brightcove' | 'vimeo' | 'aws_s3';
+}
+
+export interface BrandingSettings {
+  logoUrl: string;
+  primaryColor: string; // HSL string like "168 76% 50%"
+}
+
 export interface PlatformSettings {
   security: SecuritySettings;
   notifications: NotificationSettings;
   integrations: IntegrationSettings;
+  branding: BrandingSettings;
 }
 
 const DEFAULT_SECURITY: SecuritySettings = {
