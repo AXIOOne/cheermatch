@@ -20,11 +20,27 @@ export interface RawScoreDetail {
   points: number;
 }
 
+export interface RawDeductionItem {
+  deduction_type_id: string;
+  count: number;
+  warnings: number;
+}
+
 export interface RawSubmittedScore {
   deductions: number;
   details: RawScoreDetail[];
   judge_label?: string | null;
   comments?: string | null;
+  panel_abbreviation?: string | null;
+  panel_name?: string | null;
+  deduction_items?: RawDeductionItem[];
+}
+
+export interface DeductionCatalogEntry {
+  id: string;
+  name: string;
+  points: number;
+  display_order: number;
 }
 
 export interface ScoresheetInput {
@@ -39,6 +55,7 @@ export interface ScoresheetInput {
   fields: RawField[];
   submitted_scores: RawSubmittedScore[];
   show_comments?: boolean;
+  deduction_catalog?: DeductionCatalogEntry[];
 }
 
 export interface ScoresheetRow {
@@ -52,6 +69,19 @@ export interface ScoresheetRow {
 export interface JudgeComment {
   judge_label: string;
   comments: string;
+}
+
+export interface DeductionReportRow {
+  name: string;
+  value: number;
+  occurrences: number;
+  warnings: number;
+  score: number;
+}
+
+export interface DeductionReport {
+  rows: DeductionReportRow[];
+  total: number;
 }
 
 export interface ScoresheetData {
@@ -70,7 +100,10 @@ export interface ScoresheetData {
   perfection: number;
   show_comments: boolean;
   judge_comments: JudgeComment[];
+  deduction_report: DeductionReport;
+  safety_comments: string;
 }
+
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
