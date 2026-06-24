@@ -53,6 +53,21 @@ export default function Dashboard() {
     },
   });
 
+  const { data: recentLogins, isLoading: loginsLoading } = useQuery({
+    queryKey: ['recent-logins'],
+    queryFn: async () => {
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('login_events')
+        .select('id, user_id, email, full_name, created_at')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const isLoading = eventsLoading || teamsLoading || templatesLoading;
 
   return (
