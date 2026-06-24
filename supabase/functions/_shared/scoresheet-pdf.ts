@@ -102,62 +102,67 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     drawTextRight(p, gen, PAGE_W - MARGIN, y, italic, smallSize, MUTED);
   };
 
-  // Header
-  let cursorY = PAGE_H - MARGIN;
-  const colW = CONTENT_W / 3;
-  const xLeft = MARGIN;
-  const xCenter = MARGIN + colW;
-  const xRight = MARGIN + colW * 2;
+  // Shared header drawn at the top of every page.
+  const drawPageHeader = (p: PDFPage): number => {
+    let cursorY = PAGE_H - MARGIN;
+    const colW = CONTENT_W / 3;
+    const xLeft = MARGIN;
+    const xCenter = MARGIN + colW;
+    const xRight = MARGIN + colW * 2;
 
-  const topY = cursorY - titleFontSize;
-  {
-    const t = data.event_name || '';
-    const tw = bold.widthOfTextAtSize(t, titleFontSize);
-    page.drawText(t, { x: xCenter + (colW - tw) / 2, y: topY, size: titleFontSize, font: bold, color: TEXT });
-  }
-  {
-    const t = data.event_phase || '';
-    if (t) {
-      const tw = bold.widthOfTextAtSize(t, titleFontSize - 4);
-      page.drawText(t, { x: xRight + colW - tw, y: topY, size: titleFontSize - 4, font: bold, color: TEXT });
+    const topY = cursorY - titleFontSize;
+    {
+      const t = data.event_name || '';
+      const tw = bold.widthOfTextAtSize(t, titleFontSize);
+      p.drawText(t, { x: xCenter + (colW - tw) / 2, y: topY, size: titleFontSize, font: bold, color: TEXT });
     }
-  }
-
-  const subStartY = topY - 18;
-  const leftLines: Array<[string, PDFFont]> = [];
-  if (data.gym_name) leftLines.push([data.gym_name, bold]);
-  if (data.team_name) leftLines.push([data.team_name, font]);
-  const ld = [data.level_name, data.division_name].filter(Boolean).join(' - ');
-  if (ld) leftLines.push([ld, font]);
-
-  let ly = subStartY;
-  for (const [line, f] of leftLines) {
-    const wrapped = wrapText(line, f, metaFontSize, colW - 6);
-    for (const ln of wrapped) {
-      page.drawText(ln, { x: xLeft, y: ly, size: metaFontSize, font: f, color: TEXT });
-      ly -= metaFontSize + 3;
+    {
+      const t = data.event_phase || '';
+      if (t) {
+        const tw = bold.widthOfTextAtSize(t, titleFontSize - 4);
+        p.drawText(t, { x: xRight + colW - tw, y: topY, size: titleFontSize - 4, font: bold, color: TEXT });
+      }
     }
-  }
 
-  if (data.hall_name) {
-    const t = `Hall Name: ${data.hall_name}`;
-    const tw = bold.widthOfTextAtSize(t, metaFontSize);
-    page.drawText(t, {
-      x: xCenter + (colW - tw) / 2, y: subStartY,
-      size: metaFontSize, font: bold, color: TEXT,
-    });
-  }
+    const subStartY = topY - 18;
+    const leftLines: Array<[string, PDFFont]> = [];
+    if (data.gym_name) leftLines.push([data.gym_name, bold]);
+    if (data.team_name) leftLines.push([data.team_name, font]);
+    const ld = [data.level_name, data.division_name].filter(Boolean).join(' - ');
+    if (ld) leftLines.push([ld, font]);
 
-  {
-    const label = 'AccuScore End Time:';
-    const value = formatDateTime(data.accuscore_end_at);
-    drawTextRight(page, label, PAGE_W - MARGIN, subStartY, bold, metaFontSize, TEXT);
-    drawTextRight(page, value, PAGE_W - MARGIN, subStartY - (metaFontSize + 3), font, metaFontSize, TEXT);
-  }
+    let ly = subStartY;
+    for (const [line, f] of leftLines) {
+      const wrapped = wrapText(line, f, metaFontSize, colW - 6);
+      for (const ln of wrapped) {
+        p.drawText(ln, { x: xLeft, y: ly, size: metaFontSize, font: f, color: TEXT });
+        ly -= metaFontSize + 3;
+      }
+    }
 
-  const headerBottom = Math.min(ly, subStartY - (metaFontSize + 3) * 2) - 6;
-  drawRule(page, MARGIN, headerBottom, CONTENT_W, 1.5);
-  cursorY = headerBottom - 10;
+    if (data.hall_name) {
+      const t = `Hall Name: ${data.hall_name}`;
+      const tw = bold.widthOfTextAtSize(t, metaFontSize);
+      p.drawText(t, {
+        x: xCenter + (colW - tw) / 2, y: subStartY,
+        size: metaFontSize, font: bold, color: TEXT,
+      });
+    }
+
+    {
+      const label = 'AccuScore End Time:';
+      const value = formatDateTime(data.accuscore_end_at);
+      drawTextRight(p, label, PAGE_W - MARGIN, subStartY, bold, metaFontSize, TEXT);
+      drawTextRight(p, value, PAGE_W - MARGIN, subStartY - (metaFontSize + 3), font, metaFontSize, TEXT);
+    }
+
+    const headerBottom = Math.min(ly, subStartY - (metaFontSize + 3) * 2) - 6;
+    drawRule(p, MARGIN, headerBottom, CONTENT_W, 1.5);
+    return headerBottom - 10;
+  };
+
+  let cursorY = drawPageHeader(page);
+
 
   // Table
   type ComputedRow = { idx: number; lines: string[]; height: number };
@@ -292,7 +297,7 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
   if (data.show_comments !== false && data.judge_comments.length > 0) {
     drawPageFooter(page);
     page = doc.addPage([PAGE_W, PAGE_H]);
-    cursorY = PAGE_H - MARGIN;
+    cursorY = drawPageHeader(page);
 
     const headingSize = 14;
     const labelSize = 11;
@@ -312,9 +317,10 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
       if (cursorY - needed < MARGIN + 24) {
         drawPageFooter(page);
         page = doc.addPage([PAGE_W, PAGE_H]);
-        cursorY = PAGE_H - MARGIN;
+        cursorY = drawPageHeader(page);
       }
     };
+
 
     for (const jc of data.judge_comments) {
       const hasComment = jc.comments.trim().length > 0;
