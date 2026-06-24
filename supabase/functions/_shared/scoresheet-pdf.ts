@@ -202,6 +202,9 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     return y - HEADER_H;
   };
 
+  // Heavy rule above the table block
+  drawRule(page, MARGIN, cursorY + 4, CONTENT_W, 1.75);
+
   cursorY = drawTableHeader(cursorY);
 
   // Pre-scale row heights so the entire scores table + summary + totals
@@ -220,8 +223,9 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
 
     let cx = MARGIN;
     drawCellBorder(page, cx, yBot, COLS.criteria, rowH);
-    drawTextLeft(page, row.lines, cx, yBot, rowH, font, cellFontSize);
+    drawTextCenteredMultiline(page, row.lines, cx, yBot, COLS.criteria, rowH, font, cellFontSize);
     cx += COLS.criteria;
+
 
     drawCellBorder(page, cx, yBot, COLS.max, rowH);
     drawTextCentered(page, fmt(r.max_value, 1), cx, yBot, COLS.max, rowH, font, cellFontSize);
