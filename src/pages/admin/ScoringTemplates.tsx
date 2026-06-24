@@ -370,6 +370,17 @@ export default function ScoringTemplates() {
             options: (f.options || [])
               .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
               .map((o: any) => ({ id: o.id, temp_id: o.id, label: o.label, value: Number(o.value) })),
+            skills: (f.skills || [])
+              .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+              .map((sk: any) => ({
+                id: sk.id,
+                temp_id: sk.id,
+                name: sk.name,
+                description: sk.description || undefined,
+                options: (sk.options || [])
+                  .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+                  .map((o: any) => ({ id: o.id, temp_id: o.id, label: o.label, value: Number(o.value) })),
+              })),
           })),
       }));
     setSections(loadedSections);
