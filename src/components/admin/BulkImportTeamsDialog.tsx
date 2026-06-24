@@ -21,7 +21,6 @@ type CsvRow = {
   gym_name?: string;
   division?: string;
   level?: string;
-  athlete_count?: string;
   athletes_male?: string;
   athletes_female?: string;
   coach_name?: string;
@@ -34,14 +33,15 @@ type ParsedRow = {
   errors: string[];
   payload?: {
     name: string; gym_name: string; division_id: string; level_id: string;
-    athlete_count: number; athletes_male: number; athletes_female: number;
+    athletes_male: number; athletes_female: number;
     coach_name: string | null; coach_email: string | null; coach_phone: string | null;
   };
 };
 
 const SAMPLE_HEADERS = [
-  'team_name','gym_name','division','level','athlete_count','athletes_male','athletes_female','coach_name','coach_email','coach_phone'
+  'team_name','gym_name','division','level','athletes_male','athletes_female','coach_name','coach_email','coach_phone'
 ];
+
 
 export function BulkImportTeamsDialog({ open, onOpenChange, eventId }: Props) {
   const [rows, setRows] = useState<ParsedRow[]>([]);
