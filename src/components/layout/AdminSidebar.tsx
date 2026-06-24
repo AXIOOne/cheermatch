@@ -52,6 +52,19 @@ export function AdminSidebar() {
   const { branding } = usePlatformSettings();
   const logoSrc = branding?.logoUrl || logoWhite.url;
 
+  const { data: profile } = useQuery({
+    queryKey: ['sidebar-profile', user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url, full_name')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+      return data;
+    },
+  });
+
   return (
     <aside className="w-64 min-h-screen bg-black flex flex-col">
       {/* Logo */}
