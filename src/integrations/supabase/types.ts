@@ -1564,7 +1564,7 @@ export type Database = {
         | "min"
         | "max"
         | "sum"
-      scoring_field_type: "number" | "dropdown"
+      scoring_field_type: "number" | "dropdown" | "difficulty_driver"
       submission_status:
         | "pending"
         | "uploaded"
@@ -1730,7 +1730,7 @@ export const Constants = {
         "max",
         "sum",
       ],
-      scoring_field_type: ["number", "dropdown"],
+      scoring_field_type: ["number", "dropdown", "difficulty_driver"],
       submission_status: [
         "pending",
         "uploaded",
