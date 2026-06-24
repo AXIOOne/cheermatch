@@ -27,10 +27,17 @@ export interface IntegrationSettings {
   activeVideoProvider: 'brightcove' | 'vimeo' | 'aws_s3';
 }
 
+
+export interface BrandingSettings {
+  logoUrl: string;
+  primaryColor: string; // HSL string like "168 76% 50%"
+}
+
 export interface PlatformSettings {
   security: SecuritySettings;
   notifications: NotificationSettings;
   integrations: IntegrationSettings;
+  branding: BrandingSettings;
 }
 
 const DEFAULT_SECURITY: SecuritySettings = {
@@ -56,6 +63,11 @@ const DEFAULT_INTEGRATIONS: IntegrationSettings = {
   awsS3Bucket: '',
   awsS3Region: 'us-east-1',
   activeVideoProvider: 'brightcove',
+};
+
+const DEFAULT_BRANDING: BrandingSettings = {
+  logoUrl: '',
+  primaryColor: '168 76% 50%',
 };
 
 export function usePlatformSettings() {
@@ -91,15 +103,22 @@ export function usePlatformSettings() {
     ...(query.data?.integrations as Partial<IntegrationSettings> | undefined),
   }), [query.data]);
 
+  const branding: BrandingSettings = useMemo(() => ({
+    ...DEFAULT_BRANDING,
+    ...(query.data?.branding as Partial<BrandingSettings> | undefined),
+  }), [query.data]);
+
   return {
     ...query,
     security,
     notifications,
     integrations,
+    branding,
     settings: {
       security,
       notifications,
       integrations,
+      branding,
     } as PlatformSettings,
   };
 }

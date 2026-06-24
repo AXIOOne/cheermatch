@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play, Mail } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play, Mail, Palette, Upload } from 'lucide-react';
 import { EmailTemplateManager } from '@/components/admin/EmailTemplateManager';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 
@@ -29,6 +29,59 @@ const AWS_REGIONS = [
   { value: 'ap-southeast-2', label: 'Asia Pacific (Sydney)' },
 ];
 
+// Convert "H S% L%" → "#rrggbb"
+function hslStringToHex(hsl: string): string {
+  if (!hsl) return '';
+  const m = hsl.trim().match(/^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/);
+  if (!m) return '';
+  const h = parseFloat(m[1]) / 360;
+  const s = parseFloat(m[2]) / 100;
+  const l = parseFloat(m[3]) / 100;
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1 / 6) return p + (q - p) * 6 * t;
+    if (t < 1 / 2) return q;
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+    return p;
+  };
+  let r: number, g: number, b: number;
+  if (s === 0) { r = g = b = l; }
+  else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1 / 3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1 / 3);
+  }
+  const toHex = (x: number) => Math.round(x * 255).toString(16).padStart(2, '0');
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+// Convert "#rrggbb" → "H S% L%" (Tailwind HSL CSS var format)
+function hexToHslString(hex: string): string {
+  const m = hex.trim().match(/^#?([a-f\d]{6})$/i);
+  if (!m) return '';
+  const num = parseInt(m[1], 16);
+  const r = ((num >> 16) & 255) / 255;
+  const g = ((num >> 8) & 255) / 255;
+  const b = (num & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
 export default function Settings() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -38,9 +91,10 @@ export default function Settings() {
   const [notificationsDialogOpen, setNotificationsDialogOpen] = useState(false);
   const [integrationsDialogOpen, setIntegrationsDialogOpen] = useState(false);
   const [emailTemplatesOpen, setEmailTemplatesOpen] = useState(false);
+  const [brandingDialogOpen, setBrandingDialogOpen] = useState(false);
 
   // Use the reusable hook
-  const { security, notifications, integrations, isLoading } = usePlatformSettings();
+  const { security, notifications, integrations, branding, isLoading } = usePlatformSettings();
 
   // Security settings state
   const [requireStrongPassword, setRequireStrongPassword] = useState(true);
@@ -66,6 +120,11 @@ export default function Settings() {
   const [awsS3Bucket, setAwsS3Bucket] = useState('');
   const [awsS3Region, setAwsS3Region] = useState('us-east-1');
 
+  // Branding settings state
+  const [brandingLogoUrl, setBrandingLogoUrl] = useState('');
+  const [brandingPrimaryHex, setBrandingPrimaryHex] = useState('#1ddbb1');
+  const [brandingUploading, setBrandingUploading] = useState(false);
+
   // Update local state when settings are loaded from the hook
   useEffect(() => {
     // Security settings
@@ -88,7 +147,11 @@ export default function Settings() {
     setAwsSecretAccessKey(integrations.awsSecretAccessKey);
     setAwsS3Bucket(integrations.awsS3Bucket);
     setAwsS3Region(integrations.awsS3Region);
-  }, [security, notifications, integrations]);
+
+    // Branding settings
+    setBrandingLogoUrl(branding.logoUrl);
+    setBrandingPrimaryHex(hslStringToHex(branding.primaryColor) || '#1ddbb1');
+  }, [security, notifications, integrations, branding]);
 
   // Mutation to save settings
   const saveMutation = useMutation({
@@ -164,6 +227,46 @@ export default function Settings() {
       });
       toast({ title: 'Integration settings saved!' });
       setIntegrationsDialogOpen(false);
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    }
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    setBrandingUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `branding/logo-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from('email-assets')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (uploadError) throw uploadError;
+      const { data } = supabase.storage.from('email-assets').getPublicUrl(path);
+      setBrandingLogoUrl(data.publicUrl);
+      toast({ title: 'Logo uploaded!' });
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Upload failed', description: error.message });
+    } finally {
+      setBrandingUploading(false);
+    }
+  };
+
+  const handleSaveBrandingSettings = async () => {
+    try {
+      const hsl = hexToHslString(brandingPrimaryHex);
+      if (!hsl) {
+        toast({ variant: 'destructive', title: 'Invalid color', description: 'Please enter a valid hex color.' });
+        return;
+      }
+      await saveMutation.mutateAsync({
+        key: 'branding',
+        value: {
+          logoUrl: brandingLogoUrl,
+          primaryColor: hsl,
+        },
+      });
+      toast({ title: 'Branding saved!' });
+      setBrandingDialogOpen(false);
     } catch (error: any) {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     }
@@ -310,6 +413,28 @@ export default function Settings() {
               </p>
               <Button variant="outline" onClick={() => setEmailTemplatesOpen(true)}>
                 Manage Templates
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Palette className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Branding</CardTitle>
+                  <CardDescription>Portal logo and color scheme</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Customize the portal logo and primary color used across the app.
+              </p>
+              <Button variant="outline" onClick={() => setBrandingDialogOpen(true)}>
+                Configure Branding
               </Button>
             </CardContent>
           </Card>
@@ -643,6 +768,89 @@ export default function Settings() {
         open={emailTemplatesOpen}
         onOpenChange={setEmailTemplatesOpen}
       />
+
+      {/* Branding Settings Dialog */}
+      <Dialog open={brandingDialogOpen} onOpenChange={setBrandingDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Branding</DialogTitle>
+            <DialogDescription>Customize the portal logo and color scheme</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label>Portal Logo</Label>
+              <div className="flex items-center gap-4">
+                <div className="w-32 h-16 rounded-md bg-black flex items-center justify-center overflow-hidden border">
+                  {brandingLogoUrl ? (
+                    <img src={brandingLogoUrl} alt="Logo preview" className="max-w-full max-h-full object-contain" />
+                  ) : (
+                    <span className="text-xs text-white/50">No logo</span>
+                  )}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <Input
+                    type="file"
+                    accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                    disabled={brandingUploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleLogoUpload(file);
+                    }}
+                  />
+                  {brandingLogoUrl && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setBrandingLogoUrl('')}
+                    >
+                      Remove logo
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Recommended: transparent PNG or SVG, 200×60px. Shown on the dark sidebar.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="primaryColor">Primary Color</Label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="color"
+                  value={brandingPrimaryHex}
+                  onChange={(e) => setBrandingPrimaryHex(e.target.value)}
+                  className="w-12 h-10 rounded border cursor-pointer bg-transparent"
+                />
+                <Input
+                  id="primaryColor"
+                  value={brandingPrimaryHex}
+                  onChange={(e) => setBrandingPrimaryHex(e.target.value)}
+                  placeholder="#1ddbb1"
+                  className="w-40 font-mono"
+                />
+                <div
+                  className="flex-1 h-10 rounded-md border"
+                  style={{ backgroundColor: brandingPrimaryHex }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Used for buttons, links, and accent highlights across the portal.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setBrandingDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveBrandingSettings} disabled={saveMutation.isPending || brandingUploading}>
+              {saveMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              Save Changes
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
