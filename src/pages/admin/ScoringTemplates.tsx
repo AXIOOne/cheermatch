@@ -116,6 +116,7 @@ export default function ScoringTemplates() {
 
       const optionRows: any[] = [];
       const panelRows: any[] = [];
+      const skillsToInsert: { fieldId: string; skills: any[] }[] = [];
       for (let j = 0; j < sec.fields.length; j++) {
         const fId = insertedFields![j].id;
         const f = sec.fields[j];
@@ -125,6 +126,9 @@ export default function ScoringTemplates() {
         f.panels.forEach((abbr) => {
           panelRows.push({ field_id: fId, panel_abbreviation: abbr });
         });
+        if (f.field_type === 'difficulty_driver' && f.skills && f.skills.length > 0) {
+          skillsToInsert.push({ fieldId: fId, skills: f.skills });
+        }
       }
       if (optionRows.length > 0) {
         const { error } = await sb.from('scoring_field_options').insert(optionRows);
@@ -133,6 +137,33 @@ export default function ScoringTemplates() {
       if (panelRows.length > 0) {
         const { error } = await sb.from('scoring_field_panels').insert(panelRows);
         if (error) throw error;
+      }
+      for (const { fieldId, skills } of skillsToInsert) {
+        const skillRows = skills.map((sk: any, si: number) => ({
+          field_id: fieldId,
+          name: sk.name,
+          description: sk.description || null,
+          display_order: si,
+        }));
+        const { data: insertedSkills, error: skErr } = await sb
+          .from('scoring_field_skills').insert(skillRows).select();
+        if (skErr) throw skErr;
+        const skillOptRows: any[] = [];
+        skills.forEach((sk: any, si: number) => {
+          const newSkillId = insertedSkills![si].id;
+          (sk.options || []).forEach((opt: any, oi: number) => {
+            skillOptRows.push({
+              skill_id: newSkillId,
+              label: opt.label,
+              value: opt.value,
+              display_order: oi,
+            });
+          });
+        });
+        if (skillOptRows.length > 0) {
+          const { error: soErr } = await sb.from('scoring_field_skill_options').insert(skillOptRows);
+          if (soErr) throw soErr;
+        }
       }
     }
   };
