@@ -651,14 +651,26 @@ export default function SubmissionScoringDialog({
                           <div className="space-y-2">
                             {sortByDisplayOrder(template.deduction_types as any[]).map((dt: any) => (
                               <div key={dt.id} className="flex items-center justify-between gap-3">
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                   <p className="text-sm font-medium truncate">{dt.name}</p>
                                   <p className="text-xs text-muted-foreground">{Number(dt.points).toFixed(2)} each</p>
                                 </div>
-                                <Input type="number" min={0} step={1}
-                                  value={deductionCounts[dt.id] || 0}
-                                  onChange={(e) => setDeductionCounts(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
-                                  className="w-20" disabled={isCurrentPanelLocked} />
+                                <div className="flex items-end gap-2">
+                                  <div className="flex flex-col items-center">
+                                    <span className="text-[10px] uppercase text-muted-foreground">Count</span>
+                                    <Input type="number" min={0} step={1}
+                                      value={deductionCounts[dt.id] || 0}
+                                      onChange={(e) => setDeductionCounts(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
+                                      className="w-16" disabled={isCurrentPanelLocked} />
+                                  </div>
+                                  <div className="flex flex-col items-center">
+                                    <span className="text-[10px] uppercase text-muted-foreground">Warnings</span>
+                                    <Input type="number" min={0} step={1}
+                                      value={deductionWarnings[dt.id] || 0}
+                                      onChange={(e) => setDeductionWarnings(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
+                                      className="w-16" disabled={isCurrentPanelLocked} />
+                                  </div>
+                                </div>
                               </div>
                             ))}
                             <div className="pt-2 border-t flex items-center justify-between">
