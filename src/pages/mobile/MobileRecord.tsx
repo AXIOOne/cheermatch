@@ -370,7 +370,7 @@ export default function MobileRecord() {
         )}
         {phase === "preview" && (
           <Button onClick={goChoose} className="w-full h-14">
-            {attempts.length < maxAttempts ? "Recording Ended - Continue Capture Process" : "Choose submission"}
+            {attempts.length < maxAttempts ? "Recording Ended - Continue Capture Process" : "Continue With Submission Process"}
           </Button>
         )}
         <div className="flex items-center justify-between pt-1 text-xs text-white/70">
