@@ -70,6 +70,18 @@ function drawTextLeft(page: PDFPage, lines: string[], x: number, y: number, h: n
     cy -= lineH;
   }
 }
+function drawTextCenteredMultiline(page: PDFPage, lines: string[], x: number, y: number,
+  w: number, h: number, font: PDFFont, size: number) {
+  const lineH = size + 1.5;
+  const totalH = lines.length * lineH;
+  let cy = y + (h - totalH) / 2 + totalH - size;
+  for (const line of lines) {
+    const tw = font.widthOfTextAtSize(line, size);
+    page.drawText(line, { x: x + (w - tw) / 2, y: cy, size, font, color: TEXT });
+    cy -= lineH;
+  }
+}
+
 function drawTextRight(page: PDFPage, text: string, xRight: number, y: number,
   font: PDFFont, size: number, color = TEXT) {
   const tw = font.widthOfTextAtSize(text, size);
