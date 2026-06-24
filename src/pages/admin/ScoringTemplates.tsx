@@ -65,7 +65,8 @@ export default function ScoringTemplates() {
             fields:scoring_fields(
               *,
               options:scoring_field_options(*),
-              panel_links:scoring_field_panels(*)
+              panel_links:scoring_field_panels(*),
+              skills:scoring_field_skills(*, options:scoring_field_skill_options(*))
             )
           ),
           deduction_types:deduction_types(*)
