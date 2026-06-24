@@ -67,6 +67,11 @@ export default function Settings() {
   const [awsS3Bucket, setAwsS3Bucket] = useState('');
   const [awsS3Region, setAwsS3Region] = useState('us-east-1');
 
+  // Branding settings state
+  const [brandingLogoUrl, setBrandingLogoUrl] = useState('');
+  const [brandingPrimaryHex, setBrandingPrimaryHex] = useState('#1ddbb1');
+  const [brandingUploading, setBrandingUploading] = useState(false);
+
   // Update local state when settings are loaded from the hook
   useEffect(() => {
     // Security settings
