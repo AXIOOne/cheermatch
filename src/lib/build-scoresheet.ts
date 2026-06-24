@@ -185,6 +185,35 @@ export function buildScoresheet(input: ScoresheetInput): ScoresheetData {
     }))
     .sort((a, b) => a.judge_label.localeCompare(b.judge_label, undefined, { numeric: true, sensitivity: 'base' }));
 
+  // Designated safety/deduction judge: panel abbrev "SD" or name containing "safety"/"deduction".
+  // Fall back to first submitted score so the report still renders.
+  const isSdPanel = (s: RawSubmittedScore) => {
+    const ab = (s.panel_abbreviation ?? '').trim().toLowerCase();
+    const nm = (s.panel_name ?? '').trim().toLowerCase();
+    return ab === 'sd' || /safety|deduction/.test(nm);
+  };
+  const sdScore = input.submitted_scores.find(isSdPanel) || input.submitted_scores[0];
+
+  const catalog = (input.deduction_catalog ?? [])
+    .slice()
+    .sort((a, b) => a.display_order - b.display_order || a.name.localeCompare(b.name));
+
+  const dedItemsById = new Map<string, RawDeductionItem>();
+  (sdScore?.deduction_items ?? []).forEach((it) => dedItemsById.set(it.deduction_type_id, it));
+
+  let dedTotal = 0;
+  const reportRows: DeductionReportRow[] = catalog.map((c) => {
+    const it = dedItemsById.get(c.id);
+    const occurrences = Number(it?.count || 0);
+    const warnings = Number(it?.warnings || 0);
+    const value = Math.abs(Number(c.points || 0));
+    const score = round2(value * occurrences);
+    dedTotal += score;
+    return { name: c.name, value, occurrences, warnings, score };
+  });
+  const deduction_report: DeductionReport = { rows: reportRows, total: round2(dedTotal) };
+  const safety_comments = (sdScore?.comments ?? '').trim();
+
   return {
     team_name: input.team_name,
     gym_name: input.gym_name,
@@ -201,5 +230,8 @@ export function buildScoresheet(input: ScoresheetInput): ScoresheetData {
     perfection,
     show_comments,
     judge_comments,
+    deduction_report,
+    safety_comments,
   };
 }
+
