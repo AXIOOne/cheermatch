@@ -89,10 +89,23 @@ Deno.serve(async (req) => {
     }
 
     // Update profile if there are profile-related changes
-    const profileUpdates: { email?: string; full_name?: string; avatar_url?: string | null } = {}
+    const profileUpdates: { email?: string; full_name?: string; avatar_url?: string | null; password_hash?: string } = {}
     if (email) profileUpdates.email = email
     if (fullName !== undefined) profileUpdates.full_name = fullName
     if (avatarUrl !== undefined) profileUpdates.avatar_url = avatarUrl
+
+    // Also sync password_hash used by the mobile (coach/gym) login flow
+    if (password) {
+      const { data: hashed, error: hashErr } = await supabaseAdmin.rpc('hash_password', { _password: password })
+      if (hashErr) {
+        console.error('Error hashing password:', hashErr)
+        return new Response(
+          JSON.stringify({ error: hashErr.message }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      if (typeof hashed === 'string') profileUpdates.password_hash = hashed
+    }
 
     if (Object.keys(profileUpdates).length > 0) {
       const { error: updateProfileError } = await supabaseAdmin
@@ -108,6 +121,7 @@ Deno.serve(async (req) => {
         )
       }
     }
+
 
     console.log(`User ${userId} updated successfully by admin ${requester.id}`)
 
