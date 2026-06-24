@@ -338,7 +338,7 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
   if (data.show_comments !== false && data.judge_comments.length > 0) {
     drawPageFooter(page);
     page = doc.addPage([PAGE_W, PAGE_H]);
-    cursorY = PAGE_H - MARGIN;
+    cursorY = drawPageHeader(page);
 
     const headingSize = 14;
     const labelSize = 11;
@@ -358,9 +358,10 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
       if (cursorY - needed < MARGIN + 24) {
         drawPageFooter(page);
         page = doc.addPage([PAGE_W, PAGE_H]);
-        cursorY = PAGE_H - MARGIN;
+        cursorY = drawPageHeader(page);
       }
     };
+
 
     for (const jc of data.judge_comments) {
       const hasComment = jc.comments.trim().length > 0;
