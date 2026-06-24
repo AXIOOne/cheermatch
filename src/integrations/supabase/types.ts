@@ -1299,7 +1299,6 @@ export type Database = {
       }
       teams: {
         Row: {
-          athlete_count: number
           athletes_female: number
           athletes_male: number
           coach_email: string | null
@@ -1309,14 +1308,15 @@ export type Database = {
           created_at: string
           division_id: string
           event_id: string
+          female_count: number
           gym_name: string
           id: string
           level_id: string
+          male_count: number
           name: string
           updated_at: string
         }
         Insert: {
-          athlete_count: number
           athletes_female?: number
           athletes_male?: number
           coach_email?: string | null
@@ -1326,14 +1326,15 @@ export type Database = {
           created_at?: string
           division_id: string
           event_id: string
+          female_count?: number
           gym_name: string
           id?: string
           level_id: string
+          male_count?: number
           name: string
           updated_at?: string
         }
         Update: {
-          athlete_count?: number
           athletes_female?: number
           athletes_male?: number
           coach_email?: string | null
@@ -1343,9 +1344,11 @@ export type Database = {
           created_at?: string
           division_id?: string
           event_id?: string
+          female_count?: number
           gym_name?: string
           id?: string
           level_id?: string
+          male_count?: number
           name?: string
           updated_at?: string
         }
