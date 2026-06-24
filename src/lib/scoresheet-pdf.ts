@@ -360,8 +360,10 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     const x = MARGIN + totLabelW + totCellW * i;
     drawCellBorder(page, x, yBot, totCellW, totRowH);
     drawTextCentered(page, totals[i][1], x, yBot, totCellW, totRowH, font, headerFontSize);
+  }
   // Heavy rule below totals breakout (matches top rule)
   drawRule(page, MARGIN, yBot - 6, CONTENT_W, 1.75);
+
 
 
   // ---------- Judge comments (always start on page 2) ----------
