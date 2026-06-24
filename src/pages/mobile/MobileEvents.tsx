@@ -50,11 +50,6 @@ export default function MobileEvents() {
             <Card className="p-4 active:bg-muted transition-colors">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge variant={e.competition_status === "OPEN" ? "default" : "secondary"}>
-                      {e.competition_status}
-                    </Badge>
-                  </div>
                   <div className="font-semibold truncate">{e.description}</div>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
                     <Calendar className="h-3 w-3" />
@@ -65,6 +60,11 @@ export default function MobileEvents() {
                       Submission deadline: {e.sub_deadline}
                     </div>
                   )}
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge variant={e.competition_status === "OPEN" ? "default" : "secondary"}>
+                      {e.competition_status}
+                    </Badge>
+                  </div>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
               </div>
