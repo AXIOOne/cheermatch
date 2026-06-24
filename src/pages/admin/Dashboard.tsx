@@ -5,6 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Calendar, Users, Trophy, ClipboardList, Plus, Loader2, LogIn } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
+function initialsOf(name?: string | null, email?: string | null) {
+  const src = (name || email || '?').trim();
+  const parts = src.split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return src.slice(0, 2).toUpperCase();
+}
 
 export default function Dashboard() {
   const { data: events, isLoading: eventsLoading } = useQuery({
@@ -64,7 +72,16 @@ export default function Dashboard() {
         .order('created_at', { ascending: false })
         .limit(10);
       if (error) throw error;
-      return data;
+      const userIds = Array.from(new Set((data ?? []).map((d) => d.user_id)));
+      let avatarMap = new Map<string, string | null>();
+      if (userIds.length) {
+        const { data: profs } = await supabase
+          .from('profiles')
+          .select('user_id, avatar_url')
+          .in('user_id', userIds);
+        avatarMap = new Map((profs ?? []).map((p: any) => [p.user_id, p.avatar_url]));
+      }
+      return (data ?? []).map((d) => ({ ...d, avatar_url: avatarMap.get(d.user_id) ?? null }));
     },
   });
 
@@ -216,13 +233,19 @@ export default function Dashboard() {
             <div className="divide-y divide-border">
               {recentLogins.map((login) => (
                 <div key={login.id} className="flex items-center justify-between py-3">
-                  <div>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8">
+                      {login.avatar_url && <AvatarImage src={login.avatar_url} alt={login.full_name || login.email || ''} />}
+                      <AvatarFallback className="text-xs">{initialsOf(login.full_name, login.email)}</AvatarFallback>
+                    </Avatar>
+                    <div>
                     <p className="font-medium text-sm">
                       {login.full_name || login.email || 'Unknown user'}
                     </p>
                     {login.full_name && login.email && (
                       <p className="text-xs text-muted-foreground">{login.email}</p>
                     )}
+                    </div>
                   </div>
                   <span className="text-xs text-muted-foreground" title={new Date(login.created_at).toLocaleString()}>
                     {formatDistanceToNow(new Date(login.created_at), { addSuffix: true })}
