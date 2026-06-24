@@ -143,19 +143,37 @@ export function EditTeamDialog({ open, onOpenChange, team, onSaved }: EditTeamDi
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="athlete_count"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Participant Total</FormLabel>
-                  <FormControl>
-                    <Input type="number" min={0} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="athletes_female"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel># Female Athletes</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="athletes_male"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel># Male Athletes</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Total: {(form.watch('athletes_female') || 0) + (form.watch('athletes_male') || 0)}
+            </p>
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
