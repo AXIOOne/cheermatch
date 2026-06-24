@@ -312,7 +312,7 @@ export default function MobileRecord() {
                 <Plus className="h-4 w-4 mr-2" /> Record Second Capture
               </Button>
             ) : (
-              <Button variant="secondary" disabled className="h-12">Max attempts reached</Button>
+              <Button variant="secondary" disabled className="h-12">Max Attempts Reached</Button>
             )}
             <Button onClick={uploadSelected} disabled={selectedAttemptId == null} className="h-12">
               <Upload className="h-4 w-4 mr-2" /> Submit Selected For Scoring
