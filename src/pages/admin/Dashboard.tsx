@@ -195,6 +195,48 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Recent Logins */}
+      <Card className="mt-8">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <LogIn className="w-5 h-5" />
+              Recent Logins
+            </CardTitle>
+            <span className="text-xs text-muted-foreground">Last 30 days</span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loginsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : recentLogins && recentLogins.length > 0 ? (
+            <div className="divide-y divide-border">
+              {recentLogins.map((login) => (
+                <div key={login.id} className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="font-medium text-sm">
+                      {login.full_name || login.email || 'Unknown user'}
+                    </p>
+                    {login.full_name && login.email && (
+                      <p className="text-xs text-muted-foreground">{login.email}</p>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground" title={new Date(login.created_at).toLocaleString()}>
+                    {formatDistanceToNow(new Date(login.created_at), { addSuffix: true })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground text-sm">
+              No logins recorded in the last 30 days.
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
