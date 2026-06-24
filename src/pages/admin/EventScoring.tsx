@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +6,17 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Loader2, BarChart3, CheckCircle, Clock, Settings, Send, AlertCircle, ClipboardList, Eye, Download, MoreHorizontal } from 'lucide-react';
 import {
@@ -17,7 +27,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import AssignPanelsDialog from '@/components/admin/AssignPanelsDialog';
 import SubmissionScoringDialog from '@/components/admin/SubmissionScoringDialog';
-import { downloadSubmissionScoresheet } from '@/lib/download-submission-scoresheet';
+import { downloadSubmissionScoresheet, generateSubmissionScoresheetBytes } from '@/lib/download-submission-scoresheet';
+import { downloadPdf } from '@/lib/scoresheet-pdf';
 
 
 interface JudgePanel {
@@ -59,6 +70,12 @@ export default function EventScoring() {
   const [downloadingPdfFor, setDownloadingPdfFor] = useState<string | null>(null);
   const [scoringSubmissionId, setScoringSubmissionId] = useState<string | null>(null);
   const [scoringPanelId, setScoringPanelId] = useState<string | null>(null);
+  const [confirmSendFor, setConfirmSendFor] = useState<{ id: string; teamName: string } | null>(null);
+  const [previewFor, setPreviewFor] = useState<{ id: string; teamName: string } | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewBytes, setPreviewBytes] = useState<Uint8Array | null>(null);
+  const [previewFileName, setPreviewFileName] = useState<string>('scoresheet.pdf');
+  const [previewLoading, setPreviewLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -179,9 +196,12 @@ export default function EventScoring() {
     },
   });
 
-  const handleSendScoreSheet = (submissionId: string) => {
-    setSendingScoreFor(submissionId);
-    sendScoreSheetMutation.mutate(submissionId);
+  const handleConfirmSend = () => {
+    if (!confirmSendFor) return;
+    const id = confirmSendFor.id;
+    setSendingScoreFor(id);
+    setConfirmSendFor(null);
+    sendScoreSheetMutation.mutate(id);
   };
 
   const handleDownloadPdf = async (submissionId: string) => {
@@ -194,6 +214,44 @@ export default function EventScoring() {
       setDownloadingPdfFor(null);
     }
   };
+
+  // Generate preview PDF when previewFor changes
+  useEffect(() => {
+    let cancelled = false;
+    let createdUrl: string | null = null;
+    if (!previewFor) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+      setPreviewBytes(null);
+      return;
+    }
+    setPreviewLoading(true);
+    setPreviewUrl(null);
+    setPreviewBytes(null);
+    generateSubmissionScoresheetBytes(previewFor.id, { includeAllScores: true })
+      .then(({ bytes, fileName }) => {
+        if (cancelled) return;
+        const blob = new Blob([bytes as BlobPart], { type: 'application/pdf' });
+        createdUrl = URL.createObjectURL(blob);
+        setPreviewBytes(bytes);
+        setPreviewFileName(fileName);
+        setPreviewUrl(createdUrl);
+      })
+      .catch((err: any) => {
+        if (cancelled) return;
+        toast({ variant: 'destructive', title: 'Preview failed', description: err.message });
+        setPreviewFor(null);
+      })
+      .finally(() => {
+        if (!cancelled) setPreviewLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewFor?.id]);
+
 
   const isLoading = eventLoading || panelsLoading || submissionsLoading;
 
@@ -504,14 +562,18 @@ export default function EventScoring() {
                           <Button
                             variant="default"
                             size="sm"
-                            className="h-8"
-                            onClick={() => {
-                              setScoringPanelId(null);
-                              setScoringSubmissionId(submission.id);
-                            }}
+                            className="h-8 bg-success text-success-foreground hover:bg-success/90"
+                            disabled={sendingScoreFor === submission.id || !overallStatus.allReviewed}
+                            onClick={() =>
+                              setConfirmSendFor({ id: submission.id, teamName: submission.team?.name || 'this team' })
+                            }
                           >
-                            <ClipboardList className="w-3.5 h-3.5 mr-1" />
-                            Score
+                            {sendingScoreFor === submission.id ? (
+                              <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                            ) : (
+                              <Send className="w-3.5 h-3.5 mr-1" />
+                            )}
+                            Send Score Sheet
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -526,25 +588,16 @@ export default function EventScoring() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-52">
                               <DropdownMenuItem
-                                onClick={() => handleSendScoreSheet(submission.id)}
-                                disabled={sendingScoreFor === submission.id || !overallStatus.allReviewed}
+                                onClick={() =>
+                                  setPreviewFor({ id: submission.id, teamName: submission.team?.name || 'Team' })
+                                }
                               >
-                                {sendingScoreFor === submission.id ? (
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                ) : (
-                                  <Send className="w-4 h-4 mr-2" />
-                                )}
-                                Send Score Sheet
-                              </DropdownMenuItem>
-                              <DropdownMenuItem asChild>
-                                <Link to={`/admin/submissions/${submission.id}`}>
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  Preview
-                                </Link>
+                                <Eye className="w-4 h-4 mr-2" />
+                                Preview
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => handleDownloadPdf(submission.id)}
-                                disabled={downloadingPdfFor === submission.id || !overallStatus.allReviewed}
+                                disabled={downloadingPdfFor === submission.id}
                               >
                                 {downloadingPdfFor === submission.id ? (
                                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -557,6 +610,7 @@ export default function EventScoring() {
                           </DropdownMenu>
                         </div>
                       </TableCell>
+
 
                       {panels?.map((panel) => (
                         <TableCell key={panel.id} className="text-center">
@@ -606,6 +660,53 @@ export default function EventScoring() {
         panels={panels || []}
         initialPanelId={scoringPanelId}
       />
+
+      {/* Confirm send score sheet */}
+      <AlertDialog open={!!confirmSendFor} onOpenChange={(open) => !open && setConfirmSendFor(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send score sheet?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will immediately email the finalized score sheet to the coach for{' '}
+              <strong>{confirmSendFor?.teamName}</strong>. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSend}>
+              <Send className="w-4 h-4 mr-2" /> Send Score Sheet
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Scoresheet PDF preview */}
+      <Dialog open={!!previewFor} onOpenChange={(open) => !open && setPreviewFor(null)}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Scoresheet Preview — {previewFor?.teamName}</DialogTitle>
+          </DialogHeader>
+          <div className="w-full h-[70vh] bg-muted rounded-md overflow-hidden flex items-center justify-center">
+            {previewLoading || !previewUrl ? (
+              <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="text-sm">Generating preview…</span>
+              </div>
+            ) : (
+              <iframe src={previewUrl} title="Scoresheet preview" className="w-full h-full bg-white" />
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPreviewFor(null)}>Close</Button>
+            <Button
+              disabled={!previewBytes}
+              onClick={() => previewBytes && downloadPdf(previewBytes, previewFileName)}
+            >
+              <Download className="w-4 h-4 mr-2" /> Download PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

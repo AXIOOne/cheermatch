@@ -1,30 +1,22 @@
-Clean up the Submissions area so it focuses only on importing submissions, approving/denying, and editing team details — no scoring information.
+Rework the action column in the Scoring Control Panel (`src/pages/admin/EventScoring.tsx`).
 
-## Changes
+## Primary button
 
-### Submissions list (`src/pages/admin/Submissions.tsx`)
-- Keep stats simple: remove "Assigned" and "Complete" stat cards and the matching status filter options. Keep Total, Imported, Approved, Revisions, Denied.
-- Keep the table columns (Team, Event, Division/Level, Status, Submitted, Actions) and the bulk Send Review Links action — these are import/approval workflow tools, not scoring.
+Replace the green "Score" button with a green "Send Score Sheet" button.
+- Same disabled rule as the existing menu item: only enabled once every panel is reviewed (`overallStatus.allReviewed`).
+- Shows a spinner while sending.
+- Clicking the button opens a confirmation `AlertDialog`: "Send score sheet to coach for {team name}? This will email the scoresheet immediately." with Cancel / Send actions. Sending only fires on confirm.
+- Scoring stays reachable by clicking individual panel cells (as today). The "Score" button on the row goes away.
 
-### Submission detail page (`src/pages/admin/SubmissionScoresheet.tsx`)
-Strip all scoring display while keeping approve/deny/revision and edit-team controls.
+## 3-dot menu
 
-Remove:
-- "Download PDF" button in the action bar.
-- "Aggregated Score" number in the header.
-- "Per-Panel Totals" card (right column under the video).
-- "Aggregated Scoresheet" section.
-- "Per-Panel Detail" section.
-- All score-related queries, helpers, and imports (`scores` query, `aggregateValues`, `buildScoresheet`, `buildScoresheetPdf`, `RawField`, `ScoreType`, `handleDownloadPdf`, the aggregation logic, `Trophy`/`Award`/`FileText`/`Download`/`Play` icons no longer needed).
+Drop the "Send Score Sheet" entry from the menu. Keep only:
+- **Preview** — opens a new `Dialog` that renders the scoresheet PDF for the current scores (whatever is filled in so far, even partial). Inside the dialog, build the PDF with `buildScoresheet` + `buildScoresheetPdf` (already used by `downloadSubmissionScoresheet`), turn the bytes into a blob URL, and show it in an `<iframe class="w-full h-[80vh]">`. Dialog has a Close button and a "Download PDF" button that reuses the same bytes. Loading state while the PDF is generating; revoke the blob URL when the dialog closes.
+- **Download PDF** — unchanged behavior (calls `downloadSubmissionScoresheet`). Enabled regardless of review status so admins can grab a working draft (matches Preview's "current scores" behavior); if you'd rather keep the existing "all reviewed" gate, say so and I'll leave it.
 
-Keep:
-- Back button, Approve / Deny / Request Revision buttons.
-- Team header with Edit Team dialog trigger.
-- Event / Division / Level / Athlete count / Submitted date / Status badges.
-- Performance Video card (now full-width since the panel totals card is gone).
-- Reviewer notes banner.
+## Technical notes
 
-### Rename
-- Rename the file/component from `SubmissionScoresheet.tsx` to `SubmissionDetail.tsx` and update the import in `src/App.tsx`, since it no longer renders a scoresheet.
-
-Scoring views remain available elsewhere (Event Scoring, Event Results, judge tools) — only the Submissions tab is cleaned up.
+- Add `AlertDialog` import from `@/components/ui/alert-dialog` and `Dialog`/`DialogContent`/`DialogHeader`/`DialogTitle`/`DialogFooter` from `@/components/ui/dialog`.
+- Track two new pieces of local state: `confirmSendFor: string | null` and `previewFor: { submissionId: string; teamName: string } | null`.
+- Extract a small `generateScoresheetBytes(submissionId)` helper (or inline) by lifting the data-fetch + PDF-build logic out of `src/lib/download-submission-scoresheet.ts` into a sibling function that returns the `Uint8Array`, so Preview and Download can share it without re-downloading.
+- No backend or schema changes.

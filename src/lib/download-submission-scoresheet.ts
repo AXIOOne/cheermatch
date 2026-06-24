@@ -4,7 +4,10 @@ import { buildScoresheetPdf, downloadPdf } from '@/lib/scoresheet-pdf';
 
 const sb = supabase as any;
 
-export async function downloadSubmissionScoresheet(submissionId: string) {
+export async function generateSubmissionScoresheetBytes(
+  submissionId: string,
+  options: { includeAllScores?: boolean } = {}
+): Promise<{ bytes: Uint8Array; fileName: string }> {
   const { data: submission, error: subErr } = await sb
     .from('video_submissions')
     .select(`
@@ -33,11 +36,12 @@ export async function downloadSubmissionScoresheet(submissionId: string) {
     .eq('submission_id', submissionId);
   if (scoresErr) throw scoresErr;
 
-  const submitted = (scores || []).filter((s: any) => s.status === 'submitted');
+  const usable = (scores || []).filter((s: any) =>
+    options.includeAllScores ? true : s.status === 'submitted'
+  );
 
-  // Look up the template's show_comments setting (use first submitted score's template)
   let show_comments = false;
-  const templateId = submitted[0]?.template_id;
+  const templateId = usable[0]?.template_id;
   if (templateId) {
     const { data: tpl } = await sb
       .from('scoring_templates')
@@ -48,7 +52,7 @@ export async function downloadSubmissionScoresheet(submissionId: string) {
   }
 
   const fieldMap = new Map<string, RawField>();
-  submitted.forEach((s: any) => {
+  usable.forEach((s: any) => {
     (s.details || []).forEach((d: any) => {
       const f = Array.isArray(d.field) ? d.field[0] : d.field;
       if (!f || fieldMap.has(f.id)) return;
@@ -76,7 +80,7 @@ export async function downloadSubmissionScoresheet(submissionId: string) {
     accuscore_end_at: submission.event?.accuscore_end_at || null,
     fields: Array.from(fieldMap.values()),
     show_comments,
-    submitted_scores: submitted.map((s: any) => {
+    submitted_scores: usable.map((s: any) => {
       const panel = Array.isArray(s.panel) ? s.panel[0] : s.panel;
       return {
         deductions: Number(s.deductions || 0),
@@ -92,5 +96,10 @@ export async function downloadSubmissionScoresheet(submissionId: string) {
 
   const bytes = await buildScoresheetPdf(data);
   const safeName = `${data.team_name} - ${data.event_name}`.replace(/[^\w\s-]/g, '').trim();
-  downloadPdf(bytes, `${safeName || 'scoresheet'}.pdf`);
+  return { bytes, fileName: `${safeName || 'scoresheet'}.pdf` };
+}
+
+export async function downloadSubmissionScoresheet(submissionId: string) {
+  const { bytes, fileName } = await generateSubmissionScoresheetBytes(submissionId);
+  downloadPdf(bytes, fileName);
 }
