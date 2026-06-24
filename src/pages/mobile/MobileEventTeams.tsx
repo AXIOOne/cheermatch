@@ -62,8 +62,11 @@ export default function MobileEventTeams() {
             <Card className="p-4 active:bg-muted transition-colors">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold truncate">{t.team_name}</div>
-                  <div className="text-xs text-muted-foreground truncate">{t.gym_name}</div>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="font-semibold truncate">{t.team_name}</div>
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate pl-6">{t.gym_name}</div>
                   <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs">
                     <Badge variant="outline">{t.division_name}</Badge>
                     <Badge variant="outline">{t.level_name}</Badge>
