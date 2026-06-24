@@ -88,7 +88,6 @@ export function BulkImportTeamsDialog({ open, onOpenChange, eventId }: Props) {
       const division = (raw.division || '').trim();
       const level = (raw.level || '').trim();
       const coachEmail = (raw.coach_email || '').trim().toLowerCase();
-      const athletes = Number(raw.athlete_count ?? 0);
       const male = Number(raw.athletes_male ?? 0);
       const female = Number(raw.athletes_female ?? 0);
 
@@ -102,14 +101,14 @@ export function BulkImportTeamsDialog({ open, onOpenChange, eventId }: Props) {
       if (teamName && existing.has(teamName.toLowerCase())) errors.push('team name already exists');
       if (teamName && seen.has(teamName.toLowerCase())) errors.push('duplicate in CSV');
       if (teamName) seen.add(teamName.toLowerCase());
-      if (!Number.isFinite(athletes) || athletes < 0) errors.push('athlete_count invalid');
+      if (!Number.isFinite(male) || male < 0) errors.push('athletes_male invalid');
+      if (!Number.isFinite(female) || female < 0) errors.push('athletes_female invalid');
 
       const payload = errors.length === 0 ? {
         name: teamName,
         gym_name: gymName,
         division_id: divMap.get(division.toLowerCase())!,
         level_id: lvlMap.get(level.toLowerCase())!,
-        athlete_count: athletes || (male + female),
         athletes_male: Number.isFinite(male) ? male : 0,
         athletes_female: Number.isFinite(female) ? female : 0,
         coach_name: (raw.coach_name || '').trim() || null,
