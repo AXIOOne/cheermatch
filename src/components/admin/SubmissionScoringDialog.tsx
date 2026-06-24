@@ -112,7 +112,8 @@ export default function SubmissionScoringDialog({
       const { data, error } = await sb.from('scores').select(`
         *,
         details:score_details(*),
-        deduction_items:score_deductions(*)
+        deduction_items:score_deductions(*),
+        skill_selections:score_skill_selections(*)
       `).eq('submission_id', submissionId!);
       if (error) throw error;
       const judgeIds = [...new Set((data || []).map((s: any) => s.judge_user_id).filter(Boolean))];
