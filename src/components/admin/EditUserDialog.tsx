@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Upload, Trash2 } from 'lucide-react';
 
 const editUserSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -24,25 +25,33 @@ interface EditUserDialogProps {
     user_id: string;
     email: string;
     full_name: string | null;
+    avatar_url?: string | null;
   } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
+function initialsOf(name: string | null, email: string): string {
+  const src = (name || email || '').trim();
+  if (!src) return '?';
+  const parts = src.split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return src.slice(0, 2).toUpperCase();
+}
+
 export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarDirty, setAvatarDirty] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const form = useForm<EditUserFormData>({
     resolver: zodResolver(editUserSchema),
-    defaultValues: {
-      email: '',
-      fullName: '',
-      password: '',
-    },
+    defaultValues: { email: '', fullName: '', password: '' },
   });
 
-  // Reset form when user changes
   useEffect(() => {
     if (user) {
       form.reset({
@@ -50,8 +59,47 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
         fullName: user.full_name || '',
         password: '',
       });
+      setAvatarUrl(user.avatar_url || null);
+      setAvatarDirty(false);
     }
   }, [user, form]);
+
+  const handlePickFile = () => fileInputRef.current?.click();
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !user) return;
+    if (!file.type.startsWith('image/')) {
+      toast({ variant: 'destructive', title: 'Invalid file', description: 'Please choose an image file.' });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ variant: 'destructive', title: 'File too large', description: 'Avatar must be 5MB or smaller.' });
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+      const path = `avatars/${user.user_id}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('email-assets')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('email-assets').getPublicUrl(path);
+      setAvatarUrl(pub.publicUrl);
+      setAvatarDirty(true);
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Upload failed', description: err.message });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarUrl(null);
+    setAvatarDirty(true);
+  };
 
   const updateUserMutation = useMutation({
     mutationFn: async (data: EditUserFormData) => {
@@ -66,6 +114,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
           email: data.email !== user.email ? data.email : undefined,
           fullName: data.fullName !== user.full_name ? data.fullName : undefined,
           password: data.password || undefined,
+          avatarUrl: avatarDirty ? avatarUrl : undefined,
         },
       });
 
@@ -97,6 +146,37 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={avatarUrl || undefined} alt={user?.full_name || user?.email || ''} />
+                <AvatarFallback className="text-lg">
+                  {initialsOf(user?.full_name ?? null, user?.email ?? '')}
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+                <div className="flex gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={handlePickFile} disabled={uploading}>
+                    {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                    {avatarUrl ? 'Change' : 'Upload'}
+                  </Button>
+                  {avatarUrl && (
+                    <Button type="button" variant="ghost" size="sm" onClick={handleRemoveAvatar} disabled={uploading}>
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">PNG or JPG, up to 5MB.</p>
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="fullName"
@@ -140,7 +220,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={updateUserMutation.isPending}>
+              <Button type="submit" disabled={updateUserMutation.isPending || uploading}>
                 {updateUserMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                 Save Changes
               </Button>
