@@ -401,6 +401,26 @@ export default function ScoringTemplates() {
                   </FormItem>
                 )} />
 
+                <FormField control={form.control} name="show_comments_on_scoresheet" render={({ field }) => (
+                  <FormItem className="flex flex-row items-start gap-3 rounded-md border p-3">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 accent-primary"
+                        checked={!!field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="cursor-pointer">Show judge comments on scoresheet PDF</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        When enabled, each judge's comments are appended to the PDF scoresheet, grouped by judge panel.
+                      </p>
+                    </div>
+                  </FormItem>
+                )} />
+
+
                 <Tabs defaultValue="editor" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="editor"><Pencil className="w-4 h-4 mr-2" />Editor</TabsTrigger>
