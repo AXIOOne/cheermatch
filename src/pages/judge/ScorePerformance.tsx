@@ -305,6 +305,11 @@ export default function ScorePerformance() {
           points: fs.points, notes: fs.notes || null,
         }));
 
+      const skillRowsFor = (scoreId: string) =>
+        Object.entries(skillSelections)
+          .filter(([, optId]) => !!optId)
+          .map(([skill_id, option_id]) => ({ score_id: scoreId, skill_id, option_id }));
+
       const reviewFields = status === 'submitted'
         ? { needs_review: needsReview, review_reason: needsReview ? reviewReason : null, reviewed_at: null, reviewed_by: null }
         : {};
