@@ -89,3 +89,62 @@ export async function bcGetVideo(videoId: string): Promise<Record<string, unknow
   if (!res.ok) throw new Error(`Brightcove get video failed: ${res.status} ${await res.text()}`);
   return await res.json();
 }
+
+// ---- Folders ----
+const folderIdCache = new Map<string, string>();
+
+export async function bcListFolders(): Promise<Array<{ id: string; name: string }>> {
+  const token = await getBrightcoveToken();
+  const out: Array<{ id: string; name: string }> = [];
+  // Brightcove returns up to 100 per page; loop a few pages defensively.
+  for (let offset = 0; offset < 1000; offset += 100) {
+    const res = await fetch(
+      `https://cms.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/folders?limit=100&offset=${offset}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) throw new Error(`Brightcove list folders failed: ${res.status} ${await res.text()}`);
+    const page = await res.json() as Array<{ id: string; name: string }>;
+    if (!Array.isArray(page) || page.length === 0) break;
+    out.push(...page);
+    if (page.length < 100) break;
+  }
+  return out;
+}
+
+export async function bcCreateFolder(name: string): Promise<{ id: string; name: string }> {
+  const token = await getBrightcoveToken();
+  const res = await fetch(
+    `https://cms.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/folders`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    },
+  );
+  if (!res.ok) throw new Error(`Brightcove create folder failed: ${res.status} ${await res.text()}`);
+  return await res.json();
+}
+
+export async function bcAddVideoToFolder(folderId: string, videoId: string): Promise<void> {
+  const token = await getBrightcoveToken();
+  const res = await fetch(
+    `https://cms.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/folders/${folderId}/videos/${videoId}`,
+    { method: "PUT", headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) throw new Error(`Brightcove add video to folder failed: ${res.status} ${await res.text()}`);
+}
+
+export async function bcEnsureFolder(name: string): Promise<string> {
+  const key = name.trim().toLowerCase();
+  const cached = folderIdCache.get(key);
+  if (cached) return cached;
+  const folders = await bcListFolders();
+  const existing = folders.find((f) => (f.name ?? "").trim().toLowerCase() === key);
+  if (existing) {
+    folderIdCache.set(key, existing.id);
+    return existing.id;
+  }
+  const created = await bcCreateFolder(name.trim());
+  folderIdCache.set(key, created.id);
+  return created.id;
+}
