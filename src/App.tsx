@@ -28,7 +28,7 @@ import EventParticipants from "./pages/admin/EventParticipants";
 import EventReports from "./pages/admin/EventReports";
 import EventsSummary from "./pages/admin/EventsSummary";
 import Rubrics from "./pages/admin/Rubrics";
-import SubmissionScoresheet from "./pages/admin/SubmissionScoresheet";
+import SubmissionDetail from "./pages/admin/SubmissionDetail";
 
 // Judge imports
 import { JudgeLayout } from "./components/layout/JudgeLayout";
@@ -83,7 +83,7 @@ const App = () => (
                 <Route path="divisions" element={<Divisions />} />
 
                 <Route path="submissions" element={<Submissions />} />
-                <Route path="submissions/:submissionId" element={<SubmissionScoresheet />} />
+                <Route path="submissions/:submissionId" element={<SubmissionDetail />} />
 
                 <Route path="reviews" element={<ReviewRequests />} />
                 <Route path="roles" element={<UserRoles />} />

@@ -20,8 +20,8 @@ import type { Database } from '@/integrations/supabase/types';
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
 
 // Lifecycle statuses we surface in the UI.
-type LifecycleStatus = 'imported' | 'approved' | 'denied' | 'revision_requested' | 'assigned' | 'complete';
-const LIFECYCLE_STATUSES: LifecycleStatus[] = ['imported', 'approved', 'denied', 'revision_requested', 'assigned', 'complete'];
+type LifecycleStatus = 'imported' | 'approved' | 'denied' | 'revision_requested';
+const LIFECYCLE_STATUSES: LifecycleStatus[] = ['imported', 'approved', 'denied', 'revision_requested'];
 
 interface SubmissionWithDetails {
   id: string;
@@ -49,8 +49,6 @@ const lifecycleConfig: Record<LifecycleStatus, { label: string; icon: React.Elem
   approved: { label: 'Approved', icon: CheckCircle, className: 'bg-green-100 text-green-700' },
   denied: { label: 'Denied', icon: XCircle, className: 'bg-destructive/10 text-destructive' },
   revision_requested: { label: 'Revision Requested', icon: RotateCcw, className: 'bg-amber-100 text-amber-700' },
-  assigned: { label: 'Assigned', icon: UserCheck, className: 'bg-blue-100 text-blue-700' },
-  complete: { label: 'Complete', icon: Flag, className: 'bg-primary/10 text-primary' },
 };
 
 // Map any legacy status onto the new lifecycle for display.
@@ -147,9 +145,8 @@ export default function Submissions() {
     total: submissions?.length || 0,
     imported: countBy('imported'),
     approved: countBy('approved'),
+    denied: countBy('denied'),
     revision_requested: countBy('revision_requested'),
-    assigned: countBy('assigned'),
-    complete: countBy('complete'),
   };
 
   const toggleSelection = (id: string) => {
@@ -187,7 +184,7 @@ export default function Submissions() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
@@ -214,29 +211,22 @@ export default function Submissions() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Denied</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-destructive">{stats.denied}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Revisions</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-amber-600">{stats.revision_requested}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Assigned</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-blue-600">{stats.assigned}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Complete</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-primary">{stats.complete}</p>
-          </CardContent>
-        </Card>
       </div>
+
 
       {/* Filters & Bulk Actions */}
       <Card className="mb-6">

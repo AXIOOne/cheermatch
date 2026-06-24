@@ -1,60 +1,30 @@
-## Scoresheet PDF — visual revamp + judge comments
+Clean up the Submissions area so it focuses only on importing submissions, approving/denying, and editing team details — no scoring information.
 
-### Part 1: Match the reference layout (page 1)
+## Changes
 
-Rewrite the header + table in `src/lib/scoresheet-pdf.ts` (and mirror in `supabase/functions/_shared/scoresheet-pdf.ts`) to match the attached screenshot.
+### Submissions list (`src/pages/admin/Submissions.tsx`)
+- Keep stats simple: remove "Assigned" and "Complete" stat cards and the matching status filter options. Keep Total, Imported, Approved, Revisions, Denied.
+- Keep the table columns (Team, Event, Division/Level, Status, Submitted, Actions) and the bulk Send Review Links action — these are import/approval workflow tools, not scoring.
 
-**Header (three-column band, serif/bold).**
+### Submission detail page (`src/pages/admin/SubmissionScoresheet.tsx`)
+Strip all scoring display while keeping approve/deny/revision and edit-team controls.
 
-```text
-SUM                    The Summit                 Finals
-Cheer Athletics-       Hall Name: West A          AccuScore End Time:
-  Denver                                            05/03/2026 05:25 pm
-Ice 4
-L4 Junior - Medium
-```
+Remove:
+- "Download PDF" button in the action bar.
+- "Aggregated Score" number in the header.
+- "Per-Panel Totals" card (right column under the video).
+- "Aggregated Scoresheet" section.
+- "Per-Panel Detail" section.
+- All score-related queries, helpers, and imports (`scores` query, `aggregateValues`, `buildScoresheet`, `buildScoresheetPdf`, `RawField`, `ScoreType`, `handleDownloadPdf`, the aggregation logic, `Trophy`/`Award`/`FileText`/`Download`/`Play` icons no longer needed).
 
-- Left: gym short code (top, bold), then team name lines (gym, team, division stacked, bold).
-- Center: event name (large bold serif) with phase/round label below (e.g. "Finals" — pulled from event round if available, otherwise blank).
-- Right: "Hall Name: <hall>" centered row, "AccuScore End Time:" with timestamp right-aligned.
-- Switch fonts from Helvetica to **Times-Roman / Times-Bold** (`StandardFonts.TimesRoman`, `StandardFonts.TimesRomanBold`) to match the serif look in the screenshot. Title ~22pt bold, meta ~11pt.
-- Thick horizontal rule under header, second thick rule under the scoring table, matching the screenshot.
+Keep:
+- Back button, Approve / Deny / Request Revision buttons.
+- Team header with Edit Team dialog trigger.
+- Event / Division / Level / Athlete count / Submitted date / Status badges.
+- Performance Video card (now full-width since the panel totals card is gone).
+- Reviewer notes banner.
 
-**Scoring table — tighter rows.**
+### Rename
+- Rename the file/component from `SubmissionScoresheet.tsx` to `SubmissionDetail.tsx` and update the import in `src/App.tsx`, since it no longer renders a scoresheet.
 
-- Reduce row height: cellFontSize 9 → 8.5, minimum row height 22 → 16, vertical padding shrinks accordingly so single-line rows are compact like the screenshot.
-- Header row height 24 → 18, bold serif, centered.
-- Keep gray-fill for N/A Difficulty/Execution cells.
-- Add the summary row at the bottom of the table (inside the same grid): blank criteria cell, "50.00" bold-boxed under Max Value, "Raw Score:" + value spanning Execution/Score, "%:" + perfection on the next half-row — matching screenshot footer rows.
-
-**Totals block (separate small table below).**
-
-Single 4-column table: Raw Score | Deductions | % Perfection | Event Score, with one data row labeled "Finals" (or the round name). Replaces the current stacked totals box.
-
-**Page footer.**
-
-Small italic line: `SUM         The Summit         Generated: <timestamp>` at bottom margin on every page.
-
-### Part 2: Judge comments toggle
-
-**Database** (`supabase/migrations/...`):
-- Add `show_comments_on_scoresheet boolean not null default false` to `public.scoring_templates`.
-
-**Admin UI** (`src/pages/admin/ScoringTemplates.tsx`):
-- Add a checkbox/switch "Show judge comments on scoresheet PDF" in the template create/edit form, persisted to the new column.
-
-**Data shaping** (`src/lib/build-scoresheet.ts` + `supabase/functions/_shared/build-scoresheet.ts`):
-- Extend `ScoresheetInput` with `show_comments: boolean` and `submitted_scores[].judge_label` (e.g. "B1") + `submitted_scores[].comments: string | null`.
-- Extend `ScoresheetData` with `show_comments` and `judge_comments: Array<{ judge_label: string; comments: string }>` (only non-empty entries, only when flag is true).
-
-**Callers** (`src/lib/download-submission-scoresheet.ts`, `supabase/functions/send-scoresheet-email/index.ts`):
-- Select `scoring_templates.show_comments_on_scoresheet` and `scores.comments` + the judge's panel label, pass through to the builder.
-
-**PDF rendering** (both `scoresheet-pdf.ts` copies):
-- After the totals block, if `show_comments` and `judge_comments.length`, render a new section "Judge Comments". For each judge with non-empty comments, print a small bold header (`Judge B1`, `Judge B2`, etc.) followed by the wrapped comment text. Section flows to subsequent pages as needed.
-
-### Technical notes
-
-- Files touched: `src/lib/scoresheet-pdf.ts`, `src/lib/build-scoresheet.ts`, `src/lib/download-submission-scoresheet.ts`, `supabase/functions/_shared/scoresheet-pdf.ts`, `supabase/functions/_shared/build-scoresheet.ts`, `supabase/functions/send-scoresheet-email/index.ts`, `src/pages/admin/ScoringTemplates.tsx`, one migration.
-- The mirrored `_shared/*` files must stay byte-equivalent in logic to the `src/lib/*` versions (Deno can't import from `src/`).
-- No changes to scoring entry UI — judges already capture comments via `scores.comments`.
+Scoring views remain available elsewhere (Event Scoring, Event Results, judge tools) — only the Submissions tab is cleaned up.
