@@ -207,16 +207,25 @@ export default function ScorePerformance() {
       });
       setFieldScores(loaded);
       const dc: Record<string, number> = {};
-      (existingScore.deduction_items || []).forEach((it: any) => { dc[it.deduction_type_id] = it.count || 0; });
+      const dw: Record<string, number> = {};
+      (existingScore.deduction_items || []).forEach((it: any) => {
+        dc[it.deduction_type_id] = it.count || 0;
+        dw[it.deduction_type_id] = it.warnings || 0;
+      });
       setDeductionCounts(dc);
+      setDeductionWarnings(dw);
       setComments(existingScore.comments || '');
     } else {
       const init: Record<string, FieldScore> = {};
       allFields.forEach((f: any) => { init[f.id] = { field_id: f.id, points: 0, notes: '' }; });
       setFieldScores(init);
       const dc: Record<string, number> = {};
-      (sortByDisplayOrder((template.deduction_types || []) as any[])).forEach((dt: any) => { dc[dt.id] = 0; });
+      const dw: Record<string, number> = {};
+      (sortByDisplayOrder((template.deduction_types || []) as any[])).forEach((dt: any) => {
+        dc[dt.id] = 0; dw[dt.id] = 0;
+      });
       setDeductionCounts(dc);
+      setDeductionWarnings(dw);
     }
   }, [template, existingScore, visibleSections]);
 
