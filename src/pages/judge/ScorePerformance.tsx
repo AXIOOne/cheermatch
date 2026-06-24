@@ -45,6 +45,7 @@ export default function ScorePerformance() {
   const queryClient = useQueryClient();
 
   const [fieldScores, setFieldScores] = useState<Record<string, FieldScore>>({});
+  const [skillSelections, setSkillSelections] = useState<Record<string, string>>({}); // skill_id -> option_id
   const [deductionCounts, setDeductionCounts] = useState<Record<string, number>>({});
   const [deductionWarnings, setDeductionWarnings] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
