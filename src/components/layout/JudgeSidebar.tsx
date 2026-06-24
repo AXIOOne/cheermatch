@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import logoWhite from '@/assets/logo-white.png';
+import logoWhite from '@/assets/logo-white.png.asset.json';
 import {
   ClipboardList,
   LogOut,
