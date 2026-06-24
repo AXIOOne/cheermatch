@@ -121,7 +121,10 @@ export function buildScoresheet(input: ScoresheetInput): ScoresheetData {
     diff?: RawField; exec?: RawField };
   const groups = new Map<string, Group>();
   for (const f of ordered) {
-    const key = `${f.section_id}::${f.name.trim().toLowerCase()}`;
+    // Group by field name (case-insensitive) across the whole template so a
+    // difficulty field and an execution field with the same criterion name
+    // collapse into a single row with both values side by side.
+    const key = f.name.trim().toLowerCase();
     let g = groups.get(key);
     if (!g) {
       g = { name: f.name, section_order: f.section_order, field_order: f.field_order };
