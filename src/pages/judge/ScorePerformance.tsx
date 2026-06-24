@@ -209,6 +209,11 @@ export default function ScorePerformance() {
         loaded[d.field_id] = { field_id: d.field_id, points: Number(d.points), notes: d.notes || '' };
       });
       setFieldScores(loaded);
+      const sel: Record<string, string> = {};
+      (existingScore.skill_selections || []).forEach((s: any) => {
+        sel[s.skill_id] = s.option_id;
+      });
+      setSkillSelections(sel);
       const dc: Record<string, number> = {};
       const dw: Record<string, number> = {};
       (existingScore.deduction_items || []).forEach((it: any) => {
@@ -222,6 +227,7 @@ export default function ScorePerformance() {
       const init: Record<string, FieldScore> = {};
       allFields.forEach((f: any) => { init[f.id] = { field_id: f.id, points: 0, notes: '' }; });
       setFieldScores(init);
+      setSkillSelections({});
       const dc: Record<string, number> = {};
       const dw: Record<string, number> = {};
       (sortByDisplayOrder((template.deduction_types || []) as any[])).forEach((dt: any) => {
@@ -231,6 +237,41 @@ export default function ScorePerformance() {
       setDeductionWarnings(dw);
     }
   }, [template, existingScore, visibleSections]);
+
+  // For difficulty_driver fields, derive field points from selected radio options
+  const driverFieldsById = useMemo(() => {
+    const map: Record<string, any> = {};
+    visibleSections.forEach((s: any) => s.visibleFields.forEach((f: any) => {
+      if (f.field_type === 'difficulty_driver') map[f.id] = f;
+    }));
+    return map;
+  }, [visibleSections]);
+
+  useEffect(() => {
+    const updates: Record<string, number> = {};
+    Object.values(driverFieldsById).forEach((f: any) => {
+      const sum = (f.skills || []).reduce((acc: number, sk: any) => {
+        const optId = skillSelections[sk.id];
+        if (!optId) return acc;
+        const opt = (sk.options || []).find((o: any) => o.id === optId);
+        return acc + (opt ? Number(opt.value) : 0);
+      }, 0);
+      updates[f.id] = sum;
+    });
+    if (Object.keys(updates).length === 0) return;
+    setFieldScores(prev => {
+      let changed = false;
+      const next = { ...prev };
+      for (const [fid, pts] of Object.entries(updates)) {
+        const cur = prev[fid];
+        if (!cur || Number(cur.points) !== pts) {
+          next[fid] = { field_id: fid, points: pts, notes: cur?.notes || '' };
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [skillSelections, driverFieldsById]);
 
   const updateFieldScore = (id: string, points: number) =>
     setFieldScores(prev => ({ ...prev, [id]: { ...prev[id], field_id: id, points, notes: prev[id]?.notes || '' } }));
