@@ -279,8 +279,18 @@ export default function ScorePerformance() {
           if (dErr) throw dErr;
         }
         await sb.from('score_deductions').delete().eq('score_id', existingScore.id);
-        const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
-          .map(([deduction_type_id, count]) => ({ score_id: existingScore.id, deduction_type_id, count }));
+        const allDedIds = new Set<string>([
+          ...Object.keys(deductionCounts),
+          ...Object.keys(deductionWarnings),
+        ]);
+        const deds = Array.from(allDedIds)
+          .map((deduction_type_id) => ({
+            score_id: existingScore.id,
+            deduction_type_id,
+            count: deductionCounts[deduction_type_id] || 0,
+            warnings: deductionWarnings[deduction_type_id] || 0,
+          }))
+          .filter((d) => (d.count || 0) > 0 || (d.warnings || 0) > 0);
         if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
       } else {
         const { data: newScore, error } = await sb.from('scores').insert([{
@@ -296,8 +306,18 @@ export default function ScorePerformance() {
           const { error: dErr } = await sb.from('score_details').insert(rows);
           if (dErr) throw dErr;
         }
-        const deds = Object.entries(deductionCounts).filter(([, c]) => (c||0)>0)
-          .map(([deduction_type_id, count]) => ({ score_id: newScore.id, deduction_type_id, count }));
+        const allDedIds = new Set<string>([
+          ...Object.keys(deductionCounts),
+          ...Object.keys(deductionWarnings),
+        ]);
+        const deds = Array.from(allDedIds)
+          .map((deduction_type_id) => ({
+            score_id: newScore.id,
+            deduction_type_id,
+            count: deductionCounts[deduction_type_id] || 0,
+            warnings: deductionWarnings[deduction_type_id] || 0,
+          }))
+          .filter((d) => (d.count || 0) > 0 || (d.warnings || 0) > 0);
         if (deds.length) { const { error: ee } = await sb.from('score_deductions').insert(deds); if (ee) throw ee; }
       }
     },
