@@ -279,6 +279,41 @@ export default function ScorePerformance() {
     });
   }, [skillSelections, driverFieldsById]);
 
+  // Auto-generate a comments block from execution_driver selections.
+  // Everything below the marker is managed automatically; text above is the judge's free-form comments.
+  const AUTO_COMMENTS_MARKER = '\n\n———— Auto-Generated Execution Notes ————\n';
+  useEffect(() => {
+    const execFields = Object.values(driverFieldsById).filter(
+      (f: any) => f.field_type === 'execution_driver'
+    );
+    const blocks: string[] = [];
+    execFields.forEach((f: any) => {
+      const lines: string[] = [];
+      (f.skills || [])
+        .slice()
+        .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
+        .forEach((sk: any) => {
+          const optId = skillSelections[sk.id];
+          if (!optId) return;
+          const opt = (sk.options || []).find((o: any) => o.id === optId);
+          if (!opt) return;
+          const val = Number(opt.value);
+          if (!val) return;
+          lines.push(`**${sk.name}: -${val}**`);
+        });
+      if (lines.length > 0) {
+        blocks.push(`**__${f.name}__**\n${lines.join('\n')}`);
+      }
+    });
+    setComments(prev => {
+      const idx = prev.indexOf(AUTO_COMMENTS_MARKER);
+      const userPart = idx >= 0 ? prev.slice(0, idx) : prev;
+      const autoPart = blocks.length > 0 ? AUTO_COMMENTS_MARKER + blocks.join('\n\n') : '';
+      const next = userPart + autoPart;
+      return next === prev ? prev : next;
+    });
+  }, [skillSelections, driverFieldsById]);
+
   const updateFieldScore = (id: string, points: number) =>
     setFieldScores(prev => ({ ...prev, [id]: { ...prev[id], field_id: id, points, notes: prev[id]?.notes || '' } }));
   const updateFieldNotes = (id: string, notes: string) =>
