@@ -1,15 +1,16 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import logoWhite from '@/assets/logo-white.png.asset.json';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
+import { RubricsNavItem } from '@/components/layout/RubricsNavItem';
 import {
   ClipboardList,
   LogOut,
   LayoutDashboard,
   Play,
-  FileText,
 } from 'lucide-react';
 
 interface NavItemProps {
