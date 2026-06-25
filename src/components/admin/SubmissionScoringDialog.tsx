@@ -266,7 +266,7 @@ export default function SubmissionScoringDialog({
   }, [skillSelections, driverFieldsById]);
 
   // Auto-generate a comments block from execution_driver selections.
-  const AUTO_COMMENTS_MARKER = '\n\n———— Auto-Generated Execution Notes ————\n';
+  const autoCommentsRef = useRef('');
   useEffect(() => {
     const execFields = Object.values(driverFieldsById).filter(
       (f: any) => f.field_type === 'execution_driver'
@@ -284,17 +284,23 @@ export default function SubmissionScoringDialog({
           if (!opt) return;
           const val = Number(opt.value);
           if (!val) return;
-          lines.push(`**${sk.name}: -${val}**`);
+          lines.push(`${sk.name}: -${val}`);
         });
       if (lines.length > 0) {
-        blocks.push(`**__${f.name}__**\n${lines.join('\n')}`);
+        blocks.push(`${f.name}\n${lines.join('\n')}`);
       }
     });
+    const newAuto = blocks.length > 0 ? blocks.join('\n\n') : '';
     setComments(prev => {
-      const idx = prev.indexOf(AUTO_COMMENTS_MARKER);
-      const userPart = idx >= 0 ? prev.slice(0, idx) : prev;
-      const autoPart = blocks.length > 0 ? AUTO_COMMENTS_MARKER + blocks.join('\n\n') : '';
-      const next = userPart + autoPart;
+      const prevAuto = autoCommentsRef.current;
+      let userPart = prev;
+      if (prevAuto && prev.endsWith(prevAuto)) {
+        userPart = prev.slice(0, prev.length - prevAuto.length).replace(/\n+$/, '');
+      }
+      const next = newAuto
+        ? (userPart ? `${userPart}\n\n${newAuto}` : newAuto)
+        : userPart;
+      autoCommentsRef.current = newAuto;
       return next === prev ? prev : next;
     });
   }, [skillSelections, driverFieldsById]);
