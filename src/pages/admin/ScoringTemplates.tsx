@@ -108,6 +108,7 @@ export default function ScoringTemplates() {
         max_value: f.max_value,
         step: f.step,
         max_points: f.max_points,
+        start_value: f.field_type === 'execution_driver' ? (f.start_value ?? 0) : null,
         aggregation: f.aggregation,
       }));
       const { data: insertedFields, error: fErr } = await sb
@@ -126,7 +127,7 @@ export default function ScoringTemplates() {
         f.panels.forEach((abbr) => {
           panelRows.push({ field_id: fId, panel_abbreviation: abbr });
         });
-        if (f.field_type === 'difficulty_driver' && f.skills && f.skills.length > 0) {
+        if ((f.field_type === 'difficulty_driver' || f.field_type === 'execution_driver') && f.skills && f.skills.length > 0) {
           skillsToInsert.push({ fieldId: fId, skills: f.skills });
         }
       }
@@ -284,6 +285,7 @@ export default function ScoringTemplates() {
             name: f.name, description: f.description, display_order: f.display_order ?? j,
             field_type: f.field_type, score_type: f.score_type || 'difficulty', min_value: f.min_value, max_value: f.max_value,
             step: f.step, max_points: f.max_points, aggregation: f.aggregation,
+            start_value: f.field_type === 'execution_driver' ? (f.start_value ?? 0) : null,
           }).select().single();
           if (fErr) throw fErr;
           const opts = (f.options || []) as any[];
@@ -383,6 +385,7 @@ export default function ScoringTemplates() {
             score_type: f.score_type || 'difficulty',
             min_value: Number(f.min_value), max_value: Number(f.max_value),
             step: Number(f.step), max_points: Number(f.max_points),
+            start_value: f.start_value != null ? Number(f.start_value) : undefined,
             aggregation: f.aggregation,
             panels: (f.panel_links || []).map((p: any) => p.panel_abbreviation),
             options: (f.options || [])

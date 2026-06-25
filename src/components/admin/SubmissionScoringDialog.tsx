@@ -225,11 +225,11 @@ export default function SubmissionScoringDialog({
     }
   }, [selectedPanelId, allScores, template, visibleSections]);
 
-  // Derive difficulty-driver field points from selected radio options
+  // Derive driver field points (difficulty_driver / execution_driver) from selected radio options
   const driverFieldsById = useMemo(() => {
     const map: Record<string, any> = {};
     visibleSections.forEach((s: any) => s.visibleFields.forEach((f: any) => {
-      if (f.field_type === 'difficulty_driver') map[f.id] = f;
+      if (f.field_type === 'difficulty_driver' || f.field_type === 'execution_driver') map[f.id] = f;
     }));
     return map;
   }, [visibleSections]);
@@ -243,7 +243,12 @@ export default function SubmissionScoringDialog({
         const opt = (sk.options || []).find((o: any) => o.id === optId);
         return acc + (opt ? Number(opt.value) : 0);
       }, 0);
-      updates[f.id] = sum;
+      if (f.field_type === 'execution_driver') {
+        const start = Number(f.start_value ?? 0);
+        updates[f.id] = Math.max(0, start - sum);
+      } else {
+        updates[f.id] = sum;
+      }
     });
     if (Object.keys(updates).length === 0) return;
     setFieldScores(prev => {
@@ -673,9 +678,14 @@ export default function SubmissionScoringDialog({
                                   <div>
                                     <p className="text-sm font-medium">{f.name}</p>
                                     {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
+                                    {f.field_type === 'execution_driver' && (
+                                      <p className="text-xs text-muted-foreground">
+                                        Start: {Number(f.start_value ?? 0).toFixed(2)}
+                                      </p>
+                                    )}
                                   </div>
                                   <div className="text-right text-xs text-muted-foreground">
-                                    {f.field_type === 'difficulty_driver' && (
+                                    {(f.field_type === 'difficulty_driver' || f.field_type === 'execution_driver') && (
                                       <span className="text-sm font-semibold mr-2 text-foreground">{Number(fieldScores[f.id]?.points || 0).toFixed(2)}</span>
                                     )}
                                     max {Number(f.max_points).toFixed(2)}
@@ -712,7 +722,7 @@ export default function SubmissionScoringDialog({
                                       </SelectContent>
                                     </Select>
                                   );
-                                })() : f.field_type === 'difficulty_driver' ? (
+                                })() : (f.field_type === 'difficulty_driver' || f.field_type === 'execution_driver') ? (
                                   <div className="space-y-2">
                                     {(f.skills || [])
                                       .slice()
@@ -722,15 +732,30 @@ export default function SubmissionScoringDialog({
                                           .slice()
                                           .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
                                         const selected = skillSelections[sk.id];
+                                        const isExec = f.field_type === 'execution_driver';
                                         return (
                                           <div key={sk.id} className="rounded-md border p-2">
                                             <p className="text-xs font-medium mb-2">{sk.name}</p>
                                             <RadioGroup
-                                              value={selected || ''}
-                                              onValueChange={(val) => setSkillSelections(prev => ({ ...prev, [sk.id]: val }))}
+                                              value={selected || '__none__'}
+                                              onValueChange={(val) => setSkillSelections(prev => {
+                                                const next = { ...prev };
+                                                if (val === '__none__') delete next[sk.id];
+                                                else next[sk.id] = val;
+                                                return next;
+                                              })}
                                               disabled={isCurrentPanelLocked}
                                               className="flex flex-wrap gap-3"
                                             >
+                                              {isExec && (
+                                                <label
+                                                  htmlFor={`adm-sk-${sk.id}-none`}
+                                                  className="flex items-center gap-1.5 text-xs cursor-pointer"
+                                                >
+                                                  <RadioGroupItem id={`adm-sk-${sk.id}-none`} value="__none__" />
+                                                  <span>None</span>
+                                                </label>
+                                              )}
                                               {opts.map((opt: any) => (
                                                 <label
                                                   key={opt.id}
@@ -739,7 +764,9 @@ export default function SubmissionScoringDialog({
                                                 >
                                                   <RadioGroupItem id={`adm-sk-${sk.id}-${opt.id}`} value={opt.id} />
                                                   <span>{opt.label}</span>
-                                                  <span className="text-muted-foreground">({Number(opt.value)})</span>
+                                                  <span className="text-muted-foreground">
+                                                    ({isExec ? '−' : ''}{Number(opt.value)})
+                                                  </span>
                                                 </label>
                                               ))}
                                             </RadioGroup>

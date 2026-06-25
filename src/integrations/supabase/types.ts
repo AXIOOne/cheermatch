@@ -979,6 +979,7 @@ export type Database = {
           name: string
           score_type: string
           section_id: string
+          start_value: number | null
           step: number
           template_id: string
           updated_at: string
@@ -996,6 +997,7 @@ export type Database = {
           name: string
           score_type?: string
           section_id: string
+          start_value?: number | null
           step?: number
           template_id: string
           updated_at?: string
@@ -1013,6 +1015,7 @@ export type Database = {
           name?: string
           score_type?: string
           section_id?: string
+          start_value?: number | null
           step?: number
           template_id?: string
           updated_at?: string
@@ -1711,7 +1714,11 @@ export type Database = {
         | "min"
         | "max"
         | "sum"
-      scoring_field_type: "number" | "dropdown" | "difficulty_driver"
+      scoring_field_type:
+        | "number"
+        | "dropdown"
+        | "difficulty_driver"
+        | "execution_driver"
       submission_status:
         | "pending"
         | "uploaded"
@@ -1877,7 +1884,12 @@ export const Constants = {
         "max",
         "sum",
       ],
-      scoring_field_type: ["number", "dropdown", "difficulty_driver"],
+      scoring_field_type: [
+        "number",
+        "dropdown",
+        "difficulty_driver",
+        "execution_driver",
+      ],
       submission_status: [
         "pending",
         "uploaded",
