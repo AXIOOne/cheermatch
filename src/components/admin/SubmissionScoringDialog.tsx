@@ -225,11 +225,11 @@ export default function SubmissionScoringDialog({
     }
   }, [selectedPanelId, allScores, template, visibleSections]);
 
-  // Derive difficulty-driver field points from selected radio options
+  // Derive driver field points (difficulty_driver / execution_driver) from selected radio options
   const driverFieldsById = useMemo(() => {
     const map: Record<string, any> = {};
     visibleSections.forEach((s: any) => s.visibleFields.forEach((f: any) => {
-      if (f.field_type === 'difficulty_driver') map[f.id] = f;
+      if (f.field_type === 'difficulty_driver' || f.field_type === 'execution_driver') map[f.id] = f;
     }));
     return map;
   }, [visibleSections]);
@@ -243,7 +243,12 @@ export default function SubmissionScoringDialog({
         const opt = (sk.options || []).find((o: any) => o.id === optId);
         return acc + (opt ? Number(opt.value) : 0);
       }, 0);
-      updates[f.id] = sum;
+      if (f.field_type === 'execution_driver') {
+        const start = Number(f.start_value ?? 0);
+        updates[f.id] = Math.max(0, start - sum);
+      } else {
+        updates[f.id] = sum;
+      }
     });
     if (Object.keys(updates).length === 0) return;
     setFieldScores(prev => {
