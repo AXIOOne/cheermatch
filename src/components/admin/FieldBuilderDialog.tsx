@@ -308,27 +308,43 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
             </div>
           )}
 
-          {draft.field_type === 'difficulty_driver' && (
+          {isDriver && (
             <div className="space-y-3 bg-muted/30 p-3 rounded-md">
+              {isExec && (
+                <div>
+                  <Label>Start Value</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={draft.start_value ?? 0}
+                    onChange={(e) => setDraft(d => ({ ...d, start_value: parseFloat(e.target.value) || 0 }))}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Field score = Start − sum of selected reductions (floor 0).
+                  </p>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <div>
-                  <Label>Skills</Label>
+                  <Label>{isExec ? 'Technique Issues' : 'Skills'}</Label>
                   <p className="text-xs text-muted-foreground">
-                    Each skill is a radio group. The field's value is the sum of selected option values.
+                    {isExec
+                      ? 'Each technique is a radio group; judges pick None or a reduction.'
+                      : "Each skill is a radio group. The field's value is the sum of selected option values."}
                   </p>
                 </div>
                 <Button type="button" size="sm" variant="outline" onClick={addSkill}>
-                  <Plus className="w-3 h-3 mr-1" /> Add Skill
+                  <Plus className="w-3 h-3 mr-1" /> {isExec ? 'Add Technique' : 'Add Skill'}
                 </Button>
               </div>
               {draft.skills.length === 0 && (
-                <p className="text-xs text-muted-foreground">Add at least one skill.</p>
+                <p className="text-xs text-muted-foreground">Add at least one {isExec ? 'technique' : 'skill'}.</p>
               )}
               {draft.skills.map((sk, skillIdx) => (
                 <div key={sk.temp_id} className="border rounded-md bg-background p-3 space-y-2">
                   <div className="flex items-center gap-2">
                     <Input
-                      placeholder="Skill name (e.g., Standing Tumbling)"
+                      placeholder={isExec ? 'Technique (e.g., Synchronization)' : 'Skill name (e.g., Standing Tumbling)'}
                       value={sk.name}
                       onChange={(e) => updateSkill(skillIdx, { name: e.target.value })}
                       className="flex-1"
@@ -339,7 +355,9 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
                   </div>
                   <div className="pl-2 border-l-2 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-muted-foreground">Radio options</span>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {isExec ? 'Reduction options' : 'Radio options'}
+                      </span>
                       <Button type="button" size="sm" variant="ghost" onClick={() => addSkillOption(skillIdx)}>
                         <Plus className="w-3 h-3 mr-1" /> Add Option
                       </Button>
@@ -350,7 +368,7 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
                     {sk.options.map((opt, optIdx) => (
                       <div key={opt.temp_id} className="flex items-center gap-2">
                         <Input
-                          placeholder="Label (e.g., Level 4)"
+                          placeholder={isExec ? 'Label (e.g., Minor)' : 'Label (e.g., Level 4)'}
                           value={opt.label}
                           onChange={(e) => updateSkillOption(skillIdx, optIdx, { label: e.target.value })}
                           className="flex-1"
@@ -358,7 +376,7 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
                         <Input
                           type="number"
                           step="0.01"
-                          placeholder="Value"
+                          placeholder={isExec ? 'Reduction' : 'Value'}
                           value={opt.value}
                           onChange={(e) => updateSkillOption(skillIdx, optIdx, { value: parseFloat(e.target.value) || 0 })}
                           className="w-28"
