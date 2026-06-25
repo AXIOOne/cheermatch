@@ -37,12 +37,13 @@ export interface ScoringField {
   id?: string;
   name: string;
   description?: string;
-  field_type: 'number' | 'dropdown' | 'difficulty_driver';
+  field_type: 'number' | 'dropdown' | 'difficulty_driver' | 'execution_driver';
   score_type: ScoreType;
   min_value: number;
   max_value: number;
   step: number;
   max_points: number;
+  start_value?: number;
   aggregation: AggregationMode;
   panels: string[]; // array of panel abbreviations
   options: FieldOption[];
@@ -65,6 +66,7 @@ export function blankField(): ScoringField {
     max_value: 10,
     step: 0.25,
     max_points: 10,
+    start_value: 10,
     aggregation: 'average',
     panels: [],
     options: [],
@@ -161,13 +163,16 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
   const save = () => {
     if (!draft.name.trim()) return;
     if (draft.field_type === 'dropdown' && draft.options.length === 0) return;
-    if (draft.field_type === 'difficulty_driver') {
+    if (draft.field_type === 'difficulty_driver' || draft.field_type === 'execution_driver') {
       if (draft.skills.length === 0) return;
       if (draft.skills.some(sk => !sk.name.trim() || sk.options.length === 0 || sk.options.some(o => !o.label.trim()))) return;
     }
     onSave(draft);
     onOpenChange(false);
   };
+
+  const isDriver = draft.field_type === 'difficulty_driver' || draft.field_type === 'execution_driver';
+  const isExec = draft.field_type === 'execution_driver';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -198,13 +203,14 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
               <Label>Field Type</Label>
               <Select
                 value={draft.field_type}
-                onValueChange={(v) => setDraft(d => ({ ...d, field_type: v as 'number' | 'dropdown' | 'difficulty_driver' }))}
+                onValueChange={(v) => setDraft(d => ({ ...d, field_type: v as ScoringField['field_type'] }))}
               >
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="number">Number (+/-)</SelectItem>
                   <SelectItem value="dropdown">Dropdown</SelectItem>
                   <SelectItem value="difficulty_driver">Difficulty Driver (skills)</SelectItem>
+                  <SelectItem value="execution_driver">Execution Driver (start − reductions)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
