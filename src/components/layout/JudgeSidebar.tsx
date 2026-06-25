@@ -1,15 +1,16 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import logoWhite from '@/assets/logo-white.png.asset.json';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
+import { RubricsNavItem } from '@/components/layout/RubricsNavItem';
 import {
   ClipboardList,
   LogOut,
   LayoutDashboard,
   Play,
-  FileText,
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -55,7 +56,7 @@ export function JudgeSidebar() {
       <nav className="flex-1 p-4 space-y-1">
         <NavItem to="/judge" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
         <NavItem to="/judge/queue" icon={<Play className="w-5 h-5" />} label="Scoring Queue" />
-        <NavItem to="/judge/rubrics" icon={<FileText className="w-5 h-5" />} label="Rubrics" />
+        <RubricsNavItem to="/judge/rubrics" />
       </nav>
 
       {/* User Section */}
