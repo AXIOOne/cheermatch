@@ -103,6 +103,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
       throw new Error("No submitted scores to send");
     }
 
+    // Load admin overrides for these scores
+    const submittedIds = submittedScores.map((s: any) => s.id);
+    const overrideLookup: Record<string, Record<string, number>> = {};
+    if (submittedIds.length) {
+      const { data: ovs } = await supabase.from('score_field_overrides')
+        .select('score_id, field_id, new_points').in('score_id', submittedIds);
+      (ovs || []).forEach((o: any) => {
+        if (!overrideLookup[o.score_id]) overrideLookup[o.score_id] = {};
+        overrideLookup[o.score_id][o.field_id] = Number(o.new_points || 0);
+      });
+    }
+
     // Calculate overall average
     const avgScore = submittedScores.reduce((sum: number, s: any) => sum + (s.total_score || 0), 0) / submittedScores.length;
 
