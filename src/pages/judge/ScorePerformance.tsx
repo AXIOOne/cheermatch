@@ -183,8 +183,15 @@ export default function ScorePerformance() {
     [judgeAssignments]
   );
 
+  const isSdAssigned = useMemo(
+    () => assignedPanelAbbrevs.has('SD') && !hasAllPanelsAssignment,
+    [assignedPanelAbbrevs, hasAllPanelsAssignment]
+  );
+
   const visibleSections = useMemo(() => {
     if (!template?.sections) return [] as any[];
+    // SD (Deductions) judges only enter deductions — no scoring criteria rows.
+    if (isSdAssigned) return [] as any[];
     return [...(template.sections as any[])]
       .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
       .map((s: any) => {
@@ -200,7 +207,7 @@ export default function ScorePerformance() {
           .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
         return { ...s, visibleFields: fields };
       }).filter((s: any) => s.visibleFields.length > 0);
-  }, [template, assignedPanelAbbrevs, assignedSectionIds, hasAllPanelsAssignment]);
+  }, [template, assignedPanelAbbrevs, assignedSectionIds, hasAllPanelsAssignment, isSdAssigned]);
 
   useEffect(() => {
     if (!template) return;
@@ -575,7 +582,7 @@ export default function ScorePerformance() {
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
 
-            {visibleSections.length === 0 ? (
+            {visibleSections.length === 0 && !isSdAssigned ? (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
                   <p>No scoring fields available for your panel.</p>
@@ -709,7 +716,7 @@ export default function ScorePerformance() {
                   </Card>
                 ))}
 
-                {template?.deduction_types && template.deduction_types.length > 0 && (
+                {isSdAssigned && template?.deduction_types && template.deduction_types.length > 0 && (
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base text-destructive">Deductions</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
@@ -743,16 +750,20 @@ export default function ScorePerformance() {
 
                 <Card className="border-2 border-primary">
                   <CardContent className="py-4 space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Deductions</span>
-                      <span className="font-medium text-destructive">
-                        -{calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <span className="font-semibold text-lg">Total Points</span>
-                      <span className="text-3xl font-bold text-primary">{calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</span>
-                    </div>
+                    {isSdAssigned && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Deductions</span>
+                        <span className="font-medium text-destructive">
+                          -{calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    {!isSdAssigned && (
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="font-semibold text-lg">Total Points</span>
+                        <span className="text-3xl font-bold text-primary">{calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</span>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 

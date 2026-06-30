@@ -201,6 +201,8 @@ export default function SubmissionScoringDialog({
   // Flatten visible fields for this panel, grouped by section
   const visibleSections = useMemo(() => {
     if (!template?.sections) return [] as any[];
+    // SD (Deductions) panel only enters deductions — no scoring criteria rows.
+    if (isSdPanel) return [] as any[];
     const sections = [...(template.sections as any[])]
       .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
     return sections.map((s: any) => {
@@ -213,7 +215,7 @@ export default function SubmissionScoringDialog({
         .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
       return { ...s, visibleFields: fields };
     }).filter(s => s.visibleFields.length > 0);
-  }, [template, selectedPanelAbbrev]);
+  }, [template, selectedPanelAbbrev, isSdPanel]);
 
   useEffect(() => {
     if (!template?.sections) return;
@@ -842,9 +844,14 @@ export default function SubmissionScoringDialog({
                       </div>
                     )}
                     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                      {visibleSections.length === 0 && (
+                      {visibleSections.length === 0 && !isSdPanel && (
                         <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
                           No scoring fields are assigned to this panel.
+                        </CardContent></Card>
+                      )}
+                      {isSdPanel && (
+                        <Card><CardContent className="py-6 text-center text-sm text-muted-foreground">
+                          This is the Deductions panel — enter deductions in the panel on the right.
                         </CardContent></Card>
                       )}
                       {visibleSections.map((section: any) => (
