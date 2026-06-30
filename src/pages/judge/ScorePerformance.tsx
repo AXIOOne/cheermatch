@@ -750,16 +750,20 @@ export default function ScorePerformance() {
 
                 <Card className="border-2 border-primary">
                   <CardContent className="py-4 space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Deductions</span>
-                      <span className="font-medium text-destructive">
-                        -{calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <span className="font-semibold text-lg">Total Points</span>
-                      <span className="text-3xl font-bold text-primary">{calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</span>
-                    </div>
+                    {isSdAssigned && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Deductions</span>
+                        <span className="font-medium text-destructive">
+                          -{calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts).toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                    {!isSdAssigned && (
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="font-semibold text-lg">Total Points</span>
+                        <span className="text-3xl font-bold text-primary">{calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</span>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
