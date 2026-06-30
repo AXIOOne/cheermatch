@@ -819,10 +819,12 @@ export default function SubmissionScoringDialog({
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-3 py-2">
-                            {section.visibleFields.map((f: any) => (
-                              <div key={f.id} className="space-y-2 pb-2 border-b last:border-0">
-                                <div className="flex items-center justify-between">
-                                  <div>
+                            {section.visibleFields.map((f: any) => {
+                              const ov = currentPanelScore ? overrideMap[currentPanelScore.id]?.[f.id] : null;
+                              return (
+                              <div key={f.id} className={`space-y-2 pb-2 border-b last:border-0 ${ov ? 'bg-destructive/5 -mx-2 px-2 rounded' : ''}`}>
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
                                     <p className="text-sm font-medium">{f.name}</p>
                                     {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
                                     {f.field_type === 'execution_driver' && (
@@ -830,12 +832,52 @@ export default function SubmissionScoringDialog({
                                         Start: {Number(f.start_value ?? 0).toFixed(2)}
                                       </p>
                                     )}
-                                  </div>
-                                  <div className="text-right text-xs text-muted-foreground">
-                                    {(f.field_type === 'difficulty_driver' || f.field_type === 'execution_driver') && (
-                                      <span className="text-sm font-semibold mr-2 text-foreground">{Number(fieldScores[f.id]?.points || 0).toFixed(2)}</span>
+                                    {ov && (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <p className="text-[11px] font-semibold text-destructive mt-1 inline-flex items-center gap-1 cursor-help">
+                                              <Ban className="w-3 h-3" />
+                                              Overridden to 0 (was {Number(ov.original_points).toFixed(2)})
+                                              <Info className="w-3 h-3" />
+                                            </p>
+                                          </TooltipTrigger>
+                                          <TooltipContent className="max-w-xs">
+                                            <p className="text-xs"><strong>Reason:</strong> {ov.reason}</p>
+                                            {ov.admin && <p className="text-xs mt-1 text-muted-foreground">By {ov.admin.full_name || ov.admin.email}</p>}
+                                            <p className="text-xs text-muted-foreground">{new Date(ov.overridden_at || ov.created_at).toLocaleString()}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                     )}
-                                    max {Number(f.max_points).toFixed(2)}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-right text-xs text-muted-foreground">
+                                      {(f.field_type === 'difficulty_driver' || f.field_type === 'execution_driver') && (
+                                        <span className={`text-sm font-semibold mr-2 ${ov ? 'text-destructive line-through' : 'text-foreground'}`}>{Number(fieldScores[f.id]?.points || 0).toFixed(2)}</span>
+                                      )}
+                                      max {Number(f.max_points).toFixed(2)}
+                                    </div>
+                                    {currentPanelScore && (
+                                      ov ? (
+                                        <Button
+                                          variant="ghost" size="sm"
+                                          className="h-7 px-2 text-xs"
+                                          onClick={() => removeOverrideMutation.mutate({ scoreId: currentPanelScore.id, fieldId: f.id })}
+                                          disabled={removeOverrideMutation.isPending}
+                                        >
+                                          <RotateCcw className="w-3 h-3 mr-1" /> Undo
+                                        </Button>
+                                      ) : (
+                                        <Button
+                                          variant="ghost" size="sm"
+                                          className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                          onClick={() => setOverrideTarget({ field: f, currentPoints: Number(fieldScores[f.id]?.points || 0) })}
+                                        >
+                                          <Ban className="w-3 h-3 mr-1" /> Override → 0
+                                        </Button>
+                                      )
+                                    )}
                                   </div>
                                 </div>
                                 {f.field_type === 'dropdown' ? (() => {
