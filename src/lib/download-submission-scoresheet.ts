@@ -42,6 +42,18 @@ export async function generateSubmissionScoresheetBytes(
     options.includeAllScores ? true : s.status === 'submitted'
   );
 
+  // Load admin overrides for these scores
+  const usableIds = usable.map((s: any) => s.id);
+  let overrideLookup: Record<string, Record<string, number>> = {};
+  if (usableIds.length) {
+    const { data: ovs } = await sb.from('score_field_overrides')
+      .select('score_id, field_id, new_points').in('score_id', usableIds);
+    (ovs || []).forEach((o: any) => {
+      if (!overrideLookup[o.score_id]) overrideLookup[o.score_id] = {};
+      overrideLookup[o.score_id][o.field_id] = Number(o.new_points || 0);
+    });
+  }
+
   let show_comments = false;
   let deduction_catalog: Array<{ id: string; name: string; points: number; display_order: number }> = [];
   let templateId: string | null = usable[0]?.template_id ?? null;
