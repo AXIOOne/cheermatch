@@ -508,6 +508,78 @@ export default function SubmissionScoringDialog({
     onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
 
+  // Recompute and persist a score's total after an override is added/removed.
+  const recomputeScoreTotal = async (scoreId: string) => {
+    const score: any = allScores?.find((s: any) => s.id === scoreId);
+    if (!score) return;
+    // Re-fetch latest overrides for this score
+    const { data: ovs } = await sb.from('score_field_overrides')
+      .select('field_id, new_points').eq('score_id', scoreId);
+    const ovMap: Record<string, number> = {};
+    (ovs || []).forEach((o: any) => { ovMap[o.field_id] = Number(o.new_points || 0); });
+    // Sum effective points for the visible template fields (use this panel's visible fields).
+    const tplFields: any[] = (template?.sections || []).flatMap((s: any) => s.fields || []);
+    const panelAbbr = (panels.find(p => p.id === resolveScorePanelId(score))?.abbreviation || '').toUpperCase();
+    const visibleForPanel = tplFields.filter((f: any) => {
+      const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
+      if (abbrs.length === 0) return true;
+      return abbrs.includes(panelAbbr);
+    });
+    let max = 0;
+    let raw = 0;
+    visibleForPanel.forEach((f: any) => {
+      max += Number(f.max_points || 0);
+      const detail = (score.details || []).find((d: any) => d.field_id === f.id);
+      const original = Number(detail?.points || 0);
+      const effective = f.id in ovMap ? ovMap[f.id] : original;
+      raw += effective;
+    });
+    const ded = Number(score.deductions || 0);
+    const perfection = max > 0 ? Math.max(0, (raw / max) * 100 - ded) : 0;
+    await sb.from('scores').update({ total_score: perfection }).eq('id', scoreId);
+  };
+
+  const applyOverrideMutation = useMutation({
+    mutationFn: async ({ scoreId, field, currentPoints, reason }: { scoreId: string; field: any; currentPoints: number; reason: string }) => {
+      const { data: userData } = await supabase.auth.getUser();
+      const adminId = userData.user?.id;
+      if (!adminId) throw new Error('Not authenticated');
+      const { error } = await sb.from('score_field_overrides').upsert({
+        score_id: scoreId,
+        field_id: field.id,
+        original_points: currentPoints,
+        new_points: 0,
+        reason,
+        overridden_by: adminId,
+      }, { onConflict: 'score_id,field_id' });
+      if (error) throw error;
+      await recomputeScoreTotal(scoreId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['submission-score-overrides', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
+      toast({ title: 'Score overridden to 0' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Override failed', description: e.message }),
+  });
+
+  const removeOverrideMutation = useMutation({
+    mutationFn: async ({ scoreId, fieldId }: { scoreId: string; fieldId: string }) => {
+      const { error } = await sb.from('score_field_overrides').delete()
+        .eq('score_id', scoreId).eq('field_id', fieldId);
+      if (error) throw error;
+      await recomputeScoreTotal(scoreId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['submission-score-overrides', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
+      toast({ title: 'Override removed' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Remove failed', description: e.message }),
+  });
+
   const getPanelStatus = (panelId: string) => {
     const s: any = allScores?.find((x: any) => resolveScorePanelId(x) === panelId);
     if (!s) return 'pending';
