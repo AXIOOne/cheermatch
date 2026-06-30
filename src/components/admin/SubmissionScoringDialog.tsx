@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { FormattedCommentField } from '@/components/ui/formatted-comment-field';
 import { ScoreInput } from '@/components/ui/score-input';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
@@ -892,9 +893,9 @@ export default function SubmissionScoringDialog({
 
                     <div>
                       <label className="text-sm font-medium">Feedback & Comments</label>
-                      <Textarea placeholder="Overall feedback for the team..."
-                        value={comments} onChange={(e) => setComments(e.target.value)} rows={3}
-                        disabled={isCurrentPanelLocked} className="mt-1" />
+                      <FormattedCommentField placeholder="Overall feedback for the team..."
+                        value={comments} onChange={setComments} rows={3}
+                        disabled={isCurrentPanelLocked} className="mt-1" toolbarClassName="mt-1" />
                     </div>
 
                     <div className="flex items-center justify-between p-3 rounded-lg border bg-warning/5 border-warning/30">

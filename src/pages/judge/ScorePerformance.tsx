@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { FormattedCommentField } from '@/components/ui/formatted-comment-field';
 import { ScoreInput } from '@/components/ui/score-input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -764,10 +765,10 @@ export default function ScorePerformance() {
             <Card className="lg:sticky lg:top-24">
               <CardHeader className="pb-2"><CardTitle className="text-base">Judge Comments</CardTitle></CardHeader>
               <CardContent>
-                <Textarea
+                <FormattedCommentField
                   placeholder="Overall feedback..."
                   value={comments}
-                  onChange={(e) => setComments(e.target.value)}
+                  onChange={setComments}
                   rows={14}
                   disabled={isLocked}
                 />
