@@ -844,9 +844,14 @@ export default function SubmissionScoringDialog({
                       </div>
                     )}
                     <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                      {visibleSections.length === 0 && (
+                      {visibleSections.length === 0 && !isSdPanel && (
                         <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
                           No scoring fields are assigned to this panel.
+                        </CardContent></Card>
+                      )}
+                      {isSdPanel && (
+                        <Card><CardContent className="py-6 text-center text-sm text-muted-foreground">
+                          This is the Deductions panel — enter deductions in the panel on the right.
                         </CardContent></Card>
                       )}
                       {visibleSections.map((section: any) => (
