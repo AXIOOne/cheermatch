@@ -480,6 +480,36 @@ export default function SubmissionScoringDialog({
           if (sErr) throw sErr;
         }
       }
+
+      // Re-apply any admin overrides on top of the freshly saved score.
+      const targetScoreId = currentPanelScore?.id;
+      if (targetScoreId) {
+        const { data: ovs } = await sb.from('score_field_overrides')
+          .select('field_id, new_points, original_points').eq('score_id', targetScoreId);
+        if (ovs && ovs.length) {
+          // Zero out detail rows for overridden fields and recompute total
+          for (const o of ovs) {
+            await sb.from('score_details').update({ points: Number(o.new_points || 0) })
+              .eq('score_id', targetScoreId).eq('field_id', o.field_id);
+          }
+          // Recompute total_score from current detail rows
+          const tplFields: any[] = (template?.sections || []).flatMap((s: any) => s.fields || []);
+          const panelAbbr = (panels.find(p => p.id === selectedPanelId)?.abbreviation || '').toUpperCase();
+          const visible = tplFields.filter((f: any) => {
+            const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
+            if (abbrs.length === 0) return true;
+            return abbrs.includes(panelAbbr);
+          });
+          const maxTotal = visible.reduce((s: number, f: any) => s + Number(f.max_points || 0), 0);
+          const { data: freshDetails } = await sb.from('score_details')
+            .select('field_id, points').eq('score_id', targetScoreId);
+          const raw = (freshDetails || [])
+            .filter((d: any) => visible.some((f: any) => f.id === d.field_id))
+            .reduce((s: number, d: any) => s + Number(d.points || 0), 0);
+          const perfection = maxTotal > 0 ? Math.max(0, (raw / maxTotal) * 100 - deductionsTotal) : 0;
+          await sb.from('scores').update({ total_score: perfection }).eq('id', targetScoreId);
+        }
+      }
     },
     onSuccess: (_, args) => {
       queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
