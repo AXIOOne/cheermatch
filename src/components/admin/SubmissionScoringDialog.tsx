@@ -634,6 +634,13 @@ export default function SubmissionScoringDialog({
                 {submission.team?.name} • {submission.team?.gym_name}
               </Badge>
             )}
+            {selectedPanelId && (
+              <Badge variant="secondary" className="font-normal gap-1">
+                <User className="w-3 h-3" />
+                {panels.find(p => p.id === selectedPanelId)?.abbreviation || 'Panel'}:{' '}
+                {assignedJudge?.judge?.full_name || assignedJudge?.judge?.email || 'Unassigned'}
+              </Badge>
+            )}
             <div className="ml-auto flex items-center gap-2">
               {isCurrentPanelSubmitted ? (
                 isCurrentPanelReviewed ? (
