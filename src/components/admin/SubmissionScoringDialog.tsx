@@ -973,7 +973,8 @@ export default function SubmissionScoringDialog({
                                   />
                                 )}
                               </div>
-                            ))}
+                              );
+                            })}
                           </CardContent>
                         </Card>
                       ))}
