@@ -716,7 +716,7 @@ export default function ScorePerformance() {
                   </Card>
                 ))}
 
-                {template?.deduction_types && template.deduction_types.length > 0 && (
+                {isSdAssigned && template?.deduction_types && template.deduction_types.length > 0 && (
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-base text-destructive">Deductions</CardTitle></CardHeader>
                     <CardContent className="space-y-2">
