@@ -170,10 +170,14 @@ export async function generateSubmissionScoresheetBytes(
           count: Number(it.count || 0),
           warnings: Number(it.warnings || 0),
         })),
-        details: (s.details || []).map((d: any) => ({
-          field_id: (Array.isArray(d.field) ? d.field[0] : d.field)?.id,
-          points: Number(d.points || 0),
-        })),
+        details: (s.details || []).map((d: any) => {
+          const fid = (Array.isArray(d.field) ? d.field[0] : d.field)?.id;
+          const ov = overrideLookup[s.id]?.[fid];
+          return {
+            field_id: fid,
+            points: ov !== undefined ? ov : Number(d.points || 0),
+          };
+        }),
       };
     }),
   });
