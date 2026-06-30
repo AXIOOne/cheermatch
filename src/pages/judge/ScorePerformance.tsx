@@ -764,10 +764,10 @@ export default function ScorePerformance() {
             <Card className="lg:sticky lg:top-24">
               <CardHeader className="pb-2"><CardTitle className="text-base">Judge Comments</CardTitle></CardHeader>
               <CardContent>
-                <Textarea
+                <FormattedCommentField
                   placeholder="Overall feedback..."
                   value={comments}
-                  onChange={(e) => setComments(e.target.value)}
+                  onChange={setComments}
                   rows={14}
                   disabled={isLocked}
                 />
