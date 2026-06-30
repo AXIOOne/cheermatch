@@ -703,6 +703,54 @@ export type Database = {
           },
         ]
       }
+      score_field_overrides: {
+        Row: {
+          created_at: string
+          field_id: string
+          id: string
+          new_points: number
+          original_points: number | null
+          overridden_by: string
+          reason: string
+          score_id: string
+        }
+        Insert: {
+          created_at?: string
+          field_id: string
+          id?: string
+          new_points?: number
+          original_points?: number | null
+          overridden_by: string
+          reason: string
+          score_id: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string
+          id?: string
+          new_points?: number
+          original_points?: number | null
+          overridden_by?: string
+          reason?: string
+          score_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_field_overrides_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "score_field_overrides_score_id_fkey"
+            columns: ["score_id"]
+            isOneToOne: false
+            referencedRelation: "scores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       score_skill_selections: {
         Row: {
           created_at: string
