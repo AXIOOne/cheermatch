@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { FormattedCommentField } from '@/components/ui/formatted-comment-field';
 import { ScoreInput } from '@/components/ui/score-input';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
