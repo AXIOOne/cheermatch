@@ -131,6 +131,38 @@ export default function SubmissionScoringDialog({
     enabled: !!submissionId && open,
   });
 
+  const scoreIds = useMemo(() => (allScores || []).map((s: any) => s.id), [allScores]);
+  const { data: overrides } = useQuery({
+    queryKey: ['submission-score-overrides', submissionId, scoreIds.join(',')],
+    queryFn: async () => {
+      if (!scoreIds.length) return [];
+      const { data, error } = await sb.from('score_field_overrides')
+        .select('*').in('score_id', scoreIds);
+      if (error) throw error;
+      const adminIds = [...new Set((data || []).map((o: any) => o.overridden_by).filter(Boolean))];
+      let adminMap: Record<string, any> = {};
+      if (adminIds.length) {
+        const { data: profs } = await sb.from('profiles')
+          .select('user_id, full_name, email').in('user_id', adminIds);
+        adminMap = (profs || []).reduce((acc: any, p: any) => { acc[p.user_id] = p; return acc; }, {});
+      }
+      return (data || []).map((o: any) => ({ ...o, admin: adminMap[o.overridden_by] || null }));
+    },
+    enabled: !!submissionId && open && scoreIds.length > 0,
+  });
+
+  // Lookup: score_id -> field_id -> override row
+  const overrideMap = useMemo(() => {
+    const map: Record<string, Record<string, any>> = {};
+    (overrides || []).forEach((o: any) => {
+      if (!map[o.score_id]) map[o.score_id] = {};
+      map[o.score_id][o.field_id] = o;
+    });
+    return map;
+  }, [overrides]);
+
+  const [overrideTarget, setOverrideTarget] = useState<{ field: any; currentPoints: number } | null>(null);
+
 
   const { data: judgeAssignments } = useQuery({
     queryKey: ['event-judge-assignments', eventId],
