@@ -183,8 +183,15 @@ export default function ScorePerformance() {
     [judgeAssignments]
   );
 
+  const isSdAssigned = useMemo(
+    () => assignedPanelAbbrevs.has('SD') && !hasAllPanelsAssignment,
+    [assignedPanelAbbrevs, hasAllPanelsAssignment]
+  );
+
   const visibleSections = useMemo(() => {
     if (!template?.sections) return [] as any[];
+    // SD (Deductions) judges only enter deductions — no scoring criteria rows.
+    if (isSdAssigned) return [] as any[];
     return [...(template.sections as any[])]
       .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
       .map((s: any) => {
@@ -200,7 +207,7 @@ export default function ScorePerformance() {
           .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
         return { ...s, visibleFields: fields };
       }).filter((s: any) => s.visibleFields.length > 0);
-  }, [template, assignedPanelAbbrevs, assignedSectionIds, hasAllPanelsAssignment]);
+  }, [template, assignedPanelAbbrevs, assignedSectionIds, hasAllPanelsAssignment, isSdAssigned]);
 
   useEffect(() => {
     if (!template) return;
