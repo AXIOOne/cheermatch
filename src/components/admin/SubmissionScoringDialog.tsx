@@ -1089,6 +1089,23 @@ export default function SubmissionScoringDialog({
           </div>
         )}
       </DialogContent>
+      <ScoreFieldOverrideDialog
+        open={!!overrideTarget}
+        onOpenChange={(o) => { if (!o) setOverrideTarget(null); }}
+        fieldName={overrideTarget?.field?.name || ''}
+        currentPoints={overrideTarget?.currentPoints || 0}
+        maxPoints={Number(overrideTarget?.field?.max_points || 0)}
+        onConfirm={async (reason) => {
+          if (!overrideTarget || !currentPanelScore) return;
+          await applyOverrideMutation.mutateAsync({
+            scoreId: currentPanelScore.id,
+            field: overrideTarget.field,
+            currentPoints: overrideTarget.currentPoints,
+            reason,
+          });
+          setOverrideTarget(null);
+        }}
+      />
     </Dialog>
   );
 }
