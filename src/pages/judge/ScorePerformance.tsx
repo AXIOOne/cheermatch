@@ -582,7 +582,7 @@ export default function ScorePerformance() {
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
 
-            {visibleSections.length === 0 ? (
+            {visibleSections.length === 0 && !isSdAssigned ? (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
                   <p>No scoring fields available for your panel.</p>
