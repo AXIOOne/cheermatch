@@ -19,8 +19,10 @@ import { calculateStructuredDeductions, sortByDisplayOrder } from '@/lib/scoring
 import {
   Play, Pause, Volume2, VolumeX, Maximize2,
   Save, Send, Loader2, CheckCircle, AlertCircle,
-  SkipBack, SkipForward, User
+  SkipBack, SkipForward, User, Ban, RotateCcw, Info
 } from 'lucide-react';
+import ScoreFieldOverrideDialog from '@/components/admin/ScoreFieldOverrideDialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface JudgePanel {
   id: string;
