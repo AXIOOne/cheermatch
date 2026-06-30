@@ -19,8 +19,10 @@ import { calculateStructuredDeductions, sortByDisplayOrder } from '@/lib/scoring
 import {
   Play, Pause, Volume2, VolumeX, Maximize2,
   Save, Send, Loader2, CheckCircle, AlertCircle,
-  SkipBack, SkipForward, User
+  SkipBack, SkipForward, User, Ban, RotateCcw, Info
 } from 'lucide-react';
+import ScoreFieldOverrideDialog from '@/components/admin/ScoreFieldOverrideDialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface JudgePanel {
   id: string;
@@ -128,6 +130,38 @@ export default function SubmissionScoringDialog({
     },
     enabled: !!submissionId && open,
   });
+
+  const scoreIds = useMemo(() => (allScores || []).map((s: any) => s.id), [allScores]);
+  const { data: overrides } = useQuery({
+    queryKey: ['submission-score-overrides', submissionId, scoreIds.join(',')],
+    queryFn: async () => {
+      if (!scoreIds.length) return [];
+      const { data, error } = await sb.from('score_field_overrides')
+        .select('*').in('score_id', scoreIds);
+      if (error) throw error;
+      const adminIds = [...new Set((data || []).map((o: any) => o.overridden_by).filter(Boolean))];
+      let adminMap: Record<string, any> = {};
+      if (adminIds.length) {
+        const { data: profs } = await sb.from('profiles')
+          .select('user_id, full_name, email').in('user_id', adminIds);
+        adminMap = (profs || []).reduce((acc: any, p: any) => { acc[p.user_id] = p; return acc; }, {});
+      }
+      return (data || []).map((o: any) => ({ ...o, admin: adminMap[o.overridden_by] || null }));
+    },
+    enabled: !!submissionId && open && scoreIds.length > 0,
+  });
+
+  // Lookup: score_id -> field_id -> override row
+  const overrideMap = useMemo(() => {
+    const map: Record<string, Record<string, any>> = {};
+    (overrides || []).forEach((o: any) => {
+      if (!map[o.score_id]) map[o.score_id] = {};
+      map[o.score_id][o.field_id] = o;
+    });
+    return map;
+  }, [overrides]);
+
+  const [overrideTarget, setOverrideTarget] = useState<{ field: any; currentPoints: number } | null>(null);
 
 
   const { data: judgeAssignments } = useQuery({
@@ -446,6 +480,36 @@ export default function SubmissionScoringDialog({
           if (sErr) throw sErr;
         }
       }
+
+      // Re-apply any admin overrides on top of the freshly saved score.
+      const targetScoreId = currentPanelScore?.id;
+      if (targetScoreId) {
+        const { data: ovs } = await sb.from('score_field_overrides')
+          .select('field_id, new_points, original_points').eq('score_id', targetScoreId);
+        if (ovs && ovs.length) {
+          // Zero out detail rows for overridden fields and recompute total
+          for (const o of ovs) {
+            await sb.from('score_details').update({ points: Number(o.new_points || 0) })
+              .eq('score_id', targetScoreId).eq('field_id', o.field_id);
+          }
+          // Recompute total_score from current detail rows
+          const tplFields: any[] = (template?.sections || []).flatMap((s: any) => s.fields || []);
+          const panelAbbr = (panels.find(p => p.id === selectedPanelId)?.abbreviation || '').toUpperCase();
+          const visible = tplFields.filter((f: any) => {
+            const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
+            if (abbrs.length === 0) return true;
+            return abbrs.includes(panelAbbr);
+          });
+          const maxTotal = visible.reduce((s: number, f: any) => s + Number(f.max_points || 0), 0);
+          const { data: freshDetails } = await sb.from('score_details')
+            .select('field_id, points').eq('score_id', targetScoreId);
+          const raw = (freshDetails || [])
+            .filter((d: any) => visible.some((f: any) => f.id === d.field_id))
+            .reduce((s: number, d: any) => s + Number(d.points || 0), 0);
+          const perfection = maxTotal > 0 ? Math.max(0, (raw / maxTotal) * 100 - deductionsTotal) : 0;
+          await sb.from('scores').update({ total_score: perfection }).eq('id', targetScoreId);
+        }
+      }
     },
     onSuccess: (_, args) => {
       queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
@@ -472,6 +536,78 @@ export default function SubmissionScoringDialog({
       toast({ title: markReviewed ? 'Marked as reviewed' : 'Review cleared' });
     },
     onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+  });
+
+  // Recompute and persist a score's total after an override is added/removed.
+  const recomputeScoreTotal = async (scoreId: string) => {
+    const score: any = allScores?.find((s: any) => s.id === scoreId);
+    if (!score) return;
+    // Re-fetch latest overrides for this score
+    const { data: ovs } = await sb.from('score_field_overrides')
+      .select('field_id, new_points').eq('score_id', scoreId);
+    const ovMap: Record<string, number> = {};
+    (ovs || []).forEach((o: any) => { ovMap[o.field_id] = Number(o.new_points || 0); });
+    // Sum effective points for the visible template fields (use this panel's visible fields).
+    const tplFields: any[] = (template?.sections || []).flatMap((s: any) => s.fields || []);
+    const panelAbbr = (panels.find(p => p.id === resolveScorePanelId(score))?.abbreviation || '').toUpperCase();
+    const visibleForPanel = tplFields.filter((f: any) => {
+      const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
+      if (abbrs.length === 0) return true;
+      return abbrs.includes(panelAbbr);
+    });
+    let max = 0;
+    let raw = 0;
+    visibleForPanel.forEach((f: any) => {
+      max += Number(f.max_points || 0);
+      const detail = (score.details || []).find((d: any) => d.field_id === f.id);
+      const original = Number(detail?.points || 0);
+      const effective = f.id in ovMap ? ovMap[f.id] : original;
+      raw += effective;
+    });
+    const ded = Number(score.deductions || 0);
+    const perfection = max > 0 ? Math.max(0, (raw / max) * 100 - ded) : 0;
+    await sb.from('scores').update({ total_score: perfection }).eq('id', scoreId);
+  };
+
+  const applyOverrideMutation = useMutation({
+    mutationFn: async ({ scoreId, field, currentPoints, reason }: { scoreId: string; field: any; currentPoints: number; reason: string }) => {
+      const { data: userData } = await supabase.auth.getUser();
+      const adminId = userData.user?.id;
+      if (!adminId) throw new Error('Not authenticated');
+      const { error } = await sb.from('score_field_overrides').upsert({
+        score_id: scoreId,
+        field_id: field.id,
+        original_points: currentPoints,
+        new_points: 0,
+        reason,
+        overridden_by: adminId,
+      }, { onConflict: 'score_id,field_id' });
+      if (error) throw error;
+      await recomputeScoreTotal(scoreId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['submission-score-overrides', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
+      toast({ title: 'Score overridden to 0' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Override failed', description: e.message }),
+  });
+
+  const removeOverrideMutation = useMutation({
+    mutationFn: async ({ scoreId, fieldId }: { scoreId: string; fieldId: string }) => {
+      const { error } = await sb.from('score_field_overrides').delete()
+        .eq('score_id', scoreId).eq('field_id', fieldId);
+      if (error) throw error;
+      await recomputeScoreTotal(scoreId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['submission-score-overrides', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
+      toast({ title: 'Override removed' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Remove failed', description: e.message }),
   });
 
   const getPanelStatus = (panelId: string) => {
@@ -713,10 +849,12 @@ export default function SubmissionScoringDialog({
                             </CardTitle>
                           </CardHeader>
                           <CardContent className="space-y-3 py-2">
-                            {section.visibleFields.map((f: any) => (
-                              <div key={f.id} className="space-y-2 pb-2 border-b last:border-0">
-                                <div className="flex items-center justify-between">
-                                  <div>
+                            {section.visibleFields.map((f: any) => {
+                              const ov = currentPanelScore ? overrideMap[currentPanelScore.id]?.[f.id] : null;
+                              return (
+                              <div key={f.id} className={`space-y-2 pb-2 border-b last:border-0 ${ov ? 'bg-destructive/5 -mx-2 px-2 rounded' : ''}`}>
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
                                     <p className="text-sm font-medium">{f.name}</p>
                                     {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
                                     {f.field_type === 'execution_driver' && (
@@ -724,12 +862,52 @@ export default function SubmissionScoringDialog({
                                         Start: {Number(f.start_value ?? 0).toFixed(2)}
                                       </p>
                                     )}
-                                  </div>
-                                  <div className="text-right text-xs text-muted-foreground">
-                                    {(f.field_type === 'difficulty_driver' || f.field_type === 'execution_driver') && (
-                                      <span className="text-sm font-semibold mr-2 text-foreground">{Number(fieldScores[f.id]?.points || 0).toFixed(2)}</span>
+                                    {ov && (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <p className="text-[11px] font-semibold text-destructive mt-1 inline-flex items-center gap-1 cursor-help">
+                                              <Ban className="w-3 h-3" />
+                                              Overridden to 0 (was {Number(ov.original_points).toFixed(2)})
+                                              <Info className="w-3 h-3" />
+                                            </p>
+                                          </TooltipTrigger>
+                                          <TooltipContent className="max-w-xs">
+                                            <p className="text-xs"><strong>Reason:</strong> {ov.reason}</p>
+                                            {ov.admin && <p className="text-xs mt-1 text-muted-foreground">By {ov.admin.full_name || ov.admin.email}</p>}
+                                            <p className="text-xs text-muted-foreground">{new Date(ov.overridden_at || ov.created_at).toLocaleString()}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                     )}
-                                    max {Number(f.max_points).toFixed(2)}
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="text-right text-xs text-muted-foreground">
+                                      {(f.field_type === 'difficulty_driver' || f.field_type === 'execution_driver') && (
+                                        <span className={`text-sm font-semibold mr-2 ${ov ? 'text-destructive line-through' : 'text-foreground'}`}>{Number(fieldScores[f.id]?.points || 0).toFixed(2)}</span>
+                                      )}
+                                      max {Number(f.max_points).toFixed(2)}
+                                    </div>
+                                    {currentPanelScore && (
+                                      ov ? (
+                                        <Button
+                                          variant="ghost" size="sm"
+                                          className="h-7 px-2 text-xs"
+                                          onClick={() => removeOverrideMutation.mutate({ scoreId: currentPanelScore.id, fieldId: f.id })}
+                                          disabled={removeOverrideMutation.isPending}
+                                        >
+                                          <RotateCcw className="w-3 h-3 mr-1" /> Undo
+                                        </Button>
+                                      ) : (
+                                        <Button
+                                          variant="ghost" size="sm"
+                                          className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                          onClick={() => setOverrideTarget({ field: f, currentPoints: Number(fieldScores[f.id]?.points || 0) })}
+                                        >
+                                          <Ban className="w-3 h-3 mr-1" /> Override → 0
+                                        </Button>
+                                      )
+                                    )}
                                   </div>
                                 </div>
                                 {f.field_type === 'dropdown' ? (() => {
@@ -825,7 +1003,8 @@ export default function SubmissionScoringDialog({
                                   />
                                 )}
                               </div>
-                            ))}
+                              );
+                            })}
                           </CardContent>
                         </Card>
                       ))}
@@ -940,6 +1119,23 @@ export default function SubmissionScoringDialog({
           </div>
         )}
       </DialogContent>
+      <ScoreFieldOverrideDialog
+        open={!!overrideTarget}
+        onOpenChange={(o) => { if (!o) setOverrideTarget(null); }}
+        fieldName={overrideTarget?.field?.name || ''}
+        currentPoints={overrideTarget?.currentPoints || 0}
+        maxPoints={Number(overrideTarget?.field?.max_points || 0)}
+        onConfirm={async (reason) => {
+          if (!overrideTarget || !currentPanelScore) return;
+          await applyOverrideMutation.mutateAsync({
+            scoreId: currentPanelScore.id,
+            field: overrideTarget.field,
+            currentPoints: overrideTarget.currentPoints,
+            reason,
+          });
+          setOverrideTarget(null);
+        }}
+      />
     </Dialog>
   );
 }
