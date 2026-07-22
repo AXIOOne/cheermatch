@@ -1,34 +1,72 @@
-## Admin Score Override (Zero Individual Fields)
 
-Allow admins to override any individual judge's field score on a scoresheet to 0, with a required reason and full audit trail.
+## Goal
 
-### 1. Database
-- New table `score_field_overrides`:
-  - `score_id`, `field_id`, `original_points`, `new_points` (always 0 for now, but stored for flexibility), `reason` (text, required), `overridden_by` (admin user_id), `created_at`.
-- RLS: only admins can insert/select; service_role full access.
-- When an override exists for a `(score_id, field_id)`, all score-reading logic treats that field's points as the overridden value.
+Give your iOS/Android developers a clean, documented HTTP API they can code against — without them needing to know anything about Supabase, Brightcove, or the web portal internals. No Capacitor wrapping, no native code from us.
 
-### 2. Admin UI (Submission Scoring Dialog / Scoresheet view)
-- For each judge's field row, add a small "Override" button (admin-only).
-- Clicking opens a confirmation dialog:
-  - Shows current points and the field's max.
-  - Required textarea: "Reason for override".
-  - Confirm button: "Set to 0".
-- Once overridden, the row displays:
-  - Score struck through, "0" shown in red beside it.
-  - Small info icon with tooltip: reason, admin name, timestamp.
-  - "Remove override" action to restore the original score.
+## Good news: most of the surface already exists
 
-### 3. Recalculation
-- Update `build-scoresheet.ts` (and the shared edge-function copy) to apply overrides before summing field points.
-- Update `scores.total_score` recompute logic: raw % = sum(effective field points) / template max × 100, then subtract deductions — same formula already in place, just using overridden values.
-- Re-trigger total recompute whenever an override is added or removed.
+The `/m` web app already talks to a set of edge functions built for exactly this purpose. Your developers can call the same endpoints. Nothing new to invent for the core flows:
 
-### 4. PDF & Reports
-- PDF scoresheet renders overridden fields with a "0*" marker and a footnote: "* Score overridden by admin".
-- Event Results, Event Reports, Score History continue to read recomputed totals — no extra changes needed beyond the recompute hook.
+| Capability | Endpoint | Status |
+| --- | --- | --- |
+| Login (email + password) | `POST /functions/v1/login` | ✅ exists — returns session token + user profile |
+| Forgot password (email a 6-digit code) | `POST /functions/v1/forgotPassword` | ✅ exists |
+| Reset password with code | `POST /functions/v1/create_password` | ✅ exists |
+| List events assigned to coach | `POST /functions/v1/mobile-coach-events` | ✅ exists |
+| List teams for an event | `POST /functions/v1/mobile-coach-teams` | ✅ exists |
+| Initialize a video upload (returns Brightcove signed URL + event folder) | `POST /functions/v1/brightcove-upload-init` | ✅ exists |
+| Finalize upload → create submission | `POST /functions/v1/brightcove-upload-complete` | ✅ exists |
 
-### Technical Notes
-- Files touched: new migration; `src/components/admin/SubmissionScoringDialog.tsx`; `src/lib/build-scoresheet.ts` + `supabase/functions/_shared/build-scoresheet.ts`; `src/lib/scoresheet-pdf.ts` + shared copy; new small component `ScoreFieldOverrideDialog.tsx`.
-- Recompute runs client-side after override mutation, mirroring existing total_score update logic.
-- Only `admin` role can see the Override controls or call the mutation (enforced via RLS + UI gating).
+All use the same envelope:
+```json
+{ "status": true, "message": "...", "data": { /* payload */ } }
+```
+
+## Small gaps to close so external devs can build cleanly
+
+These are the missing pieces I'll add:
+
+1. **Logout endpoint** — `POST /functions/v1/logout` — invalidates the mobile session token (currently the web app just drops it client-side; a real native app should be able to sign out server-side too).
+2. **Session validation endpoint** — `POST /functions/v1/me` — takes a token, returns the current user (name, email, org, phone, role) or 401. Lets a native app on cold start decide "is my saved token still valid?" without having to re-login.
+3. **Single submission lookup** — `POST /functions/v1/mobile-submission` — fetch one submission's status/thumbnail/URL by id, so the app can poll after upload without re-listing all teams.
+4. **CORS + auth header consistency** — audit the eight endpoints and make sure every one:
+   - accepts the token in the `Authorization: Bearer <token>` header **and** in the body (native devs strongly prefer the header),
+   - returns consistent HTTP status codes (200 on success, 401 on bad/missing token, 400 on validation errors) alongside the JSON envelope,
+   - has `Access-Control-Allow-Headers` covering `authorization, content-type, apikey`.
+5. **Stable base URL + anon key documentation** — the developers will need:
+   - Base URL: `https://<project-ref>.supabase.co/functions/v1`
+   - `apikey` header value (the publishable/anon key)
+   - Their token from `login` sent as `Authorization: Bearer <token>`
+
+## Deliverable: one Markdown API reference
+
+I'll write `docs/mobile-api.md` in the repo — a single self-contained reference your developers can read cover to cover. Sections:
+
+- Authentication model (how the session token works, 30-day expiry, refresh via re-login)
+- Base URL, required headers, envelope shape, error format
+- One section per endpoint with:
+  - Method + path
+  - Request body (JSON schema-style table)
+  - Success response example
+  - Error response examples (invalid token, validation error, not found)
+  - `curl` snippet
+- Video upload flow diagram (init → PUT bytes to Brightcove signed URL → complete → poll `mobile-submission` for `approved`)
+- Rate-limit / auth-email caveats
+- Changelog section (so future changes are visible)
+
+## What I will NOT do in this plan
+
+- No Capacitor / native shell work.
+- No SDK generation (Swift / Kotlin) — just the HTTP contract; devs can generate their own client if they want.
+- No breaking changes to the existing `/m` web app — the same endpoints keep working exactly as they do today.
+- No new auth mechanism (OAuth, JWT rotation, etc.) unless you ask — the existing 30-day session token model stays.
+
+## Optional additions (say the word)
+
+- **Push notification registration endpoint** (`POST /register-device`) for later FCM/APNs work.
+- **Postman / OpenAPI (Swagger) spec** in addition to the Markdown doc, so devs get autocomplete in Postman.
+- **API key per mobile app** on top of the anon key, if you want to be able to revoke a specific app build's access without rotating the whole project.
+
+## Recommended next step
+
+Confirm and I'll (a) add the three missing endpoints, (b) normalize headers/CORS on the existing eight, and (c) write `docs/mobile-api.md`. If you want Postman/OpenAPI too, tell me now and I'll include it.
