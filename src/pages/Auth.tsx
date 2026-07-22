@@ -33,7 +33,7 @@ export default function Auth() {
     } else if (isJudge) {
       navigate('/judge', { replace: true });
     } else if (isGymCoach) {
-      navigate('/coach', { replace: true });
+      navigate('/m', { replace: true });
     } else {
       navigate('/', { replace: true });
     }

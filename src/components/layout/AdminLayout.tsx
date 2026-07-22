@@ -20,7 +20,7 @@ export function AdminLayout() {
 
   if (!isAdmin) {
     if (isJudge) return <Navigate to="/judge" replace />;
-    if (isGymCoach) return <Navigate to="/coach" replace />;
+    if (isGymCoach) return <Navigate to="/m" replace />;
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">

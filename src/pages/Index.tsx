@@ -11,7 +11,7 @@ export default function Index() {
     if (loading || !user || !rolesLoaded) return;
     if (isAdmin) navigate('/admin', { replace: true });
     else if (isJudge) navigate('/judge', { replace: true });
-    else if (isGymCoach) navigate('/coach', { replace: true });
+    else if (isGymCoach) navigate('/m', { replace: true });
     else navigate('/admin', { replace: true });
   }, [user, loading, rolesLoaded, isAdmin, isJudge, isGymCoach, navigate]);
 
