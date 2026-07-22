@@ -524,7 +524,7 @@ export default function ScoringTemplates() {
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>
       ) : templates && templates.length > 0 ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 grid-cols-1">
           {templates.map((tpl: any) => (
             <Card key={tpl.id} className={`relative ${tpl.is_locked ? 'border-warning/50' : ''}`}>
               <CardHeader>
