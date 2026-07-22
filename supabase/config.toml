@@ -54,4 +54,14 @@ verify_jwt = false
 [functions.brightcove-ingest-callback]
 verify_jwt = false
 
+[functions.logout]
+verify_jwt = false
+
+[functions.me]
+verify_jwt = false
+
+[functions.mobile-submission]
+verify_jwt = false
+
+
 
