@@ -16,6 +16,7 @@ const editUserSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   fullName: z.string().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters').optional().or(z.literal('')),
+  organizationId: z.string().optional(),
 });
 
 type EditUserFormData = z.infer<typeof editUserSchema>;
@@ -26,6 +27,7 @@ interface EditUserDialogProps {
     email: string;
     full_name: string | null;
     avatar_url?: string | null;
+    organization_id?: string | null;
   } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
