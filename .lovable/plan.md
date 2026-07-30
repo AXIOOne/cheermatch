@@ -1,72 +1,31 @@
+# Organizations in the Admin Portal
 
-## Goal
+Add organizations (gyms/programs) as first-class records, assign every user to one, and make team registrations pull the gym from the assigned coach's organization.
 
-Give your iOS/Android developers a clean, documented HTTP API they can code against — without them needing to know anything about Supabase, Brightcove, or the web portal internals. No Capacitor wrapping, no native code from us.
+## What gets built
 
-## Good news: most of the surface already exists
+### 1. Organizations section (admin)
+- New sidebar entry **Organizations** nested under Settings.
+- List page with search, showing name, contact email/phone, city/state, and counts of assigned users and teams.
+- Add / Edit / Delete dialogs. Deleting is blocked while users or teams are still linked.
+- Fields: name, short code (optional), contact name, contact email, contact phone, city, state, logo URL (optional), active flag.
 
-The `/m` web app already talks to a set of edge functions built for exactly this purpose. Your developers can call the same endpoints. Nothing new to invent for the core flows:
+### 2. Users assigned to an organization
+- The Edit User dialog gets an **Organization** dropdown (searchable list of active organizations).
+- The User Roles table gets an Organization column plus an organization filter alongside the existing role filters.
+- Assignment is stored as a real link to the organization record, replacing reliance on the free-text organization name.
 
-| Capability | Endpoint | Status |
-| --- | --- | --- |
-| Login (email + password) | `POST /functions/v1/login` | ✅ exists — returns session token + user profile |
-| Forgot password (email a 6-digit code) | `POST /functions/v1/forgotPassword` | ✅ exists |
-| Reset password with code | `POST /functions/v1/create_password` | ✅ exists |
-| List events assigned to coach | `POST /functions/v1/mobile-coach-events` | ✅ exists |
-| List teams for an event | `POST /functions/v1/mobile-coach-teams` | ✅ exists |
-| Initialize a video upload (returns Brightcove signed URL + event folder) | `POST /functions/v1/brightcove-upload-init` | ✅ exists |
-| Finalize upload → create submission | `POST /functions/v1/brightcove-upload-complete` | ✅ exists |
+### 3. Registrations: coach drives the gym
+- In Add Team Registration and Edit Registration, the free-text coach name/email fields are replaced by a **Coach** dropdown listing users who can coach, each showing their organization.
+- The dropdown includes a **+ Add new coach** option that opens an inline mini-form (name, email, phone, organization) creating the coach user and returning to the registration form with them selected.
+- Once a coach is picked, the **Gym** field auto-fills from that coach's organization and is read-only. If the coach has no organization yet, the form asks you to set one before saving.
+- The team still stores its gym name and coach name/email snapshot so existing scoresheets, PDFs, emails, and the coach review portal keep working unchanged.
 
-All use the same envelope:
-```json
-{ "status": true, "message": "...", "data": { /* payload */ } }
-```
+### 4. Existing data
+Starting clean, per your choice: no automatic backfill. Existing teams keep the gym names already stored; they update when a registration is re-saved with a coach. Existing users have no organization until you assign one.
 
-## Small gaps to close so external devs can build cleanly
-
-These are the missing pieces I'll add:
-
-1. **Logout endpoint** — `POST /functions/v1/logout` — invalidates the mobile session token (currently the web app just drops it client-side; a real native app should be able to sign out server-side too).
-2. **Session validation endpoint** — `POST /functions/v1/me` — takes a token, returns the current user (name, email, org, phone, role) or 401. Lets a native app on cold start decide "is my saved token still valid?" without having to re-login.
-3. **Single submission lookup** — `POST /functions/v1/mobile-submission` — fetch one submission's status/thumbnail/URL by id, so the app can poll after upload without re-listing all teams.
-4. **CORS + auth header consistency** — audit the eight endpoints and make sure every one:
-   - accepts the token in the `Authorization: Bearer <token>` header **and** in the body (native devs strongly prefer the header),
-   - returns consistent HTTP status codes (200 on success, 401 on bad/missing token, 400 on validation errors) alongside the JSON envelope,
-   - has `Access-Control-Allow-Headers` covering `authorization, content-type, apikey`.
-5. **Stable base URL + anon key documentation** — the developers will need:
-   - Base URL: `https://<project-ref>.supabase.co/functions/v1`
-   - `apikey` header value (the publishable/anon key)
-   - Their token from `login` sent as `Authorization: Bearer <token>`
-
-## Deliverable: one Markdown API reference
-
-I'll write `docs/mobile-api.md` in the repo — a single self-contained reference your developers can read cover to cover. Sections:
-
-- Authentication model (how the session token works, 30-day expiry, refresh via re-login)
-- Base URL, required headers, envelope shape, error format
-- One section per endpoint with:
-  - Method + path
-  - Request body (JSON schema-style table)
-  - Success response example
-  - Error response examples (invalid token, validation error, not found)
-  - `curl` snippet
-- Video upload flow diagram (init → PUT bytes to Brightcove signed URL → complete → poll `mobile-submission` for `approved`)
-- Rate-limit / auth-email caveats
-- Changelog section (so future changes are visible)
-
-## What I will NOT do in this plan
-
-- No Capacitor / native shell work.
-- No SDK generation (Swift / Kotlin) — just the HTTP contract; devs can generate their own client if they want.
-- No breaking changes to the existing `/m` web app — the same endpoints keep working exactly as they do today.
-- No new auth mechanism (OAuth, JWT rotation, etc.) unless you ask — the existing 30-day session token model stays.
-
-## Optional additions (say the word)
-
-- **Push notification registration endpoint** (`POST /register-device`) for later FCM/APNs work.
-- **Postman / OpenAPI (Swagger) spec** in addition to the Markdown doc, so devs get autocomplete in Postman.
-- **API key per mobile app** on top of the anon key, if you want to be able to revoke a specific app build's access without rotating the whole project.
-
-## Recommended next step
-
-Confirm and I'll (a) add the three missing endpoints, (b) normalize headers/CORS on the existing eight, and (c) write `docs/mobile-api.md`. If you want Postman/OpenAPI too, tell me now and I'll include it.
+## Technical notes
+- New table `public.organizations` (name, code, contact fields, city/state, logo_url, is_active, timestamps + updated_at trigger), with grants for `authenticated`/`service_role`, RLS enabled: read for any authenticated user; insert/update/delete restricted to admin/portal admin via `has_role`.
+- `profiles.organization_id uuid references organizations(id) on delete set null`; `teams.organization_id` added the same way (nullable, gym_name retained as the display snapshot).
+- Coach creation from the registration dialog reuses the existing user-creation edge function path, assigning the `gym_coach` role and the chosen organization.
+- New `src/pages/admin/Organizations.tsx` + `OrganizationDialog.tsx`, route under `/admin/organizations`, and a shared `useOrganizations` query hook used by the user, team, and registration dialogs.
