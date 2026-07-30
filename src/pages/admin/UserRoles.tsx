@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus, AlertTriangle, Pencil, Mail, KeyRound } from 'lucide-react';
+import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus, AlertTriangle, Pencil, Mail, KeyRound, Search, X } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -51,6 +51,8 @@ export default function UserRoles() {
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserWithRoles | null>(null);
   const [userToEdit, setUserToEdit] = useState<UserWithRoles | null>(null);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<AppRole | 'all'>('all');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -543,23 +545,79 @@ export default function UserRoles() {
         </Card>
       </div>
 
+      {/* Filters */}
+      <Card className="mb-6">
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-4">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant={roleFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setRoleFilter('all')}
+              >
+                All
+              </Button>
+              {(Object.keys(roleLabels) as AppRole[]).map((role) => (
+                <Button
+                  key={role}
+                  size="sm"
+                  variant={roleFilter === role ? 'default' : 'outline'}
+                  onClick={() => setRoleFilter(role)}
+                  className={roleFilter === role ? '' : roleColors[role]}
+                >
+                  {roleLabels[role]}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
-          ) : users && users.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Roles</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => {
+          ) : (
+            (() => {
+              const filteredUsers = (users || []).filter((user) => {
+                const matchesSearch =
+                  search === '' ||
+                  user.email.toLowerCase().includes(search.toLowerCase()) ||
+                  (user.full_name && user.full_name.toLowerCase().includes(search.toLowerCase()));
+                const matchesRole = roleFilter === 'all' || user.roles.includes(roleFilter);
+                return matchesSearch && matchesRole;
+              });
+
+              return filteredUsers.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Roles</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => {
                   const initials = ((user.full_name || user.email || '?').trim().split(/\s+/).slice(0, 2).map(s => s[0]).join('') || '?').toUpperCase();
                   return (
                   <TableRow key={user.user_id}>
@@ -677,7 +735,8 @@ export default function UserRoles() {
               <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No users found.</p>
             </div>
-          )}
+          );
+          })())}
         </CardContent>
       </Card>
 
