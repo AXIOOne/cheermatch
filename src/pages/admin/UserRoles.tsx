@@ -545,6 +545,51 @@ export default function UserRoles() {
         </Card>
       </div>
 
+      {/* Filters */}
+      <Card className="mb-6">
+        <CardContent className="p-4">
+          <div className="flex flex-col gap-4">
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                variant={roleFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setRoleFilter('all')}
+              >
+                All
+              </Button>
+              {(Object.keys(roleLabels) as AppRole[]).map((role) => (
+                <Button
+                  key={role}
+                  size="sm"
+                  variant={roleFilter === role ? 'default' : 'outline'}
+                  onClick={() => setRoleFilter(role)}
+                  className={roleFilter === role ? '' : roleColors[role]}
+                >
+                  {roleLabels[role]}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
