@@ -51,6 +51,8 @@ export default function UserRoles() {
   const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<UserWithRoles | null>(null);
   const [userToEdit, setUserToEdit] = useState<UserWithRoles | null>(null);
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState<AppRole | 'all'>('all');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
