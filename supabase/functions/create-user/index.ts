@@ -77,11 +77,14 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Update the profile with full name if provided
-    if (fullName && newUser.user) {
+    // Update the profile with full name / organization if provided
+    if (newUser.user && (fullName || organizationId)) {
+      const profileUpdates: Record<string, unknown> = {}
+      if (fullName) profileUpdates.full_name = fullName
+      if (organizationId) profileUpdates.organization_id = organizationId
       await supabaseAdmin
         .from('profiles')
-        .update({ full_name: fullName })
+        .update(profileUpdates)
         .eq('user_id', newUser.user.id)
     }
 
