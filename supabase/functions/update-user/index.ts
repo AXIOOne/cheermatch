@@ -89,10 +89,11 @@ Deno.serve(async (req) => {
     }
 
     // Update profile if there are profile-related changes
-    const profileUpdates: { email?: string; full_name?: string; avatar_url?: string | null; password_hash?: string } = {}
+    const profileUpdates: { email?: string; full_name?: string; avatar_url?: string | null; password_hash?: string; organization_id?: string | null } = {}
     if (email) profileUpdates.email = email
     if (fullName !== undefined) profileUpdates.full_name = fullName
     if (avatarUrl !== undefined) profileUpdates.avatar_url = avatarUrl
+    if (organizationId !== undefined) profileUpdates.organization_id = organizationId || null
 
     // Also sync password_hash used by the mobile (coach/gym) login flow
     if (password) {
