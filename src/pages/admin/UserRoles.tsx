@@ -596,17 +596,28 @@ export default function UserRoles() {
             <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
-          ) : users && users.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Roles</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => {
+          ) : (
+            (() => {
+              const filteredUsers = (users || []).filter((user) => {
+                const matchesSearch =
+                  search === '' ||
+                  user.email.toLowerCase().includes(search.toLowerCase()) ||
+                  (user.full_name && user.full_name.toLowerCase().includes(search.toLowerCase()));
+                const matchesRole = roleFilter === 'all' || user.roles.includes(roleFilter);
+                return matchesSearch && matchesRole;
+              });
+
+              return filteredUsers.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>User</TableHead>
+                      <TableHead>Roles</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => {
                   const initials = ((user.full_name || user.email || '?').trim().split(/\s+/).slice(0, 2).map(s => s[0]).join('') || '?').toUpperCase();
                   return (
                   <TableRow key={user.user_id}>
