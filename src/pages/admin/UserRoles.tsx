@@ -43,6 +43,8 @@ interface UserWithRoles {
   email: string;
   full_name: string | null;
   avatar_url: string | null;
+  organization_id: string | null;
+  organization_name: string | null;
   roles: AppRole[];
 }
 
@@ -53,6 +55,8 @@ export default function UserRoles() {
   const [userToEdit, setUserToEdit] = useState<UserWithRoles | null>(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<AppRole | 'all'>('all');
+  const [orgFilter, setOrgFilter] = useState<string>('all');
+  const { data: organizations } = useOrganizations();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
