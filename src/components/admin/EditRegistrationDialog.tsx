@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,17 +6,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { CoachSelect, useCoaches, type CoachOption } from './CoachSelect';
 
 const schema = z.object({
-  gym_name: z.string().trim().min(1, 'Gym name is required').max(120),
   name: z.string().trim().min(1, 'Team name is required').max(120),
-  coach_name: z.string().trim().min(1, 'Coach name is required').max(120),
-  coach_email: z.string().trim().email('Invalid email').max(255),
   coach_phone: z.string().trim().max(40).optional().or(z.literal('')),
   division_id: z.string().min(1, 'Division is required'),
   level_id: z.string().min(1, 'Level is required'),
@@ -38,14 +37,13 @@ const sb = supabase as any;
 export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: EditRegistrationDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: coaches } = useCoaches();
+  const [coach, setCoach] = useState<CoachOption | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      gym_name: '',
       name: '',
-      coach_name: '',
-      coach_email: '',
       coach_phone: '',
       division_id: '',
       level_id: '',
@@ -57,10 +55,7 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
   useEffect(() => {
     if (open && team) {
       form.reset({
-        gym_name: team.gym_name || '',
         name: team.name || '',
-        coach_name: team.coach_name || '',
-        coach_email: team.coach_email || '',
         coach_phone: team.coach_phone || '',
         division_id: team.division_id || '',
         level_id: team.level_id || '',
@@ -69,6 +64,15 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
       });
     }
   }, [open, team?.id]);
+
+  useEffect(() => {
+    if (!open || !team || !coaches) return;
+    const match =
+      coaches.find((c) => c.user_id === team.coach_user_id) ||
+      coaches.find((c) => c.email?.toLowerCase() === (team.coach_email || '').toLowerCase()) ||
+      null;
+    setCoach(match);
+  }, [open, team?.id, coaches]);
 
   const { data: divisions } = useQuery({
     queryKey: ['divisions-edit-reg'],
@@ -90,22 +94,17 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const athleteTotal = (data.athletes_male || 0) + (data.athletes_female || 0);
-      // Re-link to coach profile by email
-      const { data: profile } = await sb
-        .from('profiles')
-        .select('user_id')
-        .ilike('email', data.coach_email)
-        .maybeSingle();
+      if (!coach) throw new Error('Please select a coach for this registration.');
       const { error } = await sb
         .from('teams')
         .update({
           name: data.name,
-          gym_name: data.gym_name,
-          coach_name: data.coach_name,
-          coach_email: data.coach_email,
+          gym_name: coach.organization_name || '',
+          organization_id: coach.organization_id,
+          coach_name: coach.full_name || coach.email,
+          coach_email: coach.email,
           coach_phone: data.coach_phone || null,
-          coach_user_id: profile?.user_id ?? null,
+          coach_user_id: coach.user_id,
           division_id: data.division_id,
           level_id: data.level_id,
           athletes_male: data.athletes_male,
@@ -132,17 +131,16 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
         <Form {...form}>
           <form onSubmit={form.handleSubmit((d) => updateMutation.mutate(d))} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField control={form.control} name="gym_name" render={({ field }) => (
-                <FormItem><FormLabel>Gym Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Coach</Label>
+                <CoachSelect value={coach?.user_id ?? null} onChange={setCoach} />
+              </div>
+              <div className="space-y-2">
+                <Label>Gym (from coach's organization)</Label>
+                <Input value={coach?.organization_name || ''} readOnly placeholder="Select a coach" />
+              </div>
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem><FormLabel>Team Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="coach_name" render={({ field }) => (
-                <FormItem><FormLabel>Coach Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="coach_email" render={({ field }) => (
-                <FormItem><FormLabel>Coach Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="coach_phone" render={({ field }) => (
                 <FormItem><FormLabel>Coach Phone</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>
