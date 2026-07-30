@@ -116,31 +116,18 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
         <Form {...form}>
           <form onSubmit={form.handleSubmit((d) => createMutation.mutate(d))} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField control={form.control} name="gym_name" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Gym Name</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Coach</Label>
+                <CoachSelect value={coach?.user_id ?? null} onChange={setCoach} />
+              </div>
+              <div className="space-y-2">
+                <Label>Gym (from coach's organization)</Label>
+                <Input value={coach?.organization_name || ''} readOnly placeholder="Select a coach" />
+              </div>
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Team Name</FormLabel>
                   <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="coach_name" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Coach Name</FormLabel>
-                  <FormControl><Input {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="coach_email" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Coach Email</FormLabel>
-                  <FormControl><Input type="email" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
