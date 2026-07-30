@@ -623,7 +623,10 @@ export default function UserRoles() {
                   user.email.toLowerCase().includes(search.toLowerCase()) ||
                   (user.full_name && user.full_name.toLowerCase().includes(search.toLowerCase()));
                 const matchesRole = roleFilter === 'all' || user.roles.includes(roleFilter);
-                return matchesSearch && matchesRole;
+                const matchesOrg =
+                  orgFilter === 'all' ||
+                  (orgFilter === 'none' ? !user.organization_id : user.organization_id === orgFilter);
+                return matchesSearch && matchesRole && matchesOrg;
               });
 
               return filteredUsers.length > 0 ? (
@@ -631,6 +634,7 @@ export default function UserRoles() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>User</TableHead>
+                      <TableHead>Organization</TableHead>
                       <TableHead>Roles</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
