@@ -49,9 +49,11 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
   const [avatarDirty, setAvatarDirty] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  const { data: organizations } = useOrganizations({ activeOnly: true });
+
   const form = useForm<EditUserFormData>({
     resolver: zodResolver(editUserSchema),
-    defaultValues: { email: '', fullName: '', password: '' },
+    defaultValues: { email: '', fullName: '', password: '', organizationId: 'none' },
   });
 
   useEffect(() => {
@@ -60,6 +62,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
         email: user.email,
         fullName: user.full_name || '',
         password: '',
+        organizationId: user.organization_id || 'none',
       });
       setAvatarUrl(user.avatar_url || null);
       setAvatarDirty(false);
