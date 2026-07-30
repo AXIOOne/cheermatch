@@ -122,6 +122,13 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
           fullName: data.fullName !== user.full_name ? data.fullName : undefined,
           password: data.password || undefined,
           avatarUrl: avatarDirty ? avatarUrl : undefined,
+          organizationId:
+            (data.organizationId === 'none' ? null : data.organizationId ?? null) !==
+            (user.organization_id ?? null)
+              ? data.organizationId === 'none'
+                ? null
+                : data.organizationId
+              : undefined,
         },
       });
 
