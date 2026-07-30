@@ -21,6 +21,7 @@ import Divisions from "./pages/admin/Divisions";
 import Settings from "./pages/admin/Settings";
 import ReviewRequests from "./pages/admin/ReviewRequests";
 import UserRoles from "./pages/admin/UserRoles";
+import Organizations from "./pages/admin/Organizations";
 import Submissions from "./pages/admin/Submissions";
 import EventRegistrations from "./pages/admin/EventRegistrations";
 import EventScoring from "./pages/admin/EventScoring";
