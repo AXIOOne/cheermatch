@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { RubricsNavItem } from '@/components/layout/RubricsNavItem';
 import { SettingsNavItem } from '@/components/layout/SettingsNavItem';
+import { EventsNavItem } from '@/components/layout/EventsNavItem';
 
 import {
   Calendar,
@@ -78,12 +79,10 @@ export function AdminSidebar() {
 
       <nav className="flex-1 p-4 space-y-1">
         <NavItem to="/admin" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
-        <NavItem to="/admin/events" icon={<Calendar className="w-5 h-5" />} label="Events" />
+        <EventsNavItem />
         <RubricsNavItem to="/admin/rubrics" />
 
         <NavItem to="/admin/submissions" icon={<Video className="w-5 h-5" />} label="Submissions" />
-
-        <NavItem to="/admin/reviews" icon={<MessageSquareText className="w-5 h-5" />} label="AccuScore" />
         <SettingsNavItem />
 
       </nav>
