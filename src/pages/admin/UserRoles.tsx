@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Database } from '@/integrations/supabase/types';
+import { useOrganizations } from '@/hooks/useOrganizations';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
