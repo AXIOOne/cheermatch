@@ -139,6 +139,8 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['coach-options'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-counts'] });
       toast({ title: 'User updated successfully!' });
       onOpenChange(false);
       form.reset();
