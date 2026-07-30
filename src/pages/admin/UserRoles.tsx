@@ -735,7 +735,8 @@ export default function UserRoles() {
               <Shield className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p>No users found.</p>
             </div>
-          )}
+          );
+          })()}
         </CardContent>
       </Card>
 
