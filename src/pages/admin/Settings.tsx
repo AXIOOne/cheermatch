@@ -12,8 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play, Mail, Palette, Upload } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play, Mail, Palette, Upload, KeyRound } from 'lucide-react';
 import { EmailTemplateManager } from '@/components/admin/EmailTemplateManager';
+import { ApiAccessDialog } from '@/components/admin/ApiAccessDialog';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 
 const AWS_REGIONS = [
@@ -92,6 +93,7 @@ export default function Settings() {
   const [integrationsDialogOpen, setIntegrationsDialogOpen] = useState(false);
   const [emailTemplatesOpen, setEmailTemplatesOpen] = useState(false);
   const [brandingDialogOpen, setBrandingDialogOpen] = useState(false);
+  const [apiAccessDialogOpen, setApiAccessDialogOpen] = useState(false);
 
   // Use the reusable hook
   const { security, notifications, integrations, branding, isLoading } = usePlatformSettings();
@@ -438,8 +440,33 @@ export default function Settings() {
               </Button>
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <KeyRound className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Mobile API Access</CardTitle>
+                  <CardDescription>Base URL and anon key for app developers</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                View and copy the credentials needed to connect mobile apps to the scoring portal.
+              </p>
+              <Button variant="outline" onClick={() => setApiAccessDialogOpen(true)}>
+                View API Access
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       )}
+
+      <ApiAccessDialog open={apiAccessDialogOpen} onOpenChange={setApiAccessDialogOpen} />
+
 
       {/* Security Settings Dialog */}
       <Dialog open={securityDialogOpen} onOpenChange={setSecurityDialogOpen}>
