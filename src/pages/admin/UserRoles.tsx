@@ -85,9 +85,9 @@ export default function UserRoles() {
     queryKey: ['users-with-roles'],
     queryFn: async () => {
       // Get all profiles
-      const { data: profiles, error: profilesError } = await supabase
+      const { data: profiles, error: profilesError } = await (supabase as any)
         .from('profiles')
-        .select('user_id, email, full_name, avatar_url')
+        .select('user_id, email, full_name, avatar_url, organization_id, organizations(name)')
         .order('email');
 
       if (profilesError) throw profilesError;
@@ -100,11 +100,13 @@ export default function UserRoles() {
       if (rolesError) throw rolesError;
 
       // Combine profiles with roles
-      const usersWithRoles: UserWithRoles[] = profiles.map((profile: any) => ({
+      const usersWithRoles: UserWithRoles[] = (profiles || []).map((profile: any) => ({
         user_id: profile.user_id,
         email: profile.email,
         full_name: profile.full_name,
         avatar_url: profile.avatar_url ?? null,
+        organization_id: profile.organization_id ?? null,
+        organization_name: profile.organizations?.name ?? null,
         roles: roles
           .filter((r) => r.user_id === profile.user_id)
           .map((r) => r.role),
