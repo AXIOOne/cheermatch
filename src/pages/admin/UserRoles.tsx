@@ -32,6 +32,7 @@ const createUserSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   fullName: z.string().min(1, 'Full name is required'),
+  organizationId: z.string().uuid('Please select an organization'),
   role: z.enum(['admin', 'portal_admin', 'judge', 'gym_coach', 'none'] as const).optional(),
   sendEmail: z.boolean().default(true),
 });
@@ -75,6 +76,7 @@ export default function UserRoles() {
       email: '',
       password: '',
       fullName: '',
+      organizationId: '',
       role: 'none',
       sendEmail: true,
     },
@@ -164,6 +166,7 @@ export default function UserRoles() {
           email: data.email,
           password: data.password,
           fullName: data.fullName,
+          organizationId: data.organizationId,
           role: data.role === 'none' ? undefined : data.role,
         },
       });
@@ -364,6 +367,28 @@ export default function UserRoles() {
                         <FormControl>
                           <Input placeholder="••••••••" type="password" {...field} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={createUserForm.control}
+                    name="organizationId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Organization</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an organization" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {(organizations ?? []).map((org: any) => (
+                              <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
