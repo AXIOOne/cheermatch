@@ -266,23 +266,8 @@ export default function UserRoles() {
     },
   });
 
-  const resendInviteMutation = useMutation({
-    mutationFn: async (userId: string) => {
-      const loginUrl = `${window.location.origin}/auth`;
-      const response = await supabase.functions.invoke('resend-user-invite', {
-        body: { userId, loginUrl },
-      });
-      if (response.error) throw new Error(response.error.message);
-      if (response.data?.error) throw new Error(response.data.error);
-      return response.data;
-    },
-    onSuccess: () => {
-      toast({ title: 'Invite resent', description: 'A new temporary password has been emailed.' });
-    },
-    onError: (error: any) => {
-      toast({ variant: 'destructive', title: 'Failed to resend invite', description: error.message });
-    },
-  });
+
+
 
   const resetPasswordMutation = useMutation({
     mutationFn: async (email: string) => {
