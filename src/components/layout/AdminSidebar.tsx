@@ -12,15 +12,8 @@ import { SettingsNavItem } from '@/components/layout/SettingsNavItem';
 import { EventsNavItem } from '@/components/layout/EventsNavItem';
 
 import {
-  Users,
-  ClipboardList,
-  Settings,
   LogOut,
   LayoutDashboard,
-  Layers,
-  UserCheck,
-  MessageSquareText,
-  ShieldCheck,
   Video,
 } from 'lucide-react';
 
