@@ -6,7 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { AlertCircle, CheckCircle2, Loader2, Send } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { AlertCircle, CheckCircle2, KeyRound, Loader2, UserPlus } from 'lucide-react';
 
 interface Props { eventId: string; }
 
@@ -52,20 +55,33 @@ export function CoachAccountsPanel({ eventId }: Props) {
     return () => window.removeEventListener('hashchange', applyHash);
   }, [rows]);
 
-  const inviteMutation = useMutation({
-    mutationFn: async ({ email, fullName }: { email: string; fullName: string | null }) => {
-      const loginUrl = `${window.location.origin}/m/login`;
-      const { error, data } = await supabase.functions.invoke('invite-coach', {
-        body: { email, fullName, loginUrl },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+  const [target, setTarget] = useState<Row | null>(null);
+  const [password, setPassword] = useState('');
+
+  const createAccountMutation = useMutation({
+    mutationFn: async ({ row, password }: { row: Row; password: string }) => {
+      if (row.user_exists && row.user_id) {
+        const { error, data } = await supabase.functions.invoke('update-user', {
+          body: { userId: row.user_id, password, role: 'gym_coach' },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+      } else {
+        const { error, data } = await supabase.functions.invoke('create-user', {
+          body: { email: row.coach_email, password, fullName: row.coach_name, role: 'gym_coach' },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+      }
     },
     onSuccess: () => {
-      toast({ title: 'Invite sent' });
+      toast({ title: 'Coach account ready', description: 'Share the email and password with the coach.' });
+      setTarget(null);
+      setPassword('');
       queryClient.invalidateQueries({ queryKey: ['coach-account-status', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
     },
-    onError: (e: any) => toast({ variant: 'destructive', title: 'Invite failed', description: e.message }),
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Failed', description: e.message }),
   });
 
   const total = rows?.length ?? 0;
@@ -134,11 +150,10 @@ export function CoachAccountsPanel({ eventId }: Props) {
                       <Button
                         size="sm"
                         variant={ok ? 'outline' : 'default'}
-                        onClick={() => inviteMutation.mutate({ email: r.coach_email, fullName: r.coach_name })}
-                        disabled={inviteMutation.isPending}
+                        onClick={() => { setTarget(r); setPassword(''); }}
                       >
-                        <Send className="w-3 h-3 mr-2" />
-                        {ok ? 'Resend invite' : 'Invite coach'}
+                        {ok ? <KeyRound className="w-3 h-3 mr-2" /> : <UserPlus className="w-3 h-3 mr-2" />}
+                        {ok ? 'Set password' : 'Create account'}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -148,6 +163,38 @@ export function CoachAccountsPanel({ eventId }: Props) {
           </Table>
         )}
       </CardContent>
+
+      <Dialog open={!!target} onOpenChange={(o) => { if (!o) { setTarget(null); setPassword(''); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{target?.user_exists ? 'Set coach password' : 'Create coach account'}</DialogTitle>
+            <DialogDescription>
+              {target?.coach_email} — the password you set here is what the coach uses to log in. No invite email is sent.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="coach-password">Password</Label>
+            <Input
+              id="coach-password"
+              type="text"
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setTarget(null); setPassword(''); }}>Cancel</Button>
+            <Button
+              disabled={password.length < 8 || createAccountMutation.isPending}
+              onClick={() => target && createAccountMutation.mutate({ row: target, password })}
+            >
+              {createAccountMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {target?.user_exists ? 'Update password' : 'Create account'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
