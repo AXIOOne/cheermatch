@@ -714,23 +714,6 @@ export default function UserRoles() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          disabled={resendInviteMutation.isPending && resendInviteMutation.variables === user.user_id}
-                          onClick={() => {
-                            if (confirm(`Resend invite email to ${user.email}? This generates a new temporary password.`)) {
-                              resendInviteMutation.mutate(user.user_id);
-                            }
-                          }}
-                        >
-                          {resendInviteMutation.isPending && resendInviteMutation.variables === user.user_id ? (
-                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                          ) : (
-                            <Mail className="w-4 h-4 mr-1" />
-                          )}
-                          Resend Invite
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
                           disabled={resetPasswordMutation.isPending && resetPasswordMutation.variables === user.email}
                           onClick={() => {
                             if (confirm(`Send a password reset link to ${user.email}?`)) {
