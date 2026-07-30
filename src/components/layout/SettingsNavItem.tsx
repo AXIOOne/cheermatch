@@ -8,12 +8,14 @@ import {
   ClipboardList,
   Layers,
   SlidersHorizontal,
+  Building2,
 } from 'lucide-react';
 
 const CHILDREN = [
   { to: '/admin/settings', label: 'General', icon: SlidersHorizontal },
   { to: '/admin/scoring', label: 'Scoring Templates', icon: ClipboardList },
   { to: '/admin/divisions', label: 'Divisions & Levels', icon: Layers },
+  { to: '/admin/organizations', label: 'Organizations', icon: Building2 },
   { to: '/admin/roles', label: 'User Roles', icon: ShieldCheck },
 ];
 
