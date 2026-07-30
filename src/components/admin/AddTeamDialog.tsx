@@ -37,14 +37,12 @@ const sb = supabase as any;
 export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [coach, setCoach] = useState<CoachOption | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      gym_name: '',
       name: '',
-      coach_name: '',
-      coach_email: '',
       coach_phone: '',
       division_id: '',
       level_id: '',
@@ -54,7 +52,10 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
   });
 
   useEffect(() => {
-    if (open) form.reset();
+    if (open) {
+      form.reset();
+      setCoach(null);
+    }
   }, [open]);
 
   const { data: divisions } = useQuery({
