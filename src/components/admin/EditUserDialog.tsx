@@ -11,11 +11,14 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Upload, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useOrganizations } from '@/hooks/useOrganizations';
 
 const editUserSchema = z.object({
   email: z.string().email('Please enter a valid email'),
   fullName: z.string().optional(),
   password: z.string().min(8, 'Password must be at least 8 characters').optional().or(z.literal('')),
+  organizationId: z.string().optional(),
 });
 
 type EditUserFormData = z.infer<typeof editUserSchema>;
@@ -26,6 +29,7 @@ interface EditUserDialogProps {
     email: string;
     full_name: string | null;
     avatar_url?: string | null;
+    organization_id?: string | null;
   } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -47,9 +51,11 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
   const [avatarDirty, setAvatarDirty] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  const { data: organizations } = useOrganizations({ activeOnly: true });
+
   const form = useForm<EditUserFormData>({
     resolver: zodResolver(editUserSchema),
-    defaultValues: { email: '', fullName: '', password: '' },
+    defaultValues: { email: '', fullName: '', password: '', organizationId: 'none' },
   });
 
   useEffect(() => {
@@ -58,6 +64,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
         email: user.email,
         fullName: user.full_name || '',
         password: '',
+        organizationId: user.organization_id || 'none',
       });
       setAvatarUrl(user.avatar_url || null);
       setAvatarDirty(false);
@@ -115,6 +122,13 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
           fullName: data.fullName !== user.full_name ? data.fullName : undefined,
           password: data.password || undefined,
           avatarUrl: avatarDirty ? avatarUrl : undefined,
+          organizationId:
+            (data.organizationId === 'none' ? null : data.organizationId ?? null) !==
+            (user.organization_id ?? null)
+              ? data.organizationId === 'none'
+                ? null
+                : data.organizationId
+              : undefined,
         },
       });
 
@@ -125,6 +139,8 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      queryClient.invalidateQueries({ queryKey: ['coach-options'] });
+      queryClient.invalidateQueries({ queryKey: ['organization-counts'] });
       toast({ title: 'User updated successfully!' });
       onOpenChange(false);
       form.reset();
@@ -199,6 +215,27 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
                   <FormControl>
                     <Input placeholder="user@example.com" type="email" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="organizationId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Organization</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                    <FormControl>
+                      <SelectTrigger><SelectValue placeholder="No organization" /></SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">No organization</SelectItem>
+                      {(organizations || []).map((o) => (
+                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

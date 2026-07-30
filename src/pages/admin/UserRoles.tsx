@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Database } from '@/integrations/supabase/types';
+import { useOrganizations } from '@/hooks/useOrganizations';
 
 type AppRole = Database['public']['Enums']['app_role'];
 
@@ -43,6 +44,8 @@ interface UserWithRoles {
   email: string;
   full_name: string | null;
   avatar_url: string | null;
+  organization_id: string | null;
+  organization_name: string | null;
   roles: AppRole[];
 }
 
@@ -53,6 +56,8 @@ export default function UserRoles() {
   const [userToEdit, setUserToEdit] = useState<UserWithRoles | null>(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<AppRole | 'all'>('all');
+  const [orgFilter, setOrgFilter] = useState<string>('all');
+  const { data: organizations } = useOrganizations();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -80,9 +85,9 @@ export default function UserRoles() {
     queryKey: ['users-with-roles'],
     queryFn: async () => {
       // Get all profiles
-      const { data: profiles, error: profilesError } = await supabase
+      const { data: profiles, error: profilesError } = await (supabase as any)
         .from('profiles')
-        .select('user_id, email, full_name, avatar_url')
+        .select('user_id, email, full_name, avatar_url, organization_id, organizations(name)')
         .order('email');
 
       if (profilesError) throw profilesError;
@@ -95,11 +100,13 @@ export default function UserRoles() {
       if (rolesError) throw rolesError;
 
       // Combine profiles with roles
-      const usersWithRoles: UserWithRoles[] = profiles.map((profile: any) => ({
+      const usersWithRoles: UserWithRoles[] = (profiles || []).map((profile: any) => ({
         user_id: profile.user_id,
         email: profile.email,
         full_name: profile.full_name,
         avatar_url: profile.avatar_url ?? null,
+        organization_id: profile.organization_id ?? null,
+        organization_name: profile.organizations?.name ?? null,
         roles: roles
           .filter((r) => r.user_id === profile.user_id)
           .map((r) => r.role),
@@ -586,6 +593,18 @@ export default function UserRoles() {
                 </Button>
               ))}
             </div>
+            <div className="w-full sm:w-64">
+              <Select value={orgFilter} onValueChange={setOrgFilter}>
+                <SelectTrigger><SelectValue placeholder="All organizations" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All organizations</SelectItem>
+                  <SelectItem value="none">No organization</SelectItem>
+                  {(organizations || []).map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -604,7 +623,10 @@ export default function UserRoles() {
                   user.email.toLowerCase().includes(search.toLowerCase()) ||
                   (user.full_name && user.full_name.toLowerCase().includes(search.toLowerCase()));
                 const matchesRole = roleFilter === 'all' || user.roles.includes(roleFilter);
-                return matchesSearch && matchesRole;
+                const matchesOrg =
+                  orgFilter === 'all' ||
+                  (orgFilter === 'none' ? !user.organization_id : user.organization_id === orgFilter);
+                return matchesSearch && matchesRole && matchesOrg;
               });
 
               return filteredUsers.length > 0 ? (
@@ -612,6 +634,7 @@ export default function UserRoles() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>User</TableHead>
+                      <TableHead>Organization</TableHead>
                       <TableHead>Roles</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
@@ -632,6 +655,13 @@ export default function UserRoles() {
                           <p className="text-sm text-muted-foreground">{user.email}</p>
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {user.organization_name ? (
+                        <span className="text-sm">{user.organization_name}</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
