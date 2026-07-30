@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     }
 
     // Get request body
-    const { userId, email, password, fullName, avatarUrl } = await req.json()
+    const { userId, email, password, fullName, avatarUrl, organizationId } = await req.json()
 
     if (!userId) {
       return new Response(
