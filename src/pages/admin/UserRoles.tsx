@@ -593,6 +593,18 @@ export default function UserRoles() {
                 </Button>
               ))}
             </div>
+            <div className="w-full sm:w-64">
+              <Select value={orgFilter} onValueChange={setOrgFilter}>
+                <SelectTrigger><SelectValue placeholder="All organizations" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All organizations</SelectItem>
+                  <SelectItem value="none">No organization</SelectItem>
+                  {(organizations || []).map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
