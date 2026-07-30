@@ -657,6 +657,13 @@ export default function UserRoles() {
                       </div>
                     </TableCell>
                     <TableCell>
+                      {user.organization_name ? (
+                        <span className="text-sm">{user.organization_name}</span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex flex-wrap gap-2">
                         {user.roles.length > 0 ? (
                           user.roles.map((role) => (
