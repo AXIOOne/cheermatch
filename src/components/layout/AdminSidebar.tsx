@@ -12,7 +12,6 @@ import { SettingsNavItem } from '@/components/layout/SettingsNavItem';
 import { EventsNavItem } from '@/components/layout/EventsNavItem';
 
 import {
-  Calendar,
   Users,
   ClipboardList,
   Settings,
