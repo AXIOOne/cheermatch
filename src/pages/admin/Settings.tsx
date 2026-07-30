@@ -12,8 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play, Mail, Palette, Upload } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play, Mail, Palette, Upload, KeyRound } from 'lucide-react';
 import { EmailTemplateManager } from '@/components/admin/EmailTemplateManager';
+import { ApiAccessDialog } from '@/components/admin/ApiAccessDialog';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
 
 const AWS_REGIONS = [
