@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,17 +6,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { CoachSelect, type CoachOption } from './CoachSelect';
 
 const schema = z.object({
-  gym_name: z.string().trim().min(1, 'Gym name is required').max(120),
   name: z.string().trim().min(1, 'Team name is required').max(120),
-  coach_name: z.string().trim().min(1, 'Coach name is required').max(120),
-  coach_email: z.string().trim().email('Invalid email').max(255),
   coach_phone: z.string().trim().max(40).optional().or(z.literal('')),
   division_id: z.string().min(1, 'Division is required'),
   level_id: z.string().min(1, 'Level is required'),
