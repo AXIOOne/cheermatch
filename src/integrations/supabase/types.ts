@@ -523,6 +523,51 @@ export type Database = {
         }
         Relationships: []
       }
+      organizations: {
+        Row: {
+          city: string | null
+          code: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          name: string
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          city?: string | null
+          code?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name: string
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          city?: string | null
+          code?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          name?: string
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       password_reset_codes: {
         Row: {
           code: string
@@ -584,6 +629,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          organization_id: string | null
           organization_name: string | null
           password_hash: string | null
           phone: string | null
@@ -596,6 +642,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id?: string
+          organization_id?: string | null
           organization_name?: string | null
           password_hash?: string | null
           phone?: string | null
@@ -608,13 +655,22 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          organization_id?: string | null
           organization_name?: string | null
           password_hash?: string | null
           phone?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       score_deductions: {
         Row: {
@@ -1512,6 +1568,7 @@ export type Database = {
           id: string
           level_id: string
           name: string
+          organization_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1528,6 +1585,7 @@ export type Database = {
           id?: string
           level_id: string
           name: string
+          organization_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1544,6 +1602,7 @@ export type Database = {
           id?: string
           level_id?: string
           name?: string
+          organization_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1566,6 +1625,13 @@ export type Database = {
             columns: ["level_id"]
             isOneToOne: false
             referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
