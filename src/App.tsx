@@ -89,6 +89,7 @@ const App = () => (
 
                 <Route path="reviews" element={<ReviewRequests />} />
                 <Route path="roles" element={<UserRoles />} />
+                <Route path="organizations" element={<Organizations />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
 
