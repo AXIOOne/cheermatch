@@ -51,7 +51,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
   const [avatarDirty, setAvatarDirty] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const { data: organizations } = useOrganizations({ activeOnly: true });
+  const { data: _organizations } = useOrganizations({ activeOnly: true });
 
   const form = useForm<EditUserFormData>({
     resolver: zodResolver(editUserSchema),
