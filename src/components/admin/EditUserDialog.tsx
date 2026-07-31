@@ -11,7 +11,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Upload, Trash2 } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { OrganizationCombobox } from '@/components/organization/OrganizationCombobox';
 import { useOrganizations } from '@/hooks/useOrganizations';
 
 const editUserSchema = z.object({
