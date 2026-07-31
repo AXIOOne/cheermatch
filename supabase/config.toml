@@ -63,5 +63,8 @@ verify_jwt = false
 [functions.mobile-submission]
 verify_jwt = false
 
+[functions.import-registrations]
+verify_jwt = false
+
 
 
