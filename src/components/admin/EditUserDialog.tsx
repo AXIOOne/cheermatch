@@ -11,7 +11,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, Upload, Trash2 } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { OrganizationCombobox } from '@/components/organization/OrganizationCombobox';
 import { useOrganizations } from '@/hooks/useOrganizations';
 
 const editUserSchema = z.object({
@@ -51,7 +51,7 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
   const [avatarDirty, setAvatarDirty] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  const { data: organizations } = useOrganizations({ activeOnly: true });
+  useOrganizations({ activeOnly: true });
 
   const form = useForm<EditUserFormData>({
     resolver: zodResolver(editUserSchema),
@@ -223,19 +223,18 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
               control={form.control}
               name="organizationId"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Organization</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || 'none'}>
-                    <FormControl>
-                      <SelectTrigger><SelectValue placeholder="No organization" /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">No organization</SelectItem>
-                      {(organizations || []).map((o) => (
-                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <OrganizationCombobox
+                      value={field.value || 'none'}
+                      onChange={field.onChange}
+                      placeholder="Select an organization"
+                      allowNone
+                      noneLabel="No organization"
+                      activeOnly
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

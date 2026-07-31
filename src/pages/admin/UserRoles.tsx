@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus, AlertTriangle, Pencil, KeyRound, Search, X } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { OrganizationCombobox } from '@/components/organization/OrganizationCombobox';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Database } from '@/integrations/supabase/types';
@@ -375,20 +376,16 @@ export default function UserRoles() {
                     control={createUserForm.control}
                     name="organizationId"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="flex flex-col">
                         <FormLabel>Organization</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select an organization" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {(organizations ?? []).map((org: any) => (
-                              <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <OrganizationCombobox
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select an organization"
+                            emptyLabel="No organization found."
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
