@@ -223,19 +223,18 @@ export function EditUserDialog({ user, open, onOpenChange }: EditUserDialogProps
               control={form.control}
               name="organizationId"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Organization</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || 'none'}>
-                    <FormControl>
-                      <SelectTrigger><SelectValue placeholder="No organization" /></SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">No organization</SelectItem>
-                      {(organizations || []).map((o) => (
-                        <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <FormControl>
+                    <OrganizationCombobox
+                      value={field.value || 'none'}
+                      onChange={field.onChange}
+                      placeholder="Select an organization"
+                      allowNone
+                      noneLabel="No organization"
+                      activeOnly
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
