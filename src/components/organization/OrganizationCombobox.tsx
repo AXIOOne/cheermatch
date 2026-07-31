@@ -76,7 +76,6 @@ export function OrganizationCombobox({
                 <CommandItem
                   key={item.id}
                   value={item.id}
-                  textValue={item.name}
                   onSelect={(currentValue) => {
                     onChange(currentValue === value ? (allowNone ? 'none' : '') : currentValue);
                     setOpen(false);
