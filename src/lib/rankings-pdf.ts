@@ -81,7 +81,7 @@ export async function buildRankingsPdf(
 ): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.TimesRoman);
-  const bold = await pdf.embedFont(StandardFonts.TimesRoldItalic ? StandardFonts.TimesRomanBold : StandardFonts.TimesRomanBold);
+  const bold = await pdf.embedFont(StandardFonts.TimesRomanBold);
 
   let page: PDFPage;
   let y = 0;
