@@ -376,20 +376,16 @@ export default function UserRoles() {
                     control={createUserForm.control}
                     name="organizationId"
                     render={({ field }) => (
-                      <FormItem>
+                      <FormItem className="flex flex-col">
                         <FormLabel>Organization</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select an organization" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {(organizations ?? []).map((org: any) => (
-                              <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <OrganizationCombobox
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Select an organization"
+                            emptyLabel="No organization found."
+                          />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
