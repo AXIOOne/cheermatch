@@ -10,6 +10,8 @@ type Submission = {
   status: string;
   submitted_at?: string;
   review_notes?: string;
+  video_url?: string;
+  thumbnail_url?: string;
 } | null;
 
 type EventInfo = {
@@ -83,9 +85,38 @@ export default function MobileTeamDetail() {
           <p className="text-sm text-muted-foreground mt-2 mb-2">
             Status: <span className="font-medium capitalize">{submission?.status?.replace(/_/g, " ")}</span>
           </p>
-          <p className="text-sm text-muted-foreground mb-6">
+          <p className="text-sm text-muted-foreground mb-4">
             A performance video has been submitted for this team. Only one submission per team, per event.
           </p>
+
+          {submission?.video_url ? (
+            <div className="mb-6 text-left">
+              <p className="text-sm font-medium mb-2">Submitted video</p>
+              <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                {/players\.brightcove\.net|player\.vimeo\.com|youtube\.com\/embed|youtu\.be/.test(submission.video_url) ? (
+                  <iframe
+                    src={submission.video_url}
+                    title="Submitted performance video"
+                    className="w-full h-full"
+                    allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video
+                    src={submission.video_url}
+                    controls
+                    playsInline
+                    poster={submission.thumbnail_url || undefined}
+                    className="w-full h-full"
+                  />
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground mb-6">
+              Your video is still processing. Check back shortly to watch it here.
+            </p>
+          )}
           <Button
             variant="secondary"
             className="w-full h-12 text-base"
