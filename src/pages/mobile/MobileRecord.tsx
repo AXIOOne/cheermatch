@@ -472,16 +472,16 @@ export default function MobileRecord() {
             <Progress value={progress} className="h-2" />
           </div>
         ) : (
-          <div className="flex flex-col gap-3 sticky bottom-0 pt-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] bg-background">
+          <div className={`gap-3 sticky bottom-0 pt-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] bg-background ${isPortrait ? "flex flex-col" : "grid grid-cols-2"}`}>
             {attempts.length < maxAttempts ? (
-              <Button variant="secondary" onClick={recordAnother} className="h-12 w-full justify-center">
-                <Plus className="h-4 w-4 mr-2 shrink-0" /> Record Another Take
+              <Button variant="secondary" onClick={recordAnother} className="h-14 w-full justify-center">
+                <Plus className="h-5 w-5 mr-2 shrink-0" /> Record Another Take
               </Button>
             ) : (
-              <Button variant="secondary" disabled className="h-12 w-full">Max Attempts Reached</Button>
+              <Button variant="secondary" disabled className="h-14 w-full">Max Attempts Reached</Button>
             )}
-            <Button onClick={uploadSelected} disabled={selectedAttemptId == null} className="h-12 w-full justify-center">
-              <Upload className="h-4 w-4 mr-2 shrink-0" /> Submit Selected For Scoring
+            <Button onClick={uploadSelected} disabled={selectedAttemptId == null} className="h-14 w-full justify-center">
+              <Upload className="h-5 w-5 mr-2 shrink-0" /> Submit Selected For Scoring
             </Button>
           </div>
         )}
