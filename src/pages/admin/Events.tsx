@@ -682,7 +682,7 @@ export default function Events() {
                             </Badge>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="start">
-                            {Object.entries(statusLabels).map(([value, label]) => (
+                            {STATUS_OPTIONS.map(({ value, label }) => (
                               <DropdownMenuItem
                                 key={value}
                                 onClick={() => updateStatusMutation.mutate({ id: event.id, status: value })}
