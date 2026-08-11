@@ -89,6 +89,7 @@ const App = () => (
                 <Route path="submissions" element={<Submissions />} />
                 <Route path="submissions/:submissionId" element={<SubmissionDetail />} />
 
+                <Route path="messages" element={<Navigate to="/admin/broadcast" replace />} />
                 <Route path="broadcast" element={<Broadcast />} />
                 <Route path="reviews" element={<ReviewRequests />} />
                 <Route path="roles" element={<UserRoles />} />
