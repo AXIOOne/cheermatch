@@ -98,6 +98,14 @@ const statusVariants: Record<string, 'default' | 'secondary' | 'destructive' | '
   archived: 'outline',
 };
 
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: 'registration_open', label: 'Registration Open' },
+  { value: 'open_for_capture', label: 'Open for Capture' },
+  { value: 'open_for_scoring', label: 'Open for Scoring' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'archived', label: 'Archived' },
+];
+
 
 export default function Events() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
