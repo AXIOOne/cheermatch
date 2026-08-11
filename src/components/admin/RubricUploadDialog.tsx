@@ -198,7 +198,6 @@ export function RubricUploadDialog({ open, onOpenChange, rubric }: Props) {
             <Textarea id="r-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
           </div>
           <div className="grid grid-cols-2 gap-3">
-          <div className="grid grid-cols-2 gap-3">
             <div>
               <Label htmlFor="r-season">Season</Label>
               <Input id="r-season" placeholder="e.g. 2025-2026" value={season} onChange={(e) => setSeason(e.target.value)} />
