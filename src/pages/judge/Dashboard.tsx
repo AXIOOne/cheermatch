@@ -120,12 +120,14 @@ export default function JudgeDashboard() {
             <div className="space-y-4">
               {assignments.map((assignment) => {
                 const status = assignment.event?.status;
-                const isOpen = status === 'open_for_scoring' || status === 'in_progress';
+                const isOpen = status === 'open_for_capture' || status === 'open_for_scoring';
                 const statusLabel =
+                  status === 'open_for_capture' ? 'Open for capture' :
                   status === 'open_for_scoring' ? 'Open for scoring' :
                   status === 'in_progress' ? 'In progress' :
                   'Not yet released';
                 const statusClass =
+                  status === 'open_for_capture' ? 'bg-blue-100 text-blue-700' :
                   status === 'open_for_scoring' ? 'bg-green-100 text-green-700' :
                   status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
                   'bg-gray-100 text-gray-600';

@@ -10,6 +10,8 @@ const STATUS_COLORS: Record<string, string> = {
   draft: '#6b7280',
   registration_open: '#22c55e',
   registration_closed: '#eab308',
+  open_for_capture: '#3b82f6',
+  open_for_scoring: '#22c55e',
   in_progress: '#3b82f6',
   completed: '#a855f7',
   archived: '#9ca3af',
