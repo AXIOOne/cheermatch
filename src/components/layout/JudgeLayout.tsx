@@ -36,6 +36,9 @@ export function JudgeLayout() {
       <JudgeSidebar />
       <main className="flex-1 overflow-auto">
         <JudgeBroadcastBanner />
+        <div className="flex justify-end px-6 pt-4">
+          <JudgeMessagesMenu />
+        </div>
         <Outlet />
       </main>
     </div>
