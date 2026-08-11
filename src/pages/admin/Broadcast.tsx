@@ -156,7 +156,7 @@ export default function Broadcast() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Sent Messages</CardTitle>
+          <CardTitle>Sent Broadcasts</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {isLoading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}
