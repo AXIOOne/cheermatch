@@ -44,6 +44,7 @@ export default function Rubrics() {
         .from('scoring_rubrics')
         .select(`
           id, title, description, season, event_id, division_id, level_id,
+          discipline,
           file_path, file_name, file_size_bytes, mime_type, created_at,
           event:events(name),
           division:divisions(name),
