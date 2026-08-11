@@ -151,6 +151,7 @@ export default function Rubrics() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
+                  <TableHead>Discipline</TableHead>
                   <TableHead>Season</TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Division</TableHead>
