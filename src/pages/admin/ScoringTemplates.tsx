@@ -72,7 +72,7 @@ export default function ScoringTemplates() {
 
   const form = useForm<TemplateFormData>({
     resolver: zodResolver(templateSchema),
-    defaultValues: { name: '', description: '', is_default: false, show_comments_on_scoresheet: false },
+    defaultValues: { name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false },
   });
 
   const eventPanels: string[] | undefined = undefined;
@@ -215,6 +215,7 @@ export default function ScoringTemplates() {
         .insert({
           name: data.name,
           description: data.description,
+          discipline: data.discipline,
           is_default: data.is_default,
           show_comments_on_scoresheet: data.show_comments_on_scoresheet,
         })
@@ -237,6 +238,7 @@ export default function ScoringTemplates() {
       const { error: tErr } = await sb.from('scoring_templates').update({
         name: data.name,
         description: data.description,
+        discipline: data.discipline,
         is_default: data.is_default,
         show_comments_on_scoresheet: data.show_comments_on_scoresheet,
       }).eq('id', id);
@@ -285,6 +287,7 @@ export default function ScoringTemplates() {
       const { data: newTpl, error } = await sb.from('scoring_templates').insert({
         name: `${src.name} (Copy)`,
         description: src.description,
+        discipline: src.discipline,
         
         is_default: false,
         is_locked: false,
@@ -379,7 +382,7 @@ export default function ScoringTemplates() {
 
   const handleNewTemplate = () => {
     setEditingTemplate(null);
-    form.reset({ name: '', description: '', is_default: false, show_comments_on_scoresheet: false });
+    form.reset({ name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false });
     setSections([]); setDeductions([]);
     setIsDialogOpen(true);
   };
@@ -392,6 +395,7 @@ export default function ScoringTemplates() {
     setEditingTemplate(tpl);
     form.reset({
       name: tpl.name, description: tpl.description || '',
+      discipline: tpl.discipline || templateDisciplines(tpl).find((d) => d !== 'unassigned') || 'allstar_cheer',
       is_default: tpl.is_default,
       show_comments_on_scoresheet: !!tpl.show_comments_on_scoresheet,
     });
@@ -499,6 +503,22 @@ export default function ScoringTemplates() {
                   <FormItem>
                     <FormLabel>Template Name</FormLabel>
                     <FormControl><Input placeholder="USASF Level 4 Senior" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="discipline" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Discipline</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger><SelectValue placeholder="Select a discipline" /></SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {DISCIPLINES.map((d) => (
+                          <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )} />
