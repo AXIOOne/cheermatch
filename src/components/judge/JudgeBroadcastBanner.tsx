@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { X, Megaphone } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { isActiveMessage } from './JudgeMessagesMenu';
 
 const db = supabase as any;
 
@@ -20,13 +21,13 @@ export function JudgeBroadcastBanner() {
     queryFn: async () => {
       const { data, error } = await db
         .from('judge_messages')
-        .select('*, events(name), judge_message_reads(user_id)')
+        .select('*, events(name, status), judge_message_reads(user_id)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data as any[]).filter(
         (m) =>
           !(m.judge_message_reads || []).some((r: any) => r.user_id === user!.id) &&
-          (!m.expires_at || new Date(m.expires_at) > new Date())
+          isActiveMessage(m)
       );
     },
   });
