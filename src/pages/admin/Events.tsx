@@ -667,9 +667,24 @@ export default function Events() {
                         {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={statusVariants[event.status]} className="whitespace-nowrap">
-                          {statusLabels[event.status]}
-                        </Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Badge variant={statusVariants[event.status]} className="whitespace-nowrap cursor-pointer hover:opacity-80">
+                              {statusLabels[event.status]}
+                            </Badge>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {Object.entries(statusLabels).map(([value, label]) => (
+                              <DropdownMenuItem
+                                key={value}
+                                onClick={() => updateStatusMutation.mutate({ id: event.id, status: value })}
+                                className={value === event.status ? 'bg-accent' : ''}
+                              >
+                                {label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
