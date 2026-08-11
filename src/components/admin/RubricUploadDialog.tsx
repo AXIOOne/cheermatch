@@ -14,11 +14,26 @@ import { Loader2, Upload } from 'lucide-react';
 const MAX_SIZE = 25 * 1024 * 1024; // 25 MB
 const NONE = '__none__';
 
+export const RUBRIC_DISCIPLINES = [
+  { value: 'allstar_cheer', label: 'All-Star Cheer' },
+  { value: 'allstar_dance', label: 'All-Star Dance' },
+  { value: 'nca_cheer', label: 'NCA Cheer' },
+  { value: 'nca_dance', label: 'NCA Dance' },
+  { value: 'uca_cheer', label: 'UCA Cheer' },
+  { value: 'uca_dance', label: 'UCA Dance' },
+  { value: 'usa_cheer', label: 'USA Cheer' },
+  { value: 'usa_dance', label: 'USA Dance' },
+] as const;
+
+export const rubricDisciplineLabel = (v?: string | null) =>
+  RUBRIC_DISCIPLINES.find((d) => d.value === v)?.label ?? v ?? null;
+
 export interface RubricRecord {
   id: string;
   title: string;
   description: string | null;
   season: string | null;
+  discipline: string | null;
   event_id: string | null;
   division_id: string | null;
   level_id: string | null;
