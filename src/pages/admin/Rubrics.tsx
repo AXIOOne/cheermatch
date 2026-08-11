@@ -173,6 +173,7 @@ export default function Rubrics() {
                         </div>
                       </div>
                     </TableCell>
+                    <TableCell>{rubricDisciplineLabel(r.discipline) ?? <span className="text-muted-foreground">All</span>}</TableCell>
                     <TableCell>{r.season ? <Badge variant="outline">{r.season}</Badge> : '-'}</TableCell>
                     <TableCell>{r.event?.name ?? <span className="text-muted-foreground">All</span>}</TableCell>
                     <TableCell>{r.division?.name ?? <span className="text-muted-foreground">All</span>}</TableCell>
