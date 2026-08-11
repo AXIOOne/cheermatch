@@ -79,6 +79,7 @@ const statusLabels: Record<string, string> = {
   draft: 'Draft',
   registration_open: 'Registration Open',
   registration_closed: 'Registration Closed',
+  open_for_capture: 'Open for Capture',
   open_for_scoring: 'Open for Scoring',
   in_progress: 'In Progress',
   completed: 'Completed',
@@ -89,11 +90,13 @@ const statusVariants: Record<string, 'default' | 'secondary' | 'destructive' | '
   draft: 'secondary',
   registration_open: 'default',
   registration_closed: 'outline',
+  open_for_capture: 'default',
   open_for_scoring: 'default',
   in_progress: 'default',
   completed: 'secondary',
   archived: 'outline',
 };
+
 
 export default function Events() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
