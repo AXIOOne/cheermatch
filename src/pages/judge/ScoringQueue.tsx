@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Play, CheckCircle, Clock, Video, Loader2 } from 'lucide-react';
 
 const sb = supabase as any;
-const OPEN_STATUSES = new Set(['open_for_scoring', 'in_progress']);
+const OPEN_STATUSES = new Set(['open_for_capture', 'open_for_scoring']);
 
 const single = (value: any) => Array.isArray(value) ? value[0] : value;
 

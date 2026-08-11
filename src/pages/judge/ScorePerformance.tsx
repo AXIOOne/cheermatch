@@ -69,7 +69,7 @@ export default function ScorePerformance() {
     enabled: !!submissionId,
   });
 
-  const OPEN_STATUSES = new Set(['open_for_scoring', 'in_progress']);
+  const OPEN_STATUSES = new Set(['open_for_capture', 'open_for_scoring']);
   const eventRow: any = (submission as any)?.event;
   const now = Date.now();
   const openAt = eventRow?.scoring_open_at ? new Date(eventRow.scoring_open_at).getTime() : null;
