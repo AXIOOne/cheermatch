@@ -198,9 +198,20 @@ export function RubricUploadDialog({ open, onOpenChange, rubric }: Props) {
             <Textarea id="r-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} />
           </div>
           <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <Label htmlFor="r-season">Season</Label>
               <Input id="r-season" placeholder="e.g. 2025-2026" value={season} onChange={(e) => setSeason(e.target.value)} />
+            </div>
+            <div>
+              <Label>Discipline</Label>
+              <Select value={discipline} onValueChange={setDiscipline}>
+                <SelectTrigger><SelectValue placeholder="Select discipline" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>All / None</SelectItem>
+                  {RUBRIC_DISCIPLINES.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Event</Label>
