@@ -564,11 +564,33 @@ export default function ScoringTemplates() {
         </Dialog>
       </div>
 
+      {!isLoading && templates && templates.length > 0 && (
+        <Tabs value={disciplineFilter} onValueChange={setDisciplineFilter} className="mb-6">
+          <div className="overflow-x-auto pb-1">
+            <TabsList className="inline-flex w-max">
+              <TabsTrigger value="all">All</TabsTrigger>
+              {availableDisciplines.map((d) => (
+                <TabsTrigger key={d} value={d}>{disciplineLabel(d)}</TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+        </Tabs>
+      )}
+
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>
-      ) : templates && templates.length > 0 ? (
-        <div className="grid gap-6 grid-cols-1">
-          {templates.map((tpl: any) => (
+      ) : groupedTemplates.length > 0 ? (
+        <div className="space-y-8">
+          {groupedTemplates.map((group) => (
+          <div key={group.key} className="space-y-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-foreground">{disciplineLabel(group.key)}</h2>
+              <Badge variant="secondary" className="text-xs">{group.templates.length}</Badge>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+            <div className="grid gap-6 grid-cols-1">
+          {group.templates.map((tpl: any) => (
+
             <Card key={tpl.id} className={`relative ${tpl.is_locked ? 'border-warning/50' : ''}`}>
               <CardHeader>
                 <div className="flex items-start justify-between">
