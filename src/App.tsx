@@ -31,6 +31,7 @@ import EventReports from "./pages/admin/EventReports";
 import EventsSummary from "./pages/admin/EventsSummary";
 import Rubrics from "./pages/admin/Rubrics";
 import SubmissionDetail from "./pages/admin/SubmissionDetail";
+import Messages from "./pages/admin/Messages";
 
 // Judge imports
 import { JudgeLayout } from "./components/layout/JudgeLayout";
@@ -88,6 +89,7 @@ const App = () => (
                 <Route path="submissions" element={<Submissions />} />
                 <Route path="submissions/:submissionId" element={<SubmissionDetail />} />
 
+                <Route path="messages" element={<Messages />} />
                 <Route path="reviews" element={<ReviewRequests />} />
                 <Route path="roles" element={<UserRoles />} />
                 <Route path="organizations" element={<Organizations />} />
