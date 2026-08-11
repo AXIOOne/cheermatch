@@ -45,7 +45,7 @@ export function JudgeAssignmentDialog({ judge, open, onOpenChange }: JudgeAssign
       const { data, error } = await supabase
         .from('events')
         .select('id, name, status')
-        .in('status', ['draft', 'registration_open', 'registration_closed', 'in_progress'])
+        .in('status', ['registration_open', 'open_for_capture', 'open_for_scoring'])
         .order('start_date', { ascending: false });
       if (error) throw error;
       return data;
