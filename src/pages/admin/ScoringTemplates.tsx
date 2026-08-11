@@ -24,6 +24,7 @@ import TemplatePreview from '@/components/admin/TemplatePreview';
 const templateSchema = z.object({
   name: z.string().min(2, 'Template name must be at least 2 characters'),
   description: z.string().optional(),
+  discipline: z.string().min(1, 'Discipline is required'),
   is_default: z.boolean(),
   show_comments_on_scoresheet: z.boolean(),
 });
@@ -44,8 +45,9 @@ const DISCIPLINES = [
 const disciplineLabel = (v: string) =>
   v === 'unassigned' ? 'Unassigned' : DISCIPLINES.find((d) => d.value === v)?.label ?? v;
 
-// A template's disciplines are derived from the divisions that reference it.
+// A template's discipline is its own field, falling back to the divisions that reference it.
 const templateDisciplines = (tpl: any): string[] => {
+  if (tpl.discipline) return [tpl.discipline];
   const set = new Set<string>(
     ((tpl.divisions || []) as any[]).map((d) => d.discipline).filter(Boolean)
   );
