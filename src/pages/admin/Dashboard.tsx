@@ -194,7 +194,16 @@ export default function Dashboard() {
                     event.status === 'open_for_scoring' ? 'bg-green-100 text-green-700' :
                     'bg-gray-100 text-gray-700'
                   }`}>
-                    {statusLabels[event.status] ?? event.status.replace('_', ' ')}
+                    {{
+                      draft: 'Draft',
+                      registration_open: 'Registration Open',
+                      registration_closed: 'Registration Closed',
+                      open_for_capture: 'Open for Capture',
+                      open_for_scoring: 'Open for Scoring',
+                      in_progress: 'In Progress',
+                      completed: 'Completed',
+                      archived: 'Archived',
+                    }[event.status] ?? event.status.replace('_', ' ')}
                   </span>
                 </div>
               ))}
