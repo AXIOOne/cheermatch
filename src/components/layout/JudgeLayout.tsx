@@ -2,6 +2,7 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { JudgeSidebar } from './JudgeSidebar';
 import { JudgeBroadcastBanner } from '@/components/judge/JudgeBroadcastBanner';
+import { JudgeMessagesMenu } from '@/components/judge/JudgeMessagesMenu';
 import { Loader2 } from 'lucide-react';
 
 export function JudgeLayout() {
