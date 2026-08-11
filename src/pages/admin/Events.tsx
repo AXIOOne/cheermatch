@@ -18,6 +18,7 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Calendar, Loader2, Pencil, Trash2, Search, BarChart3, Users, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const DISCIPLINES = [
   { value: 'allstar_cheer', label: 'All-Star Cheer' },
@@ -96,6 +97,14 @@ const statusVariants: Record<string, 'default' | 'secondary' | 'destructive' | '
   completed: 'secondary',
   archived: 'outline',
 };
+
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: 'registration_open', label: 'Registration Open' },
+  { value: 'open_for_capture', label: 'Open for Capture' },
+  { value: 'open_for_scoring', label: 'Open for Scoring' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'archived', label: 'Archived' },
+];
 
 
 export default function Events() {
@@ -248,6 +257,20 @@ export default function Events() {
       setIsDialogOpen(false);
       setEditingEvent(null);
       form.reset();
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    },
+  });
+
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from('events').update({ status } as any).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events'] });
+      toast({ title: 'Status updated!' });
     },
     onError: (error: any) => {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
@@ -542,12 +565,9 @@ export default function Events() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="registration_open">Registration Open</SelectItem>
-                            <SelectItem value="open_for_capture">Open for Capture</SelectItem>
-                            <SelectItem value="open_for_scoring">Open for Scoring</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                            <SelectItem value="archived">Archived</SelectItem>
-
+                            {STATUS_OPTIONS.map(({ value, label }) => (
+                              <SelectItem key={value} value={value}>{label}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -585,12 +605,9 @@ export default function Events() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="registration_open">Registration Open</SelectItem>
-                    <SelectItem value="open_for_capture">Open for Capture</SelectItem>
-                    <SelectItem value="open_for_scoring">Open for Scoring</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
-
+                    {STATUS_OPTIONS.map(({ value, label }) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -652,9 +669,24 @@ export default function Events() {
                         {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={statusVariants[event.status]} className="whitespace-nowrap">
-                          {statusLabels[event.status]}
-                        </Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Badge variant={statusVariants[event.status]} className="whitespace-nowrap cursor-pointer hover:opacity-80">
+                              {statusLabels[event.status]}
+                            </Badge>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            {STATUS_OPTIONS.map(({ value, label }) => (
+                              <DropdownMenuItem
+                                key={value}
+                                onClick={() => updateStatusMutation.mutate({ id: event.id, status: value })}
+                                className={value === event.status ? 'bg-accent' : ''}
+                              >
+                                {label}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
