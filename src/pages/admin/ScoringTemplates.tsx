@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,28 @@ const templateSchema = z.object({
 
 type TemplateFormData = z.infer<typeof templateSchema>;
 
+const DISCIPLINES = [
+  { value: 'allstar_cheer', label: 'All-Star Cheer' },
+  { value: 'allstar_dance', label: 'All-Star Dance' },
+  { value: 'nca_cheer', label: 'NCA Cheer' },
+  { value: 'nca_dance', label: 'NCA Dance' },
+  { value: 'uca_cheer', label: 'UCA Cheer' },
+  { value: 'uca_dance', label: 'UCA Dance' },
+  { value: 'usa_cheer', label: 'USA Cheer' },
+  { value: 'usa_dance', label: 'USA Dance' },
+] as const;
+
+const disciplineLabel = (v: string) =>
+  v === 'unassigned' ? 'Unassigned' : DISCIPLINES.find((d) => d.value === v)?.label ?? v;
+
+// A template's disciplines are derived from the divisions that reference it.
+const templateDisciplines = (tpl: any): string[] => {
+  const set = new Set<string>(
+    ((tpl.divisions || []) as any[]).map((d) => d.discipline).filter(Boolean)
+  );
+  return set.size > 0 ? Array.from(set) : ['unassigned'];
+};
+
 function tempId() {
   return `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -42,6 +64,7 @@ export default function ScoringTemplates() {
   const [lockConfirmTemplate, setLockConfirmTemplate] = useState<any>(null);
   const [sections, setSections] = useState<ScoringSection[]>([]);
   const [deductions, setDeductions] = useState<DeductionType[]>([]);
+  const [disciplineFilter, setDisciplineFilter] = useState<string>('all');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -59,7 +82,7 @@ export default function ScoringTemplates() {
         .from('scoring_templates')
         .select(`
           *,
-          divisions:divisions(id, name),
+          divisions:divisions(id, name, discipline),
           sections:scoring_sections(
             *,
             fields:scoring_fields(
@@ -431,6 +454,26 @@ export default function ScoringTemplates() {
   const fieldCount = (tpl: any) =>
     (tpl.sections || []).reduce((sum: number, s: any) => sum + (s.fields?.length || 0), 0);
 
+  const availableDisciplines = useMemo(() => {
+    const present = new Set<string>();
+    (templates || []).forEach((t: any) => templateDisciplines(t).forEach((d) => present.add(d)));
+    const ordered: string[] = DISCIPLINES.map((d) => d.value).filter((v) => present.has(v));
+    if (present.has('unassigned')) ordered.push('unassigned');
+    return ordered;
+  }, [templates]);
+
+  const groupedTemplates = useMemo(() => {
+    const keys = disciplineFilter === 'all' ? availableDisciplines : [disciplineFilter];
+    return keys
+      .map((key) => ({
+        key,
+        templates: (templates || []).filter((t: any) => templateDisciplines(t).includes(key)),
+      }))
+      .filter((g) => g.templates.length > 0);
+  }, [templates, availableDisciplines, disciplineFilter]);
+
+
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
@@ -521,11 +564,33 @@ export default function ScoringTemplates() {
         </Dialog>
       </div>
 
+      {!isLoading && templates && templates.length > 0 && (
+        <Tabs value={disciplineFilter} onValueChange={setDisciplineFilter} className="mb-6">
+          <div className="overflow-x-auto pb-1">
+            <TabsList className="inline-flex w-max">
+              <TabsTrigger value="all">All</TabsTrigger>
+              {availableDisciplines.map((d) => (
+                <TabsTrigger key={d} value={d}>{disciplineLabel(d)}</TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+        </Tabs>
+      )}
+
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-muted-foreground" /></div>
-      ) : templates && templates.length > 0 ? (
-        <div className="grid gap-6 grid-cols-1">
-          {templates.map((tpl: any) => (
+      ) : groupedTemplates.length > 0 ? (
+        <div className="space-y-8">
+          {groupedTemplates.map((group) => (
+          <div key={group.key} className="space-y-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-semibold text-foreground">{disciplineLabel(group.key)}</h2>
+              <Badge variant="secondary" className="text-xs">{group.templates.length}</Badge>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+            <div className="grid gap-6 grid-cols-1">
+          {group.templates.map((tpl: any) => (
+
             <Card key={tpl.id} className={`relative ${tpl.is_locked ? 'border-warning/50' : ''}`}>
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -601,7 +666,11 @@ export default function ScoringTemplates() {
               </CardContent>
             </Card>
           ))}
+            </div>
+          </div>
+          ))}
         </div>
+
       ) : (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
