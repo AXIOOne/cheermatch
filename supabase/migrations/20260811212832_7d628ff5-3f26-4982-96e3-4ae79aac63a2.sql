@@ -1,0 +1,1 @@
+ALTER TABLE public.scoring_templates ADD COLUMN IF NOT EXISTS discipline text;
