@@ -264,57 +264,78 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
           </p>
         ) : (
           <>
-            <div className="space-y-4 max-h-[55vh] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
               {divisions.map(div => {
                 const divisionSections = div.scoring_template_id
                   ? sectionsByTemplate.get(div.scoring_template_id) || []
                   : [];
 
+                const fullyAssigned = divisionSections.length > 0 &&
+                  divisionSections.every(section => {
+                    const current = getCurrentValue(div.id, section.id);
+                    return current !== '';
+                  });
+
                 return (
-                  <Card key={div.id}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base">{div.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      {!div.scoring_template_id ? (
-                        <p className="text-sm text-muted-foreground">
-                          No scoring template is assigned to this division.
-                        </p>
-                      ) : divisionSections.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          This division's scoring template has no judging sections.
-                        </p>
-                      ) : divisionSections.map(section => {
-                        const current = getCurrentValue(div.id, section.id);
-                        const modified = isModified(div.id, section.id);
-                        return (
-                          <div key={section.id} className="flex items-center gap-3">
-                            <div className="flex-1 min-w-0 flex items-center gap-2">
-                              {section.default_panel_abbreviation && (
-                                <Badge variant="secondary">{section.default_panel_abbreviation}</Badge>
-                              )}
-                              <span className="text-sm font-medium truncate">{section.name}</span>
-                              {modified && (
-                                <Badge variant="outline" className="text-xs">Modified</Badge>
-                              )}
-                            </div>
-                            <div className="w-64">
-                              <JudgeCombobox
-                                value={current}
-                                judges={judges || []}
-                                onChange={(judgeUserId) => {
-                                  setPending(prev => ({
-                                    ...prev,
-                                    [`${div.id}:${section.id}`]: judgeUserId,
-                                  }));
-                                }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </CardContent>
-                  </Card>
+                  <Collapsible key={div.id} defaultOpen>
+                    <CollapsibleTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-between rounded-lg border bg-card px-4 py-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold">{div.name}</span>
+                          {fullyAssigned && (
+                            <CheckCircle2 className="h-5 w-5 text-success" />
+                          )}
+                        </div>
+                        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 [[data-state=open]>button>&]:rotate-180" />
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <Card className="mt-2 border-t-0 rounded-t-none">
+                        <CardContent className="space-y-2 py-4">
+                          {!div.scoring_template_id ? (
+                            <p className="text-sm text-muted-foreground">
+                              No scoring template is assigned to this division.
+                            </p>
+                          ) : divisionSections.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                              This division's scoring template has no judging sections.
+                            </p>
+                          ) : divisionSections.map(section => {
+                            const current = getCurrentValue(div.id, section.id);
+                            const modified = isModified(div.id, section.id);
+                            return (
+                              <div key={section.id} className="flex items-center gap-3">
+                                <div className="flex-1 min-w-0 flex items-center gap-2">
+                                  {section.default_panel_abbreviation && (
+                                    <Badge variant="secondary">{section.default_panel_abbreviation}</Badge>
+                                  )}
+                                  <span className="text-sm font-medium truncate">{section.name}</span>
+                                  {modified && (
+                                    <Badge variant="outline" className="text-xs">Modified</Badge>
+                                  )}
+                                </div>
+                                <div className="w-64">
+                                  <JudgeCombobox
+                                    value={current}
+                                    judges={judges || []}
+                                    onChange={(judgeUserId) => {
+                                      setPending(prev => ({
+                                        ...prev,
+                                        [`${div.id}:${section.id}`]: judgeUserId,
+                                      }));
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </CardContent>
+                      </Card>
+                    </CollapsibleContent>
+                  </Collapsible>
                 );
               })}
             </div>
