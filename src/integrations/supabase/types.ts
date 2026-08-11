@@ -1822,6 +1822,7 @@ export type Database = {
       event_status:
         | "draft"
         | "registration_open"
+        | "open_for_capture"
         | "registration_closed"
         | "open_for_scoring"
         | "in_progress"
@@ -1990,6 +1991,7 @@ export const Constants = {
       event_status: [
         "draft",
         "registration_open",
+        "open_for_capture",
         "registration_closed",
         "open_for_scoring",
         "in_progress",
