@@ -120,7 +120,7 @@ export default function Events() {
       time_zone: 'America/New_York',
       discipline: 'allstar_cheer',
       accuscore_end_at: '',
-      status: 'draft',
+      status: 'registration_open',
       duration_of_capture: 150,
       screen_capture_cnt: 2,
       registration_open_at: '',
