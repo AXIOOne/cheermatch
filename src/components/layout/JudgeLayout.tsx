@@ -2,6 +2,7 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { JudgeSidebar } from './JudgeSidebar';
 import { JudgeBroadcastBanner } from '@/components/judge/JudgeBroadcastBanner';
+import { JudgeMessagesMenu } from '@/components/judge/JudgeMessagesMenu';
 import { Loader2 } from 'lucide-react';
 
 export function JudgeLayout() {
@@ -36,6 +37,9 @@ export function JudgeLayout() {
       <JudgeSidebar />
       <main className="flex-1 overflow-auto">
         <JudgeBroadcastBanner />
+        <div className="flex justify-end px-6 pt-4">
+          <JudgeMessagesMenu />
+        </div>
         <Outlet />
       </main>
     </div>
