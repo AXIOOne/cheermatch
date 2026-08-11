@@ -64,6 +64,7 @@ export default function ScoringTemplates() {
   const [lockConfirmTemplate, setLockConfirmTemplate] = useState<any>(null);
   const [sections, setSections] = useState<ScoringSection[]>([]);
   const [deductions, setDeductions] = useState<DeductionType[]>([]);
+  const [disciplineFilter, setDisciplineFilter] = useState<string>('all');
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -81,7 +82,7 @@ export default function ScoringTemplates() {
         .from('scoring_templates')
         .select(`
           *,
-          divisions:divisions(id, name),
+          divisions:divisions(id, name, discipline),
           sections:scoring_sections(
             *,
             fields:scoring_fields(
