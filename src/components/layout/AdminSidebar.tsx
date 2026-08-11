@@ -15,6 +15,7 @@ import {
   LogOut,
   LayoutDashboard,
   Video,
+  MessageSquare,
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -75,6 +76,7 @@ export function AdminSidebar() {
         <RubricsNavItem to="/admin/rubrics" />
 
         <NavItem to="/admin/submissions" icon={<Video className="w-5 h-5" />} label="Submissions" />
+        <NavItem to="/admin/messages" icon={<MessageSquare className="w-5 h-5" />} label="Judge Messages" />
         <SettingsNavItem />
 
       </nav>

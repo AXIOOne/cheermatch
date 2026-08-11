@@ -413,6 +413,76 @@ export type Database = {
           },
         ]
       }
+      judge_message_reads: {
+        Row: {
+          id: string
+          message_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          message_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          message_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "judge_message_reads_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "judge_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      judge_messages: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string
+          event_id: string | null
+          expires_at: string | null
+          id: string
+          priority: string
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by: string
+          event_id?: string | null
+          expires_at?: string | null
+          id?: string
+          priority?: string
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string
+          event_id?: string | null
+          expires_at?: string | null
+          id?: string
+          priority?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "judge_messages_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       judge_panels: {
         Row: {
           abbreviation: string
