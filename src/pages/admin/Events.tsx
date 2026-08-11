@@ -585,13 +585,12 @@ export default function Events() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="registration_open">Registration Open</SelectItem>
-                    <SelectItem value="registration_closed">Registration Closed</SelectItem>
+                    <SelectItem value="open_for_capture">Open for Capture</SelectItem>
                     <SelectItem value="open_for_scoring">Open for Scoring</SelectItem>
-                    <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="archived">Archived</SelectItem>
+
                   </SelectContent>
                 </Select>
               </div>
