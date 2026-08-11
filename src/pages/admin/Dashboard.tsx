@@ -190,10 +190,11 @@ export default function Dashboard() {
                   <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                     event.status === 'draft' ? 'bg-muted text-muted-foreground' :
                     event.status === 'registration_open' ? 'bg-green-100 text-green-700' :
-                    event.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                    event.status === 'open_for_capture' ? 'bg-blue-100 text-blue-700' :
+                    event.status === 'open_for_scoring' ? 'bg-green-100 text-green-700' :
                     'bg-gray-100 text-gray-700'
                   }`}>
-                    {event.status.replace('_', ' ')}
+                    {statusLabels[event.status] ?? event.status.replace('_', ' ')}
                   </span>
                 </div>
               ))}
