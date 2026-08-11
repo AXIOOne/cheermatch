@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -29,6 +29,28 @@ const templateSchema = z.object({
 });
 
 type TemplateFormData = z.infer<typeof templateSchema>;
+
+const DISCIPLINES = [
+  { value: 'allstar_cheer', label: 'All-Star Cheer' },
+  { value: 'allstar_dance', label: 'All-Star Dance' },
+  { value: 'nca_cheer', label: 'NCA Cheer' },
+  { value: 'nca_dance', label: 'NCA Dance' },
+  { value: 'uca_cheer', label: 'UCA Cheer' },
+  { value: 'uca_dance', label: 'UCA Dance' },
+  { value: 'usa_cheer', label: 'USA Cheer' },
+  { value: 'usa_dance', label: 'USA Dance' },
+] as const;
+
+const disciplineLabel = (v: string) =>
+  v === 'unassigned' ? 'Unassigned' : DISCIPLINES.find((d) => d.value === v)?.label ?? v;
+
+// A template's disciplines are derived from the divisions that reference it.
+const templateDisciplines = (tpl: any): string[] => {
+  const set = new Set<string>(
+    ((tpl.divisions || []) as any[]).map((d) => d.discipline).filter(Boolean)
+  );
+  return set.size > 0 ? Array.from(set) : ['unassigned'];
+};
 
 function tempId() {
   return `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
