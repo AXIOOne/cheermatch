@@ -666,7 +666,11 @@ export default function ScoringTemplates() {
               </CardContent>
             </Card>
           ))}
+            </div>
+          </div>
+          ))}
         </div>
+
       ) : (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
