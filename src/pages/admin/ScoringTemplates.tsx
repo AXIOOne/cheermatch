@@ -457,7 +457,7 @@ export default function ScoringTemplates() {
   const availableDisciplines = useMemo(() => {
     const present = new Set<string>();
     (templates || []).forEach((t: any) => templateDisciplines(t).forEach((d) => present.add(d)));
-    const ordered = DISCIPLINES.map((d) => d.value).filter((v) => present.has(v));
+    const ordered: string[] = DISCIPLINES.map((d) => d.value).filter((v) => present.has(v));
     if (present.has('unassigned')) ordered.push('unassigned');
     return ordered;
   }, [templates]);
