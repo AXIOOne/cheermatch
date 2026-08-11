@@ -454,6 +454,26 @@ export default function ScoringTemplates() {
   const fieldCount = (tpl: any) =>
     (tpl.sections || []).reduce((sum: number, s: any) => sum + (s.fields?.length || 0), 0);
 
+  const availableDisciplines = useMemo(() => {
+    const present = new Set<string>();
+    (templates || []).forEach((t: any) => templateDisciplines(t).forEach((d) => present.add(d)));
+    const ordered = DISCIPLINES.map((d) => d.value).filter((v) => present.has(v));
+    if (present.has('unassigned')) ordered.push('unassigned');
+    return ordered;
+  }, [templates]);
+
+  const groupedTemplates = useMemo(() => {
+    const keys = disciplineFilter === 'all' ? availableDisciplines : [disciplineFilter];
+    return keys
+      .map((key) => ({
+        key,
+        templates: (templates || []).filter((t: any) => templateDisciplines(t).includes(key)),
+      }))
+      .filter((g) => g.templates.length > 0);
+  }, [templates, availableDisciplines, disciplineFilter]);
+
+
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
