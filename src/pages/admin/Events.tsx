@@ -257,7 +257,7 @@ export default function Events() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from('events').update({ status }).eq('id', id);
+      const { error } = await supabase.from('events').update({ status } as any).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
