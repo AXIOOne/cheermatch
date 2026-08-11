@@ -15,7 +15,7 @@ import { format } from 'date-fns';
 
 const db = supabase as any;
 
-export default function Messages() {
+export default function Broadcast() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -96,10 +96,10 @@ export default function Messages() {
       <div>
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <MessageSquare className="w-7 h-7 text-primary" />
-          Judge Messages
+          Judge Broadcast
         </h1>
         <p className="text-muted-foreground mt-1">
-          Broadcast announcements to judges. Messages drop down from the top of their screen instantly.
+          Broadcast announcements to judges. Broadcasts drop down from the top of their screen instantly.
         </p>
       </div>
 
@@ -156,7 +156,7 @@ export default function Messages() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Sent Messages</CardTitle>
+          <CardTitle>Sent Broadcasts</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {isLoading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />}

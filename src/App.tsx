@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { BrandingApplier } from "@/components/BrandingApplier";
 import Index from "./pages/Index";
@@ -31,7 +31,7 @@ import EventReports from "./pages/admin/EventReports";
 import EventsSummary from "./pages/admin/EventsSummary";
 import Rubrics from "./pages/admin/Rubrics";
 import SubmissionDetail from "./pages/admin/SubmissionDetail";
-import Messages from "./pages/admin/Messages";
+import Broadcast from "./pages/admin/Broadcast";
 
 // Judge imports
 import { JudgeLayout } from "./components/layout/JudgeLayout";
@@ -89,7 +89,8 @@ const App = () => (
                 <Route path="submissions" element={<Submissions />} />
                 <Route path="submissions/:submissionId" element={<SubmissionDetail />} />
 
-                <Route path="messages" element={<Messages />} />
+                <Route path="messages" element={<Navigate to="/admin/broadcast" replace />} />
+                <Route path="broadcast" element={<Broadcast />} />
                 <Route path="reviews" element={<ReviewRequests />} />
                 <Route path="roles" element={<UserRoles />} />
                 <Route path="organizations" element={<Organizations />} />

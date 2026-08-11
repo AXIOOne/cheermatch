@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 
 const db = supabase as any;
 
-export function JudgeMessageBanner() {
+export function JudgeBroadcastBanner() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
