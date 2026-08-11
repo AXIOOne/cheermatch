@@ -605,12 +605,9 @@ export default function Events() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="registration_open">Registration Open</SelectItem>
-                    <SelectItem value="open_for_capture">Open for Capture</SelectItem>
-                    <SelectItem value="open_for_scoring">Open for Scoring</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
-
+                    {STATUS_OPTIONS.map(({ value, label }) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
