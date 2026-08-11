@@ -55,6 +55,7 @@ export function RubricUploadDialog({ open, onOpenChange, rubric }: Props) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [season, setSeason] = useState('');
+  const [discipline, setDiscipline] = useState<string>(NONE);
   const [eventId, setEventId] = useState<string>(NONE);
   const [divisionId, setDivisionId] = useState<string>(NONE);
   const [levelId, setLevelId] = useState<string>(NONE);
@@ -66,6 +67,7 @@ export function RubricUploadDialog({ open, onOpenChange, rubric }: Props) {
       setTitle(rubric?.title ?? '');
       setDescription(rubric?.description ?? '');
       setSeason(rubric?.season ?? '');
+      setDiscipline(rubric?.discipline ?? NONE);
       setEventId(rubric?.event_id ?? NONE);
       setDivisionId(rubric?.division_id ?? NONE);
       setLevelId(rubric?.level_id ?? NONE);
