@@ -1,0 +1,1 @@
+ALTER TABLE public.scoring_rubrics ADD COLUMN IF NOT EXISTS discipline text;

@@ -14,11 +14,26 @@ import { Loader2, Upload } from 'lucide-react';
 const MAX_SIZE = 25 * 1024 * 1024; // 25 MB
 const NONE = '__none__';
 
+export const RUBRIC_DISCIPLINES = [
+  { value: 'allstar_cheer', label: 'All-Star Cheer' },
+  { value: 'allstar_dance', label: 'All-Star Dance' },
+  { value: 'nca_cheer', label: 'NCA Cheer' },
+  { value: 'nca_dance', label: 'NCA Dance' },
+  { value: 'uca_cheer', label: 'UCA Cheer' },
+  { value: 'uca_dance', label: 'UCA Dance' },
+  { value: 'usa_cheer', label: 'USA Cheer' },
+  { value: 'usa_dance', label: 'USA Dance' },
+] as const;
+
+export const rubricDisciplineLabel = (v?: string | null) =>
+  RUBRIC_DISCIPLINES.find((d) => d.value === v)?.label ?? v ?? null;
+
 export interface RubricRecord {
   id: string;
   title: string;
   description: string | null;
   season: string | null;
+  discipline: string | null;
   event_id: string | null;
   division_id: string | null;
   level_id: string | null;
@@ -40,6 +55,7 @@ export function RubricUploadDialog({ open, onOpenChange, rubric }: Props) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [season, setSeason] = useState('');
+  const [discipline, setDiscipline] = useState<string>(NONE);
   const [eventId, setEventId] = useState<string>(NONE);
   const [divisionId, setDivisionId] = useState<string>(NONE);
   const [levelId, setLevelId] = useState<string>(NONE);
@@ -51,6 +67,7 @@ export function RubricUploadDialog({ open, onOpenChange, rubric }: Props) {
       setTitle(rubric?.title ?? '');
       setDescription(rubric?.description ?? '');
       setSeason(rubric?.season ?? '');
+      setDiscipline(rubric?.discipline ?? NONE);
       setEventId(rubric?.event_id ?? NONE);
       setDivisionId(rubric?.division_id ?? NONE);
       setLevelId(rubric?.level_id ?? NONE);
@@ -102,6 +119,7 @@ export function RubricUploadDialog({ open, onOpenChange, rubric }: Props) {
         title: title.trim(),
         description: description.trim() || null,
         season: season.trim() || null,
+        discipline: discipline === NONE ? null : discipline,
         event_id: eventId === NONE ? null : eventId,
         division_id: divisionId === NONE ? null : divisionId,
         level_id: levelId === NONE ? null : levelId,
@@ -183,6 +201,16 @@ export function RubricUploadDialog({ open, onOpenChange, rubric }: Props) {
             <div>
               <Label htmlFor="r-season">Season</Label>
               <Input id="r-season" placeholder="e.g. 2025-2026" value={season} onChange={(e) => setSeason(e.target.value)} />
+            </div>
+            <div>
+              <Label>Discipline</Label>
+              <Select value={discipline} onValueChange={setDiscipline}>
+                <SelectTrigger><SelectValue placeholder="Select discipline" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE}>All / None</SelectItem>
+                  {RUBRIC_DISCIPLINES.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label>Event</Label>

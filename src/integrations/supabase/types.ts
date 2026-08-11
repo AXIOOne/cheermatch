@@ -1195,6 +1195,7 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          discipline: string | null
           division_id: string | null
           event_id: string | null
           file_name: string
@@ -1211,6 +1212,7 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          discipline?: string | null
           division_id?: string | null
           event_id?: string | null
           file_name: string
@@ -1227,6 +1229,7 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          discipline?: string | null
           division_id?: string | null
           event_id?: string | null
           file_name?: string

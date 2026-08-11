@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { FileText, Loader2, Plus, Search, Download, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { RubricUploadDialog, type RubricRecord } from '@/components/admin/RubricUploadDialog';
+import { RubricUploadDialog, rubricDisciplineLabel, type RubricRecord } from '@/components/admin/RubricUploadDialog';
 
 const ALL = '__all__';
 
@@ -44,6 +44,7 @@ export default function Rubrics() {
         .from('scoring_rubrics')
         .select(`
           id, title, description, season, event_id, division_id, level_id,
+          discipline,
           file_path, file_name, file_size_bytes, mime_type, created_at,
           event:events(name),
           division:divisions(name),
@@ -150,6 +151,7 @@ export default function Rubrics() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
+                  <TableHead>Discipline</TableHead>
                   <TableHead>Season</TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Division</TableHead>
@@ -171,6 +173,7 @@ export default function Rubrics() {
                         </div>
                       </div>
                     </TableCell>
+                    <TableCell>{rubricDisciplineLabel(r.discipline) ?? <span className="text-muted-foreground">All</span>}</TableCell>
                     <TableCell>{r.season ? <Badge variant="outline">{r.season}</Badge> : '-'}</TableCell>
                     <TableCell>{r.event?.name ?? <span className="text-muted-foreground">All</span>}</TableCell>
                     <TableCell>{r.division?.name ?? <span className="text-muted-foreground">All</span>}</TableCell>
