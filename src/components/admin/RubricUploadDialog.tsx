@@ -119,6 +119,7 @@ export function RubricUploadDialog({ open, onOpenChange, rubric }: Props) {
         title: title.trim(),
         description: description.trim() || null,
         season: season.trim() || null,
+        discipline: discipline === NONE ? null : discipline,
         event_id: eventId === NONE ? null : eventId,
         division_id: divisionId === NONE ? null : divisionId,
         level_id: levelId === NONE ? null : levelId,
