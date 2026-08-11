@@ -281,7 +281,7 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
                     <CollapsibleTrigger asChild>
                       <button
                         type="button"
-                        className="flex w-full items-center justify-between rounded-lg border bg-card px-4 py-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
+                        className="group flex w-full items-center justify-between rounded-lg border bg-card px-4 py-3 text-left transition-colors hover:bg-accent hover:text-accent-foreground"
                       >
                         <div className="flex items-center gap-3">
                           <span className="font-semibold">{div.name}</span>
@@ -289,7 +289,7 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
                             <CheckCircle2 className="h-5 w-5 text-success" />
                           )}
                         </div>
-                        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 [[data-state=open]>button>&]:rotate-180" />
+                        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
                       </button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
