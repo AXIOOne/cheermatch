@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { FileText, Loader2, Plus, Search, Download, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { RubricUploadDialog, type RubricRecord } from '@/components/admin/RubricUploadDialog';
+import { RubricUploadDialog, rubricDisciplineLabel, type RubricRecord } from '@/components/admin/RubricUploadDialog';
 
 const ALL = '__all__';
 
