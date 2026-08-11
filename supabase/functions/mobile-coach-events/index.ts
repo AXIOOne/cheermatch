@@ -6,8 +6,8 @@ import { handleOptions, ok, fail, serviceClient, legacyAuth, asId, asMoney, form
 const mapStatus = (s: string): string => {
   switch (s) {
     case "completed": case "archived": return "CLOSED";
-    case "in_progress": case "open": case "active": return "OPEN";
-    case "draft": case "upcoming": case "scheduled": return "UPCOMING";
+    case "registration_open": case "upcoming": case "scheduled": case "draft": return "UPCOMING";
+    case "open_for_capture": case "open_for_scoring": case "in_progress": case "open": case "active": return "OPEN";
     default: return String(s || "").toUpperCase();
   }
 };
