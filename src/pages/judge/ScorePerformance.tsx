@@ -231,7 +231,7 @@ export default function ScorePerformance() {
       });
       setDeductionCounts(dc);
       setDeductionWarnings(dw);
-      setComments(existingScore.comments || '');
+      setComments((existingScore.comments || '').replace(/\*\*|__/g, ''));
     } else {
       const init: Record<string, FieldScore> = {};
       allFields.forEach((f: any) => { init[f.id] = { field_id: f.id, points: 0, notes: '' }; });
@@ -308,10 +308,10 @@ export default function ScorePerformance() {
           if (!opt) return;
           const val = Number(opt.value);
           if (!val) return;
-          lines.push(`**${sk.name}: -${val}**`);
+          lines.push(`${sk.name}: -${val}`);
         });
       if (lines.length > 0) {
-        blocks.push(`**__${f.name}__**\n${lines.join('\n')}`);
+        blocks.push(`${f.name}\n${lines.join('\n')}`);
       }
     });
     const newAuto = blocks.length > 0 ? blocks.join('\n\n') : '';

@@ -246,7 +246,7 @@ export default function SubmissionScoringDialog({
       });
       setDeductionCounts(loadedDed);
       setDeductionWarnings(loadedWarn);
-      setComments(panelScore.comments || '');
+      setComments((panelScore.comments || '').replace(/\*\*|__/g, ''));
       setNeedsReview(Boolean(panelScore.needs_review));
     } else {
       const init: Record<string, FieldScore> = {};
@@ -326,10 +326,10 @@ export default function SubmissionScoringDialog({
           if (!opt) return;
           const val = Number(opt.value);
           if (!val) return;
-          lines.push(`**${sk.name}: -${val}**`);
+          lines.push(`${sk.name}: -${val}`);
         });
       if (lines.length > 0) {
-        blocks.push(`**__${f.name}__**\n${lines.join('\n')}`);
+        blocks.push(`${f.name}\n${lines.join('\n')}`);
       }
     });
     const newAuto = blocks.length > 0 ? blocks.join('\n\n') : '';
