@@ -129,7 +129,7 @@ export default function JudgeDashboard() {
                   return map;
                 }, new Map())
                 .values()]
-                .map(({ event, assignments: eventAssignments }: any) => {
+                .map(({ event }: any) => {
                   const status = event?.status;
                   const isOpen = status === 'open_for_capture' || status === 'open_for_scoring';
                   const statusLabel =
