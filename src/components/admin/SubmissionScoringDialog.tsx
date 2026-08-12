@@ -1209,6 +1209,29 @@ export default function SubmissionScoringDialog({
           setOverrideTarget(null);
         }}
       />
+      <AlertDialog open={reopenConfirmOpen} onOpenChange={setReopenConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Re-open this panel for scoring?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This sends {panels.find(p => p.id === selectedPanelId)?.abbreviation || 'this panel'} back to a pending
+              (draft) state for {assignedJudge?.judge?.full_name || assignedJudge?.judge?.email || 'the assigned judge'}.
+              Their entered scores are kept, but any review status is cleared and the score will not count as complete
+              until they resubmit.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reopenMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); reopenMutation.mutate(); }}
+              disabled={reopenMutation.isPending}
+            >
+              {reopenMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Re-open for Scoring
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
