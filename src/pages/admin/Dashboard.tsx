@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Calendar, Users, Activity, ClipboardList, Plus, Loader2, LogIn } from 'lucide-react';
+import { Calendar, Activity, Plus, Loader2, LogIn } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -15,38 +15,32 @@ function initialsOf(name?: string | null, email?: string | null) {
 }
 
 export default function Dashboard() {
-  const { data: events, isLoading: eventsLoading } = useQuery({
-    queryKey: ['events-count'],
+  const { data: currentEvents, isLoading: currentLoading } = useQuery({
+    queryKey: ['current-events'],
     queryFn: async () => {
-      const { count, error } = await supabase
+      const { data, error } = await supabase
         .from('events')
-        .select('*', { count: 'exact', head: true });
+        .select('id, name, start_date, end_date, status')
+        .in('status', ['open_for_capture', 'open_for_scoring'])
+        .order('start_date', { ascending: true });
       if (error) throw error;
-      return count || 0;
+      return data ?? [];
     },
   });
 
-  const { data: teams, isLoading: teamsLoading } = useQuery({
-    queryKey: ['teams-count'],
+  const { data: upcomingEvents, isLoading: upcomingLoading } = useQuery({
+    queryKey: ['upcoming-events'],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('teams')
-        .select('*', { count: 'exact', head: true });
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, name, start_date, end_date, status')
+        .eq('status', 'registration_open')
+        .order('start_date', { ascending: true });
       if (error) throw error;
-      return count || 0;
+      return data ?? [];
     },
   });
 
-  const { data: templates, isLoading: templatesLoading } = useQuery({
-    queryKey: ['templates-count'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('scoring_templates')
-        .select('*', { count: 'exact', head: true });
-      if (error) throw error;
-      return count || 0;
-    },
-  });
 
   const { data: recentEvents, isLoading: recentLoading } = useQuery({
     queryKey: ['recent-events'],
@@ -100,7 +94,16 @@ export default function Dashboard() {
     refetchInterval: 10000,
   });
 
-  const isLoading = eventsLoading || teamsLoading || templatesLoading || onlineLoading;
+  const isLoading = onlineLoading;
+
+  const fmtRange = (s: string, e: string) => {
+    const so = new Date(s + 'T00:00:00');
+    const eo = new Date(e + 'T00:00:00');
+    const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+    return s === e
+      ? so.toLocaleDateString(undefined, opts)
+      : `${so.toLocaleDateString(undefined, opts)} – ${eo.toLocaleDateString(undefined, opts)}`;
+  };
 
   return (
     <div className="p-8">
@@ -118,17 +121,36 @@ export default function Dashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Events
+              Current Events
             </CardTitle>
-            <Calendar className="w-5 h-5 text-primary" />
+            <Activity className="w-5 h-5 text-primary" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : events}
+              {currentLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : currentEvents?.length ?? 0}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Open for capture or scoring</p>
+            <div className="mt-3 space-y-2">
+              {(currentEvents ?? []).slice(0, 4).map((e) => (
+                <Link
+                  key={e.id}
+                  to={`/admin/events/${e.id}`}
+                  className="block rounded-md border p-2 hover:bg-muted/50"
+                >
+                  <div className="text-sm font-medium truncate">{e.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {fmtRange(e.start_date, e.end_date)} ·{' '}
+                    {e.status === 'open_for_capture' ? 'Open for Capture' : 'Open for Scoring'}
+                  </div>
+                </Link>
+              ))}
+              {!currentLoading && (currentEvents ?? []).length === 0 && (
+                <p className="text-sm text-muted-foreground">No active events</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -136,30 +158,33 @@ export default function Dashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Registered Teams
+              Upcoming Events
             </CardTitle>
-            <Users className="w-5 h-5 text-secondary" />
+            <Calendar className="w-5 h-5 text-secondary" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : teams}
+              {upcomingLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : upcomingEvents?.length ?? 0}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Registration open</p>
+            <div className="mt-3 space-y-2">
+              {(upcomingEvents ?? []).slice(0, 4).map((e) => (
+                <Link
+                  key={e.id}
+                  to={`/admin/events/${e.id}`}
+                  className="block rounded-md border p-2 hover:bg-muted/50"
+                >
+                  <div className="text-sm font-medium truncate">{e.name}</div>
+                  <div className="text-xs text-muted-foreground">{fmtRange(e.start_date, e.end_date)}</div>
+                </Link>
+              ))}
+              {!upcomingLoading && (upcomingEvents ?? []).length === 0 && (
+                <p className="text-sm text-muted-foreground">No upcoming events</p>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Scoring Templates
-            </CardTitle>
-            <ClipboardList className="w-5 h-5 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : templates}
-            </div>
-          </CardContent>
-        </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
