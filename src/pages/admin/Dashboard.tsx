@@ -42,19 +42,6 @@ export default function Dashboard() {
   });
 
 
-  const { data: recentEvents, isLoading: recentLoading } = useQuery({
-    queryKey: ['recent-events'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5);
-      if (error) throw error;
-      return data;
-    },
-  });
-
   const { data: recentLogins, isLoading: loginsLoading } = useQuery({
     queryKey: ['recent-logins'],
     queryFn: async () => {
