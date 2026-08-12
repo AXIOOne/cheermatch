@@ -118,47 +118,70 @@ export default function JudgeDashboard() {
             </div>
           ) : assignments && assignments.length > 0 ? (
             <div className="space-y-4">
-              {assignments.map((assignment) => {
-                const status = assignment.event?.status;
-                const isOpen = status === 'open_for_capture' || status === 'open_for_scoring';
-                const statusLabel =
-                  status === 'open_for_capture' ? 'Open for capture' :
-                  status === 'open_for_scoring' ? 'Open for scoring' :
-                  status === 'in_progress' ? 'In progress' :
-                  'Not yet released';
-                const statusClass =
-                  status === 'open_for_capture' ? 'bg-blue-100 text-blue-700' :
-                  status === 'open_for_scoring' ? 'bg-green-100 text-green-700' :
-                  status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
-                  'bg-gray-100 text-gray-600';
-                return (
-                  <div
-                    key={assignment.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-muted/50"
-                  >
-                    <div>
-                      <h3 className="font-medium">{assignment.event?.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {assignment.division?.name && `${assignment.division.name} • `}
-                        {assignment.level?.name && `Level ${assignment.level.level_number}`}
-                        {!assignment.division && !assignment.level && 'All divisions & levels'}
-                      </p>
+              {[...assignments
+                .reduce((map, assignment) => {
+                  const event = assignment.event;
+                  const eventId = assignment.event_id;
+                  if (!map.has(eventId)) {
+                    map.set(eventId, { event, assignments: [] });
+                  }
+                  map.get(eventId).assignments.push(assignment);
+                  return map;
+                }, new Map())
+                .values()]
+                .map(({ event, assignments: eventAssignments }: any) => {
+                  const status = event?.status;
+                  const isOpen = status === 'open_for_capture' || status === 'open_for_scoring';
+                  const statusLabel =
+                    status === 'open_for_capture' ? 'Open for capture' :
+                    status === 'open_for_scoring' ? 'Open for scoring' :
+                    status === 'in_progress' ? 'In progress' :
+                    'Not yet released';
+                  const statusClass =
+                    status === 'open_for_capture' ? 'bg-blue-100 text-blue-700' :
+                    status === 'open_for_scoring' ? 'bg-green-100 text-green-700' :
+                    status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                    'bg-gray-100 text-gray-600';
+                  const scoringOpenAt = event?.scoring_open_at
+                    ? new Date(event.scoring_open_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : null;
+                  return (
+                    <div
+                      key={event?.id}
+                      className="flex items-center justify-between p-4 rounded-lg bg-muted/50"
+                    >
+                      <div>
+                        <h3 className="font-medium">{event?.name}</h3>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                          {scoringOpenAt ? (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-3.5 h-3.5" />
+                              Scoring opens {scoringOpenAt}
+                            </span>
+                          ) : (
+                            <span>Scoring date TBD</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}>
+                          {statusLabel}
+                        </span>
+                        <Button size="sm" variant="outline" asChild={isOpen} disabled={!isOpen}>
+                          {isOpen ? (
+                            <Link to={`/judge/queue?event=${event?.id}`}>Score</Link>
+                          ) : (
+                            <span>Score</span>
+                          )}
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}>
-                        {statusLabel}
-                      </span>
-                      <Button size="sm" variant="outline" asChild={isOpen} disabled={!isOpen}>
-                        {isOpen ? (
-                          <Link to={`/judge/queue?event=${assignment.event_id}`}>Score</Link>
-                        ) : (
-                          <span>Score</span>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
