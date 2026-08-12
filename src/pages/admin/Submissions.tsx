@@ -138,16 +138,21 @@ export default function Submissions() {
     return matchesSearch && matchesStatus && matchesEvent;
   });
 
+  const eventScoped = submissions?.filter(
+    (s) => eventFilter === 'all' || s.event.id === eventFilter
+  );
+
   const countBy = (status: LifecycleStatus) =>
-    submissions?.filter((s) => toLifecycle(s.status) === status).length || 0;
+    eventScoped?.filter((s) => toLifecycle(s.status) === status).length || 0;
 
   const stats = {
-    total: submissions?.length || 0,
+    total: eventScoped?.length || 0,
     imported: countBy('imported'),
     approved: countBy('approved'),
     denied: countBy('denied'),
     revision_requested: countBy('revision_requested'),
   };
+
 
   const toggleSelection = (id: string) => {
     setSelectedIds(prev => {
@@ -178,10 +183,29 @@ export default function Submissions() {
 
   return (
     <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Video Submissions</h1>
-        <p className="text-muted-foreground mt-1">Review, approve, and track team video submissions</p>
+      <div className="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Video Submissions</h1>
+          <p className="text-muted-foreground mt-1">Review, approve, and track team video submissions</p>
+        </div>
+        <div className="w-full md:w-[280px]">
+          <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Event</label>
+          <Select value={eventFilter} onValueChange={setEventFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select an event" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Events</SelectItem>
+              {events?.map((event) => (
+                <SelectItem key={event.id} value={event.id}>
+                  {event.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
@@ -250,19 +274,6 @@ export default function Submissions() {
                   <SelectItem value="all">All Statuses</SelectItem>
                   {LIFECYCLE_STATUSES.map((s) => (
                     <SelectItem key={s} value={s}>{lifecycleConfig[s].label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={eventFilter} onValueChange={setEventFilter}>
-                <SelectTrigger className="w-full md:w-[200px]">
-                  <SelectValue placeholder="Filter by event" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Events</SelectItem>
-                  {events?.map((event) => (
-                    <SelectItem key={event.id} value={event.id}>
-                      {event.name}
-                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
