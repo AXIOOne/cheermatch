@@ -557,6 +557,8 @@ export default function EventScoring() {
                               ? 'bg-success/10 text-success border-success/20'
                               : overallStatus.allComplete
                               ? 'bg-warning/10 text-warning border-warning/20'
+                              : overallStatus.hasDraft
+                              ? 'bg-primary/10 text-primary border-primary/20'
                               : 'bg-muted text-muted-foreground border-transparent'
                           }
                         >
