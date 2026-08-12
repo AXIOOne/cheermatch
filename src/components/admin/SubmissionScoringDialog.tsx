@@ -17,6 +17,10 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { calculateStructuredDeductions, sortByDisplayOrder } from '@/lib/scoring';
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Play, Pause, Volume2, VolumeX, Maximize2,
   Save, Send, Loader2, CheckCircle, AlertCircle,
   SkipBack, SkipForward, User, Ban, RotateCcw, Info
