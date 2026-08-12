@@ -17,6 +17,10 @@ import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { calculateStructuredDeductions, sortByDisplayOrder } from '@/lib/scoring';
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Play, Pause, Volume2, VolumeX, Maximize2,
   Save, Send, Loader2, CheckCircle, AlertCircle,
   SkipBack, SkipForward, User, Ban, RotateCcw, Info
@@ -63,6 +67,7 @@ export default function SubmissionScoringDialog({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [reopenConfirmOpen, setReopenConfirmOpen] = useState(false);
 
   useEffect(() => { if (open && initialPanelId) setSelectedPanelId(initialPanelId); }, [open, initialPanelId]);
   useEffect(() => {
@@ -540,6 +545,30 @@ export default function SubmissionScoringDialog({
     onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
 
+  // Re-open a submitted/locked panel score so the assigned judge can edit and resubmit
+  const reopenMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentPanelScore) throw new Error('No score to re-open');
+      const { error } = await sb.from('scores').update({
+        status: 'in_progress',
+        submitted_at: null,
+        reviewed_at: null,
+        reviewed_by: null,
+        needs_review: false,
+        review_reason: null,
+      }).eq('id', currentPanelScore.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
+      setReopenConfirmOpen(false);
+      toast({ title: 'Re-opened for scoring', description: 'The assigned judge can now edit and resubmit this panel.' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Re-open failed', description: e.message }),
+  });
+
+
   // Recompute and persist a score's total after an override is added/removed.
   const recomputeScoreTotal = async (scoreId: string) => {
     const score: any = allScores?.find((s: any) => s.id === scoreId);
@@ -685,6 +714,23 @@ export default function SubmissionScoringDialog({
                 <span className="text-xs text-muted-foreground font-normal">
                   Submit this panel's score before it can be reviewed.
                 </span>
+              )}
+              {(isCurrentPanelSubmitted || isCurrentPanelLocked) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-warning text-warning hover:bg-warning/10 hover:text-warning"
+                  onClick={() => setReopenConfirmOpen(true)}
+                  disabled={reopenMutation.isPending}
+                >
+                  {reopenMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                  )}
+                  Re-open for Scoring
+                </Button>
               )}
             </div>
           </DialogTitle>
@@ -1167,6 +1213,29 @@ export default function SubmissionScoringDialog({
           setOverrideTarget(null);
         }}
       />
+      <AlertDialog open={reopenConfirmOpen} onOpenChange={setReopenConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Re-open this panel for scoring?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This sends {panels.find(p => p.id === selectedPanelId)?.abbreviation || 'this panel'} back to a pending
+              (draft) state for {assignedJudge?.judge?.full_name || assignedJudge?.judge?.email || 'the assigned judge'}.
+              Their entered scores are kept, but any review status is cleared and the score will not count as complete
+              until they resubmit.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={reopenMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); reopenMutation.mutate(); }}
+              disabled={reopenMutation.isPending}
+            >
+              {reopenMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Re-open for Scoring
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
