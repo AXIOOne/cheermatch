@@ -145,6 +145,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   };
 
+  // Heartbeat: keep profiles.last_seen_at fresh while the user is logged in
+  useEffect(() => {
+    if (!user) return;
+    const updateLastSeen = async () => {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ last_seen_at: new Date().toISOString() })
+          .eq('user_id', user.id);
+      } catch (e) {
+        console.warn('Failed to update last_seen_at', e);
+      }
+    };
+    updateLastSeen();
+    const id = setInterval(updateLastSeen, 60000);
+    return () => clearInterval(id);
+  }, [user]);
+
   const hasRole = (role: AppRole) => roles.includes(role);
   
   const isAdmin = hasRole('admin');
