@@ -757,7 +757,7 @@ export default function SubmissionScoringDialog({
                         const status = getPanelStatus(panel.id);
                         const colors: Record<string, string> = {
                           pending: 'bg-destructive text-destructive-foreground',
-                          in_progress: 'bg-destructive text-destructive-foreground',
+                          in_progress: 'bg-primary text-primary-foreground',
                           submitted: 'bg-success text-success-foreground',
                           needs_review: 'bg-warning text-warning-foreground',
                           locked: 'bg-muted text-muted-foreground',
