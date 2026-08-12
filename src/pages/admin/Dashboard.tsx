@@ -111,7 +111,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-bold text-foreground">
               Current Events
             </CardTitle>
             <Activity className="w-5 h-5 text-primary" />
@@ -144,7 +144,7 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-bold text-foreground">
               Upcoming Events
             </CardTitle>
             <Calendar className="w-5 h-5 text-secondary" />
@@ -175,7 +175,7 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardTitle className="text-sm font-bold text-foreground">
               Currently Online
             </CardTitle>
             <div className="relative">
