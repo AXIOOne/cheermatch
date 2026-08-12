@@ -138,16 +138,21 @@ export default function Submissions() {
     return matchesSearch && matchesStatus && matchesEvent;
   });
 
+  const eventScoped = submissions?.filter(
+    (s) => eventFilter === 'all' || s.event.id === eventFilter
+  );
+
   const countBy = (status: LifecycleStatus) =>
-    submissions?.filter((s) => toLifecycle(s.status) === status).length || 0;
+    eventScoped?.filter((s) => toLifecycle(s.status) === status).length || 0;
 
   const stats = {
-    total: submissions?.length || 0,
+    total: eventScoped?.length || 0,
     imported: countBy('imported'),
     approved: countBy('approved'),
     denied: countBy('denied'),
     revision_requested: countBy('revision_requested'),
   };
+
 
   const toggleSelection = (id: string) => {
     setSelectedIds(prev => {
