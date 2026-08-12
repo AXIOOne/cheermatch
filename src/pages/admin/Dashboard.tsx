@@ -85,7 +85,22 @@ export default function Dashboard() {
     },
   });
 
-  const isLoading = eventsLoading || teamsLoading || templatesLoading;
+  const { data: onlineUsers, isLoading: onlineLoading } = useQuery({
+    queryKey: ['currently-online'],
+    queryFn: async () => {
+      const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, email, full_name, avatar_url, last_seen_at')
+        .gte('last_seen_at', since)
+        .order('last_seen_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: 10000,
+  });
+
+  const isLoading = eventsLoading || teamsLoading || templatesLoading || onlineLoading;
 
   return (
     <div className="p-8">
