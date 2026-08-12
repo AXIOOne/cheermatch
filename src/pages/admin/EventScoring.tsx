@@ -476,6 +476,10 @@ export default function EventScoring() {
                 <span className="text-sm">Needs Review</span>
               </div>
               <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-sm bg-primary" />
+                <span className="text-sm">Draft Saved (Not Submitted)</span>
+              </div>
+              <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-sm bg-destructive" />
                 <span className="text-sm">Not Started</span>
               </div>
