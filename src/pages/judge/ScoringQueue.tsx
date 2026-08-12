@@ -232,6 +232,7 @@ export default function ScoringQueue() {
       const status = getScoreStatus(sub.id);
       const isScored = status === 'submitted' || status === 'locked';
       if (statusFilter === 'pending') return !isScored;
+      if (statusFilter === 'draft') return status === 'in_progress';
       if (statusFilter === 'scored') return isScored;
       return true;
     });
