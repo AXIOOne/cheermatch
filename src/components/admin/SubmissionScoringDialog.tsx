@@ -63,6 +63,7 @@ export default function SubmissionScoringDialog({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [reopenConfirmOpen, setReopenConfirmOpen] = useState(false);
 
   useEffect(() => { if (open && initialPanelId) setSelectedPanelId(initialPanelId); }, [open, initialPanelId]);
   useEffect(() => {
