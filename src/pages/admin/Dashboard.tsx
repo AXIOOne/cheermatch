@@ -173,7 +173,7 @@ export default function Dashboard() {
         </Card>
 
 
-        <Card>
+        <Card className="h-[320px] flex flex-col">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-bold text-foreground">
               Currently Online
@@ -186,7 +186,7 @@ export default function Dashboard() {
               </span>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col flex-1">
             <div className="text-3xl font-bold">
               {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : onlineUsers?.length ?? 0}
             </div>
