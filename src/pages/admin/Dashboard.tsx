@@ -192,10 +192,16 @@ export default function Dashboard() {
             </div>
             <div className="mt-2 flex -space-x-2 overflow-hidden">
               {(onlineUsers ?? []).slice(0, 5).map((u) => (
-                <Avatar key={u.user_id} className="h-6 w-6 border-2 border-background">
-                  {u.avatar_url && <AvatarImage src={u.avatar_url} alt={u.full_name || u.email || ''} />}
-                  <AvatarFallback className="text-[10px]">{initialsOf(u.full_name, u.email)}</AvatarFallback>
-                </Avatar>
+                <span
+                  key={u.user_id}
+                  title={u.full_name || u.email || 'Online user'}
+                  className="inline-block"
+                >
+                  <Avatar className="h-6 w-6 border-2 border-background">
+                    {u.avatar_url && <AvatarImage src={u.avatar_url} alt={u.full_name || u.email || ''} />}
+                    <AvatarFallback className="text-[10px]">{initialsOf(u.full_name, u.email)}</AvatarFallback>
+                  </Avatar>
+                </span>
               ))}
               {(onlineUsers ?? []).length > 5 && (
                 <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-muted text-[10px] font-medium text-muted-foreground">
