@@ -297,13 +297,14 @@ export default function EventScoring() {
   // Get overall scoring status text
   const getOverallStatus = (
     submission: Submission,
-  ): { text: string; allComplete: boolean; allReviewed: boolean; needsReview: boolean } => {
+  ): { text: string; allComplete: boolean; allReviewed: boolean; needsReview: boolean; hasDraft: boolean } => {
     const needsReview = submission.scores.some(s => s.needs_review && !s.reviewed_at);
+    const hasDraft = submission.scores.some(s => s.status === 'in_progress');
     if (!panels || panels.length === 0) {
       const hasSubmitted = submission.scores.some(s => s.status === 'submitted');
       const hasReviewed = hasSubmitted && submission.scores.every(s => s.status !== 'submitted' || s.reviewed_at);
-      const text = needsReview ? 'NEEDS REVIEW' : hasReviewed ? 'REVIEWED' : hasSubmitted ? 'SCORED' : 'PENDING';
-      return { text, allComplete: hasSubmitted, allReviewed: hasReviewed, needsReview };
+      const text = needsReview ? 'NEEDS REVIEW' : hasReviewed ? 'REVIEWED' : hasSubmitted ? 'SCORED' : hasDraft ? 'DRAFT SAVED' : 'PENDING';
+      return { text, allComplete: hasSubmitted, allReviewed: hasReviewed, needsReview, hasDraft };
     }
 
     const completedPanels = panels.filter(p => {
@@ -317,10 +318,11 @@ export default function EventScoring() {
 
     const allComplete = completedPanels === panels.length;
     const allReviewed = allComplete && reviewedPanels === panels.length;
-    if (needsReview) return { text: 'NEEDS REVIEW', allComplete, allReviewed, needsReview };
-    if (allReviewed) return { text: 'REVIEWED', allComplete, allReviewed, needsReview };
-    if (allComplete) return { text: 'COMPLETE', allComplete, allReviewed, needsReview };
-    return { text: 'PENDING', allComplete, allReviewed, needsReview };
+    if (needsReview) return { text: 'NEEDS REVIEW', allComplete, allReviewed, needsReview, hasDraft };
+    if (allReviewed) return { text: 'REVIEWED', allComplete, allReviewed, needsReview, hasDraft };
+    if (allComplete) return { text: 'COMPLETE', allComplete, allReviewed, needsReview, hasDraft };
+    if (hasDraft) return { text: 'DRAFT SAVED', allComplete, allReviewed, needsReview, hasDraft };
+    return { text: 'PENDING', allComplete, allReviewed, needsReview, hasDraft };
   };
 
 
