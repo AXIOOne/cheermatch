@@ -15,38 +15,32 @@ function initialsOf(name?: string | null, email?: string | null) {
 }
 
 export default function Dashboard() {
-  const { data: events, isLoading: eventsLoading } = useQuery({
-    queryKey: ['events-count'],
+  const { data: currentEvents, isLoading: currentLoading } = useQuery({
+    queryKey: ['current-events'],
     queryFn: async () => {
-      const { count, error } = await supabase
+      const { data, error } = await supabase
         .from('events')
-        .select('*', { count: 'exact', head: true });
+        .select('id, name, start_date, end_date, status')
+        .in('status', ['open_for_capture', 'open_for_scoring'])
+        .order('start_date', { ascending: true });
       if (error) throw error;
-      return count || 0;
+      return data ?? [];
     },
   });
 
-  const { data: teams, isLoading: teamsLoading } = useQuery({
-    queryKey: ['teams-count'],
+  const { data: upcomingEvents, isLoading: upcomingLoading } = useQuery({
+    queryKey: ['upcoming-events'],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('teams')
-        .select('*', { count: 'exact', head: true });
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, name, start_date, end_date, status')
+        .eq('status', 'registration_open')
+        .order('start_date', { ascending: true });
       if (error) throw error;
-      return count || 0;
+      return data ?? [];
     },
   });
 
-  const { data: templates, isLoading: templatesLoading } = useQuery({
-    queryKey: ['templates-count'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('scoring_templates')
-        .select('*', { count: 'exact', head: true });
-      if (error) throw error;
-      return count || 0;
-    },
-  });
 
   const { data: recentEvents, isLoading: recentLoading } = useQuery({
     queryKey: ['recent-events'],
