@@ -4,6 +4,8 @@ import { JudgeSidebar } from './JudgeSidebar';
 import { JudgeBroadcastBanner } from '@/components/judge/JudgeBroadcastBanner';
 import { JudgeMessagesMenu } from '@/components/judge/JudgeMessagesMenu';
 import { Loader2 } from 'lucide-react';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
 
 export function JudgeLayout() {
   const { user, loading, rolesLoaded, isJudge, isAdmin } = useAuth();
@@ -33,15 +35,22 @@ export function JudgeLayout() {
   }
 
   return (
-    <div className="min-h-screen flex bg-background">
-      <JudgeSidebar />
-      <main className="flex-1 overflow-auto">
-        <JudgeBroadcastBanner />
-        <div className="flex justify-end px-6 pt-4">
-          <JudgeMessagesMenu />
-        </div>
-        <Outlet />
-      </main>
-    </div>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <JudgeSidebar />
+        <SidebarInset>
+          <JudgeBroadcastBanner />
+          <header className="flex h-12 items-center justify-end gap-2 px-4 border-b">
+            <SidebarTrigger className="mr-auto -ml-1" />
+            <Separator orientation="vertical" className="h-4" />
+            <span className="text-sm font-medium text-muted-foreground">Judge Portal</span>
+            <JudgeMessagesMenu />
+          </header>
+          <main className="flex-1 overflow-auto p-4">
+            <Outlet />
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 }
