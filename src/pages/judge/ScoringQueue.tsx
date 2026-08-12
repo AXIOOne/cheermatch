@@ -317,9 +317,9 @@ export default function ScoringQueue() {
                           </Badge>
                         )}
                         {scoreStatus === 'in_progress' && (
-                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+                          <Badge variant="secondary" className="bg-primary/10 text-primary">
                             <Clock className="w-3 h-3 mr-1" />
-                            In Progress
+                            Draft Saved
                           </Badge>
                         )}
                         {scoreStatus === 'locked' && (
