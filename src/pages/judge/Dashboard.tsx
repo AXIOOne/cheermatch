@@ -16,7 +16,7 @@ export default function JudgeDashboard() {
         .from('judge_assignments')
         .select(`
           *,
-          event:events(id, name, status, start_date, end_date),
+          event:events(id, name, status, start_date, end_date, scoring_open_at),
           division:divisions(name),
           level:levels(name, level_number)
         `)
