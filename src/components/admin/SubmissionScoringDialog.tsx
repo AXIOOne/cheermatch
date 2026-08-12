@@ -711,6 +711,23 @@ export default function SubmissionScoringDialog({
                   Submit this panel's score before it can be reviewed.
                 </span>
               )}
+              {(isCurrentPanelSubmitted || isCurrentPanelLocked) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-warning text-warning hover:bg-warning/10 hover:text-warning"
+                  onClick={() => setReopenConfirmOpen(true)}
+                  disabled={reopenMutation.isPending}
+                >
+                  {reopenMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                  )}
+                  Re-open for Scoring
+                </Button>
+              )}
             </div>
           </DialogTitle>
         </DialogHeader>
