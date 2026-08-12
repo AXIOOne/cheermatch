@@ -326,10 +326,10 @@ export default function SubmissionScoringDialog({
           if (!opt) return;
           const val = Number(opt.value);
           if (!val) return;
-          lines.push(`**${sk.name}: -${val}**`);
+          lines.push(`${sk.name}: -${val}`);
         });
       if (lines.length > 0) {
-        blocks.push(`**__${f.name}__**\n${lines.join('\n')}`);
+        blocks.push(`${f.name}\n${lines.join('\n')}`);
       }
     });
     const newAuto = blocks.length > 0 ? blocks.join('\n\n') : '';
