@@ -821,6 +821,20 @@ export default function SubmissionScoringDialog({
                   </CardContent>
                 </Card>
 
+                {currentPanelScore?.status === 'in_progress' && (
+                  <div className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-3">
+                    <p className="text-sm font-medium text-primary">
+                      Draft preview — this judge saved their work but has not submitted the score.
+                    </p>
+                    {currentPanelScore?.updated_at && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Last saved {new Date(currentPanelScore.updated_at).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+
                 {!template ? (
                   <Card>
                     <CardContent className="py-12 text-center text-muted-foreground">
