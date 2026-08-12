@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { Calendar, Users, Activity, ClipboardList, Plus, Loader2, LogIn } from 'lucide-react';
+import { Calendar, Activity, Plus, Loader2, LogIn } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
