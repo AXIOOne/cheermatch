@@ -109,20 +109,20 @@ export default function Dashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <Card>
+        <Card className="h-[320px] flex flex-col">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-bold text-foreground">
               Current Events
             </CardTitle>
             <Activity className="w-5 h-5 text-primary" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col flex-1">
             <div className="text-3xl font-bold">
               {currentLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : currentEvents?.length ?? 0}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Open for capture or scoring</p>
-            <div className="mt-3 space-y-2">
-              {(currentEvents ?? []).slice(0, 4).map((e) => (
+            <div className="mt-3 space-y-2 overflow-y-auto flex-1 min-h-0 pr-1">
+              {(currentEvents ?? []).map((e) => (
                 <Link
                   key={e.id}
                   to={`/admin/events/${e.id}`}
@@ -142,20 +142,20 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="h-[320px] flex flex-col">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-bold text-foreground">
               Upcoming Events
             </CardTitle>
             <Calendar className="w-5 h-5 text-secondary" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col flex-1">
             <div className="text-3xl font-bold">
               {upcomingLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : upcomingEvents?.length ?? 0}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Registration open</p>
-            <div className="mt-3 space-y-2">
-              {(upcomingEvents ?? []).slice(0, 4).map((e) => (
+            <div className="mt-3 space-y-2 overflow-y-auto flex-1 min-h-0 pr-1">
+              {(upcomingEvents ?? []).map((e) => (
                 <Link
                   key={e.id}
                   to={`/admin/events/${e.id}`}
@@ -173,7 +173,7 @@ export default function Dashboard() {
         </Card>
 
 
-        <Card>
+        <Card className="h-[320px] flex flex-col">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-bold text-foreground">
               Currently Online
@@ -186,7 +186,7 @@ export default function Dashboard() {
               </span>
             </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col flex-1">
             <div className="text-3xl font-bold">
               {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : onlineUsers?.length ?? 0}
             </div>
