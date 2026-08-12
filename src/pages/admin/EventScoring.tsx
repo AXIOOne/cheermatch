@@ -335,14 +335,14 @@ export default function EventScoring() {
   }) => {
     const colors = {
       pending: 'bg-destructive hover:bg-destructive/80',
-      in_progress: 'bg-destructive hover:bg-destructive/80',
+      in_progress: 'bg-primary hover:bg-primary/80',
       submitted: 'bg-success hover:bg-success/80',
       needs_review: 'bg-warning hover:bg-warning/80',
       reviewed: 'bg-success hover:bg-success/80',
     };
     const titles = {
       pending: 'Not started — click to score',
-      in_progress: 'In progress — click to continue',
+      in_progress: 'Draft saved by judge (not submitted) — click to preview',
       submitted: 'Complete — click to view/edit',
       needs_review: 'Needs review — click to view/edit',
       reviewed: 'Reviewed — click to view/edit',
