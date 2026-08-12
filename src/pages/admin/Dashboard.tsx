@@ -164,12 +164,33 @@ export default function Dashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Active Competitions
+              Currently Online
             </CardTitle>
-            <Trophy className="w-5 h-5 text-primary" />
+            <div className="relative">
+              <Activity className="w-5 h-5 text-success" />
+              <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+              </span>
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">0</div>
+            <div className="text-3xl font-bold">
+              {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : onlineUsers?.length ?? 0}
+            </div>
+            <div className="mt-2 flex -space-x-2 overflow-hidden">
+              {(onlineUsers ?? []).slice(0, 5).map((u) => (
+                <Avatar key={u.user_id} className="h-6 w-6 border-2 border-background">
+                  {u.avatar_url && <AvatarImage src={u.avatar_url} alt={u.full_name || u.email || ''} />}
+                  <AvatarFallback className="text-[10px]">{initialsOf(u.full_name, u.email)}</AvatarFallback>
+                </Avatar>
+              ))}
+              {(onlineUsers ?? []).length > 5 && (
+                <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-muted text-[10px] font-medium text-muted-foreground">
+                  +{(onlineUsers ?? []).length - 5}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
