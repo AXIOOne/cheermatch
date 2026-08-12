@@ -699,6 +699,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          last_seen_at: string | null
           organization_id: string | null
           organization_name: string | null
           password_hash: string | null
@@ -712,6 +713,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id?: string
+          last_seen_at?: string | null
           organization_id?: string | null
           organization_name?: string | null
           password_hash?: string | null
@@ -725,6 +727,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          last_seen_at?: string | null
           organization_id?: string | null
           organization_name?: string | null
           password_hash?: string | null
