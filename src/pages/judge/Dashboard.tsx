@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { ClipboardCheck, Clock, CheckCircle, Play, Loader2 } from 'lucide-react';
+import { ClipboardCheck, Clock, CheckCircle, Play, Loader2, Calendar } from 'lucide-react';
 
 export default function JudgeDashboard() {
   const { user } = useAuth();
