@@ -506,6 +506,11 @@ export default function ScorePerformance() {
             {assignedPanelBadges.map((panel) => (
               <Badge key={panel} variant="outline" className="ml-2">Panel: {panel}</Badge>
             ))}
+            {existingScore?.status === 'in_progress' && (
+              <Badge variant="outline" className="ml-2 bg-primary/10 text-primary border-primary/20">
+                Draft saved{existingScore?.updated_at ? ` • ${new Date(existingScore.updated_at).toLocaleString()}` : ''}
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <RubricReferenceSheet eventId={submission.event_id}

@@ -34,7 +34,7 @@ export default function ScoringQueue() {
   const [searchParams] = useSearchParams();
   const eventFilter = searchParams.get('event');
   const [selectedEvent, setSelectedEvent] = useState<string>(eventFilter || 'all');
-  const [statusFilter, setStatusFilter] = useState<'pending' | 'scored' | 'all'>('pending');
+  const [statusFilter, setStatusFilter] = useState<'pending' | 'draft' | 'scored' | 'all'>('pending');
 
   // Judge's assignments — event, division, and panel
   const { data: assignments } = useQuery({
@@ -232,6 +232,7 @@ export default function ScoringQueue() {
       const status = getScoreStatus(sub.id);
       const isScored = status === 'submitted' || status === 'locked';
       if (statusFilter === 'pending') return !isScored;
+      if (statusFilter === 'draft') return status === 'in_progress';
       if (statusFilter === 'scored') return isScored;
       return true;
     });
@@ -251,6 +252,7 @@ export default function ScoringQueue() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="draft">Saved Drafts</SelectItem>
               <SelectItem value="scored">Scored</SelectItem>
               <SelectItem value="all">All</SelectItem>
             </SelectContent>
@@ -315,9 +317,9 @@ export default function ScoringQueue() {
                           </Badge>
                         )}
                         {scoreStatus === 'in_progress' && (
-                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">
+                          <Badge variant="secondary" className="bg-primary/10 text-primary">
                             <Clock className="w-3 h-3 mr-1" />
-                            In Progress
+                            Draft Saved
                           </Badge>
                         )}
                         {scoreStatus === 'locked' && (
@@ -345,7 +347,7 @@ export default function ScoringQueue() {
                       <Button asChild>
                         <Link to={`/judge/score/${submission.id}`}>
                           <Play className="w-4 h-4 mr-2" />
-                          {scoreStatus === 'in_progress' ? 'Continue' : 'Score'}
+                          {scoreStatus === 'in_progress' ? 'Resume Draft' : 'Score'}
                         </Link>
                       </Button>
                     )}

@@ -757,7 +757,7 @@ export default function SubmissionScoringDialog({
                         const status = getPanelStatus(panel.id);
                         const colors: Record<string, string> = {
                           pending: 'bg-destructive text-destructive-foreground',
-                          in_progress: 'bg-destructive text-destructive-foreground',
+                          in_progress: 'bg-primary text-primary-foreground',
                           submitted: 'bg-success text-success-foreground',
                           needs_review: 'bg-warning text-warning-foreground',
                           locked: 'bg-muted text-muted-foreground',
@@ -784,6 +784,9 @@ export default function SubmissionScoringDialog({
                             </p>
                             {score && (
                               <p className="text-xs opacity-90">{panelRaw.toFixed(2)} / {panelMax.toFixed(2)}</p>
+                            )}
+                            {status === 'in_progress' && (
+                              <p className="text-[10px] font-medium uppercase tracking-wide opacity-90">Draft</p>
                             )}
                           </div>
                         );
@@ -820,6 +823,20 @@ export default function SubmissionScoringDialog({
                     </div>
                   </CardContent>
                 </Card>
+
+                {currentPanelScore?.status === 'in_progress' && (
+                  <div className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-3">
+                    <p className="text-sm font-medium text-primary">
+                      Draft preview — this judge saved their work but has not submitted the score.
+                    </p>
+                    {currentPanelScore?.updated_at && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Last saved {new Date(currentPanelScore.updated_at).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                )}
+
 
                 {!template ? (
                   <Card>

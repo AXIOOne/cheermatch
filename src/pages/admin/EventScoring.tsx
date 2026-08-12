@@ -297,13 +297,14 @@ export default function EventScoring() {
   // Get overall scoring status text
   const getOverallStatus = (
     submission: Submission,
-  ): { text: string; allComplete: boolean; allReviewed: boolean; needsReview: boolean } => {
+  ): { text: string; allComplete: boolean; allReviewed: boolean; needsReview: boolean; hasDraft: boolean } => {
     const needsReview = submission.scores.some(s => s.needs_review && !s.reviewed_at);
+    const hasDraft = submission.scores.some(s => s.status === 'in_progress');
     if (!panels || panels.length === 0) {
       const hasSubmitted = submission.scores.some(s => s.status === 'submitted');
       const hasReviewed = hasSubmitted && submission.scores.every(s => s.status !== 'submitted' || s.reviewed_at);
-      const text = needsReview ? 'NEEDS REVIEW' : hasReviewed ? 'REVIEWED' : hasSubmitted ? 'SCORED' : 'PENDING';
-      return { text, allComplete: hasSubmitted, allReviewed: hasReviewed, needsReview };
+      const text = needsReview ? 'NEEDS REVIEW' : hasReviewed ? 'REVIEWED' : hasSubmitted ? 'SCORED' : hasDraft ? 'DRAFT SAVED' : 'PENDING';
+      return { text, allComplete: hasSubmitted, allReviewed: hasReviewed, needsReview, hasDraft };
     }
 
     const completedPanels = panels.filter(p => {
@@ -317,10 +318,11 @@ export default function EventScoring() {
 
     const allComplete = completedPanels === panels.length;
     const allReviewed = allComplete && reviewedPanels === panels.length;
-    if (needsReview) return { text: 'NEEDS REVIEW', allComplete, allReviewed, needsReview };
-    if (allReviewed) return { text: 'REVIEWED', allComplete, allReviewed, needsReview };
-    if (allComplete) return { text: 'COMPLETE', allComplete, allReviewed, needsReview };
-    return { text: 'PENDING', allComplete, allReviewed, needsReview };
+    if (needsReview) return { text: 'NEEDS REVIEW', allComplete, allReviewed, needsReview, hasDraft };
+    if (allReviewed) return { text: 'REVIEWED', allComplete, allReviewed, needsReview, hasDraft };
+    if (allComplete) return { text: 'COMPLETE', allComplete, allReviewed, needsReview, hasDraft };
+    if (hasDraft) return { text: 'DRAFT SAVED', allComplete, allReviewed, needsReview, hasDraft };
+    return { text: 'PENDING', allComplete, allReviewed, needsReview, hasDraft };
   };
 
 
@@ -335,14 +337,14 @@ export default function EventScoring() {
   }) => {
     const colors = {
       pending: 'bg-destructive hover:bg-destructive/80',
-      in_progress: 'bg-destructive hover:bg-destructive/80',
+      in_progress: 'bg-primary hover:bg-primary/80',
       submitted: 'bg-success hover:bg-success/80',
       needs_review: 'bg-warning hover:bg-warning/80',
       reviewed: 'bg-success hover:bg-success/80',
     };
     const titles = {
       pending: 'Not started — click to score',
-      in_progress: 'In progress — click to continue',
+      in_progress: 'Draft saved by judge (not submitted) — click to preview',
       submitted: 'Complete — click to view/edit',
       needs_review: 'Needs review — click to view/edit',
       reviewed: 'Reviewed — click to view/edit',
@@ -474,6 +476,10 @@ export default function EventScoring() {
                 <span className="text-sm">Needs Review</span>
               </div>
               <div className="flex items-center gap-2">
+                <div className="w-4 h-4 rounded-sm bg-primary" />
+                <span className="text-sm">Draft Saved (Not Submitted)</span>
+              </div>
+              <div className="flex items-center gap-2">
                 <div className="w-4 h-4 rounded-sm bg-destructive" />
                 <span className="text-sm">Not Started</span>
               </div>
@@ -551,6 +557,8 @@ export default function EventScoring() {
                               ? 'bg-success/10 text-success border-success/20'
                               : overallStatus.allComplete
                               ? 'bg-warning/10 text-warning border-warning/20'
+                              : overallStatus.hasDraft
+                              ? 'bg-primary/10 text-primary border-primary/20'
                               : 'bg-muted text-muted-foreground border-transparent'
                           }
                         >
