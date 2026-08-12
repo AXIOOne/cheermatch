@@ -540,6 +540,30 @@ export default function SubmissionScoringDialog({
     onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
 
+  // Re-open a submitted/locked panel score so the assigned judge can edit and resubmit
+  const reopenMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentPanelScore) throw new Error('No score to re-open');
+      const { error } = await sb.from('scores').update({
+        status: 'in_progress',
+        submitted_at: null,
+        reviewed_at: null,
+        reviewed_by: null,
+        needs_review: false,
+        review_reason: null,
+      }).eq('id', currentPanelScore.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
+      setReopenConfirmOpen(false);
+      toast({ title: 'Re-opened for scoring', description: 'The assigned judge can now edit and resubmit this panel.' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Re-open failed', description: e.message }),
+  });
+
+
   // Recompute and persist a score's total after an override is added/removed.
   const recomputeScoreTotal = async (scoreId: string) => {
     const score: any = allScores?.find((s: any) => s.id === scoreId);
