@@ -142,20 +142,20 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="h-[320px] flex flex-col">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-bold text-foreground">
               Upcoming Events
             </CardTitle>
             <Calendar className="w-5 h-5 text-secondary" />
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-col flex-1">
             <div className="text-3xl font-bold">
               {upcomingLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : upcomingEvents?.length ?? 0}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Registration open</p>
-            <div className="mt-3 space-y-2">
-              {(upcomingEvents ?? []).slice(0, 4).map((e) => (
+            <div className="mt-3 space-y-2 overflow-y-auto flex-1 min-h-0 pr-1">
+              {(upcomingEvents ?? []).map((e) => (
                 <Link
                   key={e.id}
                   to={`/admin/events/${e.id}`}
