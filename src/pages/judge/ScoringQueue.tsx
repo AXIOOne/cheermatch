@@ -252,6 +252,7 @@ export default function ScoringQueue() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="draft">Saved Drafts</SelectItem>
               <SelectItem value="scored">Scored</SelectItem>
               <SelectItem value="all">All</SelectItem>
             </SelectContent>
