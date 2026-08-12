@@ -785,6 +785,9 @@ export default function SubmissionScoringDialog({
                             {score && (
                               <p className="text-xs opacity-90">{panelRaw.toFixed(2)} / {panelMax.toFixed(2)}</p>
                             )}
+                            {status === 'in_progress' && (
+                              <p className="text-[10px] font-medium uppercase tracking-wide opacity-90">Draft</p>
+                            )}
                           </div>
                         );
 
