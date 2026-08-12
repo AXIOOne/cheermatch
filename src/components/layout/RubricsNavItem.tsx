@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { FileText, ChevronDown, ExternalLink } from 'lucide-react';
+import { FileText, ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+import {
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  useSidebar,
+} from '@/components/ui/sidebar';
 
 interface Discipline {
   label: string;
@@ -27,31 +33,39 @@ export function RubricsNavItem({ to }: Props) {
   const navigate = useNavigate();
   const isActive = location.pathname.startsWith(to);
   const [open, setOpen] = useState(isActive);
+  const { state } = useSidebar();
+  const collapsed = state === 'collapsed';
+
+  if (collapsed) {
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          tooltip="Scoring Rubrics"
+          isActive={isActive}
+          onClick={() => navigate(to)}
+        >
+          <FileText className="w-5 h-5" />
+          <span>Scoring Rubrics</span>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  }
 
   return (
-    <div>
-      <button
-        type="button"
+    <SidebarMenuItem>
+      <SidebarMenuButton
         onClick={() => setOpen((o) => !o)}
-        className={cn(
-          'w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
-          isActive
-            ? 'bg-sidebar-accent text-sidebar-primary'
-            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-        )}
-        aria-expanded={open}
+        isActive={isActive}
       >
         <FileText className="w-5 h-5" />
         <span className="flex-1 text-left">Scoring Rubrics</span>
-        <ChevronDown
-          className={cn('w-4 h-4 transition-transform', open && 'rotate-180')}
-        />
-      </button>
+        {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+      </SidebarMenuButton>
       {open && (
-        <div className="mt-1 ml-4 pl-3 border-l border-sidebar-border space-y-1">
+        <SidebarMenuSub>
           {DISCIPLINES.map((d) => {
             const className =
-              'flex items-center gap-2 px-3 py-2 rounded-md text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors';
+              'flex items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground transition-colors';
             if (d.external) {
               return (
                 <a
@@ -77,8 +91,8 @@ export function RubricsNavItem({ to }: Props) {
               </button>
             );
           })}
-        </div>
+        </SidebarMenuSub>
       )}
-    </div>
+    </SidebarMenuItem>
   );
 }

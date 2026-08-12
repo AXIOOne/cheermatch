@@ -2,6 +2,8 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminSidebar } from './AdminSidebar';
 import { Loader2 } from 'lucide-react';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { Separator } from '@/components/ui/separator';
 
 export function AdminLayout() {
   const { user, loading, rolesLoaded, isAdmin, isJudge, isGymCoach } = useAuth();
@@ -32,11 +34,20 @@ export function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen flex bg-background">
-      <AdminSidebar />
-      <main className="flex-1 overflow-auto">
-        <Outlet />
-      </main>
-    </div>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full bg-background">
+        <AdminSidebar />
+        <SidebarInset>
+          <header className="flex h-12 items-center gap-2 border-b px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="h-4" />
+            <span className="text-sm font-medium text-muted-foreground">Admin Portal</span>
+          </header>
+          <main className="flex-1 overflow-auto p-4">
+            <Outlet />
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 }
