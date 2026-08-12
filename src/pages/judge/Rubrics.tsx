@@ -89,7 +89,7 @@ export default function JudgeRubrics() {
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Rubrics</h1>
+        <h1 className="text-3xl font-bold text-foreground">Scoring Rubrics</h1>
         <p className="text-muted-foreground mt-1">Reference scoring rubrics for your assigned events.</p>
       </div>
 
