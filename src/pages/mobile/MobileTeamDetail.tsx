@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { AlertCircle, CheckCircle2, Clock, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import VideoPlayer from "@/components/video/VideoPlayer";
 import { mobileApi } from "@/lib/mobile-api";
 
 type Submission = {
