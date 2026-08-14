@@ -758,14 +758,12 @@ export default function SubmissionScoringDialog({
                       }
                       if (isEmbed) {
                         return (
-                          <div className="aspect-video bg-black rounded-t-lg overflow-hidden">
-                            <iframe
-                              src={url}
-                              className="w-full h-full"
-                              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                              allowFullScreen
-                            />
-                          </div>
+                          <VideoPlayer
+                            url={url}
+                            thumbnailUrl={submission?.thumbnail_url}
+                            status={submission?.status}
+                            title={`${submission?.team?.name || 'Team'} performance video`}
+                          />
                         );
                       }
                       return (
