@@ -26,6 +26,7 @@ import {
   SkipBack, SkipForward, User, Ban, RotateCcw, Info
 } from 'lucide-react';
 import ScoreFieldOverrideDialog from '@/components/admin/ScoreFieldOverrideDialog';
+import VideoPlayer from '@/components/video/VideoPlayer';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface JudgePanel {
