@@ -158,24 +158,12 @@ export default function SubmissionDetail() {
           <CardTitle className="flex items-center gap-2 text-base"><Video className="w-4 h-4" /> Performance Video</CardTitle>
         </CardHeader>
         <CardContent>
-          {submission.video_url ? (
-            <div className="aspect-video bg-black rounded-lg overflow-hidden">
-              {/players\.brightcove\.net|player\.vimeo\.com|youtube\.com\/embed|youtu\.be/.test(submission.video_url) ? (
-                <iframe
-                  src={submission.video_url}
-                  className="w-full h-full"
-                  allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                  allowFullScreen
-                />
-              ) : (
-                <video src={submission.video_url} controls className="w-full h-full" poster={submission.thumbnail_url || undefined} />
-              )}
-            </div>
-          ) : (
-            <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-              <p className="text-muted-foreground">Video not available</p>
-            </div>
-          )}
+          <VideoPlayer
+            url={submission.video_url}
+            thumbnailUrl={submission.thumbnail_url}
+            status={submission.status}
+            title={`${submission.team?.name || 'Team'} performance video`}
+          />
         </CardContent>
       </Card>
 
