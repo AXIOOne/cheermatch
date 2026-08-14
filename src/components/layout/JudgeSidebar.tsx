@@ -92,7 +92,7 @@ export function JudgeSidebar() {
           />
           {!collapsed && (
             <span className="text-sm font-semibold text-sidebar-foreground truncate">
-              CheerMatch
+              v2.0
             </span>
           )}
         </div>
