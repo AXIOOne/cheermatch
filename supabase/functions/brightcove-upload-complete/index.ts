@@ -25,8 +25,13 @@ Deno.serve(async (req) => {
     const deviceInfo = body.device_info ?? null;
 
     const sb = serviceClient();
-    const { data: team } = await sb.from("teams").select("id, coach_user_id").eq("id", teamId).maybeSingle();
-    if (!team || team.coach_user_id !== user.user_id) return fail("Team not found");
+    const { data: team } = await sb.from("teams").select("id, coach_user_id, coach_email").eq("id", teamId).maybeSingle();
+    const ownsTeam = !!team && (
+      team.coach_user_id === user.user_id ||
+      (typeof team.coach_email === "string" && !!user.email &&
+        team.coach_email.toLowerCase() === user.email.toLowerCase())
+    );
+    if (!ownsTeam) return fail("Team not found");
 
     // Trigger Brightcove ingest
     const callbackUrl = `${SUPABASE_URL}/functions/v1/brightcove-ingest-callback?secret=${encodeURIComponent(CALLBACK_SECRET)}`;
