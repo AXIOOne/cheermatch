@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { EditTeamDialog } from '@/components/admin/EditTeamDialog';
 import { RequestRevisionDialog } from '@/components/admin/RequestRevisionDialog';
+import VideoPlayer from '@/components/video/VideoPlayer';
 import type { Database } from '@/integrations/supabase/types';
 
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
