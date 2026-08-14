@@ -24,9 +24,11 @@ Deno.serve(async (req) => {
     // Verify ownership
     const { data: team } = await sb
       .from("teams")
-      .select("id, name, gym_name, coach_user_id")
+      .select("id, name, gym_name, coach_user_id, coach_email")
       .eq("id", teamId).maybeSingle();
-    if (!team || team.coach_user_id !== user.user_id) return fail("Team not found");
+    const owns = team && (team.coach_user_id === user.user_id ||
+      (typeof team.coach_email === "string" && team.coach_email.toLowerCase() === user.email.toLowerCase()));
+    if (!team || !owns) return fail("Team not found");
 
     // Look up event name for Brightcove folder
     const { data: event } = await sb
