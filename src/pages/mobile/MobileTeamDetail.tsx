@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { AlertCircle, CheckCircle2, Clock, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import VideoPlayer from "@/components/video/VideoPlayer";
 import { mobileApi } from "@/lib/mobile-api";
 
 type Submission = {
@@ -92,25 +93,12 @@ export default function MobileTeamDetail() {
           {submission?.video_url ? (
             <div className="mb-6 text-left">
               <p className="text-sm font-medium mb-2">Submitted video</p>
-              <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                {/players\.brightcove\.net|player\.vimeo\.com|youtube\.com\/embed|youtu\.be/.test(submission.video_url) ? (
-                  <iframe
-                    src={submission.video_url}
-                    title="Submitted performance video"
-                    className="w-full h-full"
-                    allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                  />
-                ) : (
-                  <video
-                    src={submission.video_url}
-                    controls
-                    playsInline
-                    poster={submission.thumbnail_url || undefined}
-                    className="w-full h-full"
-                  />
-                )}
-              </div>
+              <VideoPlayer
+                url={submission.video_url}
+                thumbnailUrl={submission.thumbnail_url}
+                status={submission.status}
+                title="Submitted performance video"
+              />
             </div>
           ) : (
             <p className="text-xs text-muted-foreground mb-6">

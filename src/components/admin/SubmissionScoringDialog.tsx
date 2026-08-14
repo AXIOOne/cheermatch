@@ -26,6 +26,7 @@ import {
   SkipBack, SkipForward, User, Ban, RotateCcw, Info
 } from 'lucide-react';
 import ScoreFieldOverrideDialog from '@/components/admin/ScoreFieldOverrideDialog';
+import VideoPlayer from '@/components/video/VideoPlayer';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface JudgePanel {
@@ -757,14 +758,12 @@ export default function SubmissionScoringDialog({
                       }
                       if (isEmbed) {
                         return (
-                          <div className="aspect-video bg-black rounded-t-lg overflow-hidden">
-                            <iframe
-                              src={url}
-                              className="w-full h-full"
-                              allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-                              allowFullScreen
-                            />
-                          </div>
+                          <VideoPlayer
+                            url={url}
+                            thumbnailUrl={submission?.thumbnail_url}
+                            status={submission?.status}
+                            title={`${submission?.team?.name || 'Team'} performance video`}
+                          />
                         );
                       }
                       return (
