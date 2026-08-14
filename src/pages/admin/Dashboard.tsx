@@ -147,7 +147,7 @@ export default function Dashboard() {
             <CardTitle className="text-sm font-bold text-foreground">
               Upcoming Events
             </CardTitle>
-            <Calendar className="w-5 h-5 text-secondary" />
+            <Calendar className="w-5 h-5 text-primary" />
           </CardHeader>
           <CardContent className="flex flex-col flex-1">
             <div className="text-3xl font-bold">
@@ -179,10 +179,10 @@ export default function Dashboard() {
               Currently Online
             </CardTitle>
             <div className="relative">
-              <Activity className="w-5 h-5 text-success" />
+              <Activity className="w-5 h-5 text-primary" />
               <span className="absolute -top-0.5 -right-0.5 flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
               </span>
             </div>
           </CardHeader>
