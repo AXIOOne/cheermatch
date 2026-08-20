@@ -276,6 +276,15 @@ export default function Submissions() {
         </div>
       </div>
 
+      <Tabs value={tab} onValueChange={switchTab} className="mb-6">
+        <TabsList>
+          <TabsTrigger value="current">Current ({currentCount})</TabsTrigger>
+          <TabsTrigger value="archived">Archived ({archivedCount})</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+
+
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
