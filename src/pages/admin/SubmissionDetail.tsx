@@ -120,7 +120,7 @@ export default function SubmissionDetail() {
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
         </Button>
         <div className="flex items-center gap-2 flex-wrap">
-          {(submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'denied') && (
+          {!isArchived && (submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'denied') && (
             <Button
               size="sm"
               onClick={() => updateStatusMutation.mutate('approved')}
@@ -129,7 +129,7 @@ export default function SubmissionDetail() {
               <Check className="w-4 h-4 mr-2" /> Approve
             </Button>
           )}
-          {(submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'approved') && (
+          {!isArchived && (submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'approved') && (
             <Button
               size="sm"
               variant="destructive"
@@ -139,7 +139,7 @@ export default function SubmissionDetail() {
               <X className="w-4 h-4 mr-2" /> Deny
             </Button>
           )}
-          {submission.status !== 'revision_requested' && submission.status !== 'complete' && (
+          {!isArchived && submission.status !== 'revision_requested' && submission.status !== 'complete' && (
             <Button
               size="sm"
               variant="outline"
@@ -148,6 +148,22 @@ export default function SubmissionDetail() {
             >
               <RotateCcw className="w-4 h-4 mr-2" /> Request Revision
             </Button>
+          )}
+          {!isArchived ? (
+            <Button size="sm" variant="outline" onClick={() => setArchiveConfirmOpen(true)} disabled={archiveMutation.isPending}>
+              <Archive className="w-4 h-4 mr-2" /> Archive
+            </Button>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" onClick={() => setRestoreConfirmOpen(true)} disabled={archiveMutation.isPending}>
+                <ArchiveRestore className="w-4 h-4 mr-2" /> Restore
+              </Button>
+              {isAdmin && (
+                <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 className="w-4 h-4 mr-2" /> Delete permanently
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>
