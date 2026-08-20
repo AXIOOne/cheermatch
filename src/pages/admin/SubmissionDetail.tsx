@@ -5,12 +5,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video, Archive, ArchiveRestore, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { EditTeamDialog } from '@/components/admin/EditTeamDialog';
 import { RequestRevisionDialog } from '@/components/admin/RequestRevisionDialog';
+import { DeleteSubmissionDialog } from '@/components/admin/DeleteSubmissionDialog';
 import VideoPlayer from '@/components/video/VideoPlayer';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -26,6 +31,9 @@ export default function SubmissionDetail() {
   const { isAdmin } = useAuth();
   const [editTeamOpen, setEditTeamOpen] = useState(false);
   const [revisionOpen, setRevisionOpen] = useState(false);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: SubmissionStatus) => {
