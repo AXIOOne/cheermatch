@@ -44,6 +44,7 @@ export default function EventReports() {
           )
         `)
         .eq('submission.event_id', eventId)
+        .is('submission.archived_at', null)
         .eq('status', 'submitted');
       
       if (error) throw error;
