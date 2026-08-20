@@ -240,6 +240,44 @@ export default function SubmissionDetail() {
         submissionId={submissionId!}
         teamName={submission.team?.name || ''}
       />
+
+      <AlertDialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive this submission?</AlertDialogTitle>
+            <AlertDialogDescription>
+              It will be removed from the active list, judging queues and results, but its scores and
+              video are kept. You can restore it at any time from the Archived tab.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => archiveMutation.mutate(true)}>Archive</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={restoreConfirmOpen} onOpenChange={setRestoreConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restore this submission?</AlertDialogTitle>
+            <AlertDialogDescription>
+              It will return to the Current tab with the status it had before being archived.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => archiveMutation.mutate(false)}>Restore</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <DeleteSubmissionDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        submissions={[{ id: submissionId!, teamName: submission.team?.name || 'this submission' }]}
+        onDeleted={() => navigate('/admin/submissions')}
+      />
     </div>
   );
 }
