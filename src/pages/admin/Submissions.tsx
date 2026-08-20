@@ -360,14 +360,40 @@ export default function Submissions() {
 
             {/* Bulk Actions Bar */}
             {selectedIds.size > 0 && (
-              <div className="flex items-center gap-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
+              <div className="flex items-center gap-3 flex-wrap p-3 bg-primary/5 rounded-lg border border-primary/20">
                 <span className="text-sm font-medium">
                   {selectedIds.size} team{selectedIds.size !== 1 ? 's' : ''} selected
                 </span>
-                <Button size="sm" onClick={() => setBulkEmailOpen(true)}>
-                  <Mail className="w-4 h-4 mr-2" />
-                  Send Review Links
-                </Button>
+                {!isArchivedTab && (
+                  <>
+                    <Button size="sm" onClick={() => setBulkEmailOpen(true)}>
+                      <Mail className="w-4 h-4 mr-2" />
+                      Send Review Links
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setArchiveConfirmOpen(true)}>
+                      <Archive className="w-4 h-4 mr-2" />
+                      Archive
+                    </Button>
+                  </>
+                )}
+                {isArchivedTab && (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => setRestoreConfirmOpen(true)}>
+                      <ArchiveRestore className="w-4 h-4 mr-2" />
+                      Restore to Current
+                    </Button>
+                    {isAdmin && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => openDelete(selectedRows.map(s => ({ id: s.id, teamName: s.team.name })))}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete permanently
+                      </Button>
+                    )}
+                  </>
+                )}
                 <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
                   Clear Selection
                 </Button>
