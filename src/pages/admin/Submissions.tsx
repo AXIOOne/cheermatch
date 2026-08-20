@@ -70,11 +70,17 @@ export default function Submissions() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [eventFilter, setEventFilter] = useState<string>('all');
+  const [tab, setTab] = useState<'current' | 'archived'>('current');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTargets, setDeleteTargets] = useState<{ id: string; teamName: string }[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['admin-submissions'],
@@ -89,6 +95,9 @@ export default function Submissions() {
           submitted_at,
           created_at,
           duration_seconds,
+          archived_at,
+          archived_by,
+          status_before_archive,
           team:teams!inner(
             id,
             name,
@@ -117,24 +126,61 @@ export default function Submissions() {
     },
   });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: LifecycleStatus }) => {
-      const { error } = await supabase
-        .from('video_submissions')
-        .update({ status: status as SubmissionStatus })
-        .eq('id', id);
-      if (error) throw error;
+  const archiveMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const targets = submissions?.filter((s) => ids.includes(s.id)) ?? [];
+      for (const s of targets) {
+        const { error } = await supabase
+          .from('video_submissions')
+          .update({
+            archived_at: new Date().toISOString(),
+            archived_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+            status_before_archive: s.status,
+          } as never)
+          .eq('id', s.id);
+        if (error) throw error;
+      }
+      return targets.length;
     },
-    onSuccess: () => {
+    onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
-      toast({ title: 'Status updated' });
+      setSelectedIds(new Set());
+      toast({ title: `${count} submission${count !== 1 ? 's' : ''} archived` });
     },
-    onError: (error: any) => {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
-    },
+    onError: (error: any) =>
+      toast({ variant: 'destructive', title: 'Error', description: error.message }),
   });
 
-  const filteredSubmissions = submissions?.filter((submission) => {
+  const restoreMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const targets = submissions?.filter((s) => ids.includes(s.id)) ?? [];
+      for (const s of targets) {
+        const { error } = await supabase
+          .from('video_submissions')
+          .update({
+            archived_at: null,
+            archived_by: null,
+            status_before_archive: null,
+            status: (s.status_before_archive ?? s.status) as SubmissionStatus,
+          } as never)
+          .eq('id', s.id);
+        if (error) throw error;
+      }
+      return targets.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+      setSelectedIds(new Set());
+      toast({ title: `${count} submission${count !== 1 ? 's' : ''} restored` });
+    },
+    onError: (error: any) =>
+      toast({ variant: 'destructive', title: 'Error', description: error.message }),
+  });
+
+  const isArchivedTab = tab === 'archived';
+  const tabScoped = submissions?.filter((s) => (isArchivedTab ? !!s.archived_at : !s.archived_at));
+
+  const filteredSubmissions = tabScoped?.filter((submission) => {
     const lifecycle = toLifecycle(submission.status);
     const matchesSearch =
       searchQuery === '' ||
@@ -147,7 +193,7 @@ export default function Submissions() {
     return matchesSearch && matchesStatus && matchesEvent;
   });
 
-  const eventScoped = submissions?.filter(
+  const eventScoped = tabScoped?.filter(
     (s) => eventFilter === 'all' || s.event.id === eventFilter
   );
 
@@ -162,6 +208,13 @@ export default function Submissions() {
     revision_requested: countBy('revision_requested'),
   };
 
+  const archivedCount = submissions?.filter((s) => !!s.archived_at).length || 0;
+  const currentCount = submissions?.filter((s) => !s.archived_at).length || 0;
+
+  const switchTab = (value: string) => {
+    setTab(value === 'archived' ? 'archived' : 'current');
+    setSelectedIds(new Set());
+  };
 
   const toggleSelection = (id: string) => {
     setSelectedIds(prev => {
@@ -182,13 +235,21 @@ export default function Submissions() {
     }
   };
 
-  const selectedSubmissions = submissions?.filter(s => selectedIds.has(s.id)).map(s => ({
+  const selectedRows = tabScoped?.filter(s => selectedIds.has(s.id)) || [];
+
+  const selectedSubmissions = selectedRows.map(s => ({
     id: s.id,
     teamName: s.team.name,
     gymName: s.team.gym_name,
     eventId: s.event.id,
     eventName: s.event.name,
-  })) || [];
+  }));
+
+  const openDelete = (targets: { id: string; teamName: string }[]) => {
+    setDeleteTargets(targets);
+    setDeleteOpen(true);
+  };
+
 
   return (
     <div className="p-8">
