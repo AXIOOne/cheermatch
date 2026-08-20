@@ -309,23 +309,15 @@ export default function ScoringQueue() {
         <div className="flex justify-center py-12">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
-      ) : filteredSubmissions && filteredSubmissions.length > 0 ? (
+      ) : filteredItems && filteredItems.length > 0 ? (
         <div className="grid gap-4">
-          {filteredSubmissions.map((submission: any) => {
-            const scoreStatus = getScoreStatus(submission.id);
+          {filteredItems.map((item: any) => {
+            const submission = item.submission;
+            const scoreStatus = getScoreStatus(submission.id, item.panelId);
             const isScored = scoreStatus === 'submitted' || scoreStatus === 'locked';
-            const panelBadges = [...new Map(
-              getSubmissionAssignments(submission)
-                .map((assignment: any) => {
-                  const abbreviation = getAssignmentPanelAbbrev(assignment);
-                  if (!abbreviation) return null;
-                  const label = getAssignmentPanelLabel(assignment);
-                  return [abbreviation, label ? `${abbreviation} · ${label}` : abbreviation];
-                })
-                .filter(Boolean) as [string, string][]
-            ).values()];
+            const panelBadges = item.panelBadge ? [item.panelBadge] : [];
             return (
-              <Card key={submission.id} className="overflow-hidden">
+              <Card key={item.key} className="overflow-hidden">
                 <div className="flex">
                   <div className="w-48 h-32 bg-muted flex items-center justify-center shrink-0">
                     {submission.thumbnail_url ? (
