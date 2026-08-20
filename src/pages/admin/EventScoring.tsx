@@ -124,6 +124,7 @@ export default function EventScoring() {
           scores:scores(id, status, total_score, panel_id, judge_user_id, needs_review, reviewed_at, review_reason)
         `)
         .eq('event_id', eventId)
+        .is('archived_at', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as Submission[];
