@@ -78,7 +78,7 @@ export default function ScorePerformance() {
   const eventOpenForScoring = OPEN_STATUSES.has(eventRow?.status) && withinWindow;
 
   // The judge's assignment for this submission determines which fields they see.
-  const { data: judgeAssignments } = useQuery({
+  const { data: allJudgeAssignments } = useQuery({
     queryKey: ['judge-assignments-for-submission', submission?.event_id, submission?.team_id, user?.id],
     enabled: !!submission?.event_id && !!user?.id,
     queryFn: async () => {
@@ -103,6 +103,16 @@ export default function ScorePerformance() {
       );
     },
   });
+
+  // When a judge holds several panel assignments for the same team, each panel
+  // is scored separately: the queue links here with ?panel=<panel_id> and the
+  // scoresheet is scoped to just that panel.
+  const judgeAssignments = useMemo(() => {
+    const all = allJudgeAssignments || [];
+    if (!panelParam) return all;
+    const scoped = all.filter((assignment: any) => assignment.panel_id === panelParam);
+    return scoped.length > 0 ? scoped : all;
+  }, [allJudgeAssignments, panelParam]);
 
   const assignedPanelId = useMemo(() => {
     const ids = [...new Set((judgeAssignments || []).map((assignment: any) => assignment.panel_id).filter(Boolean))];
