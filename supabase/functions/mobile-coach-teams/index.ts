@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
         id, name, gym_name, athletes_female, athletes_male,
         division:divisions(id, name),
         level:levels(id, name),
-        video_submissions(id, event_id, status, video_url, thumbnail_url, brightcove_video_id, submitted_at, captured_at, submitted_via, duration_seconds, review_notes, reviewed_at)
+        video_submissions(id, event_id, status, video_url, thumbnail_url, brightcove_video_id, submitted_at, captured_at, submitted_via, duration_seconds, review_notes, reviewed_at, archived_at)
       `)
       .eq("event_id", eventId)
       .or(`coach_user_id.eq.${user.user_id},coach_email.eq.${user.email}`);
