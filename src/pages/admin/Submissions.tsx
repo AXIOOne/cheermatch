@@ -549,7 +549,7 @@ export default function Submissions() {
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No submissions found.</p>
+              <p>{isArchivedTab ? 'No archived submissions.' : 'No submissions found.'}</p>
             </div>
           )}
         </CardContent>
@@ -560,6 +560,61 @@ export default function Submissions() {
         open={bulkEmailOpen}
         onOpenChange={setBulkEmailOpen}
         submissions={selectedSubmissions}
+      />
+
+      {/* Archive confirmation */}
+      <AlertDialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Archive {selectedIds.size} submission{selectedIds.size !== 1 ? 's' : ''}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Archived submissions are removed from the active list, judging queues and results, but their
+              scores and videos are kept. You can restore them at any time from the Archived tab.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => archiveMutation.mutate(Array.from(selectedIds))}
+              disabled={archiveMutation.isPending}
+            >
+              Archive
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Restore confirmation */}
+      <AlertDialog open={restoreConfirmOpen} onOpenChange={setRestoreConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Restore {selectedIds.size} submission{selectedIds.size !== 1 ? 's' : ''}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              They will return to the Current tab with the status they had before being archived.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => restoreMutation.mutate(Array.from(selectedIds))}
+              disabled={restoreMutation.isPending}
+            >
+              Restore
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Permanent delete */}
+      <DeleteSubmissionDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        submissions={deleteTargets}
+        onDeleted={() => setSelectedIds(new Set())}
       />
     </div>
   );
