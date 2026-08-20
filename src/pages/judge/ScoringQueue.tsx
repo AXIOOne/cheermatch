@@ -369,7 +369,7 @@ export default function ScoringQueue() {
                       </Button>
                     ) : (
                       <Button asChild>
-                        <Link to={`/judge/score/${submission.id}`}>
+                        <Link to={`/judge/score/${submission.id}${item.panelId ? `?panel=${item.panelId}` : ''}`}>
                           <Play className="w-4 h-4 mr-2" />
                           {scoreStatus === 'in_progress' ? 'Resume Draft' : 'Score'}
                         </Link>
