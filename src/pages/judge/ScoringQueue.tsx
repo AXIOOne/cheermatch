@@ -213,7 +213,7 @@ export default function ScoringQueue() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('scores')
-        .select('submission_id, status')
+        .select('submission_id, status, panel_id')
         .eq('judge_user_id', user!.id);
       if (error) throw error;
       return data;
@@ -221,23 +221,54 @@ export default function ScoringQueue() {
     enabled: !!user,
   });
 
-  const getScoreStatus = (submissionId: string) => {
-    const score = existingScores?.find(s => s.submission_id === submissionId);
-    return score?.status || null;
+  // A judge can hold more than one panel assignment for the same team
+  // (e.g. Building Difficulty + Building Execution). Each panel is scored
+  // separately, so each gets its own score row and its own queue entry.
+  const getScoreStatus = (submissionId: string, panelId: string | null) => {
+    const rows = (existingScores || []).filter((s: any) => s.submission_id === submissionId);
+    const match = panelId
+      ? rows.find((s: any) => s.panel_id === panelId)
+      : rows.find((s: any) => !s.panel_id) || rows[0];
+    return match?.status || null;
   };
 
   const uniqueEvents = [...new Map(assignments?.map((a: any) => [a.event_id, a.event]) || [])];
 
-  const filteredSubmissions = useMemo(() => {
-    return (visibleSubmissions || []).filter((sub: any) => {
-      const status = getScoreStatus(sub.id);
+  // One queue entry per (submission, panel) pair.
+  const queueItems = useMemo(() => {
+    const items: any[] = [];
+    (visibleSubmissions || []).forEach((sub: any) => {
+      const matching = getSubmissionAssignments(sub);
+      const byPanel = new Map<string, any[]>();
+      matching.forEach((assignment: any) => {
+        const key = assignment.panel_id || 'all';
+        byPanel.set(key, [...(byPanel.get(key) || []), assignment]);
+      });
+      byPanel.forEach((group, key) => {
+        const panelId = key === 'all' ? null : key;
+        const abbreviation = getAssignmentPanelAbbrev(group[0]);
+        const label = getAssignmentPanelLabel(group[0]);
+        items.push({
+          key: `${sub.id}:${key}`,
+          submission: sub,
+          panelId,
+          panelBadge: abbreviation ? (label ? `${abbreviation} · ${label}` : abbreviation) : null,
+        });
+      });
+    });
+    return items;
+  }, [visibleSubmissions, openAssignments]);
+
+  const filteredItems = useMemo(() => {
+    return queueItems.filter((item: any) => {
+      const status = getScoreStatus(item.submission.id, item.panelId);
       const isScored = status === 'submitted' || status === 'locked';
       if (statusFilter === 'pending') return !isScored;
       if (statusFilter === 'draft') return status === 'in_progress';
       if (statusFilter === 'scored') return isScored;
       return true;
     });
-  }, [visibleSubmissions, existingScores, statusFilter]);
+  }, [queueItems, existingScores, statusFilter]);
 
   return (
     <div className="p-8">
