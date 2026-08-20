@@ -58,7 +58,7 @@ export default function SubmissionDetail() {
         .from('video_submissions')
         .select(`
           id, video_url, thumbnail_url, status, submitted_at, created_at, duration_seconds,
-          review_notes, reviewed_at,
+          review_notes, reviewed_at, archived_at, status_before_archive,
           event_id,
           team:teams!inner(id, name, gym_name, athletes_female, athletes_male, division_id,
             division:divisions!inner(id, name), level:levels!inner(name, level_number)),
@@ -69,6 +69,34 @@ export default function SubmissionDetail() {
       return data;
     },
     enabled: !!submissionId,
+  });
+
+  const isArchived = !!(submission as any)?.archived_at;
+
+  const archiveMutation = useMutation({
+    mutationFn: async (archive: boolean) => {
+      const payload = archive
+        ? {
+            archived_at: new Date().toISOString(),
+            archived_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+            status_before_archive: submission?.status ?? null,
+          }
+        : {
+            archived_at: null,
+            archived_by: null,
+            status_before_archive: null,
+            status: (submission as any)?.status_before_archive ?? submission?.status,
+          };
+      const { error } = await sb.from('video_submissions').update(payload).eq('id', submissionId!);
+      if (error) throw error;
+      return archive;
+    },
+    onSuccess: (archived) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+      toast({ title: archived ? 'Submission archived' : 'Submission restored' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
 
   if (isLoading) {
