@@ -90,6 +90,18 @@ export async function bcGetVideo(videoId: string): Promise<Record<string, unknow
   return await res.json();
 }
 
+// Permanently deletes a video from the Brightcove account. A 404 means it is already gone.
+export async function bcDeleteVideo(videoId: string): Promise<void> {
+  const token = await getBrightcoveToken();
+  const res = await fetch(
+    `https://cms.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/videos/${videoId}`,
+    { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (res.status === 404) return;
+  if (!res.ok) throw new Error(`Brightcove delete video failed: ${res.status} ${await res.text()}`);
+}
+
+
 // ---- Folders ----
 const folderIdCache = new Map<string, string>();
 
