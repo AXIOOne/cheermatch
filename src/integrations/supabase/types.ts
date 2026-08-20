@@ -1738,6 +1738,8 @@ export type Database = {
       }
       video_submissions: {
         Row: {
+          archived_at: string | null
+          archived_by: string | null
           brightcove_video_id: string | null
           captured_at: string | null
           created_at: string
@@ -1749,6 +1751,9 @@ export type Database = {
           reviewed_at: string | null
           reviewed_by: string | null
           status: Database["public"]["Enums"]["submission_status"]
+          status_before_archive:
+            | Database["public"]["Enums"]["submission_status"]
+            | null
           submitted_at: string | null
           submitted_by: string | null
           submitted_via: string
@@ -1758,6 +1763,8 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          archived_at?: string | null
+          archived_by?: string | null
           brightcove_video_id?: string | null
           captured_at?: string | null
           created_at?: string
@@ -1769,6 +1776,9 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["submission_status"]
+          status_before_archive?:
+            | Database["public"]["Enums"]["submission_status"]
+            | null
           submitted_at?: string | null
           submitted_by?: string | null
           submitted_via?: string
@@ -1778,6 +1788,8 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          archived_at?: string | null
+          archived_by?: string | null
           brightcove_video_id?: string | null
           captured_at?: string | null
           created_at?: string
@@ -1789,6 +1801,9 @@ export type Database = {
           reviewed_at?: string | null
           reviewed_by?: string | null
           status?: Database["public"]["Enums"]["submission_status"]
+          status_before_archive?:
+            | Database["public"]["Enums"]["submission_status"]
+            | null
           submitted_at?: string | null
           submitted_by?: string | null
           submitted_via?: string
