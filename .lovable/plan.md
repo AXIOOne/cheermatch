@@ -21,7 +21,7 @@ Safeguards, all required:
 2. Delete is admin-only.
 3. A destructive dialog lists exactly what will be removed (submission record, scores, and the video on the hosting service) and requires typing the team name to confirm.
 4. A checkbox must be ticked to also remove the hosted video; leaving it unticked deletes only the portal record.
-5. No bulk delete — one submission at a time.
+5. Bulk delete is allowed, with an extra step: the dialog lists every selected team, shows the count, and requires typing `DELETE <n> SUBMISSIONS` (with the exact count) to enable the button. Deletions run one at a time and a summary reports any that failed.
 
 ## Technical notes
 
