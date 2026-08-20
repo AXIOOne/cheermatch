@@ -478,9 +478,13 @@ export default function Submissions() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {submission.submitted_at
-                          ? format(new Date(submission.submitted_at), 'MMM d, yyyy')
-                          : '-'}
+                        {isArchivedTab
+                          ? submission.archived_at
+                            ? format(new Date(submission.archived_at), 'MMM d, yyyy')
+                            : '-'
+                          : submission.submitted_at
+                            ? format(new Date(submission.submitted_at), 'MMM d, yyyy')
+                            : '-'}
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
@@ -493,7 +497,48 @@ export default function Submissions() {
                               </a>
                             </Button>
                           )}
-                          <GenerateReviewLink submissionId={submission.id} teamName={submission.team.name} />
+                          {!isArchivedTab && (
+                            <>
+                              <GenerateReviewLink submissionId={submission.id} teamName={submission.team.name} />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Archive submission"
+                                onClick={() => {
+                                  setSelectedIds(new Set([submission.id]));
+                                  setArchiveConfirmOpen(true);
+                                }}
+                              >
+                                <Archive className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
+                          {isArchivedTab && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Restore to current"
+                                onClick={() => {
+                                  setSelectedIds(new Set([submission.id]));
+                                  setRestoreConfirmOpen(true);
+                                }}
+                              >
+                                <ArchiveRestore className="w-4 h-4" />
+                              </Button>
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="Delete permanently"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => openDelete([{ id: submission.id, teamName: submission.team.name }])}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
