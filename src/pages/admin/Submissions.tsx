@@ -424,7 +424,7 @@ export default function Submissions() {
                   <TableHead>Event</TableHead>
                   <TableHead>Division / Level</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Submitted</TableHead>
+                  <TableHead>{isArchivedTab ? 'Archived' : 'Submitted'}</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
