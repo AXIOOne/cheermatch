@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -41,6 +41,8 @@ const isAllPanelsAssignment = (assignment: any): boolean => !assignment?.panel_i
 
 export default function ScorePerformance() {
   const { submissionId } = useParams<{ submissionId: string }>();
+  const [searchParams] = useSearchParams();
+  const panelParam = searchParams.get('panel');
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -78,7 +80,7 @@ export default function ScorePerformance() {
   const eventOpenForScoring = OPEN_STATUSES.has(eventRow?.status) && withinWindow;
 
   // The judge's assignment for this submission determines which fields they see.
-  const { data: judgeAssignments } = useQuery({
+  const { data: allJudgeAssignments } = useQuery({
     queryKey: ['judge-assignments-for-submission', submission?.event_id, submission?.team_id, user?.id],
     enabled: !!submission?.event_id && !!user?.id,
     queryFn: async () => {
@@ -103,6 +105,16 @@ export default function ScorePerformance() {
       );
     },
   });
+
+  // When a judge holds several panel assignments for the same team, each panel
+  // is scored separately: the queue links here with ?panel=<panel_id> and the
+  // scoresheet is scoped to just that panel.
+  const judgeAssignments = useMemo(() => {
+    const all = allJudgeAssignments || [];
+    if (!panelParam) return all;
+    const scoped = all.filter((assignment: any) => assignment.panel_id === panelParam);
+    return scoped.length > 0 ? scoped : all;
+  }, [allJudgeAssignments, panelParam]);
 
   const assignedPanelId = useMemo(() => {
     const ids = [...new Set((judgeAssignments || []).map((assignment: any) => assignment.panel_id).filter(Boolean))];
@@ -154,9 +166,11 @@ export default function ScorePerformance() {
       let q = sb.from('scores').select(`*, details:score_details(*), deduction_items:score_deductions(*), skill_selections:score_skill_selections(*)`)
         .eq('submission_id', submissionId!).eq('judge_user_id', user!.id);
       if (assignedPanelId) q = q.eq('panel_id', assignedPanelId);
-      const { data, error } = await q.maybeSingle();
+      const { data, error } = await q.order('created_at', { ascending: true });
       if (error) throw error;
-      return data;
+      const rows = (data || []) as any[];
+      if (assignedPanelId) return rows[0] || null;
+      return rows.find((r: any) => !r.panel_id) || rows[0] || null;
     },
     enabled: !!submissionId && !!user,
   });
