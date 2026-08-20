@@ -61,7 +61,8 @@ export async function fetchEventRankingRows(eventId: string): Promise<RankingRow
         division:divisions(id, name, scoring_template_id),
         level:levels(id, name))
     `)
-    .eq('event_id', eventId);
+    .eq('event_id', eventId)
+    .is('archived_at', null);
   if (subErr) throw subErr;
   if (!submissions?.length) return [];
 
