@@ -5,12 +5,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video, Archive, ArchiveRestore, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { EditTeamDialog } from '@/components/admin/EditTeamDialog';
 import { RequestRevisionDialog } from '@/components/admin/RequestRevisionDialog';
+import { DeleteSubmissionDialog } from '@/components/admin/DeleteSubmissionDialog';
 import VideoPlayer from '@/components/video/VideoPlayer';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -26,6 +31,9 @@ export default function SubmissionDetail() {
   const { isAdmin } = useAuth();
   const [editTeamOpen, setEditTeamOpen] = useState(false);
   const [revisionOpen, setRevisionOpen] = useState(false);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: SubmissionStatus) => {
@@ -50,7 +58,7 @@ export default function SubmissionDetail() {
         .from('video_submissions')
         .select(`
           id, video_url, thumbnail_url, status, submitted_at, created_at, duration_seconds,
-          review_notes, reviewed_at,
+          review_notes, reviewed_at, archived_at, status_before_archive,
           event_id,
           team:teams!inner(id, name, gym_name, athletes_female, athletes_male, division_id,
             division:divisions!inner(id, name), level:levels!inner(name, level_number)),
@@ -61,6 +69,34 @@ export default function SubmissionDetail() {
       return data;
     },
     enabled: !!submissionId,
+  });
+
+  const isArchived = !!(submission as any)?.archived_at;
+
+  const archiveMutation = useMutation({
+    mutationFn: async (archive: boolean) => {
+      const payload = archive
+        ? {
+            archived_at: new Date().toISOString(),
+            archived_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+            status_before_archive: submission?.status ?? null,
+          }
+        : {
+            archived_at: null,
+            archived_by: null,
+            status_before_archive: null,
+            status: (submission as any)?.status_before_archive ?? submission?.status,
+          };
+      const { error } = await sb.from('video_submissions').update(payload).eq('id', submissionId!);
+      if (error) throw error;
+      return archive;
+    },
+    onSuccess: (archived) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+      toast({ title: archived ? 'Submission archived' : 'Submission restored' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
 
   if (isLoading) {
@@ -84,7 +120,7 @@ export default function SubmissionDetail() {
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
         </Button>
         <div className="flex items-center gap-2 flex-wrap">
-          {(submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'denied') && (
+          {!isArchived && (submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'denied') && (
             <Button
               size="sm"
               onClick={() => updateStatusMutation.mutate('approved')}
@@ -93,7 +129,7 @@ export default function SubmissionDetail() {
               <Check className="w-4 h-4 mr-2" /> Approve
             </Button>
           )}
-          {(submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'approved') && (
+          {!isArchived && (submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'approved') && (
             <Button
               size="sm"
               variant="destructive"
@@ -103,7 +139,7 @@ export default function SubmissionDetail() {
               <X className="w-4 h-4 mr-2" /> Deny
             </Button>
           )}
-          {submission.status !== 'revision_requested' && submission.status !== 'complete' && (
+          {!isArchived && submission.status !== 'revision_requested' && submission.status !== 'complete' && (
             <Button
               size="sm"
               variant="outline"
@@ -112,6 +148,22 @@ export default function SubmissionDetail() {
             >
               <RotateCcw className="w-4 h-4 mr-2" /> Request Revision
             </Button>
+          )}
+          {!isArchived ? (
+            <Button size="sm" variant="outline" onClick={() => setArchiveConfirmOpen(true)} disabled={archiveMutation.isPending}>
+              <Archive className="w-4 h-4 mr-2" /> Archive
+            </Button>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" onClick={() => setRestoreConfirmOpen(true)} disabled={archiveMutation.isPending}>
+                <ArchiveRestore className="w-4 h-4 mr-2" /> Restore
+              </Button>
+              {isAdmin && (
+                <Button size="sm" variant="destructive" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 className="w-4 h-4 mr-2" /> Delete permanently
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -187,6 +239,44 @@ export default function SubmissionDetail() {
         onOpenChange={setRevisionOpen}
         submissionId={submissionId!}
         teamName={submission.team?.name || ''}
+      />
+
+      <AlertDialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archive this submission?</AlertDialogTitle>
+            <AlertDialogDescription>
+              It will be removed from the active list, judging queues and results, but its scores and
+              video are kept. You can restore it at any time from the Archived tab.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => archiveMutation.mutate(true)}>Archive</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={restoreConfirmOpen} onOpenChange={setRestoreConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restore this submission?</AlertDialogTitle>
+            <AlertDialogDescription>
+              It will return to the Current tab with the status it had before being archived.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => archiveMutation.mutate(false)}>Restore</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <DeleteSubmissionDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        submissions={[{ id: submissionId!, teamName: submission.team?.name || 'this submission' }]}
+        onDeleted={() => navigate('/admin/submissions')}
       />
     </div>
   );

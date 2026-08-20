@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
         id, name, gym_name, athletes_female, athletes_male,
         division:divisions(id, name),
         level:levels(id, name),
-        video_submissions(id, event_id, status, video_url, thumbnail_url, brightcove_video_id, submitted_at, captured_at, submitted_via, duration_seconds, review_notes, reviewed_at)
+        video_submissions(id, event_id, status, video_url, thumbnail_url, brightcove_video_id, submitted_at, captured_at, submitted_via, duration_seconds, review_notes, reviewed_at, archived_at)
       `)
       .eq("event_id", eventId)
       .or(`coach_user_id.eq.${user.user_id},coach_email.eq.${user.email}`);
@@ -28,7 +28,10 @@ Deno.serve(async (req) => {
     if (error) return fail(error.message);
 
     const list = (teams ?? []).map((t: Record<string, unknown>) => {
-      const sub = Array.isArray(t.video_submissions) ? (t.video_submissions as Record<string, unknown>[])[0] : null;
+      const subs = Array.isArray(t.video_submissions)
+        ? (t.video_submissions as Record<string, unknown>[]).filter((s) => !s.archived_at)
+        : [];
+      const sub = subs[0] ?? null;
       const div = t.division as Record<string, unknown> | null;
       const lvl = t.level as Record<string, unknown> | null;
       return {

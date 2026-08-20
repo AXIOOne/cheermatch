@@ -9,12 +9,18 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Video, Inbox, CheckCircle, XCircle, UserCheck, Flag, Search, ExternalLink, Mail, RotateCcw } from 'lucide-react';
+import { Loader2, Video, Inbox, CheckCircle, XCircle, Search, ExternalLink, Mail, RotateCcw, Archive, ArchiveRestore, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { GenerateReviewLink } from '@/components/admin/GenerateReviewLink';
 import { BulkEmailDialog } from '@/components/admin/BulkEmailDialog';
-import { RequestRevisionDialog } from '@/components/admin/RequestRevisionDialog';
+import { DeleteSubmissionDialog } from '@/components/admin/DeleteSubmissionDialog';
+import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
 
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
@@ -31,6 +37,9 @@ interface SubmissionWithDetails {
   submitted_at: string | null;
   created_at: string;
   duration_seconds: number | null;
+  archived_at: string | null;
+  archived_by: string | null;
+  status_before_archive: SubmissionStatus | null;
   team: {
     id: string;
     name: string;
@@ -61,11 +70,17 @@ export default function Submissions() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [eventFilter, setEventFilter] = useState<string>('all');
+  const [tab, setTab] = useState<'current' | 'archived'>('current');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
+  const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteTargets, setDeleteTargets] = useState<{ id: string; teamName: string }[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['admin-submissions'],
@@ -80,6 +95,9 @@ export default function Submissions() {
           submitted_at,
           created_at,
           duration_seconds,
+          archived_at,
+          archived_by,
+          status_before_archive,
           team:teams!inner(
             id,
             name,
@@ -108,24 +126,61 @@ export default function Submissions() {
     },
   });
 
-  const updateStatusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: LifecycleStatus }) => {
-      const { error } = await supabase
-        .from('video_submissions')
-        .update({ status: status as SubmissionStatus })
-        .eq('id', id);
-      if (error) throw error;
+  const archiveMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const targets = submissions?.filter((s) => ids.includes(s.id)) ?? [];
+      for (const s of targets) {
+        const { error } = await supabase
+          .from('video_submissions')
+          .update({
+            archived_at: new Date().toISOString(),
+            archived_by: (await supabase.auth.getUser()).data.user?.id ?? null,
+            status_before_archive: s.status,
+          } as never)
+          .eq('id', s.id);
+        if (error) throw error;
+      }
+      return targets.length;
     },
-    onSuccess: () => {
+    onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
-      toast({ title: 'Status updated' });
+      setSelectedIds(new Set());
+      toast({ title: `${count} submission${count !== 1 ? 's' : ''} archived` });
     },
-    onError: (error: any) => {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
-    },
+    onError: (error: any) =>
+      toast({ variant: 'destructive', title: 'Error', description: error.message }),
   });
 
-  const filteredSubmissions = submissions?.filter((submission) => {
+  const restoreMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const targets = submissions?.filter((s) => ids.includes(s.id)) ?? [];
+      for (const s of targets) {
+        const { error } = await supabase
+          .from('video_submissions')
+          .update({
+            archived_at: null,
+            archived_by: null,
+            status_before_archive: null,
+            status: (s.status_before_archive ?? s.status) as SubmissionStatus,
+          } as never)
+          .eq('id', s.id);
+        if (error) throw error;
+      }
+      return targets.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+      setSelectedIds(new Set());
+      toast({ title: `${count} submission${count !== 1 ? 's' : ''} restored` });
+    },
+    onError: (error: any) =>
+      toast({ variant: 'destructive', title: 'Error', description: error.message }),
+  });
+
+  const isArchivedTab = tab === 'archived';
+  const tabScoped = submissions?.filter((s) => (isArchivedTab ? !!s.archived_at : !s.archived_at));
+
+  const filteredSubmissions = tabScoped?.filter((submission) => {
     const lifecycle = toLifecycle(submission.status);
     const matchesSearch =
       searchQuery === '' ||
@@ -138,7 +193,7 @@ export default function Submissions() {
     return matchesSearch && matchesStatus && matchesEvent;
   });
 
-  const eventScoped = submissions?.filter(
+  const eventScoped = tabScoped?.filter(
     (s) => eventFilter === 'all' || s.event.id === eventFilter
   );
 
@@ -153,6 +208,13 @@ export default function Submissions() {
     revision_requested: countBy('revision_requested'),
   };
 
+  const archivedCount = submissions?.filter((s) => !!s.archived_at).length || 0;
+  const currentCount = submissions?.filter((s) => !s.archived_at).length || 0;
+
+  const switchTab = (value: string) => {
+    setTab(value === 'archived' ? 'archived' : 'current');
+    setSelectedIds(new Set());
+  };
 
   const toggleSelection = (id: string) => {
     setSelectedIds(prev => {
@@ -173,13 +235,21 @@ export default function Submissions() {
     }
   };
 
-  const selectedSubmissions = submissions?.filter(s => selectedIds.has(s.id)).map(s => ({
+  const selectedRows = tabScoped?.filter(s => selectedIds.has(s.id)) || [];
+
+  const selectedSubmissions = selectedRows.map(s => ({
     id: s.id,
     teamName: s.team.name,
     gymName: s.team.gym_name,
     eventId: s.event.id,
     eventName: s.event.name,
-  })) || [];
+  }));
+
+  const openDelete = (targets: { id: string; teamName: string }[]) => {
+    setDeleteTargets(targets);
+    setDeleteOpen(true);
+  };
+
 
   return (
     <div className="p-8">
@@ -205,6 +275,15 @@ export default function Submissions() {
           </Select>
         </div>
       </div>
+
+      <Tabs value={tab} onValueChange={switchTab} className="mb-6">
+        <TabsList>
+          <TabsTrigger value="current">Current ({currentCount})</TabsTrigger>
+          <TabsTrigger value="archived">Archived ({archivedCount})</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+
 
 
       {/* Stats Cards */}
@@ -281,14 +360,40 @@ export default function Submissions() {
 
             {/* Bulk Actions Bar */}
             {selectedIds.size > 0 && (
-              <div className="flex items-center gap-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
+              <div className="flex items-center gap-3 flex-wrap p-3 bg-primary/5 rounded-lg border border-primary/20">
                 <span className="text-sm font-medium">
                   {selectedIds.size} team{selectedIds.size !== 1 ? 's' : ''} selected
                 </span>
-                <Button size="sm" onClick={() => setBulkEmailOpen(true)}>
-                  <Mail className="w-4 h-4 mr-2" />
-                  Send Review Links
-                </Button>
+                {!isArchivedTab && (
+                  <>
+                    <Button size="sm" onClick={() => setBulkEmailOpen(true)}>
+                      <Mail className="w-4 h-4 mr-2" />
+                      Send Review Links
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setArchiveConfirmOpen(true)}>
+                      <Archive className="w-4 h-4 mr-2" />
+                      Archive
+                    </Button>
+                  </>
+                )}
+                {isArchivedTab && (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => setRestoreConfirmOpen(true)}>
+                      <ArchiveRestore className="w-4 h-4 mr-2" />
+                      Restore to Current
+                    </Button>
+                    {isAdmin && (
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => openDelete(selectedRows.map(s => ({ id: s.id, teamName: s.team.name })))}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete permanently
+                      </Button>
+                    )}
+                  </>
+                )}
                 <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
                   Clear Selection
                 </Button>
@@ -319,7 +424,7 @@ export default function Submissions() {
                   <TableHead>Event</TableHead>
                   <TableHead>Division / Level</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Submitted</TableHead>
+                  <TableHead>{isArchivedTab ? 'Archived' : 'Submitted'}</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -373,9 +478,13 @@ export default function Submissions() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        {submission.submitted_at
-                          ? format(new Date(submission.submitted_at), 'MMM d, yyyy')
-                          : '-'}
+                        {isArchivedTab
+                          ? submission.archived_at
+                            ? format(new Date(submission.archived_at), 'MMM d, yyyy')
+                            : '-'
+                          : submission.submitted_at
+                            ? format(new Date(submission.submitted_at), 'MMM d, yyyy')
+                            : '-'}
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
@@ -388,7 +497,48 @@ export default function Submissions() {
                               </a>
                             </Button>
                           )}
-                          <GenerateReviewLink submissionId={submission.id} teamName={submission.team.name} />
+                          {!isArchivedTab && (
+                            <>
+                              <GenerateReviewLink submissionId={submission.id} teamName={submission.team.name} />
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Archive submission"
+                                onClick={() => {
+                                  setSelectedIds(new Set([submission.id]));
+                                  setArchiveConfirmOpen(true);
+                                }}
+                              >
+                                <Archive className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
+                          {isArchivedTab && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="Restore to current"
+                                onClick={() => {
+                                  setSelectedIds(new Set([submission.id]));
+                                  setRestoreConfirmOpen(true);
+                                }}
+                              >
+                                <ArchiveRestore className="w-4 h-4" />
+                              </Button>
+                              {isAdmin && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="Delete permanently"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => openDelete([{ id: submission.id, teamName: submission.team.name }])}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -399,7 +549,7 @@ export default function Submissions() {
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>No submissions found.</p>
+              <p>{isArchivedTab ? 'No archived submissions.' : 'No submissions found.'}</p>
             </div>
           )}
         </CardContent>
@@ -410,6 +560,61 @@ export default function Submissions() {
         open={bulkEmailOpen}
         onOpenChange={setBulkEmailOpen}
         submissions={selectedSubmissions}
+      />
+
+      {/* Archive confirmation */}
+      <AlertDialog open={archiveConfirmOpen} onOpenChange={setArchiveConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Archive {selectedIds.size} submission{selectedIds.size !== 1 ? 's' : ''}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Archived submissions are removed from the active list, judging queues and results, but their
+              scores and videos are kept. You can restore them at any time from the Archived tab.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => archiveMutation.mutate(Array.from(selectedIds))}
+              disabled={archiveMutation.isPending}
+            >
+              Archive
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Restore confirmation */}
+      <AlertDialog open={restoreConfirmOpen} onOpenChange={setRestoreConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Restore {selectedIds.size} submission{selectedIds.size !== 1 ? 's' : ''}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              They will return to the Current tab with the status they had before being archived.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => restoreMutation.mutate(Array.from(selectedIds))}
+              disabled={restoreMutation.isPending}
+            >
+              Restore
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Permanent delete */}
+      <DeleteSubmissionDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        submissions={deleteTargets}
+        onDeleted={() => setSelectedIds(new Set())}
       />
     </div>
   );
