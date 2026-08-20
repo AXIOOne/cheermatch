@@ -41,6 +41,8 @@ const isAllPanelsAssignment = (assignment: any): boolean => !assignment?.panel_i
 
 export default function ScorePerformance() {
   const { submissionId } = useParams<{ submissionId: string }>();
+  const [searchParams] = useSearchParams();
+  const panelParam = searchParams.get('panel');
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
