@@ -166,9 +166,11 @@ export default function ScorePerformance() {
       let q = sb.from('scores').select(`*, details:score_details(*), deduction_items:score_deductions(*), skill_selections:score_skill_selections(*)`)
         .eq('submission_id', submissionId!).eq('judge_user_id', user!.id);
       if (assignedPanelId) q = q.eq('panel_id', assignedPanelId);
-      const { data, error } = await q.maybeSingle();
+      const { data, error } = await q.order('created_at', { ascending: true });
       if (error) throw error;
-      return data;
+      const rows = (data || []) as any[];
+      if (assignedPanelId) return rows[0] || null;
+      return rows.find((r: any) => !r.panel_id) || rows[0] || null;
     },
     enabled: !!submissionId && !!user,
   });
