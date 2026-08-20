@@ -28,7 +28,10 @@ Deno.serve(async (req) => {
     if (error) return fail(error.message);
 
     const list = (teams ?? []).map((t: Record<string, unknown>) => {
-      const sub = Array.isArray(t.video_submissions) ? (t.video_submissions as Record<string, unknown>[])[0] : null;
+      const subs = Array.isArray(t.video_submissions)
+        ? (t.video_submissions as Record<string, unknown>[]).filter((s) => !s.archived_at)
+        : [];
+      const sub = subs[0] ?? null;
       const div = t.division as Record<string, unknown> | null;
       const lvl = t.level as Record<string, unknown> | null;
       return {
