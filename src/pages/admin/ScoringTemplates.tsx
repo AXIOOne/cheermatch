@@ -480,6 +480,12 @@ export default function ScoringTemplates() {
       id: d.id, temp_id: d.id, name: d.name, points: Number(d.points),
       description: d.description, category: d.category,
     })));
+    setTemplatePanels(
+      ((tpl.panels || []) as any[])
+        .slice()
+        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+        .map((p) => ({ id: p.id, temp_id: p.id, name: p.name, abbreviation: p.abbreviation }))
+    );
     setIsDialogOpen(true);
   };
 
