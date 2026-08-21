@@ -121,7 +121,12 @@ export async function buildAveragesPdf(data: AveragesData): Promise<Uint8Array> 
       size = s;
       if (regular.widthOfTextAtSize(sample, s) <= cellW - 4) break;
     }
-    const headSize = Math.min(size, 7.5);
+    let headSize = Math.min(size, 7.5);
+    const widestWord = Math.max(
+      ...section.columns.flatMap((c) => c.label.split(/\s+/).map((w) => w.length ? w : ' '))
+        .map((w) => bold.widthOfTextAtSize(w, 1))
+    );
+    while (headSize > 4.5 && widestWord * headSize > cellW - 8) headSize -= 0.5;
     const lineH = size + 2;
 
     const xEdges: number[] = [MARGIN, MARGIN + teamW];
@@ -143,7 +148,7 @@ export async function buildAveragesPdf(data: AveragesData): Promise<Uint8Array> 
     };
 
     const drawHeader = () => {
-      const headLines = section.columns.map((c) => wrap(c.label, bold, headSize, cellW - 3));
+      const headLines = section.columns.map((c) => wrap(c.label, bold, headSize, cellW - 8));
       const maxLines = Math.max(1, ...headLines.map((l) => l.length));
       const headH = maxLines * lineH + 6;
       const yTop = y;
