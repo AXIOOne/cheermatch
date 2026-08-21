@@ -222,6 +222,20 @@ export default function ScoringTemplates() {
     if (error) throw error;
   };
 
+  const persistTemplatePanels = async (templateId: string) => {
+    const rows = templatePanels
+      .map((p, idx) => ({
+        template_id: templateId,
+        name: (p.name || p.abbreviation).trim(),
+        abbreviation: p.abbreviation.trim().toUpperCase(),
+        display_order: idx,
+      }))
+      .filter((p) => p.abbreviation);
+    if (rows.length === 0) return;
+    const { error } = await sb.from('scoring_template_panels').insert(rows);
+    if (error) throw error;
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: TemplateFormData) => {
       const { data: template, error } = await sb
