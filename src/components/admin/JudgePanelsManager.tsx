@@ -153,18 +153,58 @@ export default function JudgePanelsManager({ eventId, onClose }: JudgePanelsMana
     }
   };
 
+  const addTemplatePanels = async () => {
+    const rows = templatePanels || [];
+    if (rows.length === 0) {
+      toast({
+        title: 'No template panels found',
+        description: "The scoring templates used by this event's teams don't define panel slots yet.",
+      });
+      return;
+    }
+    const existingAbbrevs = new Set((panels || []).map((p) => p.abbreviation.toUpperCase()));
+    const toAdd = rows.filter((p: any) => !existingAbbrevs.has(String(p.abbreviation).toUpperCase()));
+    if (toAdd.length === 0) {
+      toast({ title: 'All template panels already exist' });
+      return;
+    }
+    const startOrder = (panels?.reduce((max, p) => Math.max(max, p.display_order), -1) ?? -1) + 1;
+    const { error } = await supabase.from('judge_panels').insert(
+      toAdd.map((panel: any, idx: number) => ({
+        event_id: eventId,
+        name: panel.name,
+        abbreviation: String(panel.abbreviation).toUpperCase(),
+        display_order: startOrder + idx,
+      }))
+    );
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['judge-panels', eventId] });
+      toast({ title: `Added ${toAdd.length} panels from the scoring template` });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Quick Add Presets */}
-      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+      <div className="flex items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg flex-wrap">
         <div>
           <p className="font-medium">Quick Setup</p>
-          <p className="text-sm text-muted-foreground">Add standard cheerleading judge panels</p>
+          <p className="text-sm text-muted-foreground">
+            Seed the slots from this event's scoring template, or add the standard cheer panels.
+          </p>
         </div>
-        <Button variant="secondary" onClick={addPresetPanels}>
-          Add Standard Panels
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={addTemplatePanels}>
+            Use Scoring Template Panels
+          </Button>
+          <Button variant="outline" onClick={addPresetPanels}>
+            Add Standard Panels
+          </Button>
+        </div>
       </div>
+
 
       {/* Current Panels */}
       <div>
