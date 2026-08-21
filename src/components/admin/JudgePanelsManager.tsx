@@ -39,6 +39,39 @@ export default function JudgePanelsManager({ eventId, onClose }: JudgePanelsMana
     },
   });
 
+  // Panel slots defined by the scoring templates this event's teams actually use.
+  const { data: templatePanels } = useQuery({
+    queryKey: ['event-template-panels', eventId],
+    queryFn: async () => {
+      const { data: teams, error: tErr } = await (supabase as any)
+        .from('teams')
+        .select('division:divisions(scoring_template_id)')
+        .eq('event_id', eventId);
+      if (tErr) throw tErr;
+      const templateIds = [
+        ...new Set(
+          (teams || [])
+            .map((t: any) => (Array.isArray(t.division) ? t.division[0] : t.division)?.scoring_template_id)
+            .filter(Boolean)
+        ),
+      ];
+      if (templateIds.length === 0) return [];
+      const { data, error } = await (supabase as any)
+        .from('scoring_template_panels')
+        .select('name, abbreviation, display_order')
+        .in('template_id', templateIds)
+        .order('display_order');
+      if (error) throw error;
+      const seen = new Set<string>();
+      return (data || []).filter((p: any) => {
+        const key = String(p.abbreviation).toUpperCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async (panel: { name: string; abbreviation: string; description: string }) => {
       const maxOrder = panels?.reduce((max, p) => Math.max(max, p.display_order), -1) ?? -1;
@@ -120,18 +153,58 @@ export default function JudgePanelsManager({ eventId, onClose }: JudgePanelsMana
     }
   };
 
+  const addTemplatePanels = async () => {
+    const rows = templatePanels || [];
+    if (rows.length === 0) {
+      toast({
+        title: 'No template panels found',
+        description: "The scoring templates used by this event's teams don't define panel slots yet.",
+      });
+      return;
+    }
+    const existingAbbrevs = new Set((panels || []).map((p) => p.abbreviation.toUpperCase()));
+    const toAdd = rows.filter((p: any) => !existingAbbrevs.has(String(p.abbreviation).toUpperCase()));
+    if (toAdd.length === 0) {
+      toast({ title: 'All template panels already exist' });
+      return;
+    }
+    const startOrder = (panels?.reduce((max, p) => Math.max(max, p.display_order), -1) ?? -1) + 1;
+    const { error } = await supabase.from('judge_panels').insert(
+      toAdd.map((panel: any, idx: number) => ({
+        event_id: eventId,
+        name: panel.name,
+        abbreviation: String(panel.abbreviation).toUpperCase(),
+        display_order: startOrder + idx,
+      }))
+    );
+    if (error) {
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
+    } else {
+      queryClient.invalidateQueries({ queryKey: ['judge-panels', eventId] });
+      toast({ title: `Added ${toAdd.length} panels from the scoring template` });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Quick Add Presets */}
-      <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+      <div className="flex items-center justify-between gap-4 p-4 bg-muted/50 rounded-lg flex-wrap">
         <div>
           <p className="font-medium">Quick Setup</p>
-          <p className="text-sm text-muted-foreground">Add standard cheerleading judge panels</p>
+          <p className="text-sm text-muted-foreground">
+            Seed the slots from this event's scoring template, or add the standard cheer panels.
+          </p>
         </div>
-        <Button variant="secondary" onClick={addPresetPanels}>
-          Add Standard Panels
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={addTemplatePanels}>
+            Use Scoring Template Panels
+          </Button>
+          <Button variant="outline" onClick={addPresetPanels}>
+            Add Standard Panels
+          </Button>
+        </div>
       </div>
+
 
       {/* Current Panels */}
       <div>

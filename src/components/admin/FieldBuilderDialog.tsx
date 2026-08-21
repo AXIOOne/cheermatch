@@ -97,6 +97,9 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
   }, [open, initial]);
 
   const panelChoices = (availablePanels && availablePanels.length > 0 ? availablePanels : DEFAULT_PANELS);
+  const unknownPanels = draft.panels.filter(
+    (p) => !panelChoices.some((c) => c.toUpperCase() === p.toUpperCase())
+  );
 
   const togglePanel = (abbr: string) => {
     setDraft(d => ({
@@ -395,8 +398,15 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
           <div className="space-y-2">
             <Label>Assigned Judge Panels</Label>
             <p className="text-xs text-muted-foreground">
-              Pick which panel slots score this field. Pick 2+ for a multi-judge field.
+              {availablePanels && availablePanels.length > 0
+                ? 'Pick which panel slots score this field. Slots come from this template\'s Judge Panels tab.'
+                : 'Pick which panel slots score this field. Define custom slots on the template\'s Judge Panels tab.'}
             </p>
+            {unknownPanels.length > 0 && (
+              <p className="text-xs text-destructive">
+                Not on this template&apos;s panel list: {unknownPanels.join(', ')} — remove them or add them under Judge Panels.
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
               {panelChoices.map((abbr) => {
                 const active = draft.panels.includes(abbr);

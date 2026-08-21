@@ -13,13 +13,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, ClipboardList, Loader2, Pencil, Trash2, Lock, Unlock, Eye, Layers, Copy } from 'lucide-react';
+import { Plus, ClipboardList, Loader2, Pencil, Trash2, Lock, Unlock, Eye, Layers, Copy, Users } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SectionTabs, { ScoringSection } from '@/components/admin/SectionTabs';
 import { ScoringField } from '@/components/admin/FieldBuilderDialog';
 import { DeductionType } from '@/components/admin/DeductionTypeManager';
 import TemplatePreview from '@/components/admin/TemplatePreview';
+import TemplatePanelsManager, { TemplatePanel } from '@/components/admin/TemplatePanelsManager';
 
 const templateSchema = z.object({
   name: z.string().min(2, 'Template name must be at least 2 characters'),
@@ -66,6 +67,7 @@ export default function ScoringTemplates() {
   const [lockConfirmTemplate, setLockConfirmTemplate] = useState<any>(null);
   const [sections, setSections] = useState<ScoringSection[]>([]);
   const [deductions, setDeductions] = useState<DeductionType[]>([]);
+  const [templatePanels, setTemplatePanels] = useState<TemplatePanel[]>([]);
   const [disciplineFilter, setDisciplineFilter] = useState<string>('all');
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -75,7 +77,18 @@ export default function ScoringTemplates() {
     defaultValues: { name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false },
   });
 
-  const eventPanels: string[] | undefined = undefined;
+  // Panel slots defined on the template being edited drive the field builder chips.
+  const availablePanels = useMemo(() => {
+    const list = templatePanels
+      .map((p) => p.abbreviation.trim().toUpperCase())
+      .filter(Boolean);
+    return list.length > 0 ? [...list, 'ALL'] : undefined;
+  }, [templatePanels]);
+
+  const usedPanelAbbreviations = useMemo(
+    () => sections.flatMap((s) => s.fields.flatMap((f) => f.panels || [])),
+    [sections]
+  );
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ['scoring-templates-full'],
@@ -85,6 +98,7 @@ export default function ScoringTemplates() {
         .select(`
           *,
           divisions:divisions(id, name, discipline),
+          panels:scoring_template_panels(*),
           sections:scoring_sections(
             *,
             fields:scoring_fields(
@@ -208,6 +222,20 @@ export default function ScoringTemplates() {
     if (error) throw error;
   };
 
+  const persistTemplatePanels = async (templateId: string) => {
+    const rows = templatePanels
+      .map((p, idx) => ({
+        template_id: templateId,
+        name: (p.name || p.abbreviation).trim(),
+        abbreviation: p.abbreviation.trim().toUpperCase(),
+        display_order: idx,
+      }))
+      .filter((p) => p.abbreviation);
+    if (rows.length === 0) return;
+    const { error } = await sb.from('scoring_template_panels').insert(rows);
+    if (error) throw error;
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: TemplateFormData) => {
       const { data: template, error } = await sb
@@ -223,6 +251,7 @@ export default function ScoringTemplates() {
       if (error) throw error;
       await persistSectionsAndFields(template.id);
       await persistDeductions(template.id);
+      await persistTemplatePanels(template.id);
       return template;
     },
     onSuccess: () => {
@@ -248,6 +277,8 @@ export default function ScoringTemplates() {
       await sb.from('deduction_types').delete().eq('template_id', id);
       await persistSectionsAndFields(id);
       await persistDeductions(id);
+      await sb.from('scoring_template_panels').delete().eq('template_id', id);
+      await persistTemplatePanels(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scoring-templates-full'] });
@@ -358,6 +389,16 @@ export default function ScoringTemplates() {
           }))
         );
       }
+
+      const srcPanels = (src.panels || []) as any[];
+      if (srcPanels.length) {
+        await sb.from('scoring_template_panels').insert(
+          srcPanels.map((p, idx) => ({
+            template_id: newTpl.id, name: p.name,
+            abbreviation: p.abbreviation, display_order: p.display_order ?? idx,
+          }))
+        );
+      }
       return newTpl;
     },
     onSuccess: () => {
@@ -373,6 +414,7 @@ export default function ScoringTemplates() {
     form.reset();
     setSections([]);
     setDeductions([]);
+    setTemplatePanels([]);
   };
 
   const handleSubmit = (data: TemplateFormData) => {
@@ -383,7 +425,7 @@ export default function ScoringTemplates() {
   const handleNewTemplate = () => {
     setEditingTemplate(null);
     form.reset({ name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false });
-    setSections([]); setDeductions([]);
+    setSections([]); setDeductions([]); setTemplatePanels([]);
     setIsDialogOpen(true);
   };
 
@@ -438,6 +480,12 @@ export default function ScoringTemplates() {
       id: d.id, temp_id: d.id, name: d.name, points: Number(d.points),
       description: d.description, category: d.category,
     })));
+    setTemplatePanels(
+      ((tpl.panels || []) as any[])
+        .slice()
+        .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+        .map((p) => ({ id: p.id, temp_id: p.id, name: p.name, abbreviation: p.abbreviation }))
+    );
     setIsDialogOpen(true);
   };
 
@@ -551,8 +599,9 @@ export default function ScoringTemplates() {
 
 
                 <Tabs defaultValue="editor" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="editor"><Pencil className="w-4 h-4 mr-2" />Editor</TabsTrigger>
+                    <TabsTrigger value="panels"><Users className="w-4 h-4 mr-2" />Judge Panels</TabsTrigger>
                     <TabsTrigger value="preview"><Eye className="w-4 h-4 mr-2" />Preview</TabsTrigger>
                   </TabsList>
                   <TabsContent value="editor" className="mt-4">
@@ -562,7 +611,16 @@ export default function ScoringTemplates() {
                         deductions={deductions}
                         onSectionsChange={setSections}
                         onDeductionsChange={setDeductions}
-                        availablePanels={eventPanels}
+                        availablePanels={availablePanels}
+                      />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="panels" className="mt-4">
+                    <div className="border rounded-lg p-4">
+                      <TemplatePanelsManager
+                        panels={templatePanels}
+                        onChange={setTemplatePanels}
+                        usedAbbreviations={usedPanelAbbreviations}
                       />
                     </div>
                   </TabsContent>
@@ -572,6 +630,7 @@ export default function ScoringTemplates() {
                     </div>
                   </TabsContent>
                 </Tabs>
+
 
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={closeDialog}>Cancel</Button>
