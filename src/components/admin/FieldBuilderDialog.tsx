@@ -97,6 +97,9 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
   }, [open, initial]);
 
   const panelChoices = (availablePanels && availablePanels.length > 0 ? availablePanels : DEFAULT_PANELS);
+  const unknownPanels = draft.panels.filter(
+    (p) => !panelChoices.some((c) => c.toUpperCase() === p.toUpperCase())
+  );
 
   const togglePanel = (abbr: string) => {
     setDraft(d => ({
