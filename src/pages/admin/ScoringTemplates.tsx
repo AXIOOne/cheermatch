@@ -551,8 +551,9 @@ export default function ScoringTemplates() {
 
 
                 <Tabs defaultValue="editor" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
+                  <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="editor"><Pencil className="w-4 h-4 mr-2" />Editor</TabsTrigger>
+                    <TabsTrigger value="panels"><Users className="w-4 h-4 mr-2" />Judge Panels</TabsTrigger>
                     <TabsTrigger value="preview"><Eye className="w-4 h-4 mr-2" />Preview</TabsTrigger>
                   </TabsList>
                   <TabsContent value="editor" className="mt-4">
@@ -562,7 +563,16 @@ export default function ScoringTemplates() {
                         deductions={deductions}
                         onSectionsChange={setSections}
                         onDeductionsChange={setDeductions}
-                        availablePanels={eventPanels}
+                        availablePanels={availablePanels}
+                      />
+                    </div>
+                  </TabsContent>
+                  <TabsContent value="panels" className="mt-4">
+                    <div className="border rounded-lg p-4">
+                      <TemplatePanelsManager
+                        panels={templatePanels}
+                        onChange={setTemplatePanels}
+                        usedAbbreviations={usedPanelAbbreviations}
                       />
                     </div>
                   </TabsContent>
@@ -572,6 +582,7 @@ export default function ScoringTemplates() {
                     </div>
                   </TabsContent>
                 </Tabs>
+
 
                 <div className="flex justify-end gap-2 pt-4">
                   <Button type="button" variant="outline" onClick={closeDialog}>Cancel</Button>
