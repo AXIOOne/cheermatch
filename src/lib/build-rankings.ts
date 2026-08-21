@@ -51,8 +51,33 @@ function applyRanks(rows: RankingRow[]): RankingRow[] {
   return sorted;
 }
 
-/** Fetch every scored team at an event and compute its standings row. */
-export async function fetchEventRankingRows(eventId: string): Promise<RankingRow[]> {
+export interface EventScoringData {
+  submissions: any[];
+  scoresBySubmission: Map<string, any[]>;
+  overrideLookup: Record<string, Record<string, number>>;
+  templateBySubmission: Map<string, string | null>;
+  fieldsByTemplate: Map<string, RawField[]>;
+  catalogByTemplate: Map<string, Array<{ id: string; name: string; points: number; display_order: number }>>;
+  /** field id -> abbreviation of the section it belongs to */
+  sectionAbbrByField: Map<string, string>;
+}
+
+/**
+ * Shared fetch for every event-level report: submissions, submitted scores,
+ * admin overrides, and the scoring template (fields + deduction catalog) in
+ * play for each submission.
+ */
+export async function fetchEventScoringData(eventId: string): Promise<EventScoringData> {
+  const empty: EventScoringData = {
+    submissions: [],
+    scoresBySubmission: new Map(),
+    overrideLookup: {},
+    templateBySubmission: new Map(),
+    fieldsByTemplate: new Map(),
+    catalogByTemplate: new Map(),
+    sectionAbbrByField: new Map(),
+  };
+
   const { data: submissions, error: subErr } = await sb
     .from('video_submissions')
     .select(`
@@ -64,7 +89,7 @@ export async function fetchEventRankingRows(eventId: string): Promise<RankingRow
     .eq('event_id', eventId)
     .is('archived_at', null);
   if (subErr) throw subErr;
-  if (!submissions?.length) return [];
+  if (!submissions?.length) return empty;
 
   const submissionIds = submissions.map((s: any) => s.id);
 
@@ -142,11 +167,12 @@ export async function fetchEventRankingRows(eventId: string): Promise<RankingRow
   // Bulk load fields + deduction catalogs for all templates in play
   const fieldsByTemplate = new Map<string, RawField[]>();
   const catalogByTemplate = new Map<string, Array<{ id: string; name: string; points: number; display_order: number }>>();
+  const sectionAbbrByField = new Map<string, string>();
   if (templateIds.length) {
     const { data: tplFields } = await sb
       .from('scoring_fields')
       .select(`id, name, max_points, section_id, score_type, display_order,
-               section:scoring_sections!inner(id, name, display_order, template_id)`)
+               section:scoring_sections!inner(id, name, abbreviation, display_order, template_id)`)
       .in('section.template_id', templateIds);
     (tplFields || []).forEach((f: any) => {
       const section = Array.isArray(f.section) ? f.section[0] : f.section;
@@ -164,6 +190,7 @@ export async function fetchEventRankingRows(eventId: string): Promise<RankingRow
         field_order: f.display_order ?? 0,
       });
       fieldsByTemplate.set(tid, list);
+      if (section?.abbreviation) sectionAbbrByField.set(f.id, String(section.abbreviation));
     });
 
     const { data: dts } = await sb
@@ -182,12 +209,42 @@ export async function fetchEventRankingRows(eventId: string): Promise<RankingRow
     });
   }
 
+  return {
+    submissions,
+    scoresBySubmission,
+    overrideLookup,
+    templateBySubmission,
+    fieldsByTemplate,
+    catalogByTemplate,
+    sectionAbbrByField,
+  };
+}
+
+/** Map a raw score row's details into field/points pairs with overrides applied. */
+export function scoreDetailPoints(
+  score: any,
+  overrideLookup: Record<string, Record<string, number>>
+): Array<{ field_id: string; points: number }> {
+  return (score.details || []).map((d: any) => {
+    const fid = (Array.isArray(d.field) ? d.field[0] : d.field)?.id;
+    const ov = overrideLookup[score.id]?.[fid];
+    return { field_id: fid, points: ov !== undefined ? ov : Number(d.points || 0) };
+  });
+}
+
+/** Fetch every scored team at an event and compute its standings row. */
+export async function fetchEventRankingRows(eventId: string): Promise<RankingRow[]> {
+  const data = await fetchEventScoringData(eventId);
+  return buildRankingRows(data);
+}
+
+export function buildRankingRows(ctx: EventScoringData): RankingRow[] {
   const rows: RankingRow[] = [];
-  for (const sub of submissions as any[]) {
-    const subScores = scoresBySubmission.get(sub.id) || [];
+  for (const sub of ctx.submissions as any[]) {
+    const subScores = ctx.scoresBySubmission.get(sub.id) || [];
     if (!subScores.length) continue;
-    const tid = templateBySubmission.get(sub.id);
-    const fields = (tid && fieldsByTemplate.get(tid)) || [];
+    const tid = ctx.templateBySubmission.get(sub.id);
+    const fields = (tid && ctx.fieldsByTemplate.get(tid)) || [];
     if (!fields.length) continue;
 
     const data = buildScoresheet({
@@ -197,7 +254,7 @@ export async function fetchEventRankingRows(eventId: string): Promise<RankingRow
       level_name: sub.team?.level?.name,
       event_name: '',
       fields,
-      deduction_catalog: (tid && catalogByTemplate.get(tid)) || [],
+      deduction_catalog: (tid && ctx.catalogByTemplate.get(tid)) || [],
       submitted_scores: subScores.map((s: any) => {
         const panel = Array.isArray(s.panel) ? s.panel[0] : s.panel;
         return {
@@ -209,11 +266,7 @@ export async function fetchEventRankingRows(eventId: string): Promise<RankingRow
             count: Number(it.count || 0),
             warnings: Number(it.warnings || 0),
           })),
-          details: (s.details || []).map((d: any) => {
-            const fid = (Array.isArray(d.field) ? d.field[0] : d.field)?.id;
-            const ov = overrideLookup[s.id]?.[fid];
-            return { field_id: fid, points: ov !== undefined ? ov : Number(d.points || 0) };
-          }),
+          details: scoreDetailPoints(s, ctx.overrideLookup),
         };
       }),
     });

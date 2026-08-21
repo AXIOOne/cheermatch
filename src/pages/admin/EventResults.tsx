@@ -16,6 +16,14 @@ import {
   type RankingMode,
 } from '@/lib/build-rankings';
 import { buildRankingsPdf, downloadRankingsPdf } from '@/lib/rankings-pdf';
+import {
+  averagesTeamName,
+  fetchEventAverages,
+  formatAverageCell,
+} from '@/lib/build-averages';
+import { buildAveragesPdf } from '@/lib/averages-pdf';
+
+type ReportMode = RankingMode | 'averages';
 
 const MODE_TITLES: Record<RankingMode, string> = {
   overall: 'Overall Standings Report',
@@ -25,9 +33,10 @@ const MODE_TITLES: Record<RankingMode, string> = {
 
 export default function EventResults() {
   const { eventId } = useParams<{ eventId: string }>();
-  const [mode, setMode] = useState<RankingMode>('overall');
+  const [mode, setMode] = useState<ReportMode>('overall');
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [exporting, setExporting] = useState(false);
+
 
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ['event', eventId],
@@ -45,11 +54,17 @@ export default function EventResults() {
   const { data: rows, isLoading: rowsLoading } = useQuery({
     queryKey: ['event-ranking-rows', eventId],
     queryFn: () => fetchEventRankingRows(eventId!),
-    enabled: !!eventId,
+    enabled: !!eventId && mode !== 'averages',
+  });
+
+  const { data: averageSections, isLoading: avgLoading } = useQuery({
+    queryKey: ['event-averages', eventId],
+    queryFn: () => fetchEventAverages(eventId!),
+    enabled: !!eventId && mode === 'averages',
   });
 
   const allSections = useMemo(
-    () => buildRankingSections(rows || [], mode),
+    () => (mode === 'averages' ? [] : buildRankingSections(rows || [], mode)),
     [rows, mode]
   );
 
@@ -58,17 +73,35 @@ export default function EventResults() {
     [allSections, groupFilter]
   );
 
-  const isLoading = eventLoading || rowsLoading;
+  const avgAll = averageSections || [];
+  const avgSections = useMemo(
+    () => (groupFilter === 'all' ? avgAll : avgAll.filter((s) => s.key === groupFilter)),
+    [avgAll, groupFilter]
+  );
+
+  const isLoading = eventLoading || (mode === 'averages' ? avgLoading : rowsLoading);
+  const hasContent = mode === 'averages' ? avgSections.length > 0 : sections.length > 0;
 
   const handleModeChange = (value: string) => {
-    setMode(value as RankingMode);
+    setMode(value as ReportMode);
     setGroupFilter('all');
   };
 
   const handleExport = async () => {
-    if (!sections.length) return;
+    if (!hasContent) return;
     setExporting(true);
     try {
+      if (mode === 'averages') {
+        const bytes = await buildAveragesPdf({
+          event_name: event?.name || 'Event',
+          start_date: (event as any)?.start_date,
+          end_date: (event as any)?.end_date,
+          sections: avgSections,
+        });
+        const safe = `${event?.name || 'Event'} - Division Averages Report`.replace(/[^\w\s-]/g, '').trim();
+        downloadRankingsPdf(bytes, `${safe}.pdf`);
+        return;
+      }
       const bytes = await buildRankingsPdf(
         {
           event_name: event?.name || 'Event',
@@ -89,6 +122,7 @@ export default function EventResults() {
       setExporting(false);
     }
   };
+
 
   const getRankBadge = (rank: number) => {
     if (rank === 1) return <Medal className="w-5 h-5 text-yellow-500" />;
@@ -111,7 +145,7 @@ export default function EventResults() {
             </h1>
             <p className="text-muted-foreground mt-1">Ranking Reports</p>
           </div>
-          <Button variant="outline" onClick={handleExport} disabled={exporting || !sections.length}>
+          <Button variant="outline" onClick={handleExport} disabled={exporting || !hasContent}>
             {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
             Export PDF
           </Button>
@@ -122,7 +156,7 @@ export default function EventResults() {
         <CardHeader className="gap-4">
           <CardTitle className="flex items-center gap-2">
             <Trophy className="w-5 h-5" />
-            Standings
+            {mode === 'averages' ? 'Division Averages' : 'Standings'}
           </CardTitle>
           <div className="flex flex-wrap items-center gap-3">
             <Tabs value={mode} onValueChange={handleModeChange}>
@@ -130,6 +164,7 @@ export default function EventResults() {
                 <TabsTrigger value="overall">Overall</TabsTrigger>
                 <TabsTrigger value="level">By Level</TabsTrigger>
                 <TabsTrigger value="division">By Division</TabsTrigger>
+                <TabsTrigger value="averages">Averages</TabsTrigger>
               </TabsList>
             </Tabs>
             {mode !== 'overall' && (
@@ -141,20 +176,63 @@ export default function EventResults() {
                   <SelectItem value="all">
                     {mode === 'level' ? 'All levels' : 'All divisions'}
                   </SelectItem>
-                  {allSections.map((s) => (
+                  {(mode === 'averages' ? avgAll : allSections).map((s) => (
                     <SelectItem key={s.key} value={s.key}>{s.title}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
           </div>
+
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
+          ) : mode === 'averages' ? (
+            avgSections.length > 0 ? (
+              <div className="space-y-8 pb-6">
+                {avgSections.map((section) => (
+                  <div key={section.key}>
+                    <h3 className="px-6 py-3 font-semibold text-foreground">{section.title}</h3>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[200px]">Team Name</TableHead>
+                            {section.columns.map((c) => (
+                              <TableHead key={c.key} className="text-center whitespace-nowrap">
+                                {c.label}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {section.rows.map((row) => (
+                            <TableRow key={row.submission_id}>
+                              <TableCell className="font-medium">{averagesTeamName(row)}</TableCell>
+                              {section.columns.map((c) => (
+                                <TableCell key={c.key} className="text-center whitespace-nowrap tabular-nums">
+                                  {formatAverageCell(row.cells[c.key])}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No scored results available yet.</p>
+              </div>
+            )
           ) : sections.length > 0 ? (
+
             <div className="space-y-8 pb-6">
               {sections.map((section) => (
                 <div key={section.key}>
