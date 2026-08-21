@@ -131,6 +131,13 @@ export default function Divisions() {
     return scoringTemplates.filter((t: any) => (t.discipline ?? 'allstar_cheer') === selectedDiscipline);
   }, [scoringTemplates, discipline]);
 
+  useEffect(() => {
+    const valid = filteredTemplates?.some((t: any) => t.id === scoringTemplateId);
+    if (scoringTemplateId && !valid) {
+      form.setValue('scoring_template_id', '');
+    }
+  }, [discipline, filteredTemplates, scoringTemplateId, form]);
+
   const filteredDivisions = useMemo(() => {
     if (!divisions) return [];
     if (filter === 'all') return divisions;
