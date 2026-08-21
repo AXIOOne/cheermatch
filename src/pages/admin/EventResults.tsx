@@ -190,7 +190,49 @@ export default function EventResults() {
             <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
+          ) : mode === 'averages' ? (
+            avgSections.length > 0 ? (
+              <div className="space-y-8 pb-6">
+                {avgSections.map((section) => (
+                  <div key={section.key}>
+                    <h3 className="px-6 py-3 font-semibold text-foreground">{section.title}</h3>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="min-w-[200px]">Team Name</TableHead>
+                            {section.columns.map((c) => (
+                              <TableHead key={c.key} className="text-center whitespace-nowrap">
+                                {c.label}
+                              </TableHead>
+                            ))}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {section.rows.map((row) => (
+                            <TableRow key={row.submission_id}>
+                              <TableCell className="font-medium">{averagesTeamName(row)}</TableCell>
+                              {section.columns.map((c) => (
+                                <TableCell key={c.key} className="text-center whitespace-nowrap tabular-nums">
+                                  {formatAverageCell(row.cells[c.key])}
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No scored results available yet.</p>
+              </div>
+            )
           ) : sections.length > 0 ? (
+
             <div className="space-y-8 pb-6">
               {sections.map((section) => (
                 <div key={section.key}>
