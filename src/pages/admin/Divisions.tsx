@@ -78,13 +78,6 @@ export default function Divisions() {
   const discipline = form.watch('discipline');
   const scoringTemplateId = form.watch('scoring_template_id');
 
-  useEffect(() => {
-    const valid = filteredTemplates?.some((t: any) => t.id === scoringTemplateId);
-    if (scoringTemplateId && !valid) {
-      form.setValue('scoring_template_id', '');
-    }
-  }, [discipline, filteredTemplates, scoringTemplateId, form]);
-
   const openCreate = () => {
     setEditingDivision(null);
     form.reset({ discipline: 'allstar_cheer', name: '', scoring_template_id: '', level: '' });
