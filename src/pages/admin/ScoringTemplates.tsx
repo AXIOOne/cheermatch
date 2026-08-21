@@ -67,6 +67,7 @@ export default function ScoringTemplates() {
   const [lockConfirmTemplate, setLockConfirmTemplate] = useState<any>(null);
   const [sections, setSections] = useState<ScoringSection[]>([]);
   const [deductions, setDeductions] = useState<DeductionType[]>([]);
+  const [templatePanels, setTemplatePanels] = useState<TemplatePanel[]>([]);
   const [disciplineFilter, setDisciplineFilter] = useState<string>('all');
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -76,7 +77,18 @@ export default function ScoringTemplates() {
     defaultValues: { name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false },
   });
 
-  const eventPanels: string[] | undefined = undefined;
+  // Panel slots defined on the template being edited drive the field builder chips.
+  const availablePanels = useMemo(() => {
+    const list = templatePanels
+      .map((p) => p.abbreviation.trim().toUpperCase())
+      .filter(Boolean);
+    return list.length > 0 ? [...list, 'ALL'] : undefined;
+  }, [templatePanels]);
+
+  const usedPanelAbbreviations = useMemo(
+    () => sections.flatMap((s) => s.fields.flatMap((f) => f.panels || [])),
+    [sections]
+  );
 
   const { data: templates, isLoading } = useQuery({
     queryKey: ['scoring-templates-full'],
@@ -86,6 +98,7 @@ export default function ScoringTemplates() {
         .select(`
           *,
           divisions:divisions(id, name, discipline),
+          panels:scoring_template_panels(*),
           sections:scoring_sections(
             *,
             fields:scoring_fields(
