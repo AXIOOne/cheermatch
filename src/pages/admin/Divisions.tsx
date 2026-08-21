@@ -117,12 +117,18 @@ export default function Divisions() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('scoring_templates')
-        .select('id, name, is_default')
+        .select('id, name, is_default, discipline')
         .order('name');
       if (error) throw error;
       return data;
     },
   });
+
+  const filteredTemplates = useMemo(() => {
+    if (!scoringTemplates) return [];
+    const selectedDiscipline = discipline || 'allstar_cheer';
+    return scoringTemplates.filter((t: any) => (t.discipline ?? 'allstar_cheer') === selectedDiscipline);
+  }, [scoringTemplates, discipline]);
 
   const filteredDivisions = useMemo(() => {
     if (!divisions) return [];
