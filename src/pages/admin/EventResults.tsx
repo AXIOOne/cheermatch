@@ -145,7 +145,7 @@ export default function EventResults() {
             </h1>
             <p className="text-muted-foreground mt-1">Ranking Reports</p>
           </div>
-          <Button variant="outline" onClick={handleExport} disabled={exporting || !sections.length}>
+          <Button variant="outline" onClick={handleExport} disabled={exporting || !hasContent}>
             {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
             Export PDF
           </Button>
@@ -156,7 +156,7 @@ export default function EventResults() {
         <CardHeader className="gap-4">
           <CardTitle className="flex items-center gap-2">
             <Trophy className="w-5 h-5" />
-            Standings
+            {mode === 'averages' ? 'Division Averages' : 'Standings'}
           </CardTitle>
           <div className="flex flex-wrap items-center gap-3">
             <Tabs value={mode} onValueChange={handleModeChange}>
@@ -164,6 +164,7 @@ export default function EventResults() {
                 <TabsTrigger value="overall">Overall</TabsTrigger>
                 <TabsTrigger value="level">By Level</TabsTrigger>
                 <TabsTrigger value="division">By Division</TabsTrigger>
+                <TabsTrigger value="averages">Averages</TabsTrigger>
               </TabsList>
             </Tabs>
             {mode !== 'overall' && (
@@ -175,13 +176,14 @@ export default function EventResults() {
                   <SelectItem value="all">
                     {mode === 'level' ? 'All levels' : 'All divisions'}
                   </SelectItem>
-                  {allSections.map((s) => (
+                  {(mode === 'averages' ? avgAll : allSections).map((s) => (
                     <SelectItem key={s.key} value={s.key}>{s.title}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
           </div>
+
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
