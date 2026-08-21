@@ -425,7 +425,7 @@ export default function ScoringTemplates() {
   const handleNewTemplate = () => {
     setEditingTemplate(null);
     form.reset({ name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false });
-    setSections([]); setDeductions([]);
+    setSections([]); setDeductions([]); setTemplatePanels([]);
     setIsDialogOpen(true);
   };
 
