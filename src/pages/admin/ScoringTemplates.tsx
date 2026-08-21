@@ -277,6 +277,8 @@ export default function ScoringTemplates() {
       await sb.from('deduction_types').delete().eq('template_id', id);
       await persistSectionsAndFields(id);
       await persistDeductions(id);
+      await sb.from('scoring_template_panels').delete().eq('template_id', id);
+      await persistTemplatePanels(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scoring-templates-full'] });
