@@ -13,13 +13,14 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, ClipboardList, Loader2, Pencil, Trash2, Lock, Unlock, Eye, Layers, Copy } from 'lucide-react';
+import { Plus, ClipboardList, Loader2, Pencil, Trash2, Lock, Unlock, Eye, Layers, Copy, Users } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SectionTabs, { ScoringSection } from '@/components/admin/SectionTabs';
 import { ScoringField } from '@/components/admin/FieldBuilderDialog';
 import { DeductionType } from '@/components/admin/DeductionTypeManager';
 import TemplatePreview from '@/components/admin/TemplatePreview';
+import TemplatePanelsManager, { TemplatePanel } from '@/components/admin/TemplatePanelsManager';
 
 const templateSchema = z.object({
   name: z.string().min(2, 'Template name must be at least 2 characters'),
