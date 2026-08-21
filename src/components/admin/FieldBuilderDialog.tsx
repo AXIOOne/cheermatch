@@ -401,7 +401,7 @@ export default function FieldBuilderDialog({ open, onOpenChange, initial, availa
             </p>
             {unknownPanels.length > 0 && (
               <p className="text-xs text-destructive">
-                Not on this template\'s panel list: {unknownPanels.join(', ')} — remove or add them under Judge Panels.
+                Not on this template&apos;s panel list: {unknownPanels.join(', ')} — remove them or add them under Judge Panels.
               </p>
             )}
             <div className="flex flex-wrap gap-2">
