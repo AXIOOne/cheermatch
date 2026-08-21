@@ -414,6 +414,7 @@ export default function ScoringTemplates() {
     form.reset();
     setSections([]);
     setDeductions([]);
+    setTemplatePanels([]);
   };
 
   const handleSubmit = (data: TemplateFormData) => {
