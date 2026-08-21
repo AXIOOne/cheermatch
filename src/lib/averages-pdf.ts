@@ -106,59 +106,88 @@ export async function buildAveragesPdf(data: AveragesData): Promise<Uint8Array> 
   const drawSection = (section: AverageSection) => {
     if (!section.rows.length || !section.columns.length) return;
 
-    // How many criteria columns fit on one page?
-    const cellW = 62;
-    const perPage = Math.max(1, Math.floor((CONTENT_W - TEAM_W) / cellW));
-    const chunks: typeof section.columns[] = [];
-    for (let i = 0; i < section.columns.length; i += perPage) {
-      chunks.push(section.columns.slice(i, i + perPage));
+    // Everything fits on one page width: shrink columns and type to fit.
+    const n = section.columns.length;
+    let teamW = Math.min(150, Math.max(80, CONTENT_W - n * 40));
+    let cellW = (CONTENT_W - teamW) / n;
+    if (cellW < 34) {
+      teamW = Math.max(70, CONTENT_W - n * 34);
+      cellW = (CONTENT_W - teamW) / n;
     }
 
-    chunks.forEach((chunk, ci) => {
-      newPage(section.title, ci > 0);
+    const sample = '00.00 | 00.00';
+    let size = 8;
+    for (const s of [8, 7.5, 7, 6.5, 6, 5.5, 5, 4.5]) {
+      size = s;
+      if (regular.widthOfTextAtSize(sample, s) <= cellW - 4) break;
+    }
+    let headSize = Math.min(size, 7.5);
+    const widestWord = Math.max(
+      ...section.columns.flatMap((c) => c.label.split(/\s+/).map((w) => w.length ? w : ' '))
+        .map((w) => bold.widthOfTextAtSize(w, 1))
+    );
+    while (headSize > 4.5 && widestWord * headSize > cellW - 8) headSize -= 0.5;
+    const lineH = size + 2;
 
-      const drawHeader = () => {
-        const yTop = y;
-        page.drawText('Team Name', { x: MARGIN, y: yTop - 9, size: 8.5, font: bold, color: TEXT });
-        let x = MARGIN + TEAM_W;
-        let maxLines = 1;
-        for (const c of chunk) {
-          const lines = wrap(c.label, bold, 8, cellW - 4);
-          maxLines = Math.max(maxLines, lines.length);
-          lines.forEach((ln, i) => {
-            page.drawText(ln, { x, y: yTop - 9 - i * 9, size: 8, font: bold, color: TEXT });
-          });
-          x += cellW;
-        }
-        y = yTop - 9 - (maxLines - 1) * 9 - 8;
-        rule(page, y, 0.75);
-        y -= 10;
-      };
+    const xEdges: number[] = [MARGIN, MARGIN + teamW];
+    for (let i = 0; i < n; i++) xEdges.push(MARGIN + teamW + cellW * (i + 1));
+    const xRight = xEdges[xEdges.length - 1];
 
-      drawHeader();
-
-      for (const row of section.rows) {
-        const nameLines = wrap(averagesTeamName(row), regular, 8, TEAM_W - 6);
-        const rowH = Math.max(18, nameLines.length * 9 + 8);
-        if (y - rowH < MARGIN + 28) {
-          newPage(section.title, true);
-          drawHeader();
-        }
-        const yTop = y;
-        nameLines.forEach((ln, i) => {
-          page.drawText(ln, { x: MARGIN, y: yTop - 8 - i * 9, size: 8, font: regular, color: TEXT });
-        });
-        let x = MARGIN + TEAM_W;
-        for (const c of chunk) {
-          page.drawText(formatAverageCell(row.cells[c.key]), {
-            x, y: yTop - 8, size: 8, font: regular, color: TEXT,
-          });
-          x += cellW;
-        }
-        y -= rowH;
+    const hline = (yy: number, thickness = 0.5) => {
+      page.drawLine({ start: { x: MARGIN, y: yy }, end: { x: xRight, y: yy }, thickness, color: TEXT });
+    };
+    const vlines = (yTop: number, yBottom: number) => {
+      for (const x of xEdges) {
+        page.drawLine({ start: { x, y: yTop }, end: { x, y: yBottom }, thickness: 0.5, color: TEXT });
       }
-    });
+    };
+
+    const cellText = (text: string, xLeft: number, w: number, yy: number, font: PDFFont, s: number) => {
+      const tw = font.widthOfTextAtSize(text, s);
+      page.drawText(text, { x: xLeft + (w - tw) / 2, y: yy, size: s, font, color: TEXT });
+    };
+
+    const drawHeader = () => {
+      const headLines = section.columns.map((c) => wrap(c.label, bold, headSize, cellW - 8));
+      const maxLines = Math.max(1, ...headLines.map((l) => l.length));
+      const headH = maxLines * lineH + 6;
+      const yTop = y;
+
+      hline(yTop, 0.75);
+      page.drawText('Team Name', { x: MARGIN + 4, y: yTop - headH + 5, size: headSize, font: bold, color: TEXT });
+      headLines.forEach((lines, i) => {
+        lines.forEach((ln, li) => {
+          cellText(ln, xEdges[i + 1], cellW, yTop - 4 - (li + 1) * lineH + 3, bold, headSize);
+        });
+      });
+      vlines(yTop, yTop - headH);
+      hline(yTop - headH, 0.75);
+      y = yTop - headH;
+    };
+
+    newPage(section.title, false);
+    drawHeader();
+
+    for (const row of section.rows) {
+      const nameLines = wrap(averagesTeamName(row), regular, size, teamW - 8);
+      const rowH = Math.max(lineH + 6, nameLines.length * lineH + 6);
+      if (y - rowH < MARGIN + 26) {
+        newPage(section.title, true);
+        drawHeader();
+      }
+      const yTop = y;
+      nameLines.forEach((ln, i) => {
+        page.drawText(ln, { x: MARGIN + 4, y: yTop - 4 - (i + 1) * lineH + 3, size, font: regular, color: TEXT });
+      });
+      section.columns.forEach((c, i) => {
+        cellText(formatAverageCell(row.cells[c.key]), xEdges[i + 1], cellW, yTop - 4 - lineH + 3, regular, size);
+      });
+      vlines(yTop, yTop - rowH);
+      hline(yTop - rowH);
+      y = yTop - rowH;
+    }
   };
+
 
   data.sections.forEach(drawSection);
 

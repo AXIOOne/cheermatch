@@ -200,9 +200,9 @@ export default function EventResults() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className="min-w-[200px]">Team Name</TableHead>
+                            <TableHead className="min-w-[200px] border border-border">Team Name</TableHead>
                             {section.columns.map((c) => (
-                              <TableHead key={c.key} className="text-center whitespace-nowrap">
+                              <TableHead key={c.key} className="text-center whitespace-nowrap border border-border">
                                 {c.label}
                               </TableHead>
                             ))}
@@ -211,9 +211,9 @@ export default function EventResults() {
                         <TableBody>
                           {section.rows.map((row) => (
                             <TableRow key={row.submission_id}>
-                              <TableCell className="font-medium">{averagesTeamName(row)}</TableCell>
+                              <TableCell className="font-medium border border-border">{averagesTeamName(row)}</TableCell>
                               {section.columns.map((c) => (
-                                <TableCell key={c.key} className="text-center whitespace-nowrap tabular-nums">
+                                <TableCell key={c.key} className="text-center whitespace-nowrap tabular-nums border border-border">
                                   {formatAverageCell(row.cells[c.key])}
                                 </TableCell>
                               ))}
