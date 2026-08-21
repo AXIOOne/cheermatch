@@ -54,11 +54,17 @@ export default function EventResults() {
   const { data: rows, isLoading: rowsLoading } = useQuery({
     queryKey: ['event-ranking-rows', eventId],
     queryFn: () => fetchEventRankingRows(eventId!),
-    enabled: !!eventId,
+    enabled: !!eventId && mode !== 'averages',
+  });
+
+  const { data: averageSections, isLoading: avgLoading } = useQuery({
+    queryKey: ['event-averages', eventId],
+    queryFn: () => fetchEventAverages(eventId!),
+    enabled: !!eventId && mode === 'averages',
   });
 
   const allSections = useMemo(
-    () => buildRankingSections(rows || [], mode),
+    () => (mode === 'averages' ? [] : buildRankingSections(rows || [], mode)),
     [rows, mode]
   );
 
@@ -67,17 +73,35 @@ export default function EventResults() {
     [allSections, groupFilter]
   );
 
-  const isLoading = eventLoading || rowsLoading;
+  const avgAll = averageSections || [];
+  const avgSections = useMemo(
+    () => (groupFilter === 'all' ? avgAll : avgAll.filter((s) => s.key === groupFilter)),
+    [avgAll, groupFilter]
+  );
+
+  const isLoading = eventLoading || (mode === 'averages' ? avgLoading : rowsLoading);
+  const hasContent = mode === 'averages' ? avgSections.length > 0 : sections.length > 0;
 
   const handleModeChange = (value: string) => {
-    setMode(value as RankingMode);
+    setMode(value as ReportMode);
     setGroupFilter('all');
   };
 
   const handleExport = async () => {
-    if (!sections.length) return;
+    if (!hasContent) return;
     setExporting(true);
     try {
+      if (mode === 'averages') {
+        const bytes = await buildAveragesPdf({
+          event_name: event?.name || 'Event',
+          start_date: (event as any)?.start_date,
+          end_date: (event as any)?.end_date,
+          sections: avgSections,
+        });
+        const safe = `${event?.name || 'Event'} - Division Averages Report`.replace(/[^\w\s-]/g, '').trim();
+        downloadRankingsPdf(bytes, `${safe}.pdf`);
+        return;
+      }
       const bytes = await buildRankingsPdf(
         {
           event_name: event?.name || 'Event',
@@ -98,6 +122,7 @@ export default function EventResults() {
       setExporting(false);
     }
   };
+
 
   const getRankBadge = (rank: number) => {
     if (rank === 1) return <Medal className="w-5 h-5 text-yellow-500" />;
