@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -76,6 +76,7 @@ export default function Divisions() {
   });
 
   const discipline = form.watch('discipline');
+  const scoringTemplateId = form.watch('scoring_template_id');
 
   const openCreate = () => {
     setEditingDivision(null);
@@ -117,12 +118,25 @@ export default function Divisions() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('scoring_templates')
-        .select('id, name, is_default')
+        .select('id, name, is_default, discipline')
         .order('name');
       if (error) throw error;
       return data;
     },
   });
+
+  const filteredTemplates = useMemo(() => {
+    if (!scoringTemplates) return [];
+    const selectedDiscipline = discipline || 'allstar_cheer';
+    return scoringTemplates.filter((t: any) => (t.discipline ?? 'allstar_cheer') === selectedDiscipline);
+  }, [scoringTemplates, discipline]);
+
+  useEffect(() => {
+    const valid = filteredTemplates?.some((t: any) => t.id === scoringTemplateId);
+    if (scoringTemplateId && !valid) {
+      form.setValue('scoring_template_id', '');
+    }
+  }, [discipline, filteredTemplates, scoringTemplateId, form]);
 
   const filteredDivisions = useMemo(() => {
     if (!divisions) return [];
@@ -329,8 +343,8 @@ export default function Divisions() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {scoringTemplates && scoringTemplates.length > 0 ? (
-                          scoringTemplates.map((t: any) => (
+                        {filteredTemplates && filteredTemplates.length > 0 ? (
+                          filteredTemplates.map((t: any) => (
                             <SelectItem key={t.id} value={t.id}>
                               {t.name}
                               {t.is_default ? ' (default)' : ''}
@@ -338,7 +352,7 @@ export default function Divisions() {
                           ))
                         ) : (
                           <SelectItem value="__none__" disabled>
-                            No templates available
+                            No templates available for this discipline
                           </SelectItem>
                         )}
                       </SelectContent>
