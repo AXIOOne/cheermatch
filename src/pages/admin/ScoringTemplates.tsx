@@ -389,6 +389,16 @@ export default function ScoringTemplates() {
           }))
         );
       }
+
+      const srcPanels = (src.panels || []) as any[];
+      if (srcPanels.length) {
+        await sb.from('scoring_template_panels').insert(
+          srcPanels.map((p, idx) => ({
+            template_id: newTpl.id, name: p.name,
+            abbreviation: p.abbreviation, display_order: p.display_order ?? idx,
+          }))
+        );
+      }
       return newTpl;
     },
     onSuccess: () => {
