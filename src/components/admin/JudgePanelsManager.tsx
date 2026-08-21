@@ -39,6 +39,39 @@ export default function JudgePanelsManager({ eventId, onClose }: JudgePanelsMana
     },
   });
 
+  // Panel slots defined by the scoring templates this event's teams actually use.
+  const { data: templatePanels } = useQuery({
+    queryKey: ['event-template-panels', eventId],
+    queryFn: async () => {
+      const { data: teams, error: tErr } = await (supabase as any)
+        .from('teams')
+        .select('division:divisions(scoring_template_id)')
+        .eq('event_id', eventId);
+      if (tErr) throw tErr;
+      const templateIds = [
+        ...new Set(
+          (teams || [])
+            .map((t: any) => (Array.isArray(t.division) ? t.division[0] : t.division)?.scoring_template_id)
+            .filter(Boolean)
+        ),
+      ];
+      if (templateIds.length === 0) return [];
+      const { data, error } = await (supabase as any)
+        .from('scoring_template_panels')
+        .select('name, abbreviation, display_order')
+        .in('template_id', templateIds)
+        .order('display_order');
+      if (error) throw error;
+      const seen = new Set<string>();
+      return (data || []).filter((p: any) => {
+        const key = String(p.abbreviation).toUpperCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: async (panel: { name: string; abbreviation: string; description: string }) => {
       const maxOrder = panels?.reduce((max, p) => Math.max(max, p.display_order), -1) ?? -1;
