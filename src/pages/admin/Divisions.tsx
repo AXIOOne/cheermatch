@@ -335,8 +335,8 @@ export default function Divisions() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {scoringTemplates && scoringTemplates.length > 0 ? (
-                          scoringTemplates.map((t: any) => (
+                        {filteredTemplates && filteredTemplates.length > 0 ? (
+                          filteredTemplates.map((t: any) => (
                             <SelectItem key={t.id} value={t.id}>
                               {t.name}
                               {t.is_default ? ' (default)' : ''}
@@ -344,7 +344,7 @@ export default function Divisions() {
                           ))
                         ) : (
                           <SelectItem value="__none__" disabled>
-                            No templates available
+                            No templates available for this discipline
                           </SelectItem>
                         )}
                       </SelectContent>
