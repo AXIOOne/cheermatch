@@ -1384,6 +1384,44 @@ export type Database = {
           },
         ]
       }
+      scoring_template_panels: {
+        Row: {
+          abbreviation: string
+          created_at: string
+          display_order: number
+          id: string
+          name: string
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          abbreviation: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          name: string
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          abbreviation?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          name?: string
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scoring_template_panels_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scoring_templates: {
         Row: {
           created_at: string
