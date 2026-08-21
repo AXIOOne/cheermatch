@@ -16,6 +16,14 @@ import {
   type RankingMode,
 } from '@/lib/build-rankings';
 import { buildRankingsPdf, downloadRankingsPdf } from '@/lib/rankings-pdf';
+import {
+  averagesTeamName,
+  fetchEventAverages,
+  formatAverageCell,
+} from '@/lib/build-averages';
+import { buildAveragesPdf } from '@/lib/averages-pdf';
+
+type ReportMode = RankingMode | 'averages';
 
 const MODE_TITLES: Record<RankingMode, string> = {
   overall: 'Overall Standings Report',
@@ -25,9 +33,10 @@ const MODE_TITLES: Record<RankingMode, string> = {
 
 export default function EventResults() {
   const { eventId } = useParams<{ eventId: string }>();
-  const [mode, setMode] = useState<RankingMode>('overall');
+  const [mode, setMode] = useState<ReportMode>('overall');
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [exporting, setExporting] = useState(false);
+
 
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ['event', eventId],
