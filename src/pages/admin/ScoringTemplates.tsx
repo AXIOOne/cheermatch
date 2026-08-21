@@ -251,6 +251,7 @@ export default function ScoringTemplates() {
       if (error) throw error;
       await persistSectionsAndFields(template.id);
       await persistDeductions(template.id);
+      await persistTemplatePanels(template.id);
       return template;
     },
     onSuccess: () => {
