@@ -497,8 +497,24 @@ export default function Settings() {
                   </a>
                 </Button>
               </div>
+              <p className="text-sm text-muted-foreground mt-6 mb-3">
+                Looking for feature documentation? The full portal manual is available in the Help section.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" asChild>
+                  <Link to="/admin/help">
+                    <HelpCircle className="w-4 h-4 mr-2" /> Open Help
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <a href="/docs/cheermatch-admin-manual.pdf" download>
+                    <FileDown className="w-4 h-4 mr-2" /> Portal manual (PDF)
+                  </a>
+                </Button>
+              </div>
             </CardContent>
           </Card>
+
         </div>
       )}
 
