@@ -28,6 +28,7 @@ import {
   LayoutDashboard,
   Play,
   ClipboardList,
+  HelpCircle,
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -105,6 +106,7 @@ export function JudgeSidebar() {
               <NavItem to="/judge" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
               <NavItem to="/judge/queue" icon={<Play className="w-5 h-5" />} label="Scoring Queue" />
               <RubricsNavItem to="/judge/rubrics" />
+              <NavItem to="/judge/help" icon={<HelpCircle className="w-5 h-5" />} label="Help" />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

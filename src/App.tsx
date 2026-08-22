@@ -32,6 +32,7 @@ import EventsSummary from "./pages/admin/EventsSummary";
 import Rubrics from "./pages/admin/Rubrics";
 import SubmissionDetail from "./pages/admin/SubmissionDetail";
 import Broadcast from "./pages/admin/Broadcast";
+import AdminHelp from "./pages/admin/Help";
 
 // Judge imports
 import { JudgeLayout } from "./components/layout/JudgeLayout";
@@ -40,6 +41,7 @@ import ScoringQueue from "./pages/judge/ScoringQueue";
 import ScorePerformance from "./pages/judge/ScorePerformance";
 import ScoreHistory from "./pages/judge/ScoreHistory";
 import JudgeRubrics from "./pages/judge/Rubrics";
+import JudgeHelp from "./pages/judge/Help";
 
 // Public review
 import ScoreReview from "./pages/review/ScoreReview";
@@ -95,6 +97,8 @@ const App = () => (
                 <Route path="roles" element={<UserRoles />} />
                 <Route path="organizations" element={<Organizations />} />
                 <Route path="settings" element={<Settings />} />
+                <Route path="help" element={<AdminHelp />} />
+                <Route path="help/:topic" element={<AdminHelp />} />
               </Route>
 
               {/* Judge Routes */}
@@ -104,6 +108,8 @@ const App = () => (
                 <Route path="score/:submissionId" element={<ScorePerformance />} />
                 <Route path="history" element={<ScoreHistory />} />
                 <Route path="rubrics" element={<JudgeRubrics />} />
+                <Route path="help" element={<JudgeHelp />} />
+                <Route path="help/:topic" element={<JudgeHelp />} />
               </Route>
 
               {/* Public Review Route (no auth required) */}

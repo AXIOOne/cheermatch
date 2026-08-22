@@ -30,6 +30,7 @@ import {
   LayoutDashboard,
   Video,
   MessageSquare,
+  HelpCircle,
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -110,6 +111,7 @@ export function AdminSidebar() {
               <NavItem to="/admin/submissions" icon={<Video className="w-5 h-5" />} label="Submissions" />
               <NavItem to="/admin/broadcast" icon={<MessageSquare className="w-5 h-5" />} label="Judge Broadcast" />
               <SettingsNavItem />
+              <NavItem to="/admin/help" icon={<HelpCircle className="w-5 h-5" />} label="Help" />
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

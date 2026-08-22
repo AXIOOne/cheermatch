@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play, Mail, Palette, Upload, KeyRound, ClipboardCheck, FileDown } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play, Mail, Palette, Upload, KeyRound, ClipboardCheck, FileDown, HelpCircle } from 'lucide-react';
 import { EmailTemplateManager } from '@/components/admin/EmailTemplateManager';
 import { ApiAccessDialog } from '@/components/admin/ApiAccessDialog';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
@@ -497,8 +497,24 @@ export default function Settings() {
                   </a>
                 </Button>
               </div>
+              <p className="text-sm text-muted-foreground mt-6 mb-3">
+                Looking for feature documentation? The full portal manual is available in the Help section.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" asChild>
+                  <Link to="/admin/help">
+                    <HelpCircle className="w-4 h-4 mr-2" /> Open Help
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild>
+                  <a href="/docs/cheermatch-admin-manual.pdf" download>
+                    <FileDown className="w-4 h-4 mr-2" /> Portal manual (PDF)
+                  </a>
+                </Button>
+              </div>
             </CardContent>
           </Card>
+
         </div>
       )}
 
