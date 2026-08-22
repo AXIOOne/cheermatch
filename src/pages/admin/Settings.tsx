@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play, Mail, Palette, Upload, KeyRound, ClipboardCheck, FileDown } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Shield, Bell, Loader2, Video, Cloud, Play, Mail, Palette, Upload, KeyRound, ClipboardCheck, FileDown, HelpCircle } from 'lucide-react';
 import { EmailTemplateManager } from '@/components/admin/EmailTemplateManager';
 import { ApiAccessDialog } from '@/components/admin/ApiAccessDialog';
 import { usePlatformSettings } from '@/hooks/usePlatformSettings';
