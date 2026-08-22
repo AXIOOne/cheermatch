@@ -32,6 +32,7 @@ import EventsSummary from "./pages/admin/EventsSummary";
 import Rubrics from "./pages/admin/Rubrics";
 import SubmissionDetail from "./pages/admin/SubmissionDetail";
 import Broadcast from "./pages/admin/Broadcast";
+import AdminHelp from "./pages/admin/Help";
 
 // Judge imports
 import { JudgeLayout } from "./components/layout/JudgeLayout";
