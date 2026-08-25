@@ -55,14 +55,22 @@ export default function Dashboard() {
       if (error) throw error;
       const userIds = Array.from(new Set((data ?? []).map((d) => d.user_id)));
       let avatarMap = new Map<string, string | null>();
+      const roleMap = new Map<string, string[]>();
       if (userIds.length) {
-        const { data: profs } = await supabase
-          .from('profiles')
-          .select('user_id, avatar_url')
-          .in('user_id', userIds);
+        const [{ data: profs }, { data: roleRows }] = await Promise.all([
+          supabase.from('profiles').select('user_id, avatar_url').in('user_id', userIds),
+          supabase.from('user_roles').select('user_id, role').in('user_id', userIds),
+        ]);
         avatarMap = new Map((profs ?? []).map((p: any) => [p.user_id, p.avatar_url]));
+        (roleRows ?? []).forEach((r: any) => {
+          roleMap.set(r.user_id, [...(roleMap.get(r.user_id) ?? []), r.role]);
+        });
       }
-      return (data ?? []).map((d) => ({ ...d, avatar_url: avatarMap.get(d.user_id) ?? null }));
+      return (data ?? []).map((d) => ({
+        ...d,
+        avatar_url: avatarMap.get(d.user_id) ?? null,
+        roles: roleMap.get(d.user_id) ?? [],
+      }));
     },
   });
 
