@@ -539,7 +539,7 @@ export default function Submissions() {
                       onCheckedChange={toggleAllFiltered}
                     />
                   </TableHead>
-                  <TableHead>Team</TableHead>
+                  <TableHead className="min-w-[260px]">Team</TableHead>
                   <TableHead className="w-[220px]">Gym</TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Division / Level</TableHead>
