@@ -529,7 +529,7 @@ export default function Submissions() {
                 <TableRow>
                   <TableHead className="w-10">
                     <Checkbox
-                      checked={filteredSubmissions.length > 0 && filteredSubmissions.every(s => selectedIds.has(s.id))}
+                      checked={!!filteredSubmissions?.length && filteredSubmissions.every(s => selectedIds.has(s.id))}
                       onCheckedChange={toggleAllFiltered}
                     />
                   </TableHead>
