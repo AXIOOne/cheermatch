@@ -58,8 +58,13 @@ export default function MobileTeamDetail() {
             screen_capture_cnt: Number(e.screen_capture_cnt || 2),
           });
         }
+        let count = 0;
+        try {
+          const attRes = await mobileApi.listAttempts(eventId, teamId);
+          if (attRes.status && Array.isArray(attRes.data)) count = attRes.data.length;
+        } catch { /* offline */ }
         const stored = await listAttempts(attemptKey(eventId, teamId));
-        setAttemptCount(stored.length);
+        setAttemptCount(Math.max(count, stored.length));
       } finally {
         setLoading(false);
       }
