@@ -185,13 +185,17 @@ export async function bcGetVideoSources(videoId: string): Promise<BcSource[]> {
 }
 
 // Highest-bitrate progressive MP4 rendition (skips HLS/DASH manifests).
+// Dynamic Delivery accounts often omit `container`, so fall back to sniffing
+// the src extension / mime type instead of requiring container === "MP4".
 export function bcPickMp4Source(sources: BcSource[]): BcSource | null {
-  const mp4s = sources.filter((s) =>
-    !!s.src &&
-    /^https?:/i.test(s.src) &&
-    (s.container ?? "").toUpperCase() === "MP4" &&
-    !/\.m3u8|\.mpd/i.test(s.src)
-  );
+  const mp4s = sources.filter((s) => {
+    const src = s.src ?? "";
+    if (!/^https?:/i.test(src)) return false;
+    if (/\.m3u8|\.mpd|\.ism/i.test(src)) return false;
+    const container = (s.container ?? "").toUpperCase();
+    const type = (s.type ?? "").toLowerCase();
+    return container === "MP4" || /\.mp4(\?|$)/i.test(src) || type.includes("mp4");
+  });
   if (mp4s.length === 0) return null;
   mp4s.sort((a, b) => (b.encoding_rate ?? b.size ?? 0) - (a.encoding_rate ?? a.size ?? 0));
   return mp4s[0];
