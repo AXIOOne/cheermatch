@@ -253,6 +253,37 @@ export default function Submissions() {
     revision_requested: countBy('revision_requested'),
   };
 
+  // attempts per team, plus teams that recorded but never uploaded a submission
+  const attemptsByTeam = new Map<string, { count: number; lastAt: string }>();
+  (attempts ?? []).forEach((a) => {
+    const cur = attemptsByTeam.get(a.team_id);
+    attemptsByTeam.set(a.team_id, {
+      count: (cur?.count ?? 0) + 1,
+      lastAt: cur?.lastAt && cur.lastAt > a.started_at ? cur.lastAt : a.started_at,
+    });
+  });
+
+  const submittedTeamIds = new Set((submissions ?? []).map((s) => s.team.id));
+  const capturedNoUpload = Object.values(
+    (attempts ?? [])
+      .filter((a) => !submittedTeamIds.has(a.team_id))
+      .filter((a) => eventFilter === 'all' || a.event_id === eventFilter)
+      .reduce((acc, a) => {
+        const key = a.team_id;
+        const cur = acc[key];
+        acc[key] = {
+          teamId: a.team_id,
+          teamName: a.team?.name ?? 'Unknown team',
+          gymName: a.team?.gym_name ?? '',
+          eventName: a.event?.name ?? '',
+          count: (cur?.count ?? 0) + 1,
+          lastAt: cur?.lastAt && cur.lastAt > a.started_at ? cur.lastAt : a.started_at,
+        };
+        return acc;
+      }, {} as Record<string, { teamId: string; teamName: string; gymName: string; eventName: string; count: number; lastAt: string }>),
+  ).sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
+
+
   const archivedCount = submissions?.filter((s) => !!s.archived_at).length || 0;
   const currentCount = submissions?.filter((s) => !s.archived_at).length || 0;
 
