@@ -26,9 +26,23 @@ import { useMobileAuth } from "@/hooks/useMobileAuth";
 import { detectDevice, deviceLabel, type DetectedDevice } from "@/lib/device-detect";
 import { CaptureOverlay } from "@/components/mobile/CaptureOverlay";
 import { AudioMeter } from "@/components/mobile/AudioMeter";
+import {
+  attemptKey,
+  clearAttempts,
+  finalizeAttempt,
+  listAttempts,
+  reserveAttempt,
+} from "@/lib/capture-attempts";
 
 type Phase = "ready" | "countdown" | "recording" | "preview" | "choose" | "uploading" | "done";
-type Attempt = { id: number; blob: Blob; url: string; durationSec: number };
+type Attempt = {
+  id: number;
+  seq: number;
+  blob: Blob | null;
+  url: string | null;
+  durationSec: number;
+  complete: boolean;
+};
 
 const DEFAULT_DURATION = 150; // 2:30
 const DEFAULT_ATTEMPTS = 2;
@@ -46,6 +60,7 @@ export default function MobileRecord() {
   const { eventId = "", teamId = "" } = useParams();
   const navigate = useNavigate();
   const { signOut } = useMobileAuth();
+  const storageKey = attemptKey(eventId, teamId);
 
   const videoLiveRef = useRef<HTMLVideoElement>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
@@ -152,6 +167,38 @@ export default function MobileRecord() {
       }
     })();
   }, [eventId, teamId, navigate]);
+
+  // Restore previously recorded attempts for this team (survives reload / app restart)
+  useEffect(() => {
+    let cancelled = false;
+    const urls: string[] = [];
+    (async () => {
+      const stored = await listAttempts(storageKey);
+      if (cancelled || stored.length === 0) return;
+      const restored: Attempt[] = stored.map((s) => {
+        const url = s.blob ? URL.createObjectURL(s.blob) : null;
+        if (url) urls.push(url);
+        return {
+          id: s.id,
+          seq: s.seq,
+          blob: s.blob,
+          url,
+          durationSec: s.durationSec,
+          complete: Boolean(s.complete && s.blob),
+        };
+      });
+      setAttempts(restored);
+      toast.message(
+        `${restored.length} attempt${restored.length === 1 ? "" : "s"} already recorded for this team`,
+      );
+    })();
+    return () => {
+      cancelled = true;
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [storageKey]);
+
+
 
   // Initialize camera (skip on desktop — capture is disallowed)
   useEffect(() => {
@@ -266,7 +313,7 @@ export default function MobileRecord() {
         if (n <= 1) {
           if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
           countdownTimerRef.current = null;
-          startRecording();
+          void startRecording();
           return 0;
         }
         return n - 1;
@@ -283,7 +330,7 @@ export default function MobileRecord() {
     setPhase("ready");
   }
 
-  function startRecording() {
+  async function startRecording() {
     if (!streamRef.current) { toast.error("Camera not ready"); return; }
     chunksRef.current = [];
     const mimeCandidates = ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=h264", "video/webm"];
@@ -293,16 +340,28 @@ export default function MobileRecord() {
       videoBitsPerSecond: 6_000_000,
       audioBitsPerSecond: 128_000,
     });
+
+    // Reserve the attempt BEFORE recording starts so any length of recording —
+    // even one abandoned by reloading or closing the app — counts permanently.
+    const reserved = await reserveAttempt(storageKey);
+    setAttempts((prev) => [
+      ...prev,
+      { id: reserved.id, seq: reserved.seq, blob: null, url: null, durationSec: 0, complete: false },
+    ]);
+
     const startedAt = Date.now();
     rec.ondataavailable = (e) => e.data && e.data.size > 0 && chunksRef.current.push(e.data);
     rec.onstop = () => {
       const out = new Blob(chunksRef.current, { type: rec.mimeType || "video/mp4" });
       const durationSec = Math.min(maxDuration, Math.round((Date.now() - startedAt) / 1000));
-      const id = Date.now();
       const url = URL.createObjectURL(out);
-      const next: Attempt = { id, blob: out, url, durationSec };
-      setAttempts((prev) => [...prev, next]);
-      setPreviewAttemptId(id);
+      void finalizeAttempt(reserved.id, out, durationSec);
+      setAttempts((prev) =>
+        prev.map((a) =>
+          a.id === reserved.id ? { ...a, blob: out, url, durationSec, complete: true } : a,
+        ),
+      );
+      setPreviewAttemptId(reserved.id);
       setPhase("preview");
       if (autoStopRef.current) { window.clearTimeout(autoStopRef.current); autoStopRef.current = null; }
       wakeLockRef.current?.release().catch(() => {});
@@ -332,9 +391,11 @@ export default function MobileRecord() {
 
   function goChoose() {
     setPreviewAttemptId(null);
-    setSelectedAttemptId(attempts[attempts.length - 1]?.id ?? null);
+    const playable = attempts.filter((a) => a.complete && a.url);
+    setSelectedAttemptId(playable[playable.length - 1]?.id ?? null);
     setPhase("choose");
   }
+
 
   function toggleOverlay() {
     setOverlayOn((on) => {
@@ -386,7 +447,8 @@ export default function MobileRecord() {
       });
       if (!completeRes.status) throw new Error(completeRes.message);
       setProgress(100);
-      attempts.forEach((a) => URL.revokeObjectURL(a.url));
+      attempts.forEach((a) => a.url && URL.revokeObjectURL(a.url));
+      await clearAttempts(storageKey);
       setPhase("done");
     } catch (e) {
       toast.error((e as Error).message);
@@ -450,23 +512,36 @@ export default function MobileRecord() {
           </p>
         </div>
         <div className="space-y-3">
-          {attempts.map((a, idx) => {
+          {attempts.map((a) => {
             const active = selectedAttemptId === a.id;
+            const playable = a.complete && a.url;
             return (
               <Card
                 key={a.id}
-                onClick={() => phase === "choose" && setSelectedAttemptId(a.id)}
-                className={`p-3 cursor-pointer border-2 transition ${active ? "border-primary" : "border-transparent"}`}
+                onClick={() => phase === "choose" && playable && setSelectedAttemptId(a.id)}
+                className={`p-3 border-2 transition ${playable ? "cursor-pointer" : "opacity-70"} ${active ? "border-primary" : "border-transparent"}`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="font-medium">Choose Attempt #{idx + 1}</div>
-                  <div className="text-xs text-muted-foreground font-mono">{fmt(a.durationSec)}</div>
+                  <div className="font-medium">Attempt #{a.seq}</div>
+                  <div className="text-xs text-muted-foreground font-mono">
+                    {playable ? fmt(a.durationSec) : "Not saved"}
+                  </div>
                 </div>
-                <video src={a.url} controls playsInline className="w-full rounded bg-black aspect-video" />
+                {playable ? (
+                  <video src={a.url!} controls playsInline className="w-full rounded bg-black aspect-video" />
+                ) : (
+                  <div className="w-full rounded bg-muted aspect-video flex items-center justify-center text-center px-4">
+                    <span className="text-xs text-muted-foreground">
+                      This attempt was interrupted before it finished saving. It still counts toward your{" "}
+                      {maxAttempts}-attempt limit.
+                    </span>
+                  </div>
+                )}
               </Card>
             );
           })}
         </div>
+
 
         {phase === "uploading" ? (
           <div className="space-y-2">
