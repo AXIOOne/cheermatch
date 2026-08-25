@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -164,7 +164,7 @@ export function ReplaceVideoDialog({ open, onOpenChange, submissionId, teamName,
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
+          <Button variant="outline" onClick={() => { onOpenChange(false); reset(); }} disabled={busy}>Cancel</Button>
           <Button onClick={handleUpload} disabled={!file || busy}>
             {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
             Upload replacement
