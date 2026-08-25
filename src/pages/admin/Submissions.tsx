@@ -319,7 +319,7 @@ export default function Submissions() {
   const currentCount = submissions?.filter((s) => !s.archived_at).length || 0;
 
   const switchTab = (value: string) => {
-    setTab(value === 'archived' ? 'archived' : 'current');
+    setTab(value === 'archived' ? 'archived' : value === 'pending' ? 'pending' : 'current');
     setSelectedIds(new Set());
   };
 
