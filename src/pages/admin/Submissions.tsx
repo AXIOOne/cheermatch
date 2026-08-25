@@ -11,11 +11,14 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Video, VideoOff, Inbox, CheckCircle, XCircle, Search, ExternalLink, Mail, RotateCcw, Archive, ArchiveRestore, Trash2, Download, Upload, Clapperboard, AlertTriangle } from 'lucide-react';
+import { Loader2, Video, VideoOff, Inbox, CheckCircle, XCircle, Search, ExternalLink, Mail, RotateCcw, Archive, ArchiveRestore, Trash2, Download, Upload, Clapperboard, AlertTriangle, Play } from 'lucide-react';
 import { downloadSubmissionVideo, VideoPreparingError } from '@/lib/download-submission-video';
 import { useVideoPrep } from '@/hooks/useVideoPrep';
 import { format } from 'date-fns';
@@ -24,6 +27,7 @@ import { BulkEmailDialog } from '@/components/admin/BulkEmailDialog';
 import { DeleteSubmissionDialog } from '@/components/admin/DeleteSubmissionDialog';
 import { ReplaceVideoDialog } from '@/components/admin/ReplaceVideoDialog';
 import { useAuth } from '@/hooks/useAuth';
+import VideoPlayer from '@/components/video/VideoPlayer';
 import type { Database } from '@/integrations/supabase/types';
 
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
@@ -87,6 +91,7 @@ export default function Submissions() {
   const { isAdmin } = useAuth();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<{ id: string; teamName: string } | null>(null);
+  const [videoModalSubmission, setVideoModalSubmission] = useState<SubmissionWithDetails | null>(null);
 
   const videoPrep = useVideoPrep();
 
@@ -570,9 +575,19 @@ export default function Submissions() {
                       <TableCell className="text-sm text-muted-foreground align-top">
                         <div className="flex flex-col gap-1.5">
                           <p className="text-sm font-semibold text-muted-foreground leading-tight whitespace-nowrap">{submission.team.name}</p>
-                          <div className="h-10 aspect-video bg-muted rounded flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (submission.video_url) setVideoModalSubmission(submission);
+                            }}
+                            disabled={!submission.video_url}
+                            className="h-10 aspect-video bg-muted rounded flex items-center justify-center cursor-pointer hover:bg-muted/80 disabled:cursor-default disabled:opacity-60 relative"
+                            title={submission.video_url ? 'Play video' : 'No video available'}
+                          >
                             <Video className="w-4 h-4 text-muted-foreground" />
-                          </div>
+                            {submission.video_url && <Play className="w-3 h-3 text-foreground absolute opacity-80" />}
+                          </button>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground break-words max-w-[220px]">{submission.team.gym_name}</TableCell>
@@ -853,6 +868,22 @@ export default function Submissions() {
         submissions={deleteTargets}
         onDeleted={() => setSelectedIds(new Set())}
       />
+
+      <Dialog open={!!videoModalSubmission} onOpenChange={(o) => { if (!o) setVideoModalSubmission(null); }}>
+        <DialogContent className="max-w-4xl w-[calc(100%-2rem)]">
+          <DialogHeader>
+            <DialogTitle>{videoModalSubmission?.team.name} — Performance Video</DialogTitle>
+          </DialogHeader>
+          {videoModalSubmission && (
+            <VideoPlayer
+              url={videoModalSubmission.video_url}
+              thumbnailUrl={videoModalSubmission.thumbnail_url}
+              status={videoModalSubmission.status}
+              title={`${videoModalSubmission.team.name} performance video`}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
