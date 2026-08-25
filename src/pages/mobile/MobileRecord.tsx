@@ -277,11 +277,7 @@ export default function MobileRecord() {
           const cams = devices.filter((d) => d.kind === "videoinput");
           const ultra = cams.find((d) => {
             const l = d.label.toLowerCase();
-            return (
-              /ultra|0\.5|wide/.test(l) &&
-              !/front|tele|telephoto/.test(l) &&
-              !/^(?!.*ultra).*back dual wide.*$/.test("")
-            );
+            return /ultra|0\.5/.test(l) && !/front|tele/.test(l);
           });
           if (!cancelled) {
             setWideDeviceId(ultra?.deviceId ?? null);
@@ -319,7 +315,7 @@ export default function MobileRecord() {
       if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
       wakeLockRef.current?.release().catch(() => {});
     };
-  }, [device.kind, cameraEnabled, wideAngle, wideDeviceId]);
+  }, [device.kind, cameraEnabled, wideAngle, wideAngle ? wideDeviceId : null]);
 
 
   // Battery + storage estimates (one-shot)
