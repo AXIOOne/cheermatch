@@ -557,7 +557,7 @@ export default function Submissions() {
                   return (
                     <TableRow
                       key={submission.id}
-                      className={`group cursor-pointer hover:bg-muted/50 ${selectedIds.has(submission.id) ? 'bg-primary/5' : ''}`}
+                      className={`group cursor-pointer text-sm hover:bg-muted/50 ${selectedIds.has(submission.id) ? 'bg-primary/5' : ''}`}
                       onClick={() => navigate(`/admin/submissions/${submission.id}`)}
                     >
                       <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
@@ -566,7 +566,7 @@ export default function Submissions() {
                           onCheckedChange={() => toggleSelection(submission.id)}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-sm">
                         <div className="flex items-center gap-3">
                           {submission.thumbnail_url ? (
                             <img
@@ -580,25 +580,25 @@ export default function Submissions() {
                             </div>
                           )}
                           <div>
-                            <p className="font-medium">{submission.team.name}</p>
-                            <p className="text-sm text-muted-foreground">{submission.team.gym_name}</p>
+                            <p className="text-sm font-medium leading-tight">{submission.team.name}</p>
+                            <p className="text-sm text-muted-foreground leading-tight">{submission.team.gym_name}</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>{submission.event.name}</TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          <p>{submission.team.division.name}</p>
-                          <p className="text-muted-foreground">{submission.team.level.name}</p>
+                      <TableCell className="text-sm">{submission.event.name}</TableCell>
+                      <TableCell className="text-sm">
+                        <div>
+                          <p className="leading-tight">{submission.team.division.name}</p>
+                          <p className="text-muted-foreground leading-tight">{submission.team.level.name}</p>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`${cfg.className} border-0`}>
+                      <TableCell className="text-sm">
+                        <Badge variant="outline" className={`${cfg.className} border-0 text-sm font-medium`}>
                           <StatusIcon className="w-3 h-3 mr-1" />
                           {cfg.label}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="text-sm">
                         {(() => {
                           const att = attemptsByTeam.get(teamEventKey(submission.event.id, submission.team.id));
                           return att ? (
@@ -616,7 +616,7 @@ export default function Submissions() {
                       </TableCell>
 
 
-                      <TableCell>
+                      <TableCell className="text-sm">
                         {isArchivedTab
                           ? submission.archived_at
                             ? format(new Date(submission.archived_at), 'MMM d, yyyy')
@@ -625,6 +625,7 @@ export default function Submissions() {
                             ? format(new Date(submission.submitted_at), 'MMM d, yyyy')
                             : '-'}
                       </TableCell>
+
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           {!isArchivedTab && (
