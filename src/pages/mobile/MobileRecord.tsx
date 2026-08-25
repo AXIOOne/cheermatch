@@ -785,6 +785,15 @@ export default function MobileRecord() {
             >
               <span className="h-16 w-16 rounded-full bg-destructive group-hover:bg-destructive/90" />
             </button>
+            {fs.supported && !fs.active && (
+              <Button
+                variant="secondary"
+                onClick={() => void fs.enter()}
+                className="pointer-events-auto h-11 px-5"
+              >
+                <Maximize className="h-4 w-4 mr-2" /> Go full screen
+              </Button>
+            )}
             {attempts.length > 0 && (
               <Button
                 variant="secondary"
@@ -793,6 +802,11 @@ export default function MobileRecord() {
               >
                 <Video className="h-4 w-4 mr-2" /> Review previous take{attempts.length > 1 ? "s" : ""}
               </Button>
+            )}
+            {!fs.supported && (
+              <p className="pointer-events-none max-w-xs text-center text-[11px] text-white/70">
+                For an unobstructed view, add this app to your home screen and open it from there — it runs without the address bar.
+              </p>
             )}
           </div>
 
