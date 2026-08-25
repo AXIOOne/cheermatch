@@ -28,6 +28,9 @@ export type Database = {
           team_id: string
           updated_at: string
           user_id: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
         }
         Insert: {
           attempt_number: number
@@ -42,6 +45,9 @@ export type Database = {
           team_id: string
           updated_at?: string
           user_id?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Update: {
           attempt_number?: number
@@ -56,6 +62,9 @@ export type Database = {
           team_id?: string
           updated_at?: string
           user_id?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
         }
         Relationships: [
           {

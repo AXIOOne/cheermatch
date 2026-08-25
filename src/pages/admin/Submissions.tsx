@@ -164,6 +164,7 @@ export default function Submissions() {
       const { data, error } = await supabase
         .from('capture_attempts')
         .select('id, event_id, team_id, attempt_number, started_at, outcome, team:teams(id, name, gym_name, division:divisions(name), level:levels(name)), event:events(id, name)')
+        .is('voided_at', null)
         .order('started_at', { ascending: false });
       if (error) throw error;
       return data as unknown as Array<{

@@ -24,6 +24,7 @@ Deno.serve(async (req) => {
         .from("capture_attempts")
         .select("id, team_id, attempt_number, started_at, outcome, duration_seconds")
         .eq("event_id", eventId)
+        .is("voided_at", null)
         .order("attempt_number", { ascending: true });
       if (body.team_id) q = q.eq("team_id", String(body.team_id));
       const { data, error } = await q;

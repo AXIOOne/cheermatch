@@ -9,6 +9,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video, Archive, ArchiveRestore, Trash2, Download, Upload, Clapperboard } from 'lucide-react';
 import { downloadSubmissionVideo, VideoPreparingError } from '@/lib/download-submission-video';
 import { useVideoPrep } from '@/hooks/useVideoPrep';
@@ -31,7 +33,7 @@ export default function SubmissionDetail() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [editTeamOpen, setEditTeamOpen] = useState(false);
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
@@ -39,6 +41,8 @@ export default function SubmissionDetail() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [replaceOpen, setReplaceOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetReason, setResetReason] = useState('');
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: SubmissionStatus) => {
@@ -86,7 +90,7 @@ export default function SubmissionDetail() {
     queryFn: async () => {
       const [{ data: rows, error }, { data: ev }] = await Promise.all([
         sb.from('capture_attempts')
-          .select('id, attempt_number, started_at, outcome, duration_seconds, submission_id')
+          .select('id, attempt_number, started_at, outcome, duration_seconds, submission_id, voided_at, void_reason')
           .eq('event_id', eventId!).eq('team_id', teamId!)
           .order('attempt_number', { ascending: true }),
         sb.from('events').select('screen_capture_cnt').eq('id', eventId!).maybeSingle(),
@@ -96,12 +100,37 @@ export default function SubmissionDetail() {
         attempts: (rows ?? []) as Array<{
           id: string; attempt_number: number; started_at: string;
           outcome: string; duration_seconds: number | null; submission_id: string | null;
+          voided_at: string | null; void_reason: string | null;
         }>,
         maxAttempts: (ev?.screen_capture_cnt as number | undefined) ?? 2,
       };
     },
     enabled: !!eventId && !!teamId,
   });
+
+  const overrideAttemptsMutation = useMutation({
+    mutationFn: async ({ ids, void: doVoid, reason }: { ids: string[]; void: boolean; reason?: string }) => {
+      const { error } = await sb
+        .from('capture_attempts')
+        .update(
+          doVoid
+            ? { voided_at: new Date().toISOString(), voided_by: user?.id ?? null, void_reason: reason || 'Admin override' }
+            : { voided_at: null, voided_by: null, void_reason: null },
+        )
+        .in('id', ids);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['submission-capture-attempts', eventId, teamId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+      toast({ title: vars.void ? 'Attempts overridden' : 'Attempt restored' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+  });
+
+  const allAttempts = captureInfo?.attempts ?? [];
+  const activeAttempts = allAttempts.filter((a) => !a.voided_at);
+  const voidedAttempts = allAttempts.filter((a) => a.voided_at);
 
   const videoPrep = useVideoPrep();
   const prepState = submissionId ? videoPrep.getState(submissionId) : undefined;
@@ -280,24 +309,52 @@ export default function SubmissionDetail() {
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="text-2xl font-bold">{captureInfo?.attempts.length ?? 0}</span>
+            <span className="text-2xl font-bold">{activeAttempts.length}</span>
             <span className="text-sm text-muted-foreground">
               of {captureInfo?.maxAttempts ?? 2} allowed attempt{(captureInfo?.maxAttempts ?? 2) === 1 ? '' : 's'} used by this team
+              {voidedAttempts.length > 0 && ` · ${voidedAttempts.length} overridden`}
             </span>
+            {isAdmin && activeAttempts.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-auto gap-1"
+                onClick={() => { setResetReason(''); setResetOpen(true); }}
+                disabled={overrideAttemptsMutation.isPending}
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> Reset attempts
+              </Button>
+            )}
           </div>
           {captureInfo && captureInfo.attempts.length > 0 ? (
             <div className="divide-y rounded-md border">
               {captureInfo.attempts.map((a) => (
-                <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                <div key={a.id} className={`flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm ${a.voided_at ? 'opacity-60' : ''}`}>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">Take #{a.attempt_number}</span>
-                    <Badge variant={a.submission_id ? 'default' : 'outline'} className="capitalize">
-                      {a.submission_id ? 'uploaded' : a.outcome?.replace(/_/g, ' ') || 'recorded'}
+                    <span className={`font-medium ${a.voided_at ? 'line-through' : ''}`}>Take #{a.attempt_number}</span>
+                    <Badge variant={a.voided_at ? 'secondary' : a.submission_id ? 'default' : 'outline'} className="capitalize">
+                      {a.voided_at ? 'overridden' : a.submission_id ? 'uploaded' : a.outcome?.replace(/_/g, ' ') || 'recorded'}
                     </Badge>
+                    {a.voided_at && a.void_reason && (
+                      <span className="text-xs text-muted-foreground">{a.void_reason}</span>
+                    )}
                   </div>
-                  <div className="text-muted-foreground">
-                    {format(new Date(a.started_at), 'MMM d, yyyy p')}
-                    {a.duration_seconds ? ` · ${a.duration_seconds}s` : ''}
+                  <div className="flex items-center gap-3">
+                    <span className="text-muted-foreground">
+                      {format(new Date(a.started_at), 'MMM d, yyyy p')}
+                      {a.duration_seconds ? ` · ${a.duration_seconds}s` : ''}
+                    </span>
+                    {isAdmin && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-xs"
+                        disabled={overrideAttemptsMutation.isPending}
+                        onClick={() => overrideAttemptsMutation.mutate({ ids: [a.id], void: !a.voided_at, reason: 'Admin override' })}
+                      >
+                        {a.voided_at ? 'Restore' : "Don't count"}
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -377,6 +434,41 @@ export default function SubmissionDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset capture attempts?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This clears the {activeAttempts.length} recorded attempt{activeAttempts.length === 1 ? '' : 's'} for {submission.team?.name || 'this team'} so they can record again. Attempts are kept in the history as overridden — nothing is deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="reset-reason">Reason (optional)</Label>
+            <Textarea
+              id="reset-reason"
+              value={resetReason}
+              onChange={(e) => setResetReason(e.target.value)}
+              placeholder="e.g. Camera failure during first take"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                overrideAttemptsMutation.mutate({
+                  ids: activeAttempts.map((a) => a.id),
+                  void: true,
+                  reason: resetReason.trim() || 'Admin reset',
+                })
+              }
+            >
+              Reset attempts
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <DeleteSubmissionDialog
         open={deleteOpen}
