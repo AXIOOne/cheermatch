@@ -744,6 +744,18 @@ export default function MobileRecord() {
         {phase !== "preview" && (
           <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between gap-2 px-3 py-2 bg-gradient-to-b from-black/70 to-transparent">
             <div className="flex items-center gap-3">
+              {/* Portal logo branding */}
+              {branding?.logoUrl ? (
+                <img
+                  src={branding.logoUrl}
+                  alt="Portal logo"
+                  className="h-6 max-w-[120px] object-contain drop-shadow"
+                />
+              ) : (
+                <div className="px-2 py-1 rounded bg-black/60 text-white text-xs font-semibold">
+                  Cheermatch
+                </div>
+              )}
               {phase === "recording" ? (
                 <div className="flex items-center gap-2 bg-destructive/90 px-3 py-1.5 rounded-full text-sm font-mono">
                   <span className="h-2 w-2 rounded-full bg-white animate-pulse" />
