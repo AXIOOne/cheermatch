@@ -68,3 +68,6 @@ verify_jwt = false
 
 
 
+
+[functions.capture-attempts]
+verify_jwt = false
