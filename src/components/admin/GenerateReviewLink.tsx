@@ -164,7 +164,7 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
       <DialogTrigger asChild>
         <Button variant={variant} size={size}>
           <Send className="w-4 h-4 mr-2" />
-          Send Score Sheet
+          Send
         </Button>
       </DialogTrigger>
       <DialogContent>

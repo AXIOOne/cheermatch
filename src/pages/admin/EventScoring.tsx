@@ -582,7 +582,7 @@ export default function EventScoring() {
                             ) : (
                               <Send className="w-3.5 h-3.5 mr-1" />
                             )}
-                            Send Score Sheet
+                            Send
                           </Button>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -683,7 +683,7 @@ export default function EventScoring() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmSend}>
-              <Send className="w-4 h-4 mr-2" /> Send Score Sheet
+              <Send className="w-4 h-4 mr-2" /> Send
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
