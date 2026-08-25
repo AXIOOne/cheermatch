@@ -575,9 +575,19 @@ export default function Submissions() {
                       <TableCell className="text-sm text-muted-foreground align-top">
                         <div className="flex flex-col gap-1.5">
                           <p className="text-sm font-semibold text-muted-foreground leading-tight whitespace-nowrap">{submission.team.name}</p>
-                          <div className="h-10 aspect-video bg-muted rounded flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (submission.video_url) setVideoModalSubmission(submission);
+                            }}
+                            disabled={!submission.video_url}
+                            className="h-10 aspect-video bg-muted rounded flex items-center justify-center cursor-pointer hover:bg-muted/80 disabled:cursor-default disabled:opacity-60 relative"
+                            title={submission.video_url ? 'Play video' : 'No video available'}
+                          >
                             <Video className="w-4 h-4 text-muted-foreground" />
-                          </div>
+                            {submission.video_url && <Play className="w-3 h-3 text-foreground absolute opacity-80" />}
+                          </button>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground break-words max-w-[220px]">{submission.team.gym_name}</TableCell>
