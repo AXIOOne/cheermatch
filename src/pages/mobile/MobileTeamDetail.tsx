@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { AlertCircle, CheckCircle2, Clock, Video } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Clapperboard, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import VideoPlayer from "@/components/video/VideoPlayer";
 import { mobileApi } from "@/lib/mobile-api";
+import { attemptKey, listAttempts } from "@/lib/capture-attempts";
 
 type Submission = {
   id: string;
@@ -18,6 +19,7 @@ type Submission = {
 type EventInfo = {
   submission_open_at?: string;
   submission_close_at?: string;
+  screen_capture_cnt?: number;
 } | null;
 
 export default function MobileTeamDetail() {
@@ -27,6 +29,7 @@ export default function MobileTeamDetail() {
   const [submission, setSubmission] = useState<Submission>(null);
   const [teamName, setTeamName] = useState<string>("");
   const [ev, setEv] = useState<EventInfo>(null);
+  const [attemptCount, setAttemptCount] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -52,8 +55,11 @@ export default function MobileTeamDetail() {
           if (e) setEv({
             submission_open_at: e.submission_open_at as string | undefined,
             submission_close_at: e.submission_close_at as string | undefined,
+            screen_capture_cnt: Number(e.screen_capture_cnt || 2),
           });
         }
+        const stored = await listAttempts(attemptKey(eventId, teamId));
+        setAttemptCount(stored.length);
       } finally {
         setLoading(false);
       }
@@ -137,6 +143,8 @@ export default function MobileTeamDetail() {
     );
   }
 
+  const maxAttempts = ev?.screen_capture_cnt ?? 2;
+
   return (
     <div className="px-4 py-6 space-y-4 max-w-xl mx-auto">
       {isRevisionRequested && (
@@ -157,11 +165,24 @@ export default function MobileTeamDetail() {
           </div>
         </Card>
       )}
+      {attemptCount > 0 && (
+        <Card className="p-4 border-amber-500/40 bg-amber-50/50">
+          <div className="flex gap-3 items-start">
+            <Clapperboard className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h2 className="font-semibold text-amber-900">{attemptCount} of {maxAttempts} attempt{maxAttempts === 1 ? "" : "s"} already recorded</h2>
+              <p className="text-sm text-amber-900/80 mt-1">
+                You have already started {attemptCount} capture attempt{attemptCount === 1 ? "" : "s"} for this team. Any started recording counts against your limit, even if it was not submitted.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
       <Card className="p-6 text-center">
         <Video className="h-12 w-12 mx-auto text-primary mb-3" />
         <h1 className="text-xl font-bold">Ready to record?</h1>
         <p className="text-sm text-muted-foreground mt-1 mb-6">
-          Make sure your phone is in landscape mode, the lighting is good, and you have a stable view of the entire performance area. You will get two attempts to record your routine for final submission.
+          Make sure your phone is in landscape mode, the lighting is good, and you have a stable view of the entire performance area. You will get {maxAttempts} attempt{maxAttempts === 1 ? "" : "s"} to record your routine for final submission.
         </p>
         <Button asChild className="w-full h-12 text-base">
           <Link to={`/m/events/${eventId}/teams/${teamId}/record`}>Start Your Routine Recording</Link>
