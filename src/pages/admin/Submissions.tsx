@@ -744,7 +744,7 @@ export default function Submissions() {
                     <TableCell className="text-sm text-muted-foreground align-top">
                       <div className="flex flex-col gap-1.5">
                         <p className="text-sm font-semibold text-muted-foreground leading-tight">{p.teamName}</p>
-                        <div className="w-16 h-10 rounded border border-dashed border-amber-400/70 bg-muted/50 flex items-center justify-center">
+                        <div className="h-10 aspect-video rounded border border-dashed border-amber-400/70 bg-muted/50 flex items-center justify-center">
                           <VideoOff className="w-4 h-4 text-amber-600" />
                         </div>
                       </div>
