@@ -540,6 +540,7 @@ export default function Submissions() {
                     />
                   </TableHead>
                   <TableHead>Team</TableHead>
+                  <TableHead className="w-[220px]">Gym</TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Division / Level</TableHead>
                   <TableHead>Status</TableHead>
