@@ -553,10 +553,23 @@ export default function MobileRecord() {
                   REC {fmt(elapsed)} / {fmt(maxDuration)}
                 </div>
               ) : (
-                <div className="bg-black/60 px-3 py-1.5 rounded-full text-xs font-mono">
-                  Take {attempts.length + 1}/{maxAttempts} · Limit {fmt(maxDuration)}
+                <div className="flex items-center gap-2">
+                  <div className={`px-3 py-1.5 rounded-full text-xs font-mono ${attempts.length > 0 ? "bg-primary/90 text-primary-foreground" : "bg-black/60"}`}>
+                    Take {Math.min(attempts.length + 1, maxAttempts)} of {maxAttempts} · Limit {fmt(maxDuration)}
+                  </div>
+                  {attempts.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: maxAttempts }).map((_, i) => (
+                        <span
+                          key={i}
+                          className={`h-2 w-2 rounded-full ${i < attempts.length ? "bg-primary" : "bg-white/40"}`}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
+
               <AudioMeter
                 stream={streamRef.current}
                 monitorSilence={phase === "ready"}
