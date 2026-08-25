@@ -395,6 +395,7 @@ export default function Submissions() {
 
 
       {/* Stats Cards */}
+      {!isPendingTab && (
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <Card>
           <CardHeader className="pb-2">
