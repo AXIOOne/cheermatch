@@ -200,3 +200,14 @@ export function bcPickMp4Source(sources: BcSource[]): BcSource | null {
   mp4s.sort((a, b) => (b.encoding_rate ?? b.size ?? 0) - (a.encoding_rate ?? a.size ?? 0));
   return mp4s[0];
 }
+
+// Digital master (original uploaded file). Available when the ingest kept the master.
+export async function bcGetDigitalMaster(videoId: string): Promise<Record<string, unknown> | null> {
+  const token = await getBrightcoveToken();
+  const res = await fetch(
+    `https://cms.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/videos/${videoId}/digital_master`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) return null;
+  return await res.json();
+}
