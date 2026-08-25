@@ -51,6 +51,7 @@ const DEFAULT_DURATION = 150; // 2:30
 const DEFAULT_ATTEMPTS = 2;
 const DEVICE_CONFIRM_KEY = "cm.captureDevice";
 const OVERLAY_KEY = "cm.captureOverlay";
+const WIDE_KEY = "cm.captureWideAngle";
 
 function fmt(s: number) {
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
