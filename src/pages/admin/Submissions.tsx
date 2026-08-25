@@ -556,6 +556,20 @@ export default function Submissions() {
                         </Badge>
                       </TableCell>
                       <TableCell>
+                        {attemptsByTeam.get(submission.team.id) ? (
+                          <span
+                            className="inline-flex items-center gap-1.5 text-sm"
+                            title={`Last attempt ${format(new Date(attemptsByTeam.get(submission.team.id)!.lastAt), 'MMM d, yyyy p')}`}
+                          >
+                            <Clapperboard className="w-3.5 h-3.5 text-muted-foreground" />
+                            {attemptsByTeam.get(submission.team.id)!.count}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+
+                      <TableCell>
                         {isArchivedTab
                           ? submission.archived_at
                             ? format(new Date(submission.archived_at), 'MMM d, yyyy')
