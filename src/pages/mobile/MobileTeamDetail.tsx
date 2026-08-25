@@ -35,8 +35,10 @@ export default function MobileTeamDetail() {
   const [teamName, setTeamName] = useState<string>("");
   const [ev, setEv] = useState<EventInfo>(null);
   const [attemptCount, setAttemptCount] = useState(0);
+  const [takes, setTakes] = useState<TakeInfo[]>([]);
 
   useEffect(() => {
+    const urls: string[] = [];
     (async () => {
       try {
         const [teamsRes, eventsRes] = await Promise.all([
