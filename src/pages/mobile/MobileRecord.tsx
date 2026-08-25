@@ -820,6 +820,30 @@ export default function MobileRecord() {
                 {attempts.length >= maxAttempts ? " — no takes left" : ` · ${maxAttempts - attempts.length} left`}
               </div>
             )}
+
+            {/* Lens selector — choose before you start filming */}
+            <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-black/60 p-1 backdrop-blur-sm">
+              <button
+                onClick={() => setLens(false)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${!wideAngle ? "bg-white text-black" : "text-white/80"}`}
+              >
+                1x Standard
+              </button>
+              <button
+                onClick={() => setLens(true)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${wideAngle ? "bg-white text-black" : "text-white/80"}`}
+              >
+                0.5x Wide
+              </button>
+            </div>
+            <p className="pointer-events-none text-[11px] text-white/70">
+              {wideAngle
+                ? wideSupported
+                  ? "Ultra-wide lens — fits the full mat from closer in."
+                  : "Widest available view on this device."
+                : "Standard lens — best detail for scoring."}
+            </p>
+
             <button
               onClick={beginCountdown}
               disabled={attempts.length >= maxAttempts}
