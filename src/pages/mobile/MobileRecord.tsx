@@ -15,6 +15,8 @@ import {
   BatteryMedium,
   HardDrive,
   Video,
+  Maximize,
+  Minimize,
 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,7 @@ import { useMobileAuth } from "@/hooks/useMobileAuth";
 import { detectDevice, deviceLabel, type DetectedDevice } from "@/lib/device-detect";
 import { CaptureOverlay } from "@/components/mobile/CaptureOverlay";
 import { AudioMeter } from "@/components/mobile/AudioMeter";
+import { useFullscreen } from "@/hooks/useFullscreen";
 import {
   attemptKey,
   clearAttempts,
@@ -74,6 +77,8 @@ export default function MobileRecord() {
   const autoStopRef = useRef<number | null>(null);
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
   const countdownTimerRef = useRef<number | null>(null);
+  // Fullscreen capture: hides the browser title/address bar during filming
+  const fs = useFullscreen<HTMLDivElement>();
 
   const [phase, setPhase] = useState<Phase>("ready");
   const [elapsed, setElapsed] = useState(0);
@@ -302,6 +307,12 @@ export default function MobileRecord() {
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [phase]);
 
+  // Release the fullscreen takeover once filming is over (review/upload screens scroll).
+  useEffect(() => {
+    if (phase === "choose" || phase === "uploading" || phase === "done") void fs.exit();
+  }, [phase, fs]);
+
+
   async function acquireWakeLock() {
     try {
       const wl = (navigator as Navigator & { wakeLock?: { request: (t: string) => Promise<{ release: () => Promise<void> }> } }).wakeLock;
@@ -335,6 +346,8 @@ export default function MobileRecord() {
       return;
     }
     void requestOrientationPermission();
+    // Take over the whole screen so the browser chrome never covers the shot.
+    void fs.enter();
     setCountdown(3);
     setPhase("countdown");
     countdownTimerRef.current = window.setInterval(() => {
@@ -629,7 +642,12 @@ export default function MobileRecord() {
   const isTablet = device.kind === "tablet";
 
   return (
-    <div className="bg-black text-white min-h-[calc(100vh-3.5rem)] flex flex-col relative">
+    <div
+      ref={fs.ref}
+      className={`bg-black text-white flex flex-col relative ${
+        fs.active ? "fixed inset-0 z-[70] h-[100dvh] w-screen" : "min-h-[100dvh]"
+      }`}
+    >
       {/* First-launch device confirmation */}
       {needsDeviceConfirm && (
         <div className="absolute inset-0 z-[60] bg-black/90 flex items-center justify-center p-6">
@@ -733,6 +751,16 @@ export default function MobileRecord() {
               >
                 <Grid3x3 className="h-4 w-4" />
               </button>
+              {fs.supported && (
+                <button
+                  onClick={() => (fs.active ? void fs.exit() : void fs.enter())}
+                  className={`p-1.5 rounded-md ${fs.active ? "bg-white/20" : "bg-black/40"} hover:bg-white/30`}
+                  aria-label={fs.active ? "Exit full screen" : "Enter full screen"}
+                  title={fs.active ? "Exit full screen" : "Enter full screen"}
+                >
+                  {fs.active ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -763,6 +791,15 @@ export default function MobileRecord() {
             >
               <span className="h-16 w-16 rounded-full bg-destructive group-hover:bg-destructive/90" />
             </button>
+            {fs.supported && !fs.active && (
+              <Button
+                variant="secondary"
+                onClick={() => void fs.enter()}
+                className="pointer-events-auto h-11 px-5"
+              >
+                <Maximize className="h-4 w-4 mr-2" /> Go full screen
+              </Button>
+            )}
             {attempts.length > 0 && (
               <Button
                 variant="secondary"
@@ -771,6 +808,11 @@ export default function MobileRecord() {
               >
                 <Video className="h-4 w-4 mr-2" /> Review previous take{attempts.length > 1 ? "s" : ""}
               </Button>
+            )}
+            {!fs.supported && (
+              <p className="pointer-events-none max-w-xs text-center text-[11px] text-white/70">
+                For an unobstructed view, add this app to your home screen and open it from there — it runs without the address bar.
+              </p>
             )}
           </div>
 
