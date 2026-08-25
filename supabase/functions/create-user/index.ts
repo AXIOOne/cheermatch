@@ -77,15 +77,26 @@ Deno.serve(async (req) => {
       })
     }
 
-    // Update the profile with full name / organization if provided
-    if (newUser.user && (fullName || organizationId)) {
+    // Update the profile with full name / organization / password hash (mobile login)
+    if (newUser.user) {
       const profileUpdates: Record<string, unknown> = {}
       if (fullName) profileUpdates.full_name = fullName
       if (organizationId) profileUpdates.organization_id = organizationId
-      await supabaseAdmin
-        .from('profiles')
-        .update(profileUpdates)
-        .eq('user_id', newUser.user.id)
+
+      // Sync password_hash used by the mobile (coach/gym) login flow
+      const { data: hashed, error: hashErr } = await supabaseAdmin.rpc('hash_password', { _password: password })
+      if (hashErr) {
+        console.error('Error hashing password:', hashErr)
+      } else if (typeof hashed === 'string') {
+        profileUpdates.password_hash = hashed
+      }
+
+      if (Object.keys(profileUpdates).length > 0) {
+        await supabaseAdmin
+          .from('profiles')
+          .update(profileUpdates)
+          .eq('user_id', newUser.user.id)
+      }
     }
 
     // Assign role if provided

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -131,7 +131,13 @@ export default function Divisions() {
     return scoringTemplates.filter((t: any) => (t.discipline ?? 'allstar_cheer') === selectedDiscipline);
   }, [scoringTemplates, discipline]);
 
+  // Only clear the template when the admin actively switches discipline —
+  // never when simply opening an existing division whose template belongs elsewhere.
+  const prevDisciplineRef = useRef<string | null>(null);
   useEffect(() => {
+    const prev = prevDisciplineRef.current;
+    prevDisciplineRef.current = discipline;
+    if (prev === null || prev === discipline) return;
     const valid = filteredTemplates?.some((t: any) => t.id === scoringTemplateId);
     if (scoringTemplateId && !valid) {
       form.setValue('scoring_template_id', '');

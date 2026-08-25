@@ -94,17 +94,23 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      if (!coach) throw new Error('Please select a coach for this registration.');
+      // Coach is optional: legacy rows may have a free-text coach with no linked account.
+      // Only rewrite coach/gym fields when a coach account is actually selected.
+      const coachFields = coach
+        ? {
+            gym_name: coach.organization_name || '',
+            organization_id: coach.organization_id,
+            coach_name: coach.full_name || coach.email,
+            coach_email: coach.email,
+            coach_user_id: coach.user_id,
+          }
+        : {};
       const { error } = await sb
         .from('teams')
         .update({
           name: data.name,
-          gym_name: coach.organization_name || '',
-          organization_id: coach.organization_id,
-          coach_name: coach.full_name || coach.email,
-          coach_email: coach.email,
+          ...coachFields,
           coach_phone: data.coach_phone || null,
-          coach_user_id: coach.user_id,
           division_id: data.division_id,
           level_id: data.level_id,
           athletes_male: data.athletes_male,
@@ -137,7 +143,7 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
               </div>
               <div className="space-y-2">
                 <Label>Gym (from coach's organization)</Label>
-                <Input value={coach?.organization_name || ''} readOnly placeholder="Select a coach" />
+                <Input value={coach?.organization_name || team?.gym_name || ''} readOnly placeholder="Select a coach" />
               </div>
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem><FormLabel>Team Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
