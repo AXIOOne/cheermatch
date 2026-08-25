@@ -45,10 +45,17 @@ Deno.serve(async (req) => {
     if (!videoId) return fail("This submission has no video hosted on Brightcove");
 
     const sources = await bcGetVideoSources(videoId);
+    console.log("brightcove sources", videoId, JSON.stringify(sources));
     const mp4 = bcPickMp4Source(sources);
     if (!mp4?.src) {
-      return fail("The video is still processing on the host server. Try again in a few minutes.");
+      const kinds = sources.map((s) => s.container ?? s.type ?? "unknown");
+      return fail(
+        sources.length === 0
+          ? "The video is still processing on the host server. Try again in a few minutes."
+          : `No downloadable MP4 rendition is available for this video (renditions: ${[...new Set(kinds)].join(", ")}).`,
+      );
     }
+
 
     const team = (sub as any).team?.name ?? "Team";
     const division = (sub as any).team?.division?.name ?? "";
