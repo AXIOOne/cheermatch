@@ -386,6 +386,7 @@ export default function Submissions() {
       <Tabs value={tab} onValueChange={switchTab} className="mb-6">
         <TabsList>
           <TabsTrigger value="current">Current ({currentCount})</TabsTrigger>
+          <TabsTrigger value="pending">Awaiting video ({pendingCaptures.length})</TabsTrigger>
           <TabsTrigger value="archived">Archived ({archivedCount})</TabsTrigger>
         </TabsList>
       </Tabs>
