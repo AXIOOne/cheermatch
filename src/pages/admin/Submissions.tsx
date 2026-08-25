@@ -566,7 +566,7 @@ export default function Submissions() {
                           onCheckedChange={() => toggleSelection(submission.id)}
                         />
                       </TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm text-muted-foreground">
                         <div className="flex items-center gap-3">
                           {submission.thumbnail_url ? (
                             <img
@@ -580,30 +580,30 @@ export default function Submissions() {
                             </div>
                           )}
                           <div>
-                            <p className="text-sm font-medium leading-tight">{submission.team.name}</p>
+                            <p className="text-sm text-muted-foreground leading-tight">{submission.team.name}</p>
                             <p className="text-sm text-muted-foreground leading-tight">{submission.team.gym_name}</p>
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">{submission.event.name}</TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm text-muted-foreground">{submission.event.name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
                         <div>
-                          <p className="leading-tight">{submission.team.division.name}</p>
-                          <p className="text-muted-foreground leading-tight">{submission.team.level.name}</p>
+                          <p className="text-sm text-muted-foreground leading-tight">{submission.team.division.name}</p>
+                          <p className="text-sm text-muted-foreground leading-tight">{submission.team.level.name}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">
-                        <Badge variant="outline" className={`${cfg.className} border-0 text-sm font-medium`}>
+                      <TableCell className="text-sm text-muted-foreground">
+                        <Badge variant="outline" className={`${cfg.className} border-0 text-sm font-medium text-muted-foreground`}>
                           <StatusIcon className="w-3 h-3 mr-1" />
                           {cfg.label}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm text-muted-foreground">
                         {(() => {
                           const att = attemptsByTeam.get(teamEventKey(submission.event.id, submission.team.id));
                           return att ? (
                             <span
-                              className="inline-flex items-center gap-1.5 text-sm"
+                              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground"
                               title={`Last attempt ${format(new Date(att.lastAt), 'MMM d, yyyy p')}`}
                             >
                               <Clapperboard className="w-3.5 h-3.5 text-muted-foreground" />
@@ -616,7 +616,7 @@ export default function Submissions() {
                       </TableCell>
 
 
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm text-muted-foreground">
                         {isArchivedTab
                           ? submission.archived_at
                             ? format(new Date(submission.archived_at), 'MMM d, yyyy')
@@ -742,41 +742,41 @@ export default function Submissions() {
                 {filteredPending.map((p) => (
                   <TableRow key={p.key} className="text-sm bg-amber-50/40 dark:bg-amber-950/10">
                     <TableCell className="w-10" />
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm text-muted-foreground">
                       <div className="flex items-center gap-3">
                         <div className="w-16 h-10 rounded border border-dashed border-amber-400/70 bg-muted/50 flex items-center justify-center">
                           <VideoOff className="w-4 h-4 text-amber-600" />
                         </div>
                         <div>
-                          <p className="text-sm font-medium leading-tight">{p.teamName}</p>
+                          <p className="text-sm text-muted-foreground leading-tight">{p.teamName}</p>
                           <p className="text-sm text-muted-foreground leading-tight">{p.gymName}</p>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">{p.eventName}</TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell className="text-sm text-muted-foreground">{p.eventName}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
                       <div>
-                        <p className="leading-tight">{p.divisionName}</p>
-                        <p className="text-muted-foreground leading-tight">{p.levelName}</p>
+                        <p className="text-sm text-muted-foreground leading-tight">{p.divisionName}</p>
+                        <p className="text-sm text-muted-foreground leading-tight">{p.levelName}</p>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm">
-                      <Badge variant="outline" className="bg-amber-100 text-amber-700 border-0 text-sm font-medium">
+                    <TableCell className="text-sm text-muted-foreground">
+                      <Badge variant="outline" className="bg-amber-100 text-muted-foreground border-0 text-sm font-medium">
                         <Clapperboard className="w-3 h-3 mr-1" />
                         No video selected
                       </Badge>
                     </TableCell>
 
-                    <TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
                       <span
-                        className="inline-flex items-center gap-1.5 text-sm"
+                        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground"
                         title={`Last attempt ${format(new Date(p.lastAt), 'MMM d, yyyy p')}`}
                       >
                         <Clapperboard className="w-3.5 h-3.5 text-muted-foreground" />
                         {p.count}
                       </span>
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="text-sm text-muted-foreground">
                       Recorded {format(new Date(p.lastAt), 'MMM d, yyyy')}
                     </TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">
