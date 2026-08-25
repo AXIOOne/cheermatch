@@ -274,6 +274,45 @@ export default function SubmissionDetail() {
 
       <Card>
         <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Clapperboard className="w-4 h-4" /> Capture Attempts
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold">{captureInfo?.attempts.length ?? 0}</span>
+            <span className="text-sm text-muted-foreground">
+              of {captureInfo?.maxAttempts ?? 2} allowed attempt{(captureInfo?.maxAttempts ?? 2) === 1 ? '' : 's'} used by this team
+            </span>
+          </div>
+          {captureInfo && captureInfo.attempts.length > 0 ? (
+            <div className="divide-y rounded-md border">
+              {captureInfo.attempts.map((a) => (
+                <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Take #{a.attempt_number}</span>
+                    <Badge variant={a.submission_id ? 'default' : 'outline'} className="capitalize">
+                      {a.submission_id ? 'uploaded' : a.outcome?.replace(/_/g, ' ') || 'recorded'}
+                    </Badge>
+                  </div>
+                  <div className="text-muted-foreground">
+                    {format(new Date(a.started_at), 'MMM d, yyyy p')}
+                    {a.duration_seconds ? ` · ${a.duration_seconds}s` : ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No capture attempts recorded in the portal for this team. Videos uploaded before attempt tracking, or imported by an admin, will not have attempt records.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+
+        <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><Video className="w-4 h-4" /> Performance Video</CardTitle>
         </CardHeader>
         <CardContent>
