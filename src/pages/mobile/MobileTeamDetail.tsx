@@ -1,11 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { AlertCircle, CheckCircle2, Clock, Clapperboard, Video } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Clapperboard, Video, ListVideo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import VideoPlayer from "@/components/video/VideoPlayer";
 import { mobileApi } from "@/lib/mobile-api";
 import { attemptKey, listAttempts } from "@/lib/capture-attempts";
+
+type TakeInfo = { seq: number; url: string | null; durationSec: number };
+
+const fmtDur = (s: number) =>
+  `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
 type Submission = {
   id: string;
