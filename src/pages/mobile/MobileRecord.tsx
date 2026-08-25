@@ -168,35 +168,55 @@ export default function MobileRecord() {
     })();
   }, [eventId, teamId, navigate]);
 
-  // Restore previously recorded attempts for this team (survives reload / app restart)
+  // Restore attempts for this team. The portal is the source of truth for the COUNT
+  // (so switching devices or clearing storage can't unlock extra takes); IndexedDB
+  // only supplies the local footage so previous takes stay reviewable.
   useEffect(() => {
     let cancelled = false;
     const urls: string[] = [];
     (async () => {
       const stored = await listAttempts(storageKey);
-      if (cancelled || stored.length === 0) return;
-      const restored: Attempt[] = stored.map((s) => {
-        const url = s.blob ? URL.createObjectURL(s.blob) : null;
+      const localBySeq = new Map(stored.map((s) => [s.seq, s]));
+
+      let serverSeqs: number[] = [];
+      try {
+        const res = await mobileApi.listAttempts(eventId, teamId);
+        if (res.status && Array.isArray(res.data)) {
+          serverSeqs = res.data.map((a) => Number(a.attempt_number)).filter((n) => n > 0);
+        }
+      } catch {
+        /* offline — fall back to local ledger */
+      }
+
+      const seqs = Array.from(new Set([...serverSeqs, ...stored.map((s) => s.seq)])).sort((a, b) => a - b);
+      if (cancelled || seqs.length === 0) return;
+
+      const restored: Attempt[] = seqs.map((seq) => {
+        const s = localBySeq.get(seq);
+        const url = s?.blob ? URL.createObjectURL(s.blob) : null;
         if (url) urls.push(url);
         return {
-          id: s.id,
-          seq: s.seq,
-          blob: s.blob,
+          id: s?.id ?? -seq,
+          seq,
+          blob: s?.blob ?? null,
           url,
-          durationSec: s.durationSec,
-          complete: Boolean(s.complete && s.blob),
+          durationSec: s?.durationSec ?? 0,
+          complete: Boolean(s?.complete && s?.blob),
         };
       });
       setAttempts(restored);
+      const offDevice = restored.filter((a) => !a.blob).length;
       toast.message(
-        `${restored.length} attempt${restored.length === 1 ? "" : "s"} already recorded for this team`,
+        `${restored.length} attempt${restored.length === 1 ? "" : "s"} already recorded for this team` +
+          (offDevice > 0 ? ` (${offDevice} recorded on another device)` : ""),
       );
     })();
     return () => {
       cancelled = true;
       urls.forEach((u) => URL.revokeObjectURL(u));
     };
-  }, [storageKey]);
+  }, [storageKey, eventId, teamId]);
+
 
 
 
