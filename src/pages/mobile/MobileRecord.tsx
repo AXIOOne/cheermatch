@@ -29,6 +29,7 @@ import { detectDevice, deviceLabel, type DetectedDevice } from "@/lib/device-det
 import { CaptureOverlay } from "@/components/mobile/CaptureOverlay";
 import { AudioMeter } from "@/components/mobile/AudioMeter";
 import { useFullscreen } from "@/hooks/useFullscreen";
+import { usePlatformSettings } from "@/hooks/usePlatformSettings";
 import {
   attemptKey,
   clearAttempts,
