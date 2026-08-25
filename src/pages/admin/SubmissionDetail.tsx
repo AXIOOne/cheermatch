@@ -308,6 +308,18 @@ export default function SubmissionDetail() {
         submissions={[{ id: submissionId!, teamName: submission.team?.name || 'this submission' }]}
         onDeleted={() => navigate('/admin/submissions')}
       />
+
+      <ReplaceVideoDialog
+        open={replaceOpen}
+        onOpenChange={setReplaceOpen}
+        submissionId={submissionId!}
+        teamName={submission.team?.name}
+        onReplaced={() => {
+          queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] });
+          queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+        }}
+      />
+
     </div>
   );
 }
