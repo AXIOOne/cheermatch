@@ -15,6 +15,8 @@ import {
   BatteryMedium,
   HardDrive,
   Video,
+  Maximize,
+  Minimize,
 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
