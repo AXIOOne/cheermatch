@@ -152,7 +152,26 @@ export default function Submissions() {
     },
   });
 
+  // Capture attempts recorded in the portal (source of truth, not the device)
+  const { data: attempts } = useQuery({
+    queryKey: ['capture-attempts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('capture_attempts')
+        .select('id, event_id, team_id, attempt_number, started_at, outcome, team:teams(name, gym_name), event:events(name)')
+        .order('started_at', { ascending: false });
+      if (error) throw error;
+      return data as unknown as Array<{
+        id: string; event_id: string; team_id: string; attempt_number: number;
+        started_at: string; outcome: string;
+        team: { name: string; gym_name: string } | null;
+        event: { name: string } | null;
+      }>;
+    },
+  });
+
   const archiveMutation = useMutation({
+
     mutationFn: async (ids: string[]) => {
       const targets = submissions?.filter((s) => ids.includes(s.id)) ?? [];
       for (const s of targets) {
