@@ -209,6 +209,11 @@ export default function MobileRecord() {
         };
       });
       setAttempts(restored);
+      if (reviewMode) {
+        const playable = restored.filter((a) => a.complete && a.url);
+        setSelectedAttemptId(playable[playable.length - 1]?.id ?? null);
+        setPhase("choose");
+      }
       const offDevice = restored.filter((a) => !a.blob).length;
       toast.message(
         `${restored.length} attempt${restored.length === 1 ? "" : "s"} already recorded for this team` +
