@@ -558,9 +558,9 @@ export default function MobileRecord() {
     return (
       <div className="min-h-[calc(100vh-3.5rem)] bg-background px-4 py-4 space-y-4 max-w-xl mx-auto">
         <div>
-          <h1 className="text-xl font-bold">Choose attempt to submit</h1>
+          <h1 className="text-xl font-bold">Review takes &amp; choose your submission</h1>
           <p className="text-sm text-muted-foreground">
-            You recorded {attempts.length} of {maxAttempts} attempts. Only the one you pick will be sent for judging.
+            You have used {attempts.length} of {maxAttempts} attempt{maxAttempts === 1 ? "" : "s"}. Watch each take below, then pick the one to send for judging — only the selected take is submitted.
           </p>
         </div>
         <div className="space-y-3">
