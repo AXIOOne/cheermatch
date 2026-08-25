@@ -229,9 +229,9 @@ export default function MobileRecord() {
 
 
 
-  // Initialize camera (skip on desktop — capture is disallowed)
+  // Initialize camera (skip on desktop — capture is disallowed — and in review-only mode)
   useEffect(() => {
-    if (device.kind === "desktop") return;
+    if (device.kind === "desktop" || !cameraEnabled) return;
     let cancelled = false;
     (async () => {
       try {
