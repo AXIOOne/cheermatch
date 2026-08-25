@@ -59,6 +59,10 @@ type NavigatorWithBattery = Navigator & { getBattery?: () => Promise<BatteryLike
 export default function MobileRecord() {
   const { eventId = "", teamId = "" } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // ?review=1 opens straight into the "choose a take" screen without touching the camera
+  const reviewMode = searchParams.get("review") === "1";
+  const [cameraEnabled, setCameraEnabled] = useState(!reviewMode);
   const { signOut } = useMobileAuth();
   const storageKey = attemptKey(eventId, teamId);
 
