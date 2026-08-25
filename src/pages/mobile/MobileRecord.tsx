@@ -108,6 +108,13 @@ export default function MobileRecord() {
   const [storageGb, setStorageGb] = useState<number | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
 
+  // Lens selection (standard vs ultra-wide back camera)
+  const [wideAngle, setWideAngle] = useState<boolean>(
+    typeof window !== "undefined" && localStorage.getItem(WIDE_KEY) === "1",
+  );
+  const [wideDeviceId, setWideDeviceId] = useState<string | null>(null);
+  const [wideSupported, setWideSupported] = useState(false);
+
   // First-launch device confirm
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem(DEVICE_CONFIRM_KEY) : null;
