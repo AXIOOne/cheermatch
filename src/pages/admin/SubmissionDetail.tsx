@@ -9,7 +9,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video, Archive, ArchiveRestore, Trash2, Download } from 'lucide-react';
+import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video, Archive, ArchiveRestore, Trash2, Download, Upload } from 'lucide-react';
 import { downloadSubmissionVideo } from '@/lib/download-submission-video';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +18,7 @@ import { EditTeamDialog } from '@/components/admin/EditTeamDialog';
 import { RequestRevisionDialog } from '@/components/admin/RequestRevisionDialog';
 import { DeleteSubmissionDialog } from '@/components/admin/DeleteSubmissionDialog';
 import VideoPlayer from '@/components/video/VideoPlayer';
+import { ReplaceVideoDialog } from '@/components/admin/ReplaceVideoDialog';
 import type { Database } from '@/integrations/supabase/types';
 
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
@@ -36,6 +37,7 @@ export default function SubmissionDetail() {
   const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [replaceOpen, setReplaceOpen] = useState(false);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: SubmissionStatus) => {
@@ -143,6 +145,11 @@ export default function SubmissionDetail() {
             {downloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
             Download video
           </Button>
+          {!isArchived && (
+            <Button size="sm" variant="outline" onClick={() => setReplaceOpen(true)}>
+              <Upload className="w-4 h-4 mr-2" /> Replace video
+            </Button>
+          )}
           {!isArchived && (submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'denied') && (
             <Button
               size="sm"
@@ -301,6 +308,18 @@ export default function SubmissionDetail() {
         submissions={[{ id: submissionId!, teamName: submission.team?.name || 'this submission' }]}
         onDeleted={() => navigate('/admin/submissions')}
       />
+
+      <ReplaceVideoDialog
+        open={replaceOpen}
+        onOpenChange={setReplaceOpen}
+        submissionId={submissionId!}
+        teamName={submission.team?.name}
+        onReplaced={() => {
+          queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] });
+          queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+        }}
+      />
+
     </div>
   );
 }

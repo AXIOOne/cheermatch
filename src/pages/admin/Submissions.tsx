@@ -15,12 +15,13 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Video, Inbox, CheckCircle, XCircle, Search, ExternalLink, Mail, RotateCcw, Archive, ArchiveRestore, Trash2, Download } from 'lucide-react';
+import { Loader2, Video, Inbox, CheckCircle, XCircle, Search, ExternalLink, Mail, RotateCcw, Archive, ArchiveRestore, Trash2, Download, Upload } from 'lucide-react';
 import { downloadSubmissionVideo } from '@/lib/download-submission-video';
 import { format } from 'date-fns';
 import { GenerateReviewLink } from '@/components/admin/GenerateReviewLink';
 import { BulkEmailDialog } from '@/components/admin/BulkEmailDialog';
 import { DeleteSubmissionDialog } from '@/components/admin/DeleteSubmissionDialog';
+import { ReplaceVideoDialog } from '@/components/admin/ReplaceVideoDialog';
 import { useAuth } from '@/hooks/useAuth';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -84,6 +85,7 @@ export default function Submissions() {
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [replaceTarget, setReplaceTarget] = useState<{ id: string; teamName: string } | null>(null);
 
   const handleDownload = async (submission: SubmissionWithDetails) => {
     setDownloadingId(submission.id);
@@ -516,6 +518,16 @@ export default function Submissions() {
                               ? <Loader2 className="w-4 h-4 animate-spin" />
                               : <Download className="w-4 h-4" />}
                           </Button>
+                          {isAdmin && !isArchivedTab && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              title="Replace video"
+                              onClick={() => setReplaceTarget({ id: submission.id, teamName: submission.team.name })}
+                            >
+                              <Upload className="w-4 h-4" />
+                            </Button>
+                          )}
                           {submission.video_url && (
                             <Button variant="ghost" size="sm" asChild>
                               <a href={submission.video_url} target="_blank" rel="noopener noreferrer">
@@ -636,6 +648,14 @@ export default function Submissions() {
       </AlertDialog>
 
       {/* Permanent delete */}
+      <ReplaceVideoDialog
+        open={!!replaceTarget}
+        onOpenChange={(o) => { if (!o) setReplaceTarget(null); }}
+        submissionId={replaceTarget?.id ?? null}
+        teamName={replaceTarget?.teamName}
+        onReplaced={() => queryClient.invalidateQueries({ queryKey: ['admin-submissions'] })}
+      />
+
       <DeleteSubmissionDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
