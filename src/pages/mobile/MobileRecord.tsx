@@ -313,7 +313,7 @@ export default function MobileRecord() {
         if (n <= 1) {
           if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
           countdownTimerRef.current = null;
-          startRecording();
+          void startRecording();
           return 0;
         }
         return n - 1;
