@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ChevronRight, Users, Video } from "lucide-react";
+import { ChevronRight, Users, Video, Clapperboard } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { mobileApi } from "@/lib/mobile-api";
+import { attemptKey, listAttempts } from "@/lib/capture-attempts";
 import { toast } from "sonner";
 
 type Team = {
@@ -27,6 +28,7 @@ export default function MobileEventTeams() {
   const { eventId = "" } = useParams();
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
+  const [attemptsByTeam, setAttemptsByTeam] = useState<Record<string, number>>({});
 
   useEffect(() => {
     (async () => {
@@ -37,6 +39,22 @@ export default function MobileEventTeams() {
       } finally { setLoading(false); }
     })();
   }, [eventId]);
+
+  useEffect(() => {
+    if (!teams.length) return;
+    let cancelled = false;
+    (async () => {
+      const counts: Record<string, number> = {};
+      await Promise.all(
+        teams.map(async (t) => {
+          const stored = await listAttempts(attemptKey(eventId, t.team_id));
+          counts[t.team_id] = stored.length;
+        }),
+      );
+      if (!cancelled) setAttemptsByTeam(counts);
+    })();
+    return () => { cancelled = true; };
+  }, [eventId, teams]);
 
   return (
     <div className="px-4 py-6 space-y-4 max-w-xl mx-auto">
@@ -57,33 +75,44 @@ export default function MobileEventTeams() {
       )}
 
       <div className="space-y-3">
-        {teams.map((t) => (
-          <Link key={t.team_id} to={`/m/events/${eventId}/teams/${t.team_id}`}>
-            <Card className="p-4 active:bg-muted transition-colors">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <div className="font-semibold truncate">{t.team_name}</div>
+        {teams.map((t) => {
+          const attemptCount = attemptsByTeam[t.team_id] ?? 0;
+          return (
+            <Link key={t.team_id} to={`/m/events/${eventId}/teams/${t.team_id}`}>
+              <Card className="p-4 active:bg-muted transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="font-semibold truncate">{t.team_name}</div>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate pl-6">{t.gym_name}</div>
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs">
+                      <Badge variant="outline">{t.division_name}</Badge>
+                      <Badge variant="outline">{t.level_name}</Badge>
+                      <Badge variant="outline">{Number(t.athletes_female || 0) + Number(t.athletes_male || 0)} athletes ({Number(t.athletes_female || 0)}F / {Number(t.athletes_male || 0)}M)</Badge>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs mt-2">
+                      <div className="flex items-center gap-1">
+                        <Video className="h-3 w-3" />
+                        {t.submission
+                          ? <span className="text-primary font-medium">{statusLabel(t.submission.status)}</span>
+                          : <span className="text-muted-foreground">No video submitted</span>}
+                      </div>
+                      {attemptCount > 0 && !t.submission && (
+                        <div className="flex items-center gap-1 text-amber-600">
+                          <Clapperboard className="h-3 w-3" />
+                          <span className="font-medium">{attemptCount} attempt{attemptCount === 1 ? "" : "s"} recorded</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground truncate pl-6">{t.gym_name}</div>
-                  <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs">
-                    <Badge variant="outline">{t.division_name}</Badge>
-                    <Badge variant="outline">{t.level_name}</Badge>
-                    <Badge variant="outline">{Number(t.athletes_female || 0) + Number(t.athletes_male || 0)} athletes ({Number(t.athletes_female || 0)}F / {Number(t.athletes_male || 0)}M)</Badge>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs mt-2">
-                    <Video className="h-3 w-3" />
-                    {t.submission
-                      ? <span className="text-primary font-medium">{statusLabel(t.submission.status)}</span>
-                      : <span className="text-muted-foreground">No video submitted</span>}
-                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground mt-1 shrink-0" />
-              </div>
-            </Card>
-          </Link>
-        ))}
+              </Card>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
