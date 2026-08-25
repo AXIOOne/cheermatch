@@ -28,7 +28,14 @@ import { CaptureOverlay } from "@/components/mobile/CaptureOverlay";
 import { AudioMeter } from "@/components/mobile/AudioMeter";
 
 type Phase = "ready" | "countdown" | "recording" | "preview" | "choose" | "uploading" | "done";
-type Attempt = { id: number; blob: Blob; url: string; durationSec: number };
+type Attempt = {
+  id: number;
+  seq: number;
+  blob: Blob | null;
+  url: string | null;
+  durationSec: number;
+  complete: boolean;
+};
 
 const DEFAULT_DURATION = 150; // 2:30
 const DEFAULT_ATTEMPTS = 2;
