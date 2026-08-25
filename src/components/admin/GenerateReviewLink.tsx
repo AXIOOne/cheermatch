@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link2, Loader2, Copy, Check, Mail } from 'lucide-react';
+import { Send, Loader2, Copy, Check, Mail } from 'lucide-react';
 
 const generateLinkSchema = z.object({
   coach_email: z.string().email('Please enter a valid email'),
@@ -24,9 +24,11 @@ type GenerateLinkFormData = z.infer<typeof generateLinkSchema>;
 interface GenerateReviewLinkProps {
   submissionId: string;
   teamName: string;
+  variant?: 'default' | 'outline';
+  size?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
-export function GenerateReviewLink({ submissionId, teamName }: GenerateReviewLinkProps) {
+export function GenerateReviewLink({ submissionId, teamName, variant = 'outline', size = 'sm' }: GenerateReviewLinkProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -160,9 +162,9 @@ export function GenerateReviewLink({ submissionId, teamName }: GenerateReviewLin
   return (
     <Dialog open={isOpen} onOpenChange={(open) => open ? setIsOpen(true) : handleClose()}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Link2 className="w-4 h-4 mr-2" />
-          Send Score Sheet to Coach
+        <Button variant={variant} size={size}>
+          <Send className="w-4 h-4 mr-2" />
+          Send Score Sheet
         </Button>
       </DialogTrigger>
       <DialogContent>
