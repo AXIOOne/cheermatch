@@ -2,7 +2,7 @@
 // Admin-only: resolves a direct MP4 rendition URL for a submission's Brightcove video
 // so the portal can offer a download link.
 import { handleOptions, ok, fail, serviceClient } from "../_shared/legacy.ts";
-import { bcGetVideoSources, bcPickMp4Source, bcGetDigitalMaster, bcListIngestProfiles } from "../_shared/brightcove.ts";
+import { bcGetVideoSources, bcPickMp4Source, bcGetDigitalMaster, bcRetranscodeFromMaster } from "../_shared/brightcove.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
