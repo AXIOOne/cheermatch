@@ -574,10 +574,10 @@ export default function Submissions() {
                             <img
                               src={submission.thumbnail_url}
                               alt="Thumbnail"
-                              className="w-16 h-10 object-cover rounded"
+                              className="h-10 aspect-video object-cover rounded"
                             />
                           ) : (
-                            <div className="w-16 h-10 bg-muted rounded flex items-center justify-center">
+                            <div className="h-10 aspect-video bg-muted rounded flex items-center justify-center">
                               <Video className="w-4 h-4 text-muted-foreground" />
                             </div>
                           )}
