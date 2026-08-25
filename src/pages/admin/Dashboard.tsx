@@ -255,9 +255,22 @@ export default function Dashboard() {
                     )}
                     </div>
                   </div>
-                  <span className="text-xs text-muted-foreground" title={new Date(login.created_at).toLocaleString()}>
-                    {formatDistanceToNow(new Date(login.created_at), { addSuffix: true })}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap justify-end gap-1">
+                      {login.roles.length > 0 ? (
+                        login.roles.map((r) => (
+                          <Badge key={r} variant="secondary" className="text-[10px] capitalize">
+                            {r.replace('_', ' ')}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No role</span>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground w-28 text-right" title={new Date(login.created_at).toLocaleString()}>
+                      {formatDistanceToNow(new Date(login.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
