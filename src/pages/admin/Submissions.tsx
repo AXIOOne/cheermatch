@@ -438,6 +438,7 @@ export default function Submissions() {
           </CardContent>
         </Card>
       </div>
+      )}
 
 
       {/* Filters & Bulk Actions */}
