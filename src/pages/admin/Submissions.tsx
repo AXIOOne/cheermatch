@@ -91,6 +91,7 @@ export default function Submissions() {
   const { isAdmin } = useAuth();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<{ id: string; teamName: string } | null>(null);
+  const [videoModalSubmission, setVideoModalSubmission] = useState<SubmissionWithDetails | null>(null);
 
   const videoPrep = useVideoPrep();
 
