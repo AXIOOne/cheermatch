@@ -361,9 +361,29 @@ export default function MobileRecord() {
       audioBitsPerSecond: 128_000,
     });
 
-    // Reserve the attempt BEFORE recording starts so any length of recording —
-    // even one abandoned by reloading or closing the app — counts permanently.
-    const reserved = await reserveAttempt(storageKey);
+    // Reserve the attempt in the PORTAL before recording starts, so any length of
+    // recording — even one abandoned by reloading, closing the app, or switching
+    // devices — counts permanently against the event's attempt limit.
+    let serverAttemptId: string | null = null;
+    let serverSeq: number | undefined;
+    try {
+      const res = await mobileApi.reserveAttempt(eventId, teamId, {
+        kind: device.kind,
+        label: deviceLabel(device),
+        user_agent: navigator.userAgent,
+      });
+      if (res.status && res.data) {
+        serverAttemptId = res.data.id;
+        serverSeq = Number(res.data.attempt_number);
+      } else if (!res.status) {
+        toast.error(res.message || "Could not record this attempt");
+        return;
+      }
+    } catch {
+      toast.message("Offline — this attempt will sync when you reconnect");
+    }
+
+    const reserved = await reserveAttempt(storageKey, serverSeq);
     setAttempts((prev) => [
       ...prev,
       { id: reserved.id, seq: reserved.seq, blob: null, url: null, durationSec: 0, complete: false },
@@ -376,6 +396,8 @@ export default function MobileRecord() {
       const durationSec = Math.min(maxDuration, Math.round((Date.now() - startedAt) / 1000));
       const url = URL.createObjectURL(out);
       void finalizeAttempt(reserved.id, out, durationSec);
+      if (serverAttemptId) void mobileApi.finalizeAttempt(serverAttemptId, durationSec, "saved");
+
       setAttempts((prev) =>
         prev.map((a) =>
           a.id === reserved.id ? { ...a, blob: out, url, durationSec, complete: true } : a,
