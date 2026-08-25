@@ -507,6 +507,11 @@ export default function MobileRecord() {
     });
   }
 
+  function setLens(wide: boolean) {
+    localStorage.setItem(WIDE_KEY, wide ? "1" : "0");
+    setWideAngle(wide);
+  }
+
   // Bind preview video
   useEffect(() => {
     if (phase === "preview" && previewAttemptId != null && videoPreviewRef.current) {
