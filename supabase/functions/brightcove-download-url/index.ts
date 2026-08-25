@@ -45,23 +45,37 @@ Deno.serve(async (req) => {
     if (!videoId) return fail("This submission has no video hosted on Brightcove");
 
     const sources = await bcGetVideoSources(videoId);
-    console.log("brightcove sources", videoId, JSON.stringify(sources));
     const mp4 = bcPickMp4Source(sources);
-    if (!mp4?.src) {
-      const kinds = sources.map((s) => s.container ?? s.type ?? "unknown");
+
+    // Dynamic Delivery accounts often expose only HLS/DASH renditions — fall back
+    // to the digital master (the original uploaded file) when available.
+    let url = mp4?.src ?? "";
+    let ext = "mp4";
+    if (!url) {
+      const master = await bcGetDigitalMaster(videoId);
+      console.log("brightcove digital_master", videoId, JSON.stringify(master));
+      const masterUrl = (master?.url ?? (master as any)?.src) as string | undefined;
+      if (masterUrl && /^https?:/i.test(masterUrl)) {
+        url = masterUrl;
+        ext = (masterUrl.split("?")[0].split(".").pop() ?? "mp4").slice(0, 4);
+      }
+    }
+
+    if (!url) {
+      const kinds = [...new Set(sources.map((s) => s.container ?? s.type ?? "unknown"))];
       return fail(
         sources.length === 0
           ? "The video is still processing on the host server. Try again in a few minutes."
-          : `No downloadable MP4 rendition is available for this video (renditions: ${[...new Set(kinds)].join(", ")}).`,
+          : `No downloadable file is available for this video. The host only has streaming renditions (${kinds.join(", ")}) and no archived master.`,
       );
     }
 
-
     const team = (sub as any).team?.name ?? "Team";
     const division = (sub as any).team?.division?.name ?? "";
-    const filename = `${safeName(division ? `${team} - ${division}` : team)}.mp4`;
+    const filename = `${safeName(division ? `${team} - ${division}` : team)}.${ext}`;
 
-    return ok("Download link ready", { url: mp4.src, filename });
+    return ok("Download link ready", { url, filename });
+
   } catch (e) {
     return fail((e as Error).message);
   }
