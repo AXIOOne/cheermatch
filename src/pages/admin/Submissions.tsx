@@ -523,7 +523,7 @@ export default function Submissions() {
             <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
-          ) : filteredSubmissions && filteredSubmissions.length > 0 ? (
+          ) : (filteredSubmissions && filteredSubmissions.length > 0) || filteredPending.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
