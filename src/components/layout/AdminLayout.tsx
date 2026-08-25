@@ -42,6 +42,9 @@ export function AdminLayout() {
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="h-4" />
             <span className="text-sm font-medium text-muted-foreground">Admin Portal</span>
+            <div className="ml-auto flex items-center">
+              <JudgeMessagesMenu />
+            </div>
           </header>
           <main className="flex-1 overflow-auto p-4">
             <Outlet />
