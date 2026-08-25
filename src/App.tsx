@@ -65,6 +65,7 @@ const App = () => (
     <AuthProvider>
       <MobileAuthProvider>
         <TooltipProvider>
+          <VideoPrepProvider>
           <BrandingApplier />
           <Toaster />
           <Sonner />
