@@ -248,13 +248,16 @@ export default function MobileRecord() {
     let cancelled = false;
     (async () => {
       try {
+        const baseVideo: MediaTrackConstraints = {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30, max: 30 },
+        };
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30, max: 30 },
-          },
+          video:
+            wideAngle && wideDeviceId
+              ? { ...baseVideo, deviceId: { exact: wideDeviceId } }
+              : { ...baseVideo, facingMode: { ideal: "environment" } },
           audio: {
             echoCancellation: false,
             noiseSuppression: false,
@@ -267,6 +270,35 @@ export default function MobileRecord() {
           videoLiveRef.current.srcObject = stream;
           videoLiveRef.current.play().catch(() => {});
         }
+
+        // Discover an ultra-wide back lens (labels are only exposed after permission)
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const cams = devices.filter((d) => d.kind === "videoinput");
+          const ultra = cams.find((d) => {
+            const l = d.label.toLowerCase();
+            return (
+              /ultra|0\.5|wide/.test(l) &&
+              !/front|tele|telephoto/.test(l) &&
+              !/^(?!.*ultra).*back dual wide.*$/.test("")
+            );
+          });
+          if (!cancelled) {
+            setWideDeviceId(ultra?.deviceId ?? null);
+            setWideSupported(!!ultra);
+            if (!ultra && wideAngle) setWideAngle(false);
+          }
+        } catch { /* enumerate unsupported */ }
+
+        // Fall back to the lens' minimum zoom when no separate ultra-wide device exists
+        if (wideAngle) {
+          const track = stream.getVideoTracks()[0];
+          const caps = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { zoom?: { min: number } };
+          if (caps.zoom?.min != null) {
+            try { await track.applyConstraints({ advanced: [{ zoom: caps.zoom.min } as never] }); } catch { /* noop */ }
+          }
+        }
+
         // Auto-stop on track interruption (call comes in, app backgrounded, etc.)
         stream.getTracks().forEach((t) => {
           t.addEventListener("ended", () => {
@@ -287,7 +319,8 @@ export default function MobileRecord() {
       if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
       wakeLockRef.current?.release().catch(() => {});
     };
-  }, [device.kind, cameraEnabled]);
+  }, [device.kind, cameraEnabled, wideAngle, wideDeviceId]);
+
 
   // Battery + storage estimates (one-shot)
   useEffect(() => {
