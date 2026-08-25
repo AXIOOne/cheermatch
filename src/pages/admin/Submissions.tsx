@@ -567,8 +567,9 @@ export default function Submissions() {
                           onCheckedChange={() => toggleSelection(submission.id)}
                         />
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        <div className="flex items-center gap-3">
+                      <TableCell className="text-sm text-muted-foreground align-top">
+                        <div className="flex flex-col gap-1.5">
+                          <p className="text-sm font-semibold text-muted-foreground leading-tight">{submission.team.name}</p>
                           {submission.thumbnail_url ? (
                             <img
                               src={submission.thumbnail_url}
@@ -580,7 +581,6 @@ export default function Submissions() {
                               <Video className="w-4 h-4 text-muted-foreground" />
                             </div>
                           )}
-                          <p className="text-sm font-semibold text-muted-foreground leading-tight">{submission.team.name}</p>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground break-words max-w-[220px]">{submission.team.gym_name}</TableCell>
@@ -741,12 +741,12 @@ export default function Submissions() {
                 {filteredPending.map((p) => (
                   <TableRow key={p.key} className="text-sm bg-amber-50/40 dark:bg-amber-950/10">
                     <TableCell className="w-10" />
-                    <TableCell className="text-sm text-muted-foreground">
-                      <div className="flex items-center gap-3">
+                    <TableCell className="text-sm text-muted-foreground align-top">
+                      <div className="flex flex-col gap-1.5">
+                        <p className="text-sm font-semibold text-muted-foreground leading-tight">{p.teamName}</p>
                         <div className="w-16 h-10 rounded border border-dashed border-amber-400/70 bg-muted/50 flex items-center justify-center">
                           <VideoOff className="w-4 h-4 text-amber-600" />
                         </div>
-                        <p className="text-sm font-semibold text-muted-foreground leading-tight">{p.teamName}</p>
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground break-words max-w-[220px]">{p.gymName}</TableCell>
