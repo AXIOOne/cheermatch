@@ -9,7 +9,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video, Archive, ArchiveRestore, Trash2, Download, Upload } from 'lucide-react';
+import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video, Archive, ArchiveRestore, Trash2, Download, Upload, Clapperboard } from 'lucide-react';
 import { downloadSubmissionVideo, VideoPreparingError } from '@/lib/download-submission-video';
 import { useVideoPrep } from '@/hooks/useVideoPrep';
 import { format } from 'date-fns';
@@ -77,6 +77,31 @@ export default function SubmissionDetail() {
   });
 
   const isArchived = !!(submission as any)?.archived_at;
+
+  // Capture attempts recorded in the portal (authoritative, not device-local)
+  const teamId = (submission as any)?.team?.id as string | undefined;
+  const eventId = (submission as any)?.event_id as string | undefined;
+  const { data: captureInfo } = useQuery({
+    queryKey: ['submission-capture-attempts', eventId, teamId],
+    queryFn: async () => {
+      const [{ data: rows, error }, { data: ev }] = await Promise.all([
+        sb.from('capture_attempts')
+          .select('id, attempt_number, started_at, outcome, duration_seconds, submission_id')
+          .eq('event_id', eventId!).eq('team_id', teamId!)
+          .order('attempt_number', { ascending: true }),
+        sb.from('events').select('screen_capture_cnt').eq('id', eventId!).maybeSingle(),
+      ]);
+      if (error) throw error;
+      return {
+        attempts: (rows ?? []) as Array<{
+          id: string; attempt_number: number; started_at: string;
+          outcome: string; duration_seconds: number | null; submission_id: string | null;
+        }>,
+        maxAttempts: (ev?.screen_capture_cnt as number | undefined) ?? 2,
+      };
+    },
+    enabled: !!eventId && !!teamId,
+  });
 
   const videoPrep = useVideoPrep();
   const prepState = submissionId ? videoPrep.getState(submissionId) : undefined;
@@ -248,6 +273,45 @@ export default function SubmissionDetail() {
       </div>
 
       <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Clapperboard className="w-4 h-4" /> Capture Attempts
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold">{captureInfo?.attempts.length ?? 0}</span>
+            <span className="text-sm text-muted-foreground">
+              of {captureInfo?.maxAttempts ?? 2} allowed attempt{(captureInfo?.maxAttempts ?? 2) === 1 ? '' : 's'} used by this team
+            </span>
+          </div>
+          {captureInfo && captureInfo.attempts.length > 0 ? (
+            <div className="divide-y rounded-md border">
+              {captureInfo.attempts.map((a) => (
+                <div key={a.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">Take #{a.attempt_number}</span>
+                    <Badge variant={a.submission_id ? 'default' : 'outline'} className="capitalize">
+                      {a.submission_id ? 'uploaded' : a.outcome?.replace(/_/g, ' ') || 'recorded'}
+                    </Badge>
+                  </div>
+                  <div className="text-muted-foreground">
+                    {format(new Date(a.started_at), 'MMM d, yyyy p')}
+                    {a.duration_seconds ? ` · ${a.duration_seconds}s` : ''}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No capture attempts recorded in the portal for this team. Videos uploaded before attempt tracking, or imported by an admin, will not have attempt records.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><Video className="w-4 h-4" /> Performance Video</CardTitle>
         </CardHeader>
