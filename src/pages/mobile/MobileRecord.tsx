@@ -26,6 +26,13 @@ import { useMobileAuth } from "@/hooks/useMobileAuth";
 import { detectDevice, deviceLabel, type DetectedDevice } from "@/lib/device-detect";
 import { CaptureOverlay } from "@/components/mobile/CaptureOverlay";
 import { AudioMeter } from "@/components/mobile/AudioMeter";
+import {
+  attemptKey,
+  clearAttempts,
+  finalizeAttempt,
+  listAttempts,
+  reserveAttempt,
+} from "@/lib/capture-attempts";
 
 type Phase = "ready" | "countdown" | "recording" | "preview" | "choose" | "uploading" | "done";
 type Attempt = {
