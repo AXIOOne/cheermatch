@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
     const submissionId = String(body.submission_id ?? "").trim();
+    const probe = body.probe === true; // status check only: never kick off a re-transcode
     if (!UUID_RE.test(submissionId)) return fail("A valid submission_id is required");
 
     const { data: sub, error } = await sb
@@ -61,18 +62,21 @@ Deno.serve(async (req) => {
         url = masterUrl;
         ext = (masterUrl.split("?")[0].split(".").pop() ?? "mp4").slice(0, 4);
       } else if (master?.id) {
+        if (probe) return fail("Still preparing a downloadable copy", { preparing: true });
         const started = await bcRetranscodeFromMaster(videoId);
         return fail(
           started
-            ? "This video was published in streaming-only format. We've asked the host to build a downloadable copy — this usually takes 1-2 minutes. Please try the download again shortly."
+            ? "This video was published in streaming-only format. We've asked the host to build a downloadable copy — this usually takes 1-2 minutes. We'll flag the download icon green as soon as it's ready."
             : "No downloadable copy exists for this video and the host declined to create one. Please re-upload the performance video.",
+          { preparing: started },
         );
       }
     }
 
     if (!url) {
-      return fail("The video is still processing on the host server. Try again in a few minutes.");
+      return fail("The video is still processing on the host server. Try again in a few minutes.", { preparing: true });
     }
+
 
 
     const team = (sub as any).team?.name ?? "Team";

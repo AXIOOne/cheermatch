@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Video, Inbox, CheckCircle, XCircle, Search, ExternalLink, Mail, RotateCcw, Archive, ArchiveRestore, Trash2, Download, Upload } from 'lucide-react';
-import { downloadSubmissionVideo } from '@/lib/download-submission-video';
+import { downloadSubmissionVideo, VideoPreparingError } from '@/lib/download-submission-video';
+import { useVideoPrep } from '@/hooks/useVideoPrep';
 import { format } from 'date-fns';
 import { GenerateReviewLink } from '@/components/admin/GenerateReviewLink';
 import { BulkEmailDialog } from '@/components/admin/BulkEmailDialog';
@@ -87,12 +88,20 @@ export default function Submissions() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<{ id: string; teamName: string } | null>(null);
 
+  const videoPrep = useVideoPrep();
+
   const handleDownload = async (submission: SubmissionWithDetails) => {
     setDownloadingId(submission.id);
     try {
       await downloadSubmissionVideo(submission.id, submission.video_url);
+      videoPrep.clear(submission.id);
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Download unavailable', description: e.message });
+      if (e instanceof VideoPreparingError) {
+        videoPrep.markPreparing(submission.id);
+        toast({ title: 'Preparing download', description: e.message });
+      } else {
+        toast({ variant: 'destructive', title: 'Download unavailable', description: e.message });
+      }
     } finally {
       setDownloadingId(null);
     }
@@ -510,13 +519,23 @@ export default function Submissions() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            title={submission.brightcove_video_id || submission.video_url ? 'Download video' : 'No video available'}
+                            title={
+                              videoPrep.getState(submission.id) === 'preparing'
+                                ? 'Preparing a downloadable copy on the host…'
+                                : videoPrep.getState(submission.id) === 'ready'
+                                  ? 'Downloadable copy is ready'
+                                  : submission.brightcove_video_id || submission.video_url ? 'Download video' : 'No video available'
+                            }
                             disabled={(!submission.brightcove_video_id && !submission.video_url) || downloadingId === submission.id}
                             onClick={() => handleDownload(submission)}
                           >
                             {downloadingId === submission.id
                               ? <Loader2 className="w-4 h-4 animate-spin" />
-                              : <Download className="w-4 h-4" />}
+                              : videoPrep.getState(submission.id) === 'preparing'
+                                ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                : videoPrep.getState(submission.id) === 'ready'
+                                  ? <Download className="w-4 h-4 text-primary" />
+                                  : <Download className="w-4 h-4" />}
                           </Button>
                           {isAdmin && !isArchivedTab && (
                             <Button

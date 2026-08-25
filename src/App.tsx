@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { VideoPrepProvider } from "@/hooks/useVideoPrep";
 import { BrandingApplier } from "@/components/BrandingApplier";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -65,6 +66,7 @@ const App = () => (
     <AuthProvider>
       <MobileAuthProvider>
         <TooltipProvider>
+          <VideoPrepProvider>
           <BrandingApplier />
           <Toaster />
           <Sonner />
@@ -130,6 +132,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          </VideoPrepProvider>
         </TooltipProvider>
       </MobileAuthProvider>
     </AuthProvider>

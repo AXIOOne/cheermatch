@@ -10,7 +10,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video, Archive, ArchiveRestore, Trash2, Download, Upload } from 'lucide-react';
-import { downloadSubmissionVideo } from '@/lib/download-submission-video';
+import { downloadSubmissionVideo, VideoPreparingError } from '@/lib/download-submission-video';
+import { useVideoPrep } from '@/hooks/useVideoPrep';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -77,12 +78,21 @@ export default function SubmissionDetail() {
 
   const isArchived = !!(submission as any)?.archived_at;
 
+  const videoPrep = useVideoPrep();
+  const prepState = submissionId ? videoPrep.getState(submissionId) : undefined;
+
   const handleDownload = async () => {
     setDownloading(true);
     try {
       await downloadSubmissionVideo(submissionId!, (submission as any)?.video_url);
+      videoPrep.clear(submissionId!);
     } catch (e: any) {
-      toast({ variant: 'destructive', title: 'Download unavailable', description: e.message });
+      if (e instanceof VideoPreparingError) {
+        videoPrep.markPreparing(submissionId!);
+        toast({ title: 'Preparing download', description: e.message });
+      } else {
+        toast({ variant: 'destructive', title: 'Download unavailable', description: e.message });
+      }
     } finally {
       setDownloading(false);
     }
@@ -142,8 +152,10 @@ export default function SubmissionDetail() {
             disabled={downloading || (!(submission as any).brightcove_video_id && !submission.video_url)}
             title={(submission as any).brightcove_video_id || submission.video_url ? 'Download video' : 'No video available'}
           >
-            {downloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-            Download video
+            {downloading || prepState === 'preparing'
+              ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              : <Download className={`w-4 h-4 mr-2 ${prepState === 'ready' ? 'text-primary' : ''}`} />}
+            {prepState === 'preparing' ? 'Preparing download…' : prepState === 'ready' ? 'Download ready' : 'Download video'}
           </Button>
           {!isArchived && (
             <Button size="sm" variant="outline" onClick={() => setReplaceOpen(true)}>
