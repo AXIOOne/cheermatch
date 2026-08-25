@@ -15,7 +15,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Video, Inbox, CheckCircle, XCircle, Search, ExternalLink, Mail, RotateCcw, Archive, ArchiveRestore, Trash2, Download, Upload } from 'lucide-react';
+import { Loader2, Video, Inbox, CheckCircle, XCircle, Search, ExternalLink, Mail, RotateCcw, Archive, ArchiveRestore, Trash2, Download, Upload, Clapperboard, AlertTriangle } from 'lucide-react';
 import { downloadSubmissionVideo, VideoPreparingError } from '@/lib/download-submission-video';
 import { useVideoPrep } from '@/hooks/useVideoPrep';
 import { format } from 'date-fns';
@@ -152,7 +152,26 @@ export default function Submissions() {
     },
   });
 
+  // Capture attempts recorded in the portal (source of truth, not the device)
+  const { data: attempts } = useQuery({
+    queryKey: ['capture-attempts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('capture_attempts')
+        .select('id, event_id, team_id, attempt_number, started_at, outcome, team:teams(name, gym_name), event:events(name)')
+        .order('started_at', { ascending: false });
+      if (error) throw error;
+      return data as unknown as Array<{
+        id: string; event_id: string; team_id: string; attempt_number: number;
+        started_at: string; outcome: string;
+        team: { name: string; gym_name: string } | null;
+        event: { name: string } | null;
+      }>;
+    },
+  });
+
   const archiveMutation = useMutation({
+
     mutationFn: async (ids: string[]) => {
       const targets = submissions?.filter((s) => ids.includes(s.id)) ?? [];
       for (const s of targets) {
@@ -233,6 +252,37 @@ export default function Submissions() {
     denied: countBy('denied'),
     revision_requested: countBy('revision_requested'),
   };
+
+  // attempts per team, plus teams that recorded but never uploaded a submission
+  const attemptsByTeam = new Map<string, { count: number; lastAt: string }>();
+  (attempts ?? []).forEach((a) => {
+    const cur = attemptsByTeam.get(a.team_id);
+    attemptsByTeam.set(a.team_id, {
+      count: (cur?.count ?? 0) + 1,
+      lastAt: cur?.lastAt && cur.lastAt > a.started_at ? cur.lastAt : a.started_at,
+    });
+  });
+
+  const submittedTeamIds = new Set((submissions ?? []).map((s) => s.team.id));
+  const capturedNoUpload = Object.values(
+    (attempts ?? [])
+      .filter((a) => !submittedTeamIds.has(a.team_id))
+      .filter((a) => eventFilter === 'all' || a.event_id === eventFilter)
+      .reduce((acc, a) => {
+        const key = a.team_id;
+        const cur = acc[key];
+        acc[key] = {
+          teamId: a.team_id,
+          teamName: a.team?.name ?? 'Unknown team',
+          gymName: a.team?.gym_name ?? '',
+          eventName: a.event?.name ?? '',
+          count: (cur?.count ?? 0) + 1,
+          lastAt: cur?.lastAt && cur.lastAt > a.started_at ? cur.lastAt : a.started_at,
+        };
+        return acc;
+      }, {} as Record<string, { teamId: string; teamName: string; gymName: string; eventName: string; count: number; lastAt: string }>),
+  ).sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
+
 
   const archivedCount = submissions?.filter((s) => !!s.archived_at).length || 0;
   const currentCount = submissions?.filter((s) => !s.archived_at).length || 0;
@@ -429,7 +479,42 @@ export default function Submissions() {
         </CardContent>
       </Card>
 
+      {/* Teams that recorded a capture attempt but never uploaded a video */}
+      {!isArchivedTab && capturedNoUpload.length > 0 && (
+        <Card className="mb-6 border-amber-300/60 bg-amber-50/50 dark:bg-amber-950/20">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600" />
+              Recorded but not uploaded ({capturedNoUpload.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <p className="text-sm text-muted-foreground mb-3">
+              These teams started at least one capture attempt on the mobile app, but no video submission has arrived yet.
+            </p>
+            <div className="space-y-2">
+              {capturedNoUpload.map((t) => (
+                <div key={t.teamId} className="flex items-center justify-between gap-4 text-sm border-t pt-2 first:border-t-0 first:pt-0">
+                  <div>
+                    <p className="font-medium">{t.teamName}</p>
+                    <p className="text-muted-foreground">{t.gymName}{t.eventName ? ` · ${t.eventName}` : ''}</p>
+                  </div>
+                  <div className="flex items-center gap-3 text-muted-foreground whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Clapperboard className="w-3.5 h-3.5" />
+                      {t.count} attempt{t.count === 1 ? '' : 's'}
+                    </span>
+                    <span>{format(new Date(t.lastAt), 'MMM d, p')}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Submissions Table */}
+
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
@@ -450,6 +535,8 @@ export default function Submissions() {
                   <TableHead>Event</TableHead>
                   <TableHead>Division / Level</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Attempts</TableHead>
+
                   <TableHead>{isArchivedTab ? 'Archived' : 'Submitted'}</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -503,6 +590,20 @@ export default function Submissions() {
                           {cfg.label}
                         </Badge>
                       </TableCell>
+                      <TableCell>
+                        {attemptsByTeam.get(submission.team.id) ? (
+                          <span
+                            className="inline-flex items-center gap-1.5 text-sm"
+                            title={`Last attempt ${format(new Date(attemptsByTeam.get(submission.team.id)!.lastAt), 'MMM d, yyyy p')}`}
+                          >
+                            <Clapperboard className="w-3.5 h-3.5 text-muted-foreground" />
+                            {attemptsByTeam.get(submission.team.id)!.count}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+
                       <TableCell>
                         {isArchivedTab
                           ? submission.archived_at

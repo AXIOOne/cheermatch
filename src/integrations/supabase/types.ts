@@ -14,6 +14,73 @@ export type Database = {
   }
   public: {
     Tables: {
+      capture_attempts: {
+        Row: {
+          attempt_number: number
+          created_at: string
+          device_info: Json | null
+          duration_seconds: number | null
+          event_id: string
+          id: string
+          outcome: string
+          started_at: string
+          submission_id: string | null
+          team_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          attempt_number: number
+          created_at?: string
+          device_info?: Json | null
+          duration_seconds?: number | null
+          event_id: string
+          id?: string
+          outcome?: string
+          started_at?: string
+          submission_id?: string | null
+          team_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          attempt_number?: number
+          created_at?: string
+          device_info?: Json | null
+          duration_seconds?: number | null
+          event_id?: string
+          id?: string
+          outcome?: string
+          started_at?: string
+          submission_id?: string | null
+          team_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capture_attempts_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "capture_attempts_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "video_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "capture_attempts_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_categories: {
         Row: {
           created_at: string

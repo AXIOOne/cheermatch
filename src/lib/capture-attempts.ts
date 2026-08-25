@@ -64,12 +64,12 @@ export async function listAttempts(key: string): Promise<StoredAttempt[]> {
   }
 }
 
-export async function reserveAttempt(key: string): Promise<StoredAttempt> {
+export async function reserveAttempt(key: string, seq?: number): Promise<StoredAttempt> {
   const existing = await listAttempts(key);
   const record: StoredAttempt = {
     id: Date.now(),
     key,
-    seq: (existing[existing.length - 1]?.seq ?? 0) + 1,
+    seq: seq ?? (existing[existing.length - 1]?.seq ?? 0) + 1,
     startedAt: Date.now(),
     blob: null,
     durationSec: 0,
