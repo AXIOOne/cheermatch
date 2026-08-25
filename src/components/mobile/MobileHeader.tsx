@@ -11,7 +11,7 @@ export function MobileHeader() {
   const src = branding?.logoUrl || logoWhite.url;
 
   return (
-    <header className="sticky top-0 z-30 bg-sidebar border-b border-border">
+    <header className="-mx-4 -mt-6 mb-2 bg-sidebar border-b border-border">
       <div className="max-w-xl mx-auto px-4 h-14 flex items-center">
         <Link to="/m/events" className="flex items-center">
           <img src={src} alt="Portal logo" className="h-8 w-auto object-contain" />
