@@ -143,7 +143,7 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
               </div>
               <div className="space-y-2">
                 <Label>Gym (from coach's organization)</Label>
-                <Input value={coach?.organization_name || ''} readOnly placeholder="Select a coach" />
+                <Input value={coach?.organization_name || team?.gym_name || ''} readOnly placeholder="Select a coach" />
               </div>
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem><FormLabel>Team Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
