@@ -634,7 +634,12 @@ export default function MobileRecord() {
   const isTablet = device.kind === "tablet";
 
   return (
-    <div className="bg-black text-white min-h-[calc(100vh-3.5rem)] flex flex-col relative">
+    <div
+      ref={fs.ref}
+      className={`bg-black text-white flex flex-col relative ${
+        fs.active ? "fixed inset-0 z-[70] h-[100dvh] w-screen" : "min-h-[100dvh]"
+      }`}
+    >
       {/* First-launch device confirmation */}
       {needsDeviceConfirm && (
         <div className="absolute inset-0 z-[60] bg-black/90 flex items-center justify-center p-6">
