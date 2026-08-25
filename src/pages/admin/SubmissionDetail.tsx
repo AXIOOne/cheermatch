@@ -78,6 +78,31 @@ export default function SubmissionDetail() {
 
   const isArchived = !!(submission as any)?.archived_at;
 
+  // Capture attempts recorded in the portal (authoritative, not device-local)
+  const teamId = (submission as any)?.team?.id as string | undefined;
+  const eventId = (submission as any)?.event_id as string | undefined;
+  const { data: captureInfo } = useQuery({
+    queryKey: ['submission-capture-attempts', eventId, teamId],
+    queryFn: async () => {
+      const [{ data: rows, error }, { data: ev }] = await Promise.all([
+        sb.from('capture_attempts')
+          .select('id, attempt_number, started_at, outcome, duration_seconds, submission_id')
+          .eq('event_id', eventId!).eq('team_id', teamId!)
+          .order('attempt_number', { ascending: true }),
+        sb.from('events').select('screen_capture_cnt').eq('id', eventId!).maybeSingle(),
+      ]);
+      if (error) throw error;
+      return {
+        attempts: (rows ?? []) as Array<{
+          id: string; attempt_number: number; started_at: string;
+          outcome: string; duration_seconds: number | null; submission_id: string | null;
+        }>,
+        maxAttempts: (ev?.screen_capture_cnt as number | undefined) ?? 2,
+      };
+    },
+    enabled: !!eventId && !!teamId,
+  });
+
   const videoPrep = useVideoPrep();
   const prepState = submissionId ? videoPrep.getState(submissionId) : undefined;
 
