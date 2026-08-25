@@ -109,10 +109,12 @@ export default function MobileEventTeams() {
                           ? <span className="text-primary font-medium">{statusLabel(t.submission.status)}</span>
                           : <span className="text-muted-foreground">No video submitted</span>}
                       </div>
-                      {attemptCount > 0 && !t.submission && (
-                        <div className="flex items-center gap-1 text-amber-600">
+                      {attemptCount > 0 && (
+                        <div className={`flex items-center gap-1 ${t.submission ? "text-muted-foreground" : "text-amber-600"}`}>
                           <Clapperboard className="h-3 w-3" />
-                          <span className="font-medium">{attemptCount} attempt{attemptCount === 1 ? "" : "s"} recorded</span>
+                          <span className="font-medium">
+                            {attemptCount} attempt{attemptCount === 1 ? "" : "s"} used
+                          </span>
                         </div>
                       )}
                     </div>

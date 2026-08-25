@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Camera,
   Square,
@@ -59,6 +59,10 @@ type NavigatorWithBattery = Navigator & { getBattery?: () => Promise<BatteryLike
 export default function MobileRecord() {
   const { eventId = "", teamId = "" } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  // ?review=1 opens straight into the "choose a take" screen without touching the camera
+  const reviewMode = searchParams.get("review") === "1";
+  const [cameraEnabled, setCameraEnabled] = useState(!reviewMode);
   const { signOut } = useMobileAuth();
   const storageKey = attemptKey(eventId, teamId);
 
@@ -205,6 +209,11 @@ export default function MobileRecord() {
         };
       });
       setAttempts(restored);
+      if (reviewMode) {
+        const playable = restored.filter((a) => a.complete && a.url);
+        setSelectedAttemptId(playable[playable.length - 1]?.id ?? null);
+        setPhase("choose");
+      }
       const offDevice = restored.filter((a) => !a.blob).length;
       toast.message(
         `${restored.length} attempt${restored.length === 1 ? "" : "s"} already recorded for this team` +
@@ -220,9 +229,9 @@ export default function MobileRecord() {
 
 
 
-  // Initialize camera (skip on desktop — capture is disallowed)
+  // Initialize camera (skip on desktop — capture is disallowed — and in review-only mode)
   useEffect(() => {
-    if (device.kind === "desktop") return;
+    if (device.kind === "desktop" || !cameraEnabled) return;
     let cancelled = false;
     (async () => {
       try {
@@ -265,7 +274,7 @@ export default function MobileRecord() {
       if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
       wakeLockRef.current?.release().catch(() => {});
     };
-  }, [device.kind]);
+  }, [device.kind, cameraEnabled]);
 
   // Battery + storage estimates (one-shot)
   useEffect(() => {
@@ -429,6 +438,7 @@ export default function MobileRecord() {
     setPreviewAttemptId(null);
     setProgress(0);
     setPhase("ready");
+    setCameraEnabled(true);
   }
 
   function goChoose() {
@@ -516,7 +526,7 @@ export default function MobileRecord() {
     );
   }
 
-  if (error) {
+  if (error && phase !== "choose" && phase !== "uploading") {
     return (
       <div className="p-6">
         <Card className="p-6 text-center">
@@ -548,9 +558,9 @@ export default function MobileRecord() {
     return (
       <div className="min-h-[calc(100vh-3.5rem)] bg-background px-4 py-4 space-y-4 max-w-xl mx-auto">
         <div>
-          <h1 className="text-xl font-bold">Choose attempt to submit</h1>
+          <h1 className="text-xl font-bold">Review takes &amp; choose your submission</h1>
           <p className="text-sm text-muted-foreground">
-            You recorded {attempts.length} of {maxAttempts} attempts. Only the one you pick will be sent for judging.
+            You have used {attempts.length} of {maxAttempts} attempt{maxAttempts === 1 ? "" : "s"}. Watch each take below, then pick the one to send for judging — only the selected take is submitted.
           </p>
         </div>
         <div className="space-y-3">
@@ -601,6 +611,13 @@ export default function MobileRecord() {
             )}
             <Button onClick={uploadSelected} disabled={selectedAttemptId == null} className="h-14 w-full justify-center">
               <Upload className="h-5 w-5 mr-2 shrink-0" /> Submit Selected For Scoring
+            </Button>
+            <Button
+              variant="ghost"
+              className="h-11 w-full justify-center text-muted-foreground col-span-full"
+              onClick={() => navigate(`/m/events/${eventId}/teams/${teamId}`)}
+            >
+              Back to team
             </Button>
           </div>
         )}
