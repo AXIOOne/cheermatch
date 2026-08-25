@@ -171,6 +171,9 @@ export default function MobileTeamDetail() {
   }
 
   const maxAttempts = ev?.screen_capture_cnt ?? 2;
+  const attemptsUsed = attemptCount;
+  const attemptsLeft = Math.max(0, maxAttempts - attemptsUsed);
+  const playableTakes = takes.filter((t) => t.url).length;
 
   return (
     <div className="px-4 py-6 space-y-4 max-w-xl mx-auto">
