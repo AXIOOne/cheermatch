@@ -168,6 +168,38 @@ export default function MobileRecord() {
     })();
   }, [eventId, teamId, navigate]);
 
+  // Restore previously recorded attempts for this team (survives reload / app restart)
+  useEffect(() => {
+    let cancelled = false;
+    const urls: string[] = [];
+    (async () => {
+      const stored = await listAttempts(storageKey);
+      if (cancelled || stored.length === 0) return;
+      const restored: Attempt[] = stored.map((s) => {
+        const url = s.blob ? URL.createObjectURL(s.blob) : null;
+        if (url) urls.push(url);
+        return {
+          id: s.id,
+          seq: s.seq,
+          blob: s.blob,
+          url,
+          durationSec: s.durationSec,
+          complete: Boolean(s.complete && s.blob),
+        };
+      });
+      setAttempts(restored);
+      toast.message(
+        `${restored.length} attempt${restored.length === 1 ? "" : "s"} already recorded for this team`,
+      );
+    })();
+    return () => {
+      cancelled = true;
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+  }, [storageKey]);
+
+
+
   // Initialize camera (skip on desktop — capture is disallowed)
   useEffect(() => {
     if (device.kind === "desktop") return;
