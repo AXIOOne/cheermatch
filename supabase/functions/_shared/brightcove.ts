@@ -160,3 +160,39 @@ export async function bcEnsureFolder(name: string): Promise<string> {
   folderIdCache.set(key, created.id);
   return created.id;
 }
+
+// ---- Sources (renditions) ----
+export interface BcSource {
+  src?: string;
+  container?: string;
+  codec?: string;
+  encoding_rate?: number;
+  size?: number;
+  width?: number;
+  height?: number;
+  type?: string;
+}
+
+export async function bcGetVideoSources(videoId: string): Promise<BcSource[]> {
+  const token = await getBrightcoveToken();
+  const res = await fetch(
+    `https://cms.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/videos/${videoId}/sources`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) throw new Error(`Brightcove get sources failed: ${res.status} ${await res.text()}`);
+  const data = await res.json();
+  return Array.isArray(data) ? data as BcSource[] : [];
+}
+
+// Highest-bitrate progressive MP4 rendition (skips HLS/DASH manifests).
+export function bcPickMp4Source(sources: BcSource[]): BcSource | null {
+  const mp4s = sources.filter((s) =>
+    !!s.src &&
+    /^https?:/i.test(s.src) &&
+    (s.container ?? "").toUpperCase() === "MP4" &&
+    !/\.m3u8|\.mpd/i.test(s.src)
+  );
+  if (mp4s.length === 0) return null;
+  mp4s.sort((a, b) => (b.encoding_rate ?? b.size ?? 0) - (a.encoding_rate ?? a.size ?? 0));
+  return mp4s[0];
+}
