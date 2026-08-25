@@ -297,7 +297,7 @@ export default function MobileRecord() {
     setPhase("ready");
   }
 
-  function startRecording() {
+  async function startRecording() {
     if (!streamRef.current) { toast.error("Camera not ready"); return; }
     chunksRef.current = [];
     const mimeCandidates = ["video/mp4;codecs=avc1", "video/mp4", "video/webm;codecs=h264", "video/webm"];
@@ -307,16 +307,28 @@ export default function MobileRecord() {
       videoBitsPerSecond: 6_000_000,
       audioBitsPerSecond: 128_000,
     });
+
+    // Reserve the attempt BEFORE recording starts so any length of recording —
+    // even one abandoned by reloading or closing the app — counts permanently.
+    const reserved = await reserveAttempt(storageKey);
+    setAttempts((prev) => [
+      ...prev,
+      { id: reserved.id, seq: reserved.seq, blob: null, url: null, durationSec: 0, complete: false },
+    ]);
+
     const startedAt = Date.now();
     rec.ondataavailable = (e) => e.data && e.data.size > 0 && chunksRef.current.push(e.data);
     rec.onstop = () => {
       const out = new Blob(chunksRef.current, { type: rec.mimeType || "video/mp4" });
       const durationSec = Math.min(maxDuration, Math.round((Date.now() - startedAt) / 1000));
-      const id = Date.now();
       const url = URL.createObjectURL(out);
-      const next: Attempt = { id, blob: out, url, durationSec };
-      setAttempts((prev) => [...prev, next]);
-      setPreviewAttemptId(id);
+      void finalizeAttempt(reserved.id, out, durationSec);
+      setAttempts((prev) =>
+        prev.map((a) =>
+          a.id === reserved.id ? { ...a, blob: out, url, durationSec, complete: true } : a,
+        ),
+      );
+      setPreviewAttemptId(reserved.id);
       setPhase("preview");
       if (autoStopRef.current) { window.clearTimeout(autoStopRef.current); autoStopRef.current = null; }
       wakeLockRef.current?.release().catch(() => {});
@@ -346,9 +358,11 @@ export default function MobileRecord() {
 
   function goChoose() {
     setPreviewAttemptId(null);
-    setSelectedAttemptId(attempts[attempts.length - 1]?.id ?? null);
+    const playable = attempts.filter((a) => a.complete && a.url);
+    setSelectedAttemptId(playable[playable.length - 1]?.id ?? null);
     setPhase("choose");
   }
+
 
   function toggleOverlay() {
     setOverlayOn((on) => {
