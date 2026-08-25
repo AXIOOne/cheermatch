@@ -569,7 +569,7 @@ export default function Submissions() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground align-top">
                         <div className="flex flex-col gap-1.5">
-                          <p className="text-sm font-semibold text-muted-foreground leading-tight">{submission.team.name}</p>
+                          <p className="text-sm font-semibold text-muted-foreground leading-tight whitespace-nowrap">{submission.team.name}</p>
                           {submission.thumbnail_url ? (
                             <img
                               src={submission.thumbnail_url}
