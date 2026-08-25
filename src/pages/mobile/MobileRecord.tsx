@@ -438,6 +438,7 @@ export default function MobileRecord() {
     setPreviewAttemptId(null);
     setProgress(0);
     setPhase("ready");
+    setCameraEnabled(true);
   }
 
   function goChoose() {
