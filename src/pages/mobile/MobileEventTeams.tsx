@@ -45,21 +45,27 @@ export default function MobileEventTeams() {
     let cancelled = false;
     (async () => {
       const counts: Record<string, number> = {};
-      // Portal ledger is authoritative; fall back to the local ledger when offline.
+      // Portal ledger is authoritative (admins can void/reset attempts);
+      // fall back to the local ledger only when the portal is unreachable.
+      let serverOk = false;
       try {
         const res = await mobileApi.listAttempts(eventId);
         if (res.status && Array.isArray(res.data)) {
+          serverOk = true;
+          for (const t of teams) counts[t.team_id] = 0;
           for (const a of res.data) {
-            counts[a.team_id] = Math.max(counts[a.team_id] ?? 0, Number(a.attempt_number) || 0);
+            counts[a.team_id] = (counts[a.team_id] ?? 0) + 1;
           }
         }
       } catch { /* offline */ }
-      await Promise.all(
-        teams.map(async (t) => {
-          const stored = await listAttempts(attemptKey(eventId, t.team_id));
-          counts[t.team_id] = Math.max(counts[t.team_id] ?? 0, stored.length);
-        }),
-      );
+      if (!serverOk) {
+        await Promise.all(
+          teams.map(async (t) => {
+            const stored = await listAttempts(attemptKey(eventId, t.team_id));
+            counts[t.team_id] = Math.max(counts[t.team_id] ?? 0, stored.length);
+          }),
+        );
+      }
       if (!cancelled) setAttemptsByTeam(counts);
     })();
     return () => { cancelled = true; };

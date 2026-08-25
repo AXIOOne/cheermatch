@@ -68,15 +68,20 @@ export default function MobileTeamDetail() {
         // Portal ledger is the source of truth for the count; local footage makes
         // previous takes reviewable so a final submission can be chosen.
         let serverSeqs: number[] = [];
+        let serverOk = false;
         try {
           const attRes = await mobileApi.listAttempts(eventId, teamId);
           if (attRes.status && Array.isArray(attRes.data)) {
+            serverOk = true;
             serverSeqs = attRes.data.map((a) => Number(a.attempt_number)).filter((n) => n > 0);
           }
         } catch { /* offline */ }
         const stored = await listAttempts(attemptKey(eventId, teamId));
         const localBySeq = new Map(stored.map((s) => [s.seq, s]));
-        const seqs = Array.from(new Set([...serverSeqs, ...stored.map((s) => s.seq)])).sort((a, b) => a - b);
+        const seqs = (serverOk
+          ? serverSeqs
+          : Array.from(new Set([...serverSeqs, ...stored.map((s) => s.seq)]))
+        ).sort((a, b) => a - b);
         setAttemptCount(seqs.length);
         setTakes(
           seqs.map((seq) => {

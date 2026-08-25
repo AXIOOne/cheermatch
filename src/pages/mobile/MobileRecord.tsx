@@ -198,16 +198,23 @@ export default function MobileRecord() {
       const localBySeq = new Map(stored.map((s) => [s.seq, s]));
 
       let serverSeqs: number[] = [];
+      let serverOk = false;
       try {
         const res = await mobileApi.listAttempts(eventId, teamId);
         if (res.status && Array.isArray(res.data)) {
+          serverOk = true;
           serverSeqs = res.data.map((a) => Number(a.attempt_number)).filter((n) => n > 0);
         }
       } catch {
         /* offline — fall back to local ledger */
       }
 
-      const seqs = Array.from(new Set([...serverSeqs, ...stored.map((s) => s.seq)])).sort((a, b) => a - b);
+      // When the portal answers it is authoritative: admins can void/reset attempts,
+      // so local-only takes must not be counted back in.
+      const seqs = (serverOk
+        ? serverSeqs
+        : Array.from(new Set([...serverSeqs, ...stored.map((s) => s.seq)]))
+      ).sort((a, b) => a - b);
       if (cancelled || seqs.length === 0) return;
 
       const restored: Attempt[] = seqs.map((seq) => {
