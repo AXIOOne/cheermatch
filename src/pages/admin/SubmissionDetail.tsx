@@ -9,7 +9,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video, Archive, ArchiveRestore, Trash2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video, Archive, ArchiveRestore, Trash2, Download } from 'lucide-react';
+import { downloadSubmissionVideo } from '@/lib/download-submission-video';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,6 +35,7 @@ export default function SubmissionDetail() {
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
   const [restoreConfirmOpen, setRestoreConfirmOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: SubmissionStatus) => {
@@ -57,7 +59,7 @@ export default function SubmissionDetail() {
       const { data, error } = await sb
         .from('video_submissions')
         .select(`
-          id, video_url, thumbnail_url, status, submitted_at, created_at, duration_seconds,
+          id, video_url, thumbnail_url, brightcove_video_id, status, submitted_at, created_at, duration_seconds,
           review_notes, reviewed_at, archived_at, status_before_archive,
           event_id,
           team:teams!inner(id, name, gym_name, athletes_female, athletes_male, division_id,
@@ -72,6 +74,17 @@ export default function SubmissionDetail() {
   });
 
   const isArchived = !!(submission as any)?.archived_at;
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      await downloadSubmissionVideo(submissionId!, (submission as any)?.video_url);
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Download unavailable', description: e.message });
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const archiveMutation = useMutation({
     mutationFn: async (archive: boolean) => {
@@ -120,6 +133,16 @@ export default function SubmissionDetail() {
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
         </Button>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleDownload}
+            disabled={downloading || (!(submission as any).brightcove_video_id && !submission.video_url)}
+            title={(submission as any).brightcove_video_id || submission.video_url ? 'Download video' : 'No video available'}
+          >
+            {downloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            Download video
+          </Button>
           {!isArchived && (submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'denied') && (
             <Button
               size="sm"

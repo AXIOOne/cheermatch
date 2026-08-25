@@ -15,7 +15,8 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Video, Inbox, CheckCircle, XCircle, Search, ExternalLink, Mail, RotateCcw, Archive, ArchiveRestore, Trash2 } from 'lucide-react';
+import { Loader2, Video, Inbox, CheckCircle, XCircle, Search, ExternalLink, Mail, RotateCcw, Archive, ArchiveRestore, Trash2, Download } from 'lucide-react';
+import { downloadSubmissionVideo } from '@/lib/download-submission-video';
 import { format } from 'date-fns';
 import { GenerateReviewLink } from '@/components/admin/GenerateReviewLink';
 import { BulkEmailDialog } from '@/components/admin/BulkEmailDialog';
@@ -32,6 +33,7 @@ const LIFECYCLE_STATUSES: LifecycleStatus[] = ['imported', 'approved', 'denied',
 interface SubmissionWithDetails {
   id: string;
   video_url: string | null;
+  brightcove_video_id: string | null;
   thumbnail_url: string | null;
   status: SubmissionStatus;
   submitted_at: string | null;
@@ -81,6 +83,18 @@ export default function Submissions() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const handleDownload = async (submission: SubmissionWithDetails) => {
+    setDownloadingId(submission.id);
+    try {
+      await downloadSubmissionVideo(submission.id, submission.video_url);
+    } catch (e: any) {
+      toast({ variant: 'destructive', title: 'Download unavailable', description: e.message });
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['admin-submissions'],
@@ -90,6 +104,7 @@ export default function Submissions() {
         .select(`
           id,
           video_url,
+          brightcove_video_id,
           thumbnail_url,
           status,
           submitted_at,
@@ -490,6 +505,17 @@ export default function Submissions() {
                         <div className="flex items-center justify-end gap-2">
                           {/* Approve/Deny actions live on the submission detail page */}
 
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title={submission.brightcove_video_id || submission.video_url ? 'Download video' : 'No video available'}
+                            disabled={(!submission.brightcove_video_id && !submission.video_url) || downloadingId === submission.id}
+                            onClick={() => handleDownload(submission)}
+                          >
+                            {downloadingId === submission.id
+                              ? <Loader2 className="w-4 h-4 animate-spin" />
+                              : <Download className="w-4 h-4" />}
+                          </Button>
                           {submission.video_url && (
                             <Button variant="ghost" size="sm" asChild>
                               <a href={submission.video_url} target="_blank" rel="noopener noreferrer">
