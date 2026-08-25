@@ -743,6 +743,16 @@ export default function MobileRecord() {
               >
                 <Grid3x3 className="h-4 w-4" />
               </button>
+              {fs.supported && (
+                <button
+                  onClick={() => (fs.active ? void fs.exit() : void fs.enter())}
+                  className={`p-1.5 rounded-md ${fs.active ? "bg-white/20" : "bg-black/40"} hover:bg-white/30`}
+                  aria-label={fs.active ? "Exit full screen" : "Enter full screen"}
+                  title={fs.active ? "Exit full screen" : "Enter full screen"}
+                >
+                  {fs.active ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                </button>
+              )}
             </div>
           </div>
         )}
