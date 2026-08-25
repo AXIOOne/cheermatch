@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
 import { Calendar, Activity, Plus, Loader2, LogIn } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -55,14 +56,22 @@ export default function Dashboard() {
       if (error) throw error;
       const userIds = Array.from(new Set((data ?? []).map((d) => d.user_id)));
       let avatarMap = new Map<string, string | null>();
+      const roleMap = new Map<string, string[]>();
       if (userIds.length) {
-        const { data: profs } = await supabase
-          .from('profiles')
-          .select('user_id, avatar_url')
-          .in('user_id', userIds);
+        const [{ data: profs }, { data: roleRows }] = await Promise.all([
+          supabase.from('profiles').select('user_id, avatar_url').in('user_id', userIds),
+          supabase.from('user_roles').select('user_id, role').in('user_id', userIds),
+        ]);
         avatarMap = new Map((profs ?? []).map((p: any) => [p.user_id, p.avatar_url]));
+        (roleRows ?? []).forEach((r: any) => {
+          roleMap.set(r.user_id, [...(roleMap.get(r.user_id) ?? []), r.role]);
+        });
       }
-      return (data ?? []).map((d) => ({ ...d, avatar_url: avatarMap.get(d.user_id) ?? null }));
+      return (data ?? []).map((d) => ({
+        ...d,
+        avatar_url: avatarMap.get(d.user_id) ?? null,
+        roles: roleMap.get(d.user_id) ?? [],
+      }));
     },
   });
 
@@ -247,9 +256,22 @@ export default function Dashboard() {
                     )}
                     </div>
                   </div>
-                  <span className="text-xs text-muted-foreground" title={new Date(login.created_at).toLocaleString()}>
-                    {formatDistanceToNow(new Date(login.created_at), { addSuffix: true })}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap justify-end gap-1">
+                      {login.roles.length > 0 ? (
+                        login.roles.map((r) => (
+                          <Badge key={r} variant="secondary" className="text-[10px] capitalize">
+                            {r.replace('_', ' ')}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-xs text-muted-foreground">No role</span>
+                      )}
+                    </div>
+                    <span className="text-xs text-muted-foreground w-28 text-right" title={new Date(login.created_at).toLocaleString()}>
+                      {formatDistanceToNow(new Date(login.created_at), { addSuffix: true })}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
