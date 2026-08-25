@@ -15,7 +15,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Video, Inbox, CheckCircle, XCircle, Search, ExternalLink, Mail, RotateCcw, Archive, ArchiveRestore, Trash2, Download, Upload, Clapperboard, AlertTriangle } from 'lucide-react';
+import { Loader2, Video, VideoOff, Inbox, CheckCircle, XCircle, Search, ExternalLink, Mail, RotateCcw, Archive, ArchiveRestore, Trash2, Download, Upload, Clapperboard, AlertTriangle } from 'lucide-react';
 import { downloadSubmissionVideo, VideoPreparingError } from '@/lib/download-submission-video';
 import { useVideoPrep } from '@/hooks/useVideoPrep';
 import { format } from 'date-fns';
