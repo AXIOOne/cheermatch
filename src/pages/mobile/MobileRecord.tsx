@@ -26,6 +26,7 @@ import { useMobileAuth } from "@/hooks/useMobileAuth";
 import { detectDevice, deviceLabel, type DetectedDevice } from "@/lib/device-detect";
 import { CaptureOverlay } from "@/components/mobile/CaptureOverlay";
 import { AudioMeter } from "@/components/mobile/AudioMeter";
+import { useFullscreen } from "@/hooks/useFullscreen";
 import {
   attemptKey,
   clearAttempts,
