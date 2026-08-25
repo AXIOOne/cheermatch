@@ -612,15 +612,32 @@ export default function MobileRecord() {
 
         {/* Centered floating capture controls */}
         {phase === "ready" && !isPortrait && !needsDeviceConfirm && (
-          <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-4 pointer-events-none">
+            {attempts.length > 0 && (
+              <div className="pointer-events-none rounded-full bg-black/60 px-4 py-1.5 text-sm text-white/90">
+                {attempts.length} of {maxAttempts} attempt{attempts.length === 1 ? "" : "s"} recorded
+                {attempts.length >= maxAttempts ? " — no takes left" : ` · ${maxAttempts - attempts.length} left`}
+              </div>
+            )}
             <button
               onClick={beginCountdown}
+              disabled={attempts.length >= maxAttempts}
               aria-label="Start Recording"
-              className="pointer-events-auto group flex flex-col items-center justify-center h-28 w-28 rounded-full bg-black/40 backdrop-blur-sm border-4 border-white/90 shadow-2xl active:scale-95 transition"
+              className="pointer-events-auto group flex flex-col items-center justify-center h-28 w-28 rounded-full bg-black/40 backdrop-blur-sm border-4 border-white/90 shadow-2xl active:scale-95 transition disabled:opacity-40"
             >
               <span className="h-16 w-16 rounded-full bg-destructive group-hover:bg-destructive/90" />
             </button>
+            {attempts.length > 0 && (
+              <Button
+                variant="secondary"
+                onClick={goChoose}
+                className="pointer-events-auto h-11 px-5"
+              >
+                <Video className="h-4 w-4 mr-2" /> Review previous take{attempts.length > 1 ? "s" : ""}
+              </Button>
+            )}
           </div>
+
         )}
         {phase === "recording" && (
           <div className="absolute inset-0 z-40 flex items-end justify-center pb-8 pointer-events-none">
