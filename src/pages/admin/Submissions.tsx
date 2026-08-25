@@ -507,39 +507,13 @@ export default function Submissions() {
         </CardContent>
       </Card>
 
-      {/* Teams that recorded a capture attempt but never uploaded a video */}
-      {!isArchivedTab && capturedNoUpload.length > 0 && (
-        <Card className="mb-6 border-amber-300/60 bg-amber-50/50 dark:bg-amber-950/20">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600" />
-              Recorded but not uploaded ({capturedNoUpload.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-sm text-muted-foreground mb-3">
-              These teams started at least one capture attempt on the mobile app, but no video submission has arrived yet.
-            </p>
-            <div className="space-y-2">
-              {capturedNoUpload.map((t) => (
-                <div key={t.teamId} className="flex items-center justify-between gap-4 text-sm border-t pt-2 first:border-t-0 first:pt-0">
-                  <div>
-                    <p className="font-medium">{t.teamName}</p>
-                    <p className="text-muted-foreground">{t.gymName}{t.eventName ? ` · ${t.eventName}` : ''}</p>
-                  </div>
-                  <div className="flex items-center gap-3 text-muted-foreground whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Clapperboard className="w-3.5 h-3.5" />
-                      {t.count} attempt{t.count === 1 ? '' : 's'}
-                    </span>
-                    <span>{format(new Date(t.lastAt), 'MMM d, p')}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+      {!isArchivedTab && filteredPending.length > 0 && (
+        <div className="mb-4 flex items-center gap-2 text-sm text-amber-700 dark:text-amber-500">
+          <AlertTriangle className="w-4 h-4" />
+          {filteredPending.length} team{filteredPending.length === 1 ? '' : 's'} recorded capture attempts but haven't chosen a final video yet — shown below with a placeholder.
+        </div>
       )}
+
 
       {/* Submissions Table */}
 
