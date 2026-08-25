@@ -47,29 +47,32 @@ Deno.serve(async (req) => {
     const sources = await bcGetVideoSources(videoId);
     const mp4 = bcPickMp4Source(sources);
 
-    // Dynamic Delivery accounts often expose only HLS/DASH renditions — fall back
-    // to the digital master (the original uploaded file) when available.
     let url = mp4?.src ?? "";
     let ext = "mp4";
+
     if (!url) {
+      // Dynamic Delivery only produced streaming manifests (HLS/DASH). If the original
+      // master is archived on the host, kick off a re-package with an MP4 profile so a
+      // downloadable rendition exists from now on.
       const master = await bcGetDigitalMaster(videoId);
-      console.log("brightcove digital_master", videoId, JSON.stringify(master));
       const masterUrl = (master?.url ?? (master as any)?.src) as string | undefined;
       if (masterUrl && /^https?:/i.test(masterUrl)) {
         url = masterUrl;
         ext = (masterUrl.split("?")[0].split(".").pop() ?? "mp4").slice(0, 4);
+      } else if (master?.id) {
+        const started = await bcRetranscodeFromMaster(videoId);
+        return fail(
+          started
+            ? "This video was published in streaming-only format. We've asked the host to prepare a downloadable copy — try again in a few minutes."
+            : "No downloadable copy exists for this video and the host declined to create one. Please re-upload the performance video.",
+        );
       }
     }
 
     if (!url) {
-      const kinds = [...new Set(sources.map((s) => s.container ?? s.type ?? "unknown"))];
-      return fail(
-        sources.length === 0
-          ? "The video is still processing on the host server. Try again in a few minutes."
-          : `No downloadable file is available for this video. The host only has streaming renditions (${kinds.join(", ")}) and no archived master.`,
-        { debug: { profiles: await bcListIngestProfiles() } },
-      );
+      return fail("The video is still processing on the host server. Try again in a few minutes.");
     }
+
 
     const team = (sub as any).team?.name ?? "Team";
     const division = (sub as any).team?.division?.name ?? "";
