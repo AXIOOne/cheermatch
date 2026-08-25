@@ -65,17 +65,32 @@ export default function MobileTeamDetail() {
             screen_capture_cnt: Number(e.screen_capture_cnt || 2),
           });
         }
-        let count = 0;
+        // Portal ledger is the source of truth for the count; local footage makes
+        // previous takes reviewable so a final submission can be chosen.
+        let serverSeqs: number[] = [];
         try {
           const attRes = await mobileApi.listAttempts(eventId, teamId);
-          if (attRes.status && Array.isArray(attRes.data)) count = attRes.data.length;
+          if (attRes.status && Array.isArray(attRes.data)) {
+            serverSeqs = attRes.data.map((a) => Number(a.attempt_number)).filter((n) => n > 0);
+          }
         } catch { /* offline */ }
         const stored = await listAttempts(attemptKey(eventId, teamId));
-        setAttemptCount(Math.max(count, stored.length));
+        const localBySeq = new Map(stored.map((s) => [s.seq, s]));
+        const seqs = Array.from(new Set([...serverSeqs, ...stored.map((s) => s.seq)])).sort((a, b) => a - b);
+        setAttemptCount(seqs.length);
+        setTakes(
+          seqs.map((seq) => {
+            const s = localBySeq.get(seq);
+            const url = s?.blob ? URL.createObjectURL(s.blob) : null;
+            if (url) urls.push(url);
+            return { seq, url, durationSec: s?.durationSec ?? 0 };
+          }),
+        );
       } finally {
         setLoading(false);
       }
     })();
+    return () => { urls.forEach((u) => URL.revokeObjectURL(u)); };
   }, [eventId, teamId]);
 
   if (loading) {
