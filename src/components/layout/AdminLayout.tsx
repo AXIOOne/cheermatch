@@ -1,6 +1,7 @@
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { AdminSidebar } from './AdminSidebar';
+import { JudgeMessagesMenu } from '@/components/judge/JudgeMessagesMenu';
 import { Loader2 } from 'lucide-react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
@@ -42,6 +43,9 @@ export function AdminLayout() {
             <SidebarTrigger className="-ml-1" />
             <Separator orientation="vertical" className="h-4" />
             <span className="text-sm font-medium text-muted-foreground">Admin Portal</span>
+            <div className="ml-auto flex items-center">
+              <JudgeMessagesMenu />
+            </div>
           </header>
           <main className="flex-1 overflow-auto p-4">
             <Outlet />
