@@ -513,10 +513,10 @@ export default function Submissions() {
         </CardContent>
       </Card>
 
-      {!isArchivedTab && filteredPending.length > 0 && (
+      {isPendingTab && (
         <div className="mb-4 flex items-center gap-2 text-sm text-amber-700 dark:text-amber-500">
           <AlertTriangle className="w-4 h-4" />
-          {filteredPending.length} team{filteredPending.length === 1 ? '' : 's'} recorded capture attempts but haven't chosen a final video yet — shown below with a placeholder.
+          Teams that recorded capture attempts on the mobile app but haven't chosen a final video yet.
         </div>
       )}
 
