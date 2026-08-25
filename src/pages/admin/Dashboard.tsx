@@ -109,7 +109,7 @@ export default function Dashboard() {
           <p className="text-muted-foreground mt-1">Welcome to CheerMatch Admin</p>
         </div>
         <Button asChild>
-          <Link to="/admin/events/new">
+          <Link to="/admin/events">
             <Plus className="w-4 h-4 mr-2" />
             New Event
           </Link>

@@ -81,6 +81,8 @@ const App = () => (
                 <Route index element={<Dashboard />} />
                 <Route path="events" element={<Events />} />
                 <Route path="events/summary" element={<EventsSummary />} />
+                <Route path="events/new" element={<Navigate to="/admin/events" replace />} />
+                <Route path="events/:eventId" element={<Navigate to="registrations" replace />} />
                 <Route path="events/:eventId/registrations" element={<EventRegistrations />} />
                 <Route path="events/:eventId/scoring" element={<EventScoring />} />
                 <Route path="events/:eventId/results" element={<EventResults />} />
