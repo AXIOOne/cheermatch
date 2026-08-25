@@ -462,7 +462,7 @@ export default function Submissions() {
                   return (
                     <TableRow
                       key={submission.id}
-                      className={`cursor-pointer hover:bg-muted/50 ${selectedIds.has(submission.id) ? 'bg-primary/5' : ''}`}
+                      className={`group cursor-pointer hover:bg-muted/50 ${selectedIds.has(submission.id) ? 'bg-primary/5' : ''}`}
                       onClick={() => navigate(`/admin/submissions/${submission.id}`)}
                     >
                       <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
@@ -514,67 +514,90 @@ export default function Submissions() {
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
-                          {/* Approve/Deny actions live on the submission detail page */}
+                          {!isArchivedTab && (
+                            <GenerateReviewLink
+                              submissionId={submission.id}
+                              teamName={submission.team.name}
+                              variant="default"
+                              size="sm"
+                            />
+                          )}
 
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            title={
-                              videoPrep.getState(submission.id) === 'preparing'
-                                ? 'Preparing a downloadable copy on the host…'
-                                : videoPrep.getState(submission.id) === 'ready'
-                                  ? 'Downloadable copy is ready'
-                                  : submission.brightcove_video_id || submission.video_url ? 'Download video' : 'No video available'
-                            }
-                            disabled={(!submission.brightcove_video_id && !submission.video_url) || downloadingId === submission.id}
-                            onClick={() => handleDownload(submission)}
-                          >
-                            {downloadingId === submission.id
-                              ? <Loader2 className="w-4 h-4 animate-spin" />
-                              : videoPrep.getState(submission.id) === 'preparing'
-                                ? <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                                : videoPrep.getState(submission.id) === 'ready'
-                                  ? <Download className="w-4 h-4 text-primary" />
-                                  : <Download className="w-4 h-4" />}
-                          </Button>
-                          {isAdmin && !isArchivedTab && (
+                          <div className="inline-flex items-center rounded-md border border-border bg-background divide-x divide-border">
                             <Button
                               variant="ghost"
-                              size="sm"
-                              title="Replace video"
-                              onClick={() => setReplaceTarget({ id: submission.id, teamName: submission.team.name })}
+                              size="icon"
+                              className="h-8 w-8 rounded-none text-muted-foreground hover:text-primary"
+                              title={
+                                videoPrep.getState(submission.id) === 'preparing'
+                                  ? 'Preparing a downloadable copy on the host…'
+                                  : videoPrep.getState(submission.id) === 'ready'
+                                    ? 'Downloadable copy is ready'
+                                    : submission.brightcove_video_id || submission.video_url
+                                      ? 'Download video'
+                                      : 'No video available'
+                              }
+                              disabled={(!submission.brightcove_video_id && !submission.video_url) || downloadingId === submission.id}
+                              onClick={() => handleDownload(submission)}
                             >
-                              <Upload className="w-4 h-4" />
+                              {downloadingId === submission.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : videoPrep.getState(submission.id) === 'preparing' ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                              ) : videoPrep.getState(submission.id) === 'ready' ? (
+                                <Download className="w-4 h-4 text-primary" />
+                              ) : (
+                                <Download className="w-4 h-4" />
+                              )}
                             </Button>
-                          )}
-                          {submission.video_url && (
-                            <Button variant="ghost" size="sm" asChild>
-                              <a href={submission.video_url} target="_blank" rel="noopener noreferrer">
-                                <ExternalLink className="w-4 h-4" />
-                              </a>
-                            </Button>
-                          )}
-                          {!isArchivedTab && (
-                            <>
-                              <GenerateReviewLink submissionId={submission.id} teamName={submission.team.name} />
+
+                            {isAdmin && !isArchivedTab && (
                               <Button
                                 variant="ghost"
-                                size="sm"
-                                title="Archive submission"
-                                onClick={() => {
-                                  setSelectedIds(new Set([submission.id]));
-                                  setArchiveConfirmOpen(true);
-                                }}
+                                size="icon"
+                                className="h-8 w-8 rounded-none text-muted-foreground hover:text-primary"
+                                title="Replace video"
+                                onClick={() => setReplaceTarget({ id: submission.id, teamName: submission.team.name })}
                               >
-                                <Archive className="w-4 h-4" />
+                                <Upload className="w-4 h-4" />
                               </Button>
-                            </>
+                            )}
+
+                            {submission.video_url && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-none text-muted-foreground hover:text-primary"
+                                asChild
+                              >
+                                <a href={submission.video_url} target="_blank" rel="noopener noreferrer" title="Open video">
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+
+                          {!isArchivedTab && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                              title="Archive submission"
+                              onClick={() => {
+                                setSelectedIds(new Set([submission.id]));
+                                setArchiveConfirmOpen(true);
+                              }}
+                            >
+                              <Archive className="w-4 h-4" />
+                            </Button>
                           )}
+
                           {isArchivedTab && (
                             <>
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground/50 hover:text-primary opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                                 title="Restore to current"
                                 onClick={() => {
                                   setSelectedIds(new Set([submission.id]));
@@ -586,9 +609,9 @@ export default function Submissions() {
                               {isAdmin && (
                                 <Button
                                   variant="ghost"
-                                  size="sm"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                                   title="Delete permanently"
-                                  className="text-destructive hover:text-destructive"
                                   onClick={() => openDelete([{ id: submission.id, teamName: submission.team.name }])}
                                 >
                                   <Trash2 className="w-4 h-4" />
