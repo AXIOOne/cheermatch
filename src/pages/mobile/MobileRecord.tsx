@@ -512,23 +512,36 @@ export default function MobileRecord() {
           </p>
         </div>
         <div className="space-y-3">
-          {attempts.map((a, idx) => {
+          {attempts.map((a) => {
             const active = selectedAttemptId === a.id;
+            const playable = a.complete && a.url;
             return (
               <Card
                 key={a.id}
-                onClick={() => phase === "choose" && setSelectedAttemptId(a.id)}
-                className={`p-3 cursor-pointer border-2 transition ${active ? "border-primary" : "border-transparent"}`}
+                onClick={() => phase === "choose" && playable && setSelectedAttemptId(a.id)}
+                className={`p-3 border-2 transition ${playable ? "cursor-pointer" : "opacity-70"} ${active ? "border-primary" : "border-transparent"}`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="font-medium">Choose Attempt #{idx + 1}</div>
-                  <div className="text-xs text-muted-foreground font-mono">{fmt(a.durationSec)}</div>
+                  <div className="font-medium">Attempt #{a.seq}</div>
+                  <div className="text-xs text-muted-foreground font-mono">
+                    {playable ? fmt(a.durationSec) : "Not saved"}
+                  </div>
                 </div>
-                <video src={a.url} controls playsInline className="w-full rounded bg-black aspect-video" />
+                {playable ? (
+                  <video src={a.url!} controls playsInline className="w-full rounded bg-black aspect-video" />
+                ) : (
+                  <div className="w-full rounded bg-muted aspect-video flex items-center justify-center text-center px-4">
+                    <span className="text-xs text-muted-foreground">
+                      This attempt was interrupted before it finished saving. It still counts toward your{" "}
+                      {maxAttempts}-attempt limit.
+                    </span>
+                  </div>
+                )}
               </Card>
             );
           })}
         </div>
+
 
         {phase === "uploading" ? (
           <div className="space-y-2">
