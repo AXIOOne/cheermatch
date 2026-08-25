@@ -868,6 +868,22 @@ export default function Submissions() {
         submissions={deleteTargets}
         onDeleted={() => setSelectedIds(new Set())}
       />
+
+      <Dialog open={!!videoModalSubmission} onOpenChange={(o) => { if (!o) setVideoModalSubmission(null); }}>
+        <DialogContent className="max-w-4xl w-[calc(100%-2rem)]">
+          <DialogHeader>
+            <DialogTitle>{videoModalSubmission?.team.name} — Performance Video</DialogTitle>
+          </DialogHeader>
+          {videoModalSubmission && (
+            <VideoPlayer
+              url={videoModalSubmission.video_url}
+              thumbnailUrl={videoModalSubmission.thumbnail_url}
+              status={videoModalSubmission.status}
+              title={`${videoModalSubmission.team.name} performance video`}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
