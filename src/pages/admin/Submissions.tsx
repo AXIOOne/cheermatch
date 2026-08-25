@@ -254,35 +254,62 @@ export default function Submissions() {
     revision_requested: countBy('revision_requested'),
   };
 
-  // attempts per team, plus teams that recorded but never uploaded a submission
+  // attempts per (event, team), plus teams that recorded but never uploaded a submission
+  const teamEventKey = (eventId: string, teamId: string) => `${eventId}::${teamId}`;
   const attemptsByTeam = new Map<string, { count: number; lastAt: string }>();
   (attempts ?? []).forEach((a) => {
-    const cur = attemptsByTeam.get(a.team_id);
-    attemptsByTeam.set(a.team_id, {
+    const key = teamEventKey(a.event_id, a.team_id);
+    const cur = attemptsByTeam.get(key);
+    attemptsByTeam.set(key, {
       count: (cur?.count ?? 0) + 1,
       lastAt: cur?.lastAt && cur.lastAt > a.started_at ? cur.lastAt : a.started_at,
     });
   });
 
-  const submittedTeamIds = new Set((submissions ?? []).map((s) => s.team.id));
-  const capturedNoUpload = Object.values(
+  // A team is "awaiting video" for an event when it has attempts but no live submission there
+  const submittedKeys = new Set(
+    (submissions ?? []).filter((s) => !s.archived_at).map((s) => teamEventKey(s.event.id, s.team.id)),
+  );
+
+  type PendingCapture = {
+    key: string; teamId: string; teamName: string; gymName: string;
+    divisionName: string; levelName: string; eventId: string; eventName: string;
+    count: number; lastAt: string;
+  };
+
+  const pendingCaptures: PendingCapture[] = Object.values(
     (attempts ?? [])
-      .filter((a) => !submittedTeamIds.has(a.team_id))
-      .filter((a) => eventFilter === 'all' || a.event_id === eventFilter)
+      .filter((a) => !submittedKeys.has(teamEventKey(a.event_id, a.team_id)))
       .reduce((acc, a) => {
-        const key = a.team_id;
+        const key = teamEventKey(a.event_id, a.team_id);
         const cur = acc[key];
         acc[key] = {
+          key,
           teamId: a.team_id,
           teamName: a.team?.name ?? 'Unknown team',
           gymName: a.team?.gym_name ?? '',
+          divisionName: a.team?.division?.name ?? '—',
+          levelName: a.team?.level?.name ?? '',
+          eventId: a.event_id,
           eventName: a.event?.name ?? '',
           count: (cur?.count ?? 0) + 1,
           lastAt: cur?.lastAt && cur.lastAt > a.started_at ? cur.lastAt : a.started_at,
         };
         return acc;
-      }, {} as Record<string, { teamId: string; teamName: string; gymName: string; eventName: string; count: number; lastAt: string }>),
+      }, {} as Record<string, PendingCapture>),
   ).sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
+
+  const filteredPending = isArchivedTab
+    ? []
+    : pendingCaptures.filter((p) => {
+        const matchesEvent = eventFilter === 'all' || p.eventId === eventFilter;
+        const q = searchQuery.toLowerCase();
+        const matchesSearch =
+          q === '' || p.teamName.toLowerCase().includes(q) || p.gymName.toLowerCase().includes(q);
+        const matchesStatus = statusFilter === 'all';
+        return matchesEvent && matchesSearch && matchesStatus;
+      });
+
 
 
   const archivedCount = submissions?.filter((s) => !!s.archived_at).length || 0;
