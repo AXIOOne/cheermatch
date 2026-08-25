@@ -81,6 +81,7 @@ export default function MobileRecord() {
   const countdownTimerRef = useRef<number | null>(null);
   // Fullscreen capture: hides the browser title/address bar during filming
   const fs = useFullscreen<HTMLDivElement>();
+  const { branding } = usePlatformSettings();
 
   const [phase, setPhase] = useState<Phase>("ready");
   const [elapsed, setElapsed] = useState(0);
