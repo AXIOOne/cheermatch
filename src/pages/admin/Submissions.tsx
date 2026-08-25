@@ -158,17 +158,18 @@ export default function Submissions() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('capture_attempts')
-        .select('id, event_id, team_id, attempt_number, started_at, outcome, team:teams(name, gym_name), event:events(name)')
+        .select('id, event_id, team_id, attempt_number, started_at, outcome, team:teams(id, name, gym_name, division:divisions(name), level:levels(name)), event:events(id, name)')
         .order('started_at', { ascending: false });
       if (error) throw error;
       return data as unknown as Array<{
         id: string; event_id: string; team_id: string; attempt_number: number;
         started_at: string; outcome: string;
-        team: { name: string; gym_name: string } | null;
-        event: { name: string } | null;
+        team: { id: string; name: string; gym_name: string; division: { name: string } | null; level: { name: string } | null } | null;
+        event: { id: string; name: string } | null;
       }>;
     },
   });
+
 
   const archiveMutation = useMutation({
 
