@@ -2,7 +2,7 @@
 // Admin-only: resolves a direct MP4 rendition URL for a submission's Brightcove video
 // so the portal can offer a download link.
 import { handleOptions, ok, fail, serviceClient } from "../_shared/legacy.ts";
-import { bcGetVideoSources, bcPickMp4Source, bcGetDigitalMaster } from "../_shared/brightcove.ts";
+import { bcGetVideoSources, bcPickMp4Source, bcGetDigitalMaster, bcListIngestProfiles } from "../_shared/brightcove.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
         sources.length === 0
           ? "The video is still processing on the host server. Try again in a few minutes."
           : `No downloadable file is available for this video. The host only has streaming renditions (${kinds.join(", ")}) and no archived master.`,
-        { debug: { sources, master: await bcGetDigitalMaster(videoId) } },
+        { debug: { profiles: await bcListIngestProfiles() } },
       );
     }
 

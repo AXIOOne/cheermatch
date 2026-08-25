@@ -211,3 +211,23 @@ export async function bcGetDigitalMaster(videoId: string): Promise<Record<string
   if (!res.ok) return null;
   return await res.json();
 }
+
+export async function bcListIngestProfiles(): Promise<unknown> {
+  const token = await getBrightcoveToken();
+  const res = await fetch(
+    `https://ingestion.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/profiles`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) return { error: `${res.status} ${await res.text()}` };
+  const data = await res.json() as Array<Record<string, unknown>>;
+  return Array.isArray(data)
+    ? data.map((p) => ({
+        name: p.name,
+        id: p.id,
+        digital_master: (p as any).digital_master,
+        renditions: Array.isArray((p as any).renditions)
+          ? (p as any).renditions.map((r: any) => r.package_type ?? r.media_type ?? r.format ?? r.name)
+          : (p as any).dynamic_origin?.renditions,
+      }))
+    : data;
+}
