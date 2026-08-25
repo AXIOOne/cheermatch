@@ -1,0 +1,15 @@
+{
+  "name": "Cheermatch Scoring Portal",
+  "short_name": "Cheermatch",
+  "description": "Capture, submit and score cheer routines.",
+  "start_url": "/m",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "48x48", "type": "image/x-icon" }
+  ]
+}
