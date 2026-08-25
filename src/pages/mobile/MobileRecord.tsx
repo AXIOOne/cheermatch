@@ -335,6 +335,8 @@ export default function MobileRecord() {
       return;
     }
     void requestOrientationPermission();
+    // Take over the whole screen so the browser chrome never covers the shot.
+    void fs.enter();
     setCountdown(3);
     setPhase("countdown");
     countdownTimerRef.current = window.setInterval(() => {
