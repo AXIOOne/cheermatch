@@ -74,7 +74,7 @@ export default function Submissions() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [eventFilter, setEventFilter] = useState<string>('all');
-  const [tab, setTab] = useState<'current' | 'archived'>('current');
+  const [tab, setTab] = useState<'current' | 'archived' | 'pending'>('current');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
