@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({})) as Record<string, unknown>;
     const submissionId = String(body.submission_id ?? "").trim();
+    const probe = body.probe === true; // status check only: never kick off a re-transcode
     if (!UUID_RE.test(submissionId)) return fail("A valid submission_id is required");
 
     const { data: sub, error } = await sb
