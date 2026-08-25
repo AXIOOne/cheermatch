@@ -539,7 +539,7 @@ export default function Submissions() {
                       onCheckedChange={toggleAllFiltered}
                     />
                   </TableHead>
-                  <TableHead>Team</TableHead>
+                  <TableHead className="min-w-[260px]">Team</TableHead>
                   <TableHead className="w-[220px]">Gym</TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Division / Level</TableHead>
@@ -569,7 +569,7 @@ export default function Submissions() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground align-top">
                         <div className="flex flex-col gap-1.5">
-                          <p className="text-sm font-semibold text-muted-foreground leading-tight">{submission.team.name}</p>
+                          <p className="text-sm font-semibold text-muted-foreground leading-tight whitespace-nowrap">{submission.team.name}</p>
                           {submission.thumbnail_url ? (
                             <img
                               src={submission.thumbnail_url}
@@ -743,7 +743,7 @@ export default function Submissions() {
                     <TableCell className="w-10" />
                     <TableCell className="text-sm text-muted-foreground align-top">
                       <div className="flex flex-col gap-1.5">
-                        <p className="text-sm font-semibold text-muted-foreground leading-tight">{p.teamName}</p>
+                        <p className="text-sm font-semibold text-muted-foreground leading-tight whitespace-nowrap">{p.teamName}</p>
                         <div className="h-10 aspect-video rounded border border-dashed border-amber-400/70 bg-muted/50 flex items-center justify-center">
                           <VideoOff className="w-4 h-4 text-amber-600" />
                         </div>
