@@ -51,6 +51,7 @@ const DEFAULT_DURATION = 150; // 2:30
 const DEFAULT_ATTEMPTS = 2;
 const DEVICE_CONFIRM_KEY = "cm.captureDevice";
 const OVERLAY_KEY = "cm.captureOverlay";
+const WIDE_KEY = "cm.captureWideAngle";
 
 function fmt(s: number) {
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
@@ -107,6 +108,13 @@ export default function MobileRecord() {
   const [battery, setBattery] = useState<BatteryLike | null>(null);
   const [storageGb, setStorageGb] = useState<number | null>(null);
   const [countdown, setCountdown] = useState<number>(0);
+
+  // Lens selection (standard vs ultra-wide back camera)
+  const [wideAngle, setWideAngle] = useState<boolean>(
+    typeof window !== "undefined" && localStorage.getItem(WIDE_KEY) === "1",
+  );
+  const [wideDeviceId, setWideDeviceId] = useState<string | null>(null);
+  const [wideSupported, setWideSupported] = useState(false);
 
   // First-launch device confirm
   useEffect(() => {
@@ -240,13 +248,16 @@ export default function MobileRecord() {
     let cancelled = false;
     (async () => {
       try {
+        const baseVideo: MediaTrackConstraints = {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30, max: 30 },
+        };
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30, max: 30 },
-          },
+          video:
+            wideAngle && wideDeviceId
+              ? { ...baseVideo, deviceId: { exact: wideDeviceId } }
+              : { ...baseVideo, facingMode: { ideal: "environment" } },
           audio: {
             echoCancellation: false,
             noiseSuppression: false,
@@ -259,6 +270,30 @@ export default function MobileRecord() {
           videoLiveRef.current.srcObject = stream;
           videoLiveRef.current.play().catch(() => {});
         }
+
+        // Discover an ultra-wide back lens (labels are only exposed after permission)
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const cams = devices.filter((d) => d.kind === "videoinput");
+          const ultra = cams.find((d) => {
+            const l = d.label.toLowerCase();
+            return /ultra|0\.5/.test(l) && !/front|tele/.test(l);
+          });
+          if (!cancelled) {
+            setWideDeviceId(ultra?.deviceId ?? null);
+            setWideSupported(!!ultra);
+          }
+        } catch { /* enumerate unsupported */ }
+
+        // Fall back to the lens' minimum zoom when no separate ultra-wide device exists
+        if (wideAngle) {
+          const track = stream.getVideoTracks()[0];
+          const caps = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & { zoom?: { min: number } };
+          if (caps.zoom?.min != null) {
+            try { await track.applyConstraints({ advanced: [{ zoom: caps.zoom.min } as never] }); } catch { /* noop */ }
+          }
+        }
+
         // Auto-stop on track interruption (call comes in, app backgrounded, etc.)
         stream.getTracks().forEach((t) => {
           t.addEventListener("ended", () => {
@@ -279,7 +314,8 @@ export default function MobileRecord() {
       if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
       wakeLockRef.current?.release().catch(() => {});
     };
-  }, [device.kind, cameraEnabled]);
+  }, [device.kind, cameraEnabled, wideAngle, wideAngle ? wideDeviceId : null]);
+
 
   // Battery + storage estimates (one-shot)
   useEffect(() => {
@@ -468,6 +504,11 @@ export default function MobileRecord() {
       localStorage.setItem(OVERLAY_KEY, next ? "1" : "0");
       return next;
     });
+  }
+
+  function setLens(wide: boolean) {
+    localStorage.setItem(WIDE_KEY, wide ? "1" : "0");
+    setWideAngle(wide);
   }
 
   // Bind preview video
@@ -783,6 +824,30 @@ export default function MobileRecord() {
                 {attempts.length >= maxAttempts ? " — no takes left" : ` · ${maxAttempts - attempts.length} left`}
               </div>
             )}
+
+            {/* Lens selector — choose before you start filming */}
+            <div className="pointer-events-auto flex items-center gap-1 rounded-full bg-black/60 p-1 backdrop-blur-sm">
+              <button
+                onClick={() => setLens(false)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${!wideAngle ? "bg-white text-black" : "text-white/80"}`}
+              >
+                1x Standard
+              </button>
+              <button
+                onClick={() => setLens(true)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition ${wideAngle ? "bg-white text-black" : "text-white/80"}`}
+              >
+                0.5x Wide
+              </button>
+            </div>
+            <p className="pointer-events-none text-[11px] text-white/70">
+              {wideAngle
+                ? wideSupported
+                  ? "Ultra-wide lens — fits the full mat from closer in."
+                  : "Widest available view on this device."
+                : "Standard lens — best detail for scoring."}
+            </p>
+
             <button
               onClick={beginCountdown}
               disabled={attempts.length >= maxAttempts}
