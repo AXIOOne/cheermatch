@@ -5,6 +5,10 @@ const ACCOUNT_ID = Deno.env.get("BRIGHTCOVE_ACCOUNT_ID")!;
 const CLIENT_ID = Deno.env.get("BRIGHTCOVE_CLIENT_ID")!;
 const CLIENT_SECRET = Deno.env.get("BRIGHTCOVE_CLIENT_SECRET")!;
 
+// Profile must include progressive MP4 renditions, otherwise Dynamic Delivery only
+// produces HLS/DASH manifests and the video can never be downloaded.
+export const INGEST_PROFILE = Deno.env.get("BRIGHTCOVE_INGEST_PROFILE") ?? "multi-platform-standard-static-with-mp4";
+
 let cachedToken: { value: string; expires_at: number } | null = null;
 
 export async function getBrightcoveToken(): Promise<string> {
@@ -66,7 +70,7 @@ export async function bcGetUploadUrl(videoId: string, fileName: string): Promise
 
 export async function bcIngestRequest(videoId: string, apiRequestUrl: string, callbackUrl?: string): Promise<{ id: string }> {
   const token = await getBrightcoveToken();
-  const body: Record<string, unknown> = { master: { url: apiRequestUrl }, profile: "multi-platform-standard-static" };
+  const body: Record<string, unknown> = { master: { url: apiRequestUrl }, profile: INGEST_PROFILE };
   if (callbackUrl) body.callbacks = [callbackUrl];
   const res = await fetch(
     `https://ingest.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/videos/${videoId}/ingest-requests`,
@@ -212,22 +216,21 @@ export async function bcGetDigitalMaster(videoId: string): Promise<Record<string
   return await res.json();
 }
 
-export async function bcListIngestProfiles(): Promise<unknown> {
+// Re-transcodes an existing video from its archived digital master using a profile
+// that includes progressive MP4 renditions (needed to make downloads possible).
+export async function bcRetranscodeFromMaster(videoId: string, profile = INGEST_PROFILE): Promise<boolean> {
   const token = await getBrightcoveToken();
   const res = await fetch(
-    `https://ingestion.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/profiles`,
-    { headers: { Authorization: `Bearer ${token}` } },
+    `https://ingest.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/videos/${videoId}/ingest-requests`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ master: { use_archived_master: true }, profile }),
+    },
   );
-  if (!res.ok) return { error: `${res.status} ${await res.text()}` };
-  const data = await res.json() as Array<Record<string, unknown>>;
-  return Array.isArray(data)
-    ? data.map((p) => ({
-        name: p.name,
-        id: p.id,
-        digital_master: (p as any).digital_master,
-        renditions: Array.isArray((p as any).renditions)
-          ? (p as any).renditions.map((r: any) => r.package_type ?? r.media_type ?? r.format ?? r.name)
-          : (p as any).dynamic_origin?.renditions,
-      }))
-    : data;
+  if (!res.ok) {
+    console.error("Brightcove retranscode failed", res.status, await res.text());
+    return false;
+  }
+  return true;
 }
