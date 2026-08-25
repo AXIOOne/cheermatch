@@ -526,7 +526,7 @@ export default function MobileRecord() {
     );
   }
 
-  if (error) {
+  if (error && phase !== "choose" && phase !== "uploading") {
     return (
       <div className="p-6">
         <Card className="p-6 text-center">
