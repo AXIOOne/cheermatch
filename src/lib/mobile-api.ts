@@ -66,6 +66,16 @@ export const mobileApi = {
     call("create_password", { email, code, password }),
   events: () => call<Array<Record<string, string>>>("mobile-coach-events", {}, "POST"),
   teams: (event_id: string) => call<Array<Record<string, unknown>>>("mobile-coach-teams", { event_id }),
+  listAttempts: (event_id: string, team_id?: string) =>
+    call<Array<{ id: string; team_id: string; attempt_number: number; started_at: string; outcome: string; duration_seconds: number | null }>>(
+      "capture-attempts", { action: "list", event_id, team_id },
+    ),
+  reserveAttempt: (event_id: string, team_id: string, device_info?: Record<string, unknown>) =>
+    call<{ id: string; attempt_number: number }>("capture-attempts", {
+      action: "reserve", event_id, team_id, device_info,
+    }),
+  finalizeAttempt: (attempt_id: string, duration_seconds: number, outcome = "saved") =>
+    call("capture-attempts", { action: "finalize", attempt_id, duration_seconds, outcome }),
   uploadInit: (team_id: string, event_id: string, file_name: string) =>
     call<{ video_id: string; signed_url: string; api_request_url: string; callback_url: string }>(
       "brightcove-upload-init", { team_id, event_id, file_name },
