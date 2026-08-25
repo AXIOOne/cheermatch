@@ -224,7 +224,10 @@ export default function Submissions() {
   });
 
   const isArchivedTab = tab === 'archived';
-  const tabScoped = submissions?.filter((s) => (isArchivedTab ? !!s.archived_at : !s.archived_at));
+  const isPendingTab = tab === 'pending';
+  const tabScoped = isPendingTab
+    ? []
+    : submissions?.filter((s) => (isArchivedTab ? !!s.archived_at : !s.archived_at));
 
   const filteredSubmissions = tabScoped?.filter((submission) => {
     const lifecycle = toLifecycle(submission.status);
