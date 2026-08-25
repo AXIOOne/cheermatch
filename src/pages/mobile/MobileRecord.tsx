@@ -447,7 +447,8 @@ export default function MobileRecord() {
       });
       if (!completeRes.status) throw new Error(completeRes.message);
       setProgress(100);
-      attempts.forEach((a) => URL.revokeObjectURL(a.url));
+      attempts.forEach((a) => a.url && URL.revokeObjectURL(a.url));
+      await clearAttempts(storageKey);
       setPhase("done");
     } catch (e) {
       toast.error((e as Error).message);
