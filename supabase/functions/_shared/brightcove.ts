@@ -201,7 +201,12 @@ export function bcPickMp4Source(sources: BcSource[]): BcSource | null {
     return container === "MP4" || /\.mp4(\?|$)/i.test(src) || type.includes("mp4");
   });
   if (mp4s.length === 0) return null;
-  mp4s.sort((a, b) => (b.encoding_rate ?? b.size ?? 0) - (a.encoding_rate ?? a.size ?? 0));
+  // Prefer https, then highest bitrate.
+  mp4s.sort((a, b) => {
+    const secure = Number(/^https:/i.test(b.src ?? "")) - Number(/^https:/i.test(a.src ?? ""));
+    if (secure !== 0) return secure;
+    return (b.encoding_rate ?? b.size ?? 0) - (a.encoding_rate ?? a.size ?? 0);
+  });
   return mp4s[0];
 }
 
