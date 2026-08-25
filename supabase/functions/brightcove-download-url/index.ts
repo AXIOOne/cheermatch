@@ -46,6 +46,11 @@ Deno.serve(async (req) => {
 
     const sources = await bcGetVideoSources(videoId);
     const mp4 = bcPickMp4Source(sources);
+    if (body.debug) {
+      const master = await bcGetDigitalMaster(videoId);
+      return ok("debug", { videoId, sources, master } as any);
+    }
+
 
     let url = mp4?.src ?? "";
     let ext = "mp4";
