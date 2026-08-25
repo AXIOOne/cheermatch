@@ -74,7 +74,7 @@ export default function Submissions() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [eventFilter, setEventFilter] = useState<string>('all');
-  const [tab, setTab] = useState<'current' | 'archived'>('current');
+  const [tab, setTab] = useState<'current' | 'archived' | 'pending'>('current');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
@@ -224,7 +224,10 @@ export default function Submissions() {
   });
 
   const isArchivedTab = tab === 'archived';
-  const tabScoped = submissions?.filter((s) => (isArchivedTab ? !!s.archived_at : !s.archived_at));
+  const isPendingTab = tab === 'pending';
+  const tabScoped = isPendingTab
+    ? []
+    : submissions?.filter((s) => (isArchivedTab ? !!s.archived_at : !s.archived_at));
 
   const filteredSubmissions = tabScoped?.filter((submission) => {
     const lifecycle = toLifecycle(submission.status);
@@ -299,7 +302,7 @@ export default function Submissions() {
       }, {} as Record<string, PendingCapture>),
   ).sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
 
-  const filteredPending = isArchivedTab
+  const filteredPending = !isPendingTab
     ? []
     : pendingCaptures.filter((p) => {
         const matchesEvent = eventFilter === 'all' || p.eventId === eventFilter;
@@ -316,7 +319,7 @@ export default function Submissions() {
   const currentCount = submissions?.filter((s) => !s.archived_at).length || 0;
 
   const switchTab = (value: string) => {
-    setTab(value === 'archived' ? 'archived' : 'current');
+    setTab(value === 'archived' ? 'archived' : value === 'pending' ? 'pending' : 'current');
     setSelectedIds(new Set());
   };
 
@@ -383,6 +386,7 @@ export default function Submissions() {
       <Tabs value={tab} onValueChange={switchTab} className="mb-6">
         <TabsList>
           <TabsTrigger value="current">Current ({currentCount})</TabsTrigger>
+          <TabsTrigger value="pending">Awaiting video ({pendingCaptures.length})</TabsTrigger>
           <TabsTrigger value="archived">Archived ({archivedCount})</TabsTrigger>
         </TabsList>
       </Tabs>
@@ -391,6 +395,7 @@ export default function Submissions() {
 
 
       {/* Stats Cards */}
+      {!isPendingTab && (
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
         <Card>
           <CardHeader className="pb-2">
@@ -433,6 +438,7 @@ export default function Submissions() {
           </CardContent>
         </Card>
       </div>
+      )}
 
 
       {/* Filters & Bulk Actions */}
@@ -507,10 +513,10 @@ export default function Submissions() {
         </CardContent>
       </Card>
 
-      {!isArchivedTab && filteredPending.length > 0 && (
+      {isPendingTab && (
         <div className="mb-4 flex items-center gap-2 text-sm text-amber-700 dark:text-amber-500">
           <AlertTriangle className="w-4 h-4" />
-          {filteredPending.length} team{filteredPending.length === 1 ? '' : 's'} recorded capture attempts but haven't chosen a final video yet — shown below with a placeholder.
+          Teams that recorded capture attempts on the mobile app but haven't chosen a final video yet.
         </div>
       )}
 
@@ -781,7 +787,7 @@ export default function Submissions() {
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>{isArchivedTab ? 'No archived submissions.' : 'No submissions found.'}</p>
+              <p>{isArchivedTab ? 'No archived submissions.' : isPendingTab ? 'No teams are awaiting a video selection.' : 'No submissions found.'}</p>
             </div>
           )}
         </CardContent>
