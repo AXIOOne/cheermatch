@@ -282,7 +282,6 @@ export default function MobileRecord() {
           if (!cancelled) {
             setWideDeviceId(ultra?.deviceId ?? null);
             setWideSupported(!!ultra);
-            if (!ultra && wideAngle) setWideAngle(false);
           }
         } catch { /* enumerate unsupported */ }
 
