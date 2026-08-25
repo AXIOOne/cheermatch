@@ -544,7 +544,7 @@ export default function Submissions() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredSubmissions.map((submission) => {
+                {(filteredSubmissions ?? []).map((submission) => {
                   const lifecycle = toLifecycle(submission.status);
                   const cfg = lifecycleConfig[lifecycle];
                   const StatusIcon = cfg.icon;
