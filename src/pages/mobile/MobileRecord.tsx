@@ -274,7 +274,7 @@ export default function MobileRecord() {
       if (countdownTimerRef.current) window.clearInterval(countdownTimerRef.current);
       wakeLockRef.current?.release().catch(() => {});
     };
-  }, [device.kind]);
+  }, [device.kind, cameraEnabled]);
 
   // Battery + storage estimates (one-shot)
   useEffect(() => {
