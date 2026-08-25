@@ -433,6 +433,41 @@ export default function SubmissionDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset capture attempts?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This clears the {activeAttempts.length} recorded attempt{activeAttempts.length === 1 ? '' : 's'} for {submission.team?.name || 'this team'} so they can record again. Attempts are kept in the history as overridden — nothing is deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="reset-reason">Reason (optional)</Label>
+            <Textarea
+              id="reset-reason"
+              value={resetReason}
+              onChange={(e) => setResetReason(e.target.value)}
+              placeholder="e.g. Camera failure during first take"
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() =>
+                overrideAttemptsMutation.mutate({
+                  ids: activeAttempts.map((a) => a.id),
+                  void: true,
+                  reason: resetReason.trim() || 'Admin reset',
+                })
+              }
+            >
+              Reset attempts
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+
       <DeleteSubmissionDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
