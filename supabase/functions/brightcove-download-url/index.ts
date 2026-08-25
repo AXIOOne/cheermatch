@@ -67,6 +67,7 @@ Deno.serve(async (req) => {
         sources.length === 0
           ? "The video is still processing on the host server. Try again in a few minutes."
           : `No downloadable file is available for this video. The host only has streaming renditions (${kinds.join(", ")}) and no archived master.`,
+        { debug: { sources, master: await bcGetDigitalMaster(videoId) } },
       );
     }
 
