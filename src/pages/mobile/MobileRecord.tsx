@@ -307,6 +307,12 @@ export default function MobileRecord() {
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [phase]);
 
+  // Release the fullscreen takeover once filming is over (review/upload screens scroll).
+  useEffect(() => {
+    if (phase === "choose" || phase === "uploading" || phase === "done") void fs.exit();
+  }, [phase, fs]);
+
+
   async function acquireWakeLock() {
     try {
       const wl = (navigator as Navigator & { wakeLock?: { request: (t: string) => Promise<{ release: () => Promise<void> }> } }).wakeLock;
