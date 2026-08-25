@@ -46,10 +46,6 @@ Deno.serve(async (req) => {
 
     const sources = await bcGetVideoSources(videoId);
     const mp4 = bcPickMp4Source(sources);
-    if (body.debug) {
-      const master = await bcGetDigitalMaster(videoId);
-      return ok("debug", { videoId, sources, master } as any);
-    }
 
 
     let url = mp4?.src ?? "";
@@ -68,7 +64,7 @@ Deno.serve(async (req) => {
         const started = await bcRetranscodeFromMaster(videoId);
         return fail(
           started
-            ? "This video was published in streaming-only format. We've asked the host to prepare a downloadable copy — try again in a few minutes."
+            ? "This video was published in streaming-only format. We've asked the host to build a downloadable copy — this usually takes 1-2 minutes. Please try the download again shortly."
             : "No downloadable copy exists for this video and the host declined to create one. Please re-upload the performance video.",
         );
       }
