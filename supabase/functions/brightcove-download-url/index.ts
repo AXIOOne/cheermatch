@@ -2,7 +2,7 @@
 // Admin-only: resolves a direct MP4 rendition URL for a submission's Brightcove video
 // so the portal can offer a download link.
 import { handleOptions, ok, fail, serviceClient } from "../_shared/legacy.ts";
-import { bcGetVideoSources, bcPickMp4Source } from "../_shared/brightcove.ts";
+import { bcGetVideoSources, bcPickMp4Source, bcGetDigitalMaster, bcRetranscodeFromMaster } from "../_shared/brightcove.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -46,15 +46,40 @@ Deno.serve(async (req) => {
 
     const sources = await bcGetVideoSources(videoId);
     const mp4 = bcPickMp4Source(sources);
-    if (!mp4?.src) {
+
+    let url = mp4?.src ?? "";
+    let ext = "mp4";
+
+    if (!url) {
+      // Dynamic Delivery only produced streaming manifests (HLS/DASH). If the original
+      // master is archived on the host, kick off a re-package with an MP4 profile so a
+      // downloadable rendition exists from now on.
+      const master = await bcGetDigitalMaster(videoId);
+      const masterUrl = (master?.url ?? (master as any)?.src) as string | undefined;
+      if (masterUrl && /^https?:/i.test(masterUrl)) {
+        url = masterUrl;
+        ext = (masterUrl.split("?")[0].split(".").pop() ?? "mp4").slice(0, 4);
+      } else if (master?.id) {
+        const started = await bcRetranscodeFromMaster(videoId);
+        return fail(
+          started
+            ? "This video was published in streaming-only format. We've asked the host to prepare a downloadable copy — try again in a few minutes."
+            : "No downloadable copy exists for this video and the host declined to create one. Please re-upload the performance video.",
+        );
+      }
+    }
+
+    if (!url) {
       return fail("The video is still processing on the host server. Try again in a few minutes.");
     }
 
+
     const team = (sub as any).team?.name ?? "Team";
     const division = (sub as any).team?.division?.name ?? "";
-    const filename = `${safeName(division ? `${team} - ${division}` : team)}.mp4`;
+    const filename = `${safeName(division ? `${team} - ${division}` : team)}.${ext}`;
 
-    return ok("Download link ready", { url: mp4.src, filename });
+    return ok("Download link ready", { url, filename });
+
   } catch (e) {
     return fail((e as Error).message);
   }

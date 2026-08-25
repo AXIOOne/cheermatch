@@ -5,6 +5,10 @@ const ACCOUNT_ID = Deno.env.get("BRIGHTCOVE_ACCOUNT_ID")!;
 const CLIENT_ID = Deno.env.get("BRIGHTCOVE_CLIENT_ID")!;
 const CLIENT_SECRET = Deno.env.get("BRIGHTCOVE_CLIENT_SECRET")!;
 
+// Profile must include progressive MP4 renditions, otherwise Dynamic Delivery only
+// produces HLS/DASH manifests and the video can never be downloaded.
+export const INGEST_PROFILE = Deno.env.get("BRIGHTCOVE_INGEST_PROFILE") ?? "multi-platform-standard-static-with-mp4";
+
 let cachedToken: { value: string; expires_at: number } | null = null;
 
 export async function getBrightcoveToken(): Promise<string> {
@@ -66,7 +70,7 @@ export async function bcGetUploadUrl(videoId: string, fileName: string): Promise
 
 export async function bcIngestRequest(videoId: string, apiRequestUrl: string, callbackUrl?: string): Promise<{ id: string }> {
   const token = await getBrightcoveToken();
-  const body: Record<string, unknown> = { master: { url: apiRequestUrl }, profile: "multi-platform-standard-static" };
+  const body: Record<string, unknown> = { master: { url: apiRequestUrl }, profile: INGEST_PROFILE };
   if (callbackUrl) body.callbacks = [callbackUrl];
   const res = await fetch(
     `https://ingest.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/videos/${videoId}/ingest-requests`,
@@ -185,14 +189,53 @@ export async function bcGetVideoSources(videoId: string): Promise<BcSource[]> {
 }
 
 // Highest-bitrate progressive MP4 rendition (skips HLS/DASH manifests).
+// Dynamic Delivery accounts often omit `container`, so fall back to sniffing
+// the src extension / mime type instead of requiring container === "MP4".
 export function bcPickMp4Source(sources: BcSource[]): BcSource | null {
-  const mp4s = sources.filter((s) =>
-    !!s.src &&
-    /^https?:/i.test(s.src) &&
-    (s.container ?? "").toUpperCase() === "MP4" &&
-    !/\.m3u8|\.mpd/i.test(s.src)
-  );
+  const mp4s = sources.filter((s) => {
+    const src = s.src ?? "";
+    if (!/^https?:/i.test(src)) return false;
+    if (/\.m3u8|\.mpd|\.ism/i.test(src)) return false;
+    const container = (s.container ?? "").toUpperCase();
+    const type = (s.type ?? "").toLowerCase();
+    return container === "MP4" || /\.mp4(\?|$)/i.test(src) || type.includes("mp4");
+  });
   if (mp4s.length === 0) return null;
-  mp4s.sort((a, b) => (b.encoding_rate ?? b.size ?? 0) - (a.encoding_rate ?? a.size ?? 0));
+  // Prefer https, then highest bitrate.
+  mp4s.sort((a, b) => {
+    const secure = Number(/^https:/i.test(b.src ?? "")) - Number(/^https:/i.test(a.src ?? ""));
+    if (secure !== 0) return secure;
+    return (b.encoding_rate ?? b.size ?? 0) - (a.encoding_rate ?? a.size ?? 0);
+  });
   return mp4s[0];
+}
+
+// Digital master (original uploaded file). Available when the ingest kept the master.
+export async function bcGetDigitalMaster(videoId: string): Promise<Record<string, unknown> | null> {
+  const token = await getBrightcoveToken();
+  const res = await fetch(
+    `https://cms.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/videos/${videoId}/digital_master`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+// Re-transcodes an existing video from its archived digital master using a profile
+// that includes progressive MP4 renditions (needed to make downloads possible).
+export async function bcRetranscodeFromMaster(videoId: string, profile = INGEST_PROFILE): Promise<boolean> {
+  const token = await getBrightcoveToken();
+  const res = await fetch(
+    `https://ingest.api.brightcove.com/v1/accounts/${ACCOUNT_ID}/videos/${videoId}/ingest-requests`,
+    {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ master: { use_archived_master: true }, profile }),
+    },
+  );
+  if (!res.ok) {
+    console.error("Brightcove retranscode failed", res.status, await res.text());
+    return false;
+  }
+  return true;
 }
