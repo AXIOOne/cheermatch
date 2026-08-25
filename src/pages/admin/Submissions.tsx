@@ -740,32 +740,33 @@ export default function Submissions() {
                 })}
 
                 {filteredPending.map((p) => (
-                  <TableRow key={p.key} className="bg-amber-50/40 dark:bg-amber-950/10">
+                  <TableRow key={p.key} className="text-sm bg-amber-50/40 dark:bg-amber-950/10">
                     <TableCell className="w-10" />
-                    <TableCell>
+                    <TableCell className="text-sm">
                       <div className="flex items-center gap-3">
                         <div className="w-16 h-10 rounded border border-dashed border-amber-400/70 bg-muted/50 flex items-center justify-center">
                           <VideoOff className="w-4 h-4 text-amber-600" />
                         </div>
                         <div>
-                          <p className="font-medium">{p.teamName}</p>
-                          <p className="text-sm text-muted-foreground">{p.gymName}</p>
+                          <p className="text-sm font-medium leading-tight">{p.teamName}</p>
+                          <p className="text-sm text-muted-foreground leading-tight">{p.gymName}</p>
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{p.eventName}</TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <p>{p.divisionName}</p>
-                        <p className="text-muted-foreground">{p.levelName}</p>
+                    <TableCell className="text-sm">{p.eventName}</TableCell>
+                    <TableCell className="text-sm">
+                      <div>
+                        <p className="leading-tight">{p.divisionName}</p>
+                        <p className="text-muted-foreground leading-tight">{p.levelName}</p>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-amber-100 text-amber-700 border-0">
+                    <TableCell className="text-sm">
+                      <Badge variant="outline" className="bg-amber-100 text-amber-700 border-0 text-sm font-medium">
                         <Clapperboard className="w-3 h-3 mr-1" />
                         No video selected
                       </Badge>
                     </TableCell>
+
                     <TableCell>
                       <span
                         className="inline-flex items-center gap-1.5 text-sm"
