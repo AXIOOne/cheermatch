@@ -56,7 +56,20 @@ export function ReplaceVideoDialog({ open, onOpenChange, submissionId, teamName,
   const [stage, setStage] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const reset = () => { setFile(null); setProgress(0); setStage(''); setBusy(false); };
+  const reset = () => {
+    setFile(null);
+    setDeleteOld(true);
+    setProgress(0);
+    setStage('');
+    setBusy(false);
+    if (inputRef.current) inputRef.current.value = '';
+  };
+
+  // Clear any previously picked file whenever the dialog opens or targets another submission
+  useEffect(() => {
+    if (!busy) reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, submissionId]);
 
   const call = async (body: Record<string, unknown>) => {
     const { data, error } = await supabase.functions.invoke('admin-replace-video', { body });
