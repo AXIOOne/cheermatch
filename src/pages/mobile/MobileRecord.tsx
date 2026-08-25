@@ -612,6 +612,13 @@ export default function MobileRecord() {
             <Button onClick={uploadSelected} disabled={selectedAttemptId == null} className="h-14 w-full justify-center">
               <Upload className="h-5 w-5 mr-2 shrink-0" /> Submit Selected For Scoring
             </Button>
+            <Button
+              variant="ghost"
+              className="h-11 w-full justify-center text-muted-foreground col-span-full"
+              onClick={() => navigate(`/m/events/${eventId}/teams/${teamId}`)}
+            >
+              Back to team
+            </Button>
           </div>
         )}
       </div>
