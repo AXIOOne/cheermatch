@@ -540,6 +540,7 @@ export default function Submissions() {
                     />
                   </TableHead>
                   <TableHead>Team</TableHead>
+                  <TableHead className="w-[220px]">Gym</TableHead>
                   <TableHead>Event</TableHead>
                   <TableHead>Division / Level</TableHead>
                   <TableHead>Status</TableHead>
@@ -579,12 +580,10 @@ export default function Submissions() {
                               <Video className="w-4 h-4 text-muted-foreground" />
                             </div>
                           )}
-                          <div>
-                            <p className="text-sm text-muted-foreground leading-tight">{submission.team.name}</p>
-                            <p className="text-sm text-muted-foreground leading-tight">{submission.team.gym_name}</p>
-                          </div>
+                          <p className="text-sm font-semibold text-muted-foreground leading-tight">{submission.team.name}</p>
                         </div>
                       </TableCell>
+                      <TableCell className="text-sm text-muted-foreground break-words max-w-[220px]">{submission.team.gym_name}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{submission.event.name}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         <div>
@@ -747,12 +746,10 @@ export default function Submissions() {
                         <div className="w-16 h-10 rounded border border-dashed border-amber-400/70 bg-muted/50 flex items-center justify-center">
                           <VideoOff className="w-4 h-4 text-amber-600" />
                         </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground leading-tight">{p.teamName}</p>
-                          <p className="text-sm text-muted-foreground leading-tight">{p.gymName}</p>
-                        </div>
+                        <p className="text-sm font-semibold text-muted-foreground leading-tight">{p.teamName}</p>
                       </div>
                     </TableCell>
+                    <TableCell className="text-sm text-muted-foreground break-words max-w-[220px]">{p.gymName}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{p.eventName}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       <div>
