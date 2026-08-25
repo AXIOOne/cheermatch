@@ -787,7 +787,7 @@ export default function Submissions() {
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <Video className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <p>{isArchivedTab ? 'No archived submissions.' : 'No submissions found.'}</p>
+              <p>{isArchivedTab ? 'No archived submissions.' : isPendingTab ? 'No teams are awaiting a video selection.' : 'No submissions found.'}</p>
             </div>
           )}
         </CardContent>
