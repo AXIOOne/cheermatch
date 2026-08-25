@@ -302,7 +302,7 @@ export default function Submissions() {
       }, {} as Record<string, PendingCapture>),
   ).sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
 
-  const filteredPending = isArchivedTab
+  const filteredPending = !isPendingTab
     ? []
     : pendingCaptures.filter((p) => {
         const matchesEvent = eventFilter === 'all' || p.eventId === eventFilter;
