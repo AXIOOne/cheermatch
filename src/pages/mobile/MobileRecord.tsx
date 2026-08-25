@@ -60,6 +60,7 @@ export default function MobileRecord() {
   const { eventId = "", teamId = "" } = useParams();
   const navigate = useNavigate();
   const { signOut } = useMobileAuth();
+  const storageKey = attemptKey(eventId, teamId);
 
   const videoLiveRef = useRef<HTMLVideoElement>(null);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
