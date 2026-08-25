@@ -570,17 +570,9 @@ export default function Submissions() {
                       <TableCell className="text-sm text-muted-foreground align-top">
                         <div className="flex flex-col gap-1.5">
                           <p className="text-sm font-semibold text-muted-foreground leading-tight whitespace-nowrap">{submission.team.name}</p>
-                          {submission.thumbnail_url ? (
-                            <img
-                              src={submission.thumbnail_url}
-                              alt="Thumbnail"
-                              className="h-10 aspect-video object-cover rounded"
-                            />
-                          ) : (
-                            <div className="h-10 aspect-video bg-muted rounded flex items-center justify-center">
-                              <Video className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                          )}
+                          <div className="h-10 aspect-video bg-muted rounded flex items-center justify-center">
+                            <Video className="w-4 h-4 text-muted-foreground" />
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground break-words max-w-[220px]">{submission.team.gym_name}</TableCell>
