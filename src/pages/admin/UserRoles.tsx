@@ -172,8 +172,25 @@ export default function UserRoles() {
         },
       });
 
-      if (response.error) throw new Error(response.error.message);
+      if (response.error) {
+        // Surface the real message from the function's response body
+        let message = response.error.message;
+        const ctx = (response.error as any).context;
+        try {
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error) message = body.error;
+          }
+        } catch {
+          // keep generic message
+        }
+        if (/already been registered|already exists|email_exists/i.test(message)) {
+          message = 'A user with this email address already exists.';
+        }
+        throw new Error(message);
+      }
       if (response.data?.error) throw new Error(response.data.error);
+
 
       // Send welcome email if requested
       if (data.sendEmail) {
