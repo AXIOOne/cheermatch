@@ -92,6 +92,7 @@ export default function Submissions() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<{ id: string; teamName: string } | null>(null);
   const [videoModalSubmission, setVideoModalSubmission] = useState<SubmissionWithDetails | null>(null);
+  const [manualUpload, setManualUpload] = useState<{ eventId: string | null; teamId: string | null } | null>(null);
 
   const videoPrep = useVideoPrep();
 
@@ -371,23 +372,34 @@ export default function Submissions() {
           <h1 className="text-3xl font-bold text-foreground">Video Submissions</h1>
           <p className="text-muted-foreground mt-1">Review, approve, and track team video submissions</p>
         </div>
-        <div className="w-full md:w-[280px]">
-          <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Event</label>
-          <Select value={eventFilter} onValueChange={setEventFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select an event" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Events</SelectItem>
-              {events?.map((event) => (
-                <SelectItem key={event.id} value={event.id}>
-                  {event.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+          {isAdmin && (
+            <Button
+              onClick={() => setManualUpload({ eventId: eventFilter === 'all' ? null : eventFilter, teamId: null })}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Upload video
+            </Button>
+          )}
+          <div className="w-full md:w-[280px]">
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Event</label>
+            <Select value={eventFilter} onValueChange={setEventFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select an event" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Events</SelectItem>
+                {events?.map((event) => (
+                  <SelectItem key={event.id} value={event.id}>
+                    {event.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
+
 
       <Tabs value={tab} onValueChange={switchTab} className="mb-6">
         <TabsList>
@@ -785,8 +797,20 @@ export default function Submissions() {
                       Recorded {format(new Date(p.lastAt), 'MMM d, yyyy')}
                     </TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">
-                      Awaiting coach selection
+                      {isAdmin ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setManualUpload({ eventId: p.eventId, teamId: p.teamId })}
+                        >
+                          <Upload className="w-3.5 h-3.5 mr-1.5" />
+                          Upload for team
+                        </Button>
+                      ) : (
+                        'Awaiting coach selection'
+                      )}
                     </TableCell>
+
                   </TableRow>
                 ))}
               </TableBody>
@@ -862,6 +886,20 @@ export default function Submissions() {
         teamName={replaceTarget?.teamName}
         onReplaced={() => queryClient.invalidateQueries({ queryKey: ['admin-submissions'] })}
       />
+
+      <ReplaceVideoDialog
+        mode="manual"
+        open={!!manualUpload}
+        onOpenChange={(o) => { if (!o) setManualUpload(null); }}
+        defaultEventId={manualUpload?.eventId ?? null}
+        defaultTeamId={manualUpload?.teamId ?? null}
+        onReplaced={() => {
+          queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+          queryClient.invalidateQueries({ queryKey: ['capture-attempts'] });
+        }}
+      />
+
+
 
       <DeleteSubmissionDialog
         open={deleteOpen}
