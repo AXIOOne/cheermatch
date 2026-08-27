@@ -797,8 +797,20 @@ export default function Submissions() {
                       Recorded {format(new Date(p.lastAt), 'MMM d, yyyy')}
                     </TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">
-                      Awaiting coach selection
+                      {isAdmin ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setManualUpload({ eventId: p.eventId, teamId: p.teamId })}
+                        >
+                          <Upload className="w-3.5 h-3.5 mr-1.5" />
+                          Upload for team
+                        </Button>
+                      ) : (
+                        'Awaiting coach selection'
+                      )}
                     </TableCell>
+
                   </TableRow>
                 ))}
               </TableBody>
