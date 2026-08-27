@@ -312,12 +312,16 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
                 const divisionSections = div.scoring_template_id
                   ? sectionsByTemplate.get(div.scoring_template_id) || []
                   : [];
+                const divisionExtraPanels = div.scoring_template_id
+                  ? extraPanelsByTemplate.get(div.scoring_template_id) || []
+                  : [];
 
-                const fullyAssigned = divisionSections.length > 0 &&
-                  divisionSections.every(section => {
-                    const current = getCurrentValue(div.id, section.id);
-                    return current !== '';
-                  });
+                const rowKeys = [
+                  ...divisionSections.map(s => `${div.id}:sec:${s.id}`),
+                  ...divisionExtraPanels.map(p => `${div.id}:pnl:${p.panelId}`),
+                ];
+                const fullyAssigned = rowKeys.length > 0 &&
+                  rowKeys.every(key => getCurrentValue(key) !== '');
 
                 return (
                   <Collapsible key={div.id} defaultOpen>
@@ -342,40 +346,69 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
                             <p className="text-sm text-muted-foreground">
                               No scoring template is assigned to this division.
                             </p>
-                          ) : divisionSections.length === 0 ? (
+                          ) : rowKeys.length === 0 ? (
                             <p className="text-sm text-muted-foreground">
                               This division's scoring template has no judging sections.
                             </p>
-                          ) : divisionSections.map(section => {
-                            const current = getCurrentValue(div.id, section.id);
-                            const modified = isModified(div.id, section.id);
-                            return (
-                              <div key={section.id} className="flex items-center gap-3">
-                                <div className="flex-1 min-w-0 flex items-center gap-2">
-                                  {section.default_panel_abbreviation && (
-                                    <Badge variant="secondary">{section.default_panel_abbreviation}</Badge>
-                                  )}
-                                  <span className="text-sm font-medium truncate">{section.name}</span>
-                                  {modified && (
-                                    <Badge variant="outline" className="text-xs">Modified</Badge>
-                                  )}
-                                </div>
-                                <div className="w-64">
-                                  <JudgeCombobox
-                                    value={current}
-                                    judges={judges || []}
-                                    onChange={(judgeUserId) => {
-                                      setPending(prev => ({
-                                        ...prev,
-                                        [`${div.id}:${section.id}`]: judgeUserId,
-                                      }));
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            );
-                          })}
+                          ) : (
+                            <>
+                              {divisionSections.map(section => {
+                                const key = `${div.id}:sec:${section.id}`;
+                                return (
+                                  <div key={section.id} className="flex items-center gap-3">
+                                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                                      {section.default_panel_abbreviation && (
+                                        <Badge variant="secondary">{section.default_panel_abbreviation}</Badge>
+                                      )}
+                                      <span className="text-sm font-medium truncate">{section.name}</span>
+                                      {isModified(key) && (
+                                        <Badge variant="outline" className="text-xs">Modified</Badge>
+                                      )}
+                                    </div>
+                                    <div className="w-64">
+                                      <JudgeCombobox
+                                        value={getCurrentValue(key)}
+                                        judges={judges || []}
+                                        onChange={(judgeUserId) => {
+                                          setPending(prev => ({ ...prev, [key]: judgeUserId }));
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {divisionExtraPanels.map(panel => {
+                                const key = `${div.id}:pnl:${panel.panelId}`;
+                                return (
+                                  <div key={panel.panelId} className="flex items-center gap-3">
+                                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                                      <Badge variant="secondary">{panel.abbreviation}</Badge>
+                                      <span className="text-sm font-medium truncate">{panel.name}</span>
+                                      {isModified(key) && (
+                                        <Badge variant="outline" className="text-xs">Modified</Badge>
+                                      )}
+                                    </div>
+                                    <div className="w-64">
+                                      <JudgeCombobox
+                                        value={getCurrentValue(key)}
+                                        judges={judges || []}
+                                        onChange={(judgeUserId) => {
+                                          setPending(prev => ({ ...prev, [key]: judgeUserId }));
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </>
+                          )}
                         </CardContent>
+                      </Card>
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })}
+
                       </Card>
                     </CollapsibleContent>
                   </Collapsible>
