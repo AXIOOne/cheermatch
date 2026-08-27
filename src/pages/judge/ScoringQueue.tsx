@@ -202,7 +202,10 @@ export default function ScoringQueue() {
         if (isAllPanelsAssignment(assignment)) return true;
         if (assignment.section_id) return cov.sectionIds.has(assignment.section_id);
         const judgePanel = getAssignmentPanelAbbrev(assignment);
+        // Deductions panel scores the routine's deductions, not template fields.
+        if (judgePanel === 'SD') return true;
         return judgePanel ? cov.panels.has(judgePanel) : false;
+
       });
     });
   }, [submissions, templatePanelCoverage, openAssignments]);

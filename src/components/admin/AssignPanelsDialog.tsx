@@ -33,6 +33,15 @@ interface AssignmentSection {
   display_order: number;
 }
 
+interface TemplatePanel {
+  id: string;
+  template_id: string;
+  name: string;
+  abbreviation: string;
+  display_order: number;
+}
+
+
 export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -87,6 +96,22 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
     enabled: templateIds.length > 0,
   });
 
+  // Panels defined on the templates (e.g. SD / Safety-Deductions) that are not
+  // backed by a scoring section — these still need their own judge assignment.
+  const { data: templatePanels } = useQuery({
+    queryKey: ['division-template-panels', templateIds],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('scoring_template_panels')
+        .select('id, template_id, name, abbreviation, display_order')
+        .in('template_id', templateIds)
+        .order('display_order');
+      if (error) throw error;
+      return data as TemplatePanel[];
+    },
+    enabled: templateIds.length > 0,
+  });
+
   // Panels for this event, used to auto-link section assignments to a panel
   // by matching the section abbreviation (or its default_panel_abbreviation).
   const { data: eventPanels } = useQuery({
@@ -120,6 +145,26 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
     return grouped;
   }, [sections]);
 
+  // Extra rows: event panels matching a template panel with no section of the
+  // same abbreviation (deductions panel, etc.). Keyed by template id.
+  const extraPanelsByTemplate = useMemo(() => {
+    const grouped = new Map<string, Array<{ panelId: string; abbreviation: string; name: string }>>();
+    (templatePanels || []).forEach(tp => {
+      const abbr = (tp.abbreviation || '').toUpperCase();
+      if (!abbr) return;
+      const covered = (sectionsByTemplate.get(tp.template_id) || []).some(
+        s => (s.default_panel_abbreviation || s.abbreviation || '').toUpperCase() === abbr
+      );
+      if (covered) return;
+      const eventPanel = (eventPanels || []).find(p => p.abbreviation?.toUpperCase() === abbr);
+      if (!eventPanel) return;
+      const existing = grouped.get(tp.template_id) || [];
+      grouped.set(tp.template_id, [...existing, { panelId: eventPanel.id, abbreviation: abbr, name: tp.name || abbr }]);
+    });
+    return grouped;
+  }, [templatePanels, sectionsByTemplate, eventPanels]);
+
+
   // Judges (users with judge role)
   const { data: judges, isLoading: judgesLoading } = useQuery({
     queryKey: ['judges-for-assignment'],
@@ -142,15 +187,14 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
     },
   });
 
-  // Existing section-level assignments for this event
+  // Existing section- and panel-level assignments for this event
   const { data: assignments } = useQuery({
     queryKey: ['section-assignments', eventId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('judge_assignments')
-        .select('id, division_id, section_id, judge_user_id')
-        .eq('event_id', eventId)
-        .not('section_id', 'is', null);
+        .select('id, division_id, section_id, panel_id, judge_user_id')
+        .eq('event_id', eventId);
       if (error) throw error;
       return data;
     },
@@ -159,14 +203,17 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
   const assignmentMap = useMemo(() => {
     const m = new Map<string, { id: string; judge_user_id: string }>();
     (assignments || []).forEach(a => {
-      if (a.division_id && a.section_id) {
-        m.set(`${a.division_id}:${a.section_id}`, { id: a.id, judge_user_id: a.judge_user_id });
+      if (!a.division_id) return;
+      if (a.section_id) {
+        m.set(`${a.division_id}:sec:${a.section_id}`, { id: a.id, judge_user_id: a.judge_user_id });
+      } else if (a.panel_id) {
+        m.set(`${a.division_id}:pnl:${a.panel_id}`, { id: a.id, judge_user_id: a.judge_user_id });
       }
     });
     return m;
   }, [assignments]);
 
-  // Pending (staged) edits keyed by `${divisionId}:${sectionId}` → judge_user_id | null
+  // Pending (staged) edits keyed by `${divisionId}:sec|pnl:${id}` → judge_user_id | null
   const [pending, setPending] = useState<Record<string, string | null>>({});
 
   // Reset pending whenever the underlying assignments change (e.g. after Save)
@@ -174,32 +221,27 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
     setPending({});
   }, [assignments]);
 
-  const getCurrentValue = (divisionId: string, sectionId: string): string => {
-    const key = `${divisionId}:${sectionId}`;
+  const getCurrentValue = (key: string): string => {
     if (key in pending) return pending[key] ?? '';
     return assignmentMap.get(key)?.judge_user_id ?? '';
   };
 
-  const isModified = (divisionId: string, sectionId: string): boolean => {
-    const key = `${divisionId}:${sectionId}`;
+  const isModified = (key: string): boolean => {
     if (!(key in pending)) return false;
     const original = assignmentMap.get(key)?.judge_user_id ?? null;
     return (pending[key] ?? null) !== original;
   };
 
   const modifiedCount = useMemo(() => {
-    return Object.keys(pending).filter(key => {
-      const [divisionId, sectionId] = key.split(':');
-      return isModified(divisionId, sectionId);
-    }).length;
+    return Object.keys(pending).filter(key => isModified(key)).length;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pending, assignmentMap]);
 
   const saveMutation = useMutation({
     mutationFn: async () => {
       for (const key of Object.keys(pending)) {
-        const [divisionId, sectionId] = key.split(':');
-        if (!isModified(divisionId, sectionId)) continue;
+        if (!isModified(key)) continue;
+        const [divisionId, kind, targetId] = key.split(':');
 
         const newJudge = pending[key]; // string | null
         const existing = assignmentMap.get(key);
@@ -222,15 +264,16 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
           const { error } = await supabase.from('judge_assignments').insert({
             event_id: eventId,
             division_id: divisionId,
-            section_id: sectionId,
+            section_id: kind === 'sec' ? targetId : null,
             judge_user_id: newJudge,
             level_id: null,
-            panel_id: resolvePanelIdForSection(sectionId),
+            panel_id: kind === 'sec' ? resolvePanelIdForSection(targetId) : targetId,
           });
           if (error) throw error;
         }
       }
     },
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['section-assignments', eventId] });
       queryClient.invalidateQueries({ queryKey: ['judge-assignments'] });
@@ -269,12 +312,16 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
                 const divisionSections = div.scoring_template_id
                   ? sectionsByTemplate.get(div.scoring_template_id) || []
                   : [];
+                const divisionExtraPanels = div.scoring_template_id
+                  ? extraPanelsByTemplate.get(div.scoring_template_id) || []
+                  : [];
 
-                const fullyAssigned = divisionSections.length > 0 &&
-                  divisionSections.every(section => {
-                    const current = getCurrentValue(div.id, section.id);
-                    return current !== '';
-                  });
+                const rowKeys = [
+                  ...divisionSections.map(s => `${div.id}:sec:${s.id}`),
+                  ...divisionExtraPanels.map(p => `${div.id}:pnl:${p.panelId}`),
+                ];
+                const fullyAssigned = rowKeys.length > 0 &&
+                  rowKeys.every(key => getCurrentValue(key) !== '');
 
                 return (
                   <Collapsible key={div.id} defaultOpen>
@@ -299,39 +346,62 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
                             <p className="text-sm text-muted-foreground">
                               No scoring template is assigned to this division.
                             </p>
-                          ) : divisionSections.length === 0 ? (
+                          ) : rowKeys.length === 0 ? (
                             <p className="text-sm text-muted-foreground">
                               This division's scoring template has no judging sections.
                             </p>
-                          ) : divisionSections.map(section => {
-                            const current = getCurrentValue(div.id, section.id);
-                            const modified = isModified(div.id, section.id);
-                            return (
-                              <div key={section.id} className="flex items-center gap-3">
-                                <div className="flex-1 min-w-0 flex items-center gap-2">
-                                  {section.default_panel_abbreviation && (
-                                    <Badge variant="secondary">{section.default_panel_abbreviation}</Badge>
-                                  )}
-                                  <span className="text-sm font-medium truncate">{section.name}</span>
-                                  {modified && (
-                                    <Badge variant="outline" className="text-xs">Modified</Badge>
-                                  )}
-                                </div>
-                                <div className="w-64">
-                                  <JudgeCombobox
-                                    value={current}
-                                    judges={judges || []}
-                                    onChange={(judgeUserId) => {
-                                      setPending(prev => ({
-                                        ...prev,
-                                        [`${div.id}:${section.id}`]: judgeUserId,
-                                      }));
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            );
-                          })}
+                          ) : (
+                            <>
+                              {divisionSections.map(section => {
+                                const key = `${div.id}:sec:${section.id}`;
+                                return (
+                                  <div key={section.id} className="flex items-center gap-3">
+                                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                                      {section.default_panel_abbreviation && (
+                                        <Badge variant="secondary">{section.default_panel_abbreviation}</Badge>
+                                      )}
+                                      <span className="text-sm font-medium truncate">{section.name}</span>
+                                      {isModified(key) && (
+                                        <Badge variant="outline" className="text-xs">Modified</Badge>
+                                      )}
+                                    </div>
+                                    <div className="w-64">
+                                      <JudgeCombobox
+                                        value={getCurrentValue(key)}
+                                        judges={judges || []}
+                                        onChange={(judgeUserId) => {
+                                          setPending(prev => ({ ...prev, [key]: judgeUserId }));
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              {divisionExtraPanels.map(panel => {
+                                const key = `${div.id}:pnl:${panel.panelId}`;
+                                return (
+                                  <div key={panel.panelId} className="flex items-center gap-3">
+                                    <div className="flex-1 min-w-0 flex items-center gap-2">
+                                      <Badge variant="secondary">{panel.abbreviation}</Badge>
+                                      <span className="text-sm font-medium truncate">{panel.name}</span>
+                                      {isModified(key) && (
+                                        <Badge variant="outline" className="text-xs">Modified</Badge>
+                                      )}
+                                    </div>
+                                    <div className="w-64">
+                                      <JudgeCombobox
+                                        value={getCurrentValue(key)}
+                                        judges={judges || []}
+                                        onChange={(judgeUserId) => {
+                                          setPending(prev => ({ ...prev, [key]: judgeUserId }));
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </>
+                          )}
                         </CardContent>
                       </Card>
                     </CollapsibleContent>
