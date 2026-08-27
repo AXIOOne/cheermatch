@@ -377,6 +377,7 @@ export default function SubmissionDetail() {
             url={submission.video_url}
             thumbnailUrl={submission.thumbnail_url}
             status={submission.status}
+            submissionId={submission.id}
             title={`${submission.team?.name || 'Team'} performance video`}
           />
         </CardContent>

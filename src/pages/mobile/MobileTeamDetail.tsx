@@ -138,6 +138,7 @@ export default function MobileTeamDetail() {
                 url={submission.video_url}
                 thumbnailUrl={submission.thumbnail_url}
                 status={submission.status}
+                submissionId={submission.id}
                 title="Submitted performance video"
               />
             </div>

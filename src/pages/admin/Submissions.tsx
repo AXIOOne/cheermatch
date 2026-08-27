@@ -918,6 +918,7 @@ export default function Submissions() {
               url={videoModalSubmission.video_url}
               thumbnailUrl={videoModalSubmission.thumbnail_url}
               status={videoModalSubmission.status}
+              submissionId={videoModalSubmission.id}
               title={`${videoModalSubmission.team.name} performance video`}
             />
           )}
