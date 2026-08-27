@@ -887,6 +887,20 @@ export default function Submissions() {
         onReplaced={() => queryClient.invalidateQueries({ queryKey: ['admin-submissions'] })}
       />
 
+      <ReplaceVideoDialog
+        mode="manual"
+        open={!!manualUpload}
+        onOpenChange={(o) => { if (!o) setManualUpload(null); }}
+        defaultEventId={manualUpload?.eventId ?? null}
+        defaultTeamId={manualUpload?.teamId ?? null}
+        onReplaced={() => {
+          queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+          queryClient.invalidateQueries({ queryKey: ['admin-capture-attempts'] });
+        }}
+      />
+
+
+
       <DeleteSubmissionDialog
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
