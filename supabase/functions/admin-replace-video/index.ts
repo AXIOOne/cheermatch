@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
         console.error("Brightcove folder assignment failed:", (folderErr as Error).message);
       }
       const { signed_url, api_request_url } = await bcGetUploadUrl(created.id, fileName);
-      return ok("Upload initialized", { video_id: created.id, signed_url, api_request_url });
+      return ok("Upload initialized", { submission_id: submissionId, video_id: created.id, signed_url, api_request_url });
     }
 
     if (action === "complete") {
