@@ -408,12 +408,6 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
                   </Collapsible>
                 );
               })}
-
-                      </Card>
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })}
             </div>
 
             <div className="flex items-center justify-between border-t mt-4 pt-4">
