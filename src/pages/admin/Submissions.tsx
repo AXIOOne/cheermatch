@@ -372,23 +372,34 @@ export default function Submissions() {
           <h1 className="text-3xl font-bold text-foreground">Video Submissions</h1>
           <p className="text-muted-foreground mt-1">Review, approve, and track team video submissions</p>
         </div>
-        <div className="w-full md:w-[280px]">
-          <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Event</label>
-          <Select value={eventFilter} onValueChange={setEventFilter}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select an event" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Events</SelectItem>
-              {events?.map((event) => (
-                <SelectItem key={event.id} value={event.id}>
-                  {event.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+          {isAdmin && (
+            <Button
+              onClick={() => setManualUpload({ eventId: eventFilter === 'all' ? null : eventFilter, teamId: null })}
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Upload video
+            </Button>
+          )}
+          <div className="w-full md:w-[280px]">
+            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Event</label>
+            <Select value={eventFilter} onValueChange={setEventFilter}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select an event" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Events</SelectItem>
+                {events?.map((event) => (
+                  <SelectItem key={event.id} value={event.id}>
+                    {event.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
+
 
       <Tabs value={tab} onValueChange={switchTab} className="mb-6">
         <TabsList>
