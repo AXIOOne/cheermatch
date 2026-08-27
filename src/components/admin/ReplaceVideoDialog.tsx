@@ -91,13 +91,22 @@ export function ReplaceVideoDialog({
     queryKey: ['manual-upload-teams', eventId],
     enabled: open && isManual && !!eventId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: teams, error: teamsError } = await supabase
         .from('teams')
         .select('id, name, gym_name, division:divisions(name), level:levels(name)')
         .eq('event_id', eventId)
         .order('name');
-      if (error) throw error;
-      return data;
+      if (teamsError) throw teamsError;
+
+      const { data: submissions, error: subError } = await supabase
+        .from('video_submissions')
+        .select('team_id')
+        .eq('event_id', eventId)
+        .is('archived_at', null);
+      if (subError) throw subError;
+
+      const submittedTeamIds = new Set(submissions?.map((s) => s.team_id) ?? []);
+      return teams?.filter((t) => !submittedTeamIds.has(t.id)) ?? [];
     },
   });
 
