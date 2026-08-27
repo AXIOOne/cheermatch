@@ -42,7 +42,41 @@ Deno.serve(async (req) => {
 
     const body = await parseBody(req);
     const action = String(body.action ?? "");
-    const submissionId = String(body.submission_id ?? "").trim();
+    let submissionId = String(body.submission_id ?? "").trim();
+    const eventId = String(body.event_id ?? "").trim();
+    const teamId = String(body.team_id ?? "").trim();
+
+    // Manual upload path: no submission yet — find or create one for this team + event.
+    if (!UUID_RE.test(submissionId) && action === "init" && UUID_RE.test(eventId) && UUID_RE.test(teamId)) {
+      const { data: existing } = await sb
+        .from("video_submissions")
+        .select("id")
+        .eq("event_id", eventId)
+        .eq("team_id", teamId)
+        .is("archived_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing?.id) {
+        submissionId = existing.id;
+      } else {
+        const { data: created, error: createErr } = await sb
+          .from("video_submissions")
+          .insert({
+            event_id: eventId,
+            team_id: teamId,
+            status: "pending",
+            submitted_via: "admin",
+            submitted_by: who.user.id,
+          })
+          .select("id")
+          .single();
+        if (createErr) return fail(createErr.message);
+        submissionId = created.id;
+      }
+    }
+
     if (!UUID_RE.test(submissionId)) return fail("A valid submission_id is required");
 
     const { data: sub } = await sb
@@ -55,6 +89,7 @@ Deno.serve(async (req) => {
     const teamName = (sub as any).team?.name ?? "Team";
     const gymName = (sub as any).team?.gym_name ?? "";
     const eventName = ((sub as any).event?.name ?? "").trim() || `Event ${(sub as any).event_id}`;
+
 
     if (action === "init") {
       const fileName = String(body.file_name ?? "replacement.mp4").replace(/[^\w\-. ]+/g, "") || "replacement.mp4";
