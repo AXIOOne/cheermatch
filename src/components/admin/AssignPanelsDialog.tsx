@@ -33,6 +33,15 @@ interface AssignmentSection {
   display_order: number;
 }
 
+interface TemplatePanel {
+  id: string;
+  template_id: string;
+  name: string;
+  abbreviation: string;
+  display_order: number;
+}
+
+
 export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -87,6 +96,22 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
     enabled: templateIds.length > 0,
   });
 
+  // Panels defined on the templates (e.g. SD / Safety-Deductions) that are not
+  // backed by a scoring section — these still need their own judge assignment.
+  const { data: templatePanels } = useQuery({
+    queryKey: ['division-template-panels', templateIds],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('scoring_template_panels')
+        .select('id, template_id, name, abbreviation, display_order')
+        .in('template_id', templateIds)
+        .order('display_order');
+      if (error) throw error;
+      return data as TemplatePanel[];
+    },
+    enabled: templateIds.length > 0,
+  });
+
   // Panels for this event, used to auto-link section assignments to a panel
   // by matching the section abbreviation (or its default_panel_abbreviation).
   const { data: eventPanels } = useQuery({
@@ -119,6 +144,26 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
     });
     return grouped;
   }, [sections]);
+
+  // Extra rows: event panels matching a template panel with no section of the
+  // same abbreviation (deductions panel, etc.). Keyed by template id.
+  const extraPanelsByTemplate = useMemo(() => {
+    const grouped = new Map<string, Array<{ panelId: string; abbreviation: string; name: string }>>();
+    (templatePanels || []).forEach(tp => {
+      const abbr = (tp.abbreviation || '').toUpperCase();
+      if (!abbr) return;
+      const covered = (sectionsByTemplate.get(tp.template_id) || []).some(
+        s => (s.default_panel_abbreviation || s.abbreviation || '').toUpperCase() === abbr
+      );
+      if (covered) return;
+      const eventPanel = (eventPanels || []).find(p => p.abbreviation?.toUpperCase() === abbr);
+      if (!eventPanel) return;
+      const existing = grouped.get(tp.template_id) || [];
+      grouped.set(tp.template_id, [...existing, { panelId: eventPanel.id, abbreviation: abbr, name: tp.name || abbr }]);
+    });
+    return grouped;
+  }, [templatePanels, sectionsByTemplate, eventPanels]);
+
 
   // Judges (users with judge role)
   const { data: judges, isLoading: judgesLoading } = useQuery({
