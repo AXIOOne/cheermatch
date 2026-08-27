@@ -762,6 +762,7 @@ export default function SubmissionScoringDialog({
                             url={url}
                             thumbnailUrl={submission?.thumbnail_url}
                             status={submission?.status}
+                            submissionId={submission?.id}
                             title={`${submission?.team?.name || 'Team'} performance video`}
                           />
                         );
