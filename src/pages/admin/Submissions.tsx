@@ -895,7 +895,7 @@ export default function Submissions() {
         defaultTeamId={manualUpload?.teamId ?? null}
         onReplaced={() => {
           queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
-          queryClient.invalidateQueries({ queryKey: ['admin-capture-attempts'] });
+          queryClient.invalidateQueries({ queryKey: ['capture-attempts'] });
         }}
       />
 
