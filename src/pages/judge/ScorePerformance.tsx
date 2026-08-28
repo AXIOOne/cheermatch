@@ -622,7 +622,17 @@ export default function ScorePerformance() {
                         <div key={f.id} className="space-y-2 border-b last:border-0 pb-3 last:pb-0">
                           <div className="flex justify-between items-baseline">
                             <div>
-                              <p className="font-medium text-sm">{f.name}</p>
+                              <p className="font-medium text-sm flex items-center gap-2">
+                                {f.name}
+                                {f.score_type && (
+                                  <Badge
+                                    variant="outline"
+                                    className={`text-[10px] px-1.5 py-0 font-normal ${f.score_type === 'difficulty' ? 'border-primary/50 text-primary' : 'border-amber-500/50 text-amber-600 dark:text-amber-400'}`}
+                                  >
+                                    {f.score_type === 'difficulty' ? 'Difficulty' : 'Execution'}
+                                  </Badge>
+                                )}
+                              </p>
                               {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
                               {f.field_type === 'execution_driver' && (
                                 <p className="text-xs text-muted-foreground">
