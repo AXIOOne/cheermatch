@@ -932,7 +932,17 @@ export default function SubmissionScoringDialog({
                               <div key={f.id} className={`space-y-2 pb-2 border-b last:border-0 ${ov ? 'bg-destructive/5 -mx-2 px-2 rounded' : ''}`}>
                                 <div className="flex items-center justify-between gap-2">
                                   <div className="min-w-0 flex-1">
-                                    <p className="text-sm font-medium">{f.name}</p>
+                                    <p className="text-sm font-medium flex items-center gap-2">
+                                      {f.name}
+                                      {f.score_type && (
+                                        <Badge
+                                          variant="outline"
+                                          className={`text-[10px] px-1.5 py-0 font-normal ${f.score_type === 'difficulty' ? 'border-primary/50 text-primary' : 'border-amber-500/50 text-amber-600 dark:text-amber-400'}`}
+                                        >
+                                          {f.score_type === 'difficulty' ? 'Difficulty' : 'Execution'}
+                                        </Badge>
+                                      )}
+                                    </p>
                                     {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
                                     {f.field_type === 'execution_driver' && (
                                       <p className="text-xs text-muted-foreground">
