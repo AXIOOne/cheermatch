@@ -9,6 +9,8 @@ export function MobileLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, signOut } = useMobileAuth();
+  const { branding } = usePlatformSettings();
+  const logoSrc = branding?.logoUrl || logoWhite.url;
 
   const canGoBack = location.pathname !== "/m" && location.pathname !== "/m/login";
   const showHeader = location.pathname !== "/m/login"
@@ -24,7 +26,7 @@ export function MobileLayout() {
           style={{ paddingTop: "max(env(safe-area-inset-top), 0.75rem)", paddingBottom: "0.75rem" }}
         >
           <div className="flex items-center gap-2 min-w-0">
-            {canGoBack ? (
+            {canGoBack && (
               <button
                 aria-label="Back"
                 onClick={() => navigate(-1)}
@@ -32,13 +34,13 @@ export function MobileLayout() {
               >
                 <ChevronLeft className="h-6 w-6" />
               </button>
-            ) : (
-              <div className="h-7 w-7 rounded-md bg-sidebar-primary text-sidebar-primary-foreground flex items-center justify-center font-bold">
-                C
-              </div>
             )}
-            <div className="min-w-0">
-              <div className="text-sm font-semibold truncate">Cheermatch</div>
+            <div className="min-w-0 flex flex-col justify-center">
+              <img
+                src={logoSrc}
+                alt="Cheermatch"
+                className="h-6 w-auto max-w-[140px] object-contain"
+              />
               {user && <div className="text-[11px] text-sidebar-foreground/60 truncate">{user.organization_name || user.email}</div>}
             </div>
           </div>
