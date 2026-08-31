@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { mobileApi } from "@/lib/mobile-api";
 import { toast } from "sonner";
-import MobileHeader from "@/components/mobile/MobileHeader";
+
 
 type EventRow = {
   id: string; description: string; long_description: string;
@@ -29,8 +29,8 @@ export default function MobileEvents() {
 
   return (
     <div className="px-4 py-6 space-y-4 max-w-xl mx-auto">
-      <MobileHeader />
       <div>
+
         <h1 className="text-2xl font-bold">Your Events</h1>
         <p className="text-sm text-muted-foreground">Pick an event to view your teams and submit videos.</p>
       </div>

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { mobileApi } from "@/lib/mobile-api";
 import { attemptKey, listAttempts } from "@/lib/capture-attempts";
 import { toast } from "sonner";
-import MobileHeader from "@/components/mobile/MobileHeader";
+
 
 type Team = {
   team_id: string; team_name: string; gym_name: string;
@@ -75,8 +75,8 @@ export default function MobileEventTeams() {
 
   return (
     <div className="px-4 py-6 space-y-4 max-w-xl mx-auto">
-      <MobileHeader />
       <div>
+
         <h1 className="text-2xl font-bold">Your Teams</h1>
         <p className="text-sm text-muted-foreground">Tap the Team name below to record and submit their performance for Scoring.</p>
       </div>

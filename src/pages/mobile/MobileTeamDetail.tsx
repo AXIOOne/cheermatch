@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import VideoPlayer from "@/components/video/VideoPlayer";
 import { mobileApi } from "@/lib/mobile-api";
 import { attemptKey, listAttempts } from "@/lib/capture-attempts";
-import MobileHeader from "@/components/mobile/MobileHeader";
+
 
 type TakeInfo = { seq: number; url: string | null; durationSec: number };
 
