@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import VideoPlayer from "@/components/video/VideoPlayer";
 import { mobileApi } from "@/lib/mobile-api";
 import { attemptKey, listAttempts } from "@/lib/capture-attempts";
-import MobileHeader from "@/components/mobile/MobileHeader";
+
 
 type TakeInfo = { seq: number; url: string | null; durationSec: number };
 
@@ -102,11 +102,11 @@ export default function MobileTeamDetail() {
   if (loading) {
     return (
       <div className="px-4 py-6 max-w-xl mx-auto">
-        <MobileHeader />
         <div className="text-sm text-muted-foreground">Loading…</div>
       </div>
     );
   }
+
 
   const now = Date.now();
   const openAt = ev?.submission_open_at ? new Date(ev.submission_open_at).getTime() : null;
@@ -119,8 +119,8 @@ export default function MobileTeamDetail() {
   if (hasLockedSubmission) {
     return (
       <div className="px-4 py-6 space-y-4 max-w-xl mx-auto">
-        <MobileHeader />
         <Card className="p-6 text-center">
+
           <CheckCircle2 className="h-12 w-12 mx-auto text-primary mb-3" />
           <h1 className="text-xl font-bold">Video already submitted</h1>
           {teamName && <p className="text-sm font-medium mt-1">{teamName}</p>}
@@ -162,8 +162,8 @@ export default function MobileTeamDetail() {
   if (!windowOpen) {
     return (
       <div className="px-4 py-6 space-y-4 max-w-xl mx-auto">
-        <MobileHeader />
         <Card className="p-6 text-center">
+
           <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
           <h1 className="text-xl font-bold">Submission window closed</h1>
           {teamName && <p className="text-sm font-medium mt-1">{teamName}</p>}
@@ -187,8 +187,8 @@ export default function MobileTeamDetail() {
 
   return (
     <div className="px-4 py-6 space-y-4 max-w-xl mx-auto">
-      <MobileHeader />
       {isRevisionRequested && (
+
         <Card className="p-4 border-amber-500/40 bg-amber-50/50">
           <div className="flex gap-2 items-start">
             <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
