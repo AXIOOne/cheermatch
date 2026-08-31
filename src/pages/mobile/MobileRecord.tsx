@@ -30,6 +30,7 @@ import { CaptureOverlay } from "@/components/mobile/CaptureOverlay";
 import { AudioMeter } from "@/components/mobile/AudioMeter";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
+import logoWhite from "@/assets/logo-white.png.asset.json";
 import {
   attemptKey,
   clearAttempts,
