@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   Plus,
   RotateCw,
-  ChevronLeft,
   LogOut,
   Grid3x3,
   Laptop,
