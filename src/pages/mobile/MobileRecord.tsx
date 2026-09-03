@@ -936,14 +936,7 @@ export default function MobileRecord() {
             </Button>
           </div>
         )}
-        <div className="flex items-center justify-between pt-1 text-xs text-white/70">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1 px-2 py-1 -ml-2 rounded hover:text-white"
-            aria-label="Back"
-          >
-            <ChevronLeft className="h-4 w-4" /> Back
-          </button>
+        <div className="flex items-center justify-end pt-1 text-xs text-white/70">
           <button
             onClick={() => { signOut(); navigate("/m/login", { replace: true }); }}
             className="flex items-center gap-1 px-2 py-1 -mr-2 rounded hover:text-white"
