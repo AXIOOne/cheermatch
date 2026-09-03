@@ -926,14 +926,16 @@ export default function MobileRecord() {
         {phase === "preview" && (
           <div className="grid grid-cols-2 gap-3">
             {attempts.length < maxAttempts ? (
-              <Button onClick={recordAnother} variant="secondary" className="h-14">
-                <RefreshCw className="h-4 w-4 mr-2" /> Proceed to Second Capture
+              <Button onClick={recordAnother} variant="secondary" className="h-16 whitespace-normal text-center leading-tight text-sm px-2">
+                Proceed to<br />Second Capture
               </Button>
             ) : (
-              <Button variant="secondary" disabled className="h-14">Max Takes</Button>
+              <Button variant="secondary" disabled className="h-16 whitespace-normal text-center leading-tight text-sm px-2">
+                Max Takes
+              </Button>
             )}
-            <Button onClick={goChoose} className="h-14">
-              Proceed to Team List
+            <Button onClick={goChoose} className="h-16 whitespace-normal text-center leading-tight text-sm px-2">
+              Proceed to<br />Team List
             </Button>
           </div>
         )}
