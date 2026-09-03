@@ -927,13 +927,13 @@ export default function MobileRecord() {
           <div className="grid grid-cols-2 gap-3">
             {attempts.length < maxAttempts ? (
               <Button onClick={recordAnother} variant="secondary" className="h-14">
-                <RefreshCw className="h-4 w-4 mr-2" /> Retake
+                <RefreshCw className="h-4 w-4 mr-2" /> Proceed to Second Capture
               </Button>
             ) : (
               <Button variant="secondary" disabled className="h-14">Max Takes</Button>
             )}
             <Button onClick={goChoose} className="h-14">
-              Use This Take
+              Proceed to Team List
             </Button>
           </div>
         )}
