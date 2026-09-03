@@ -11,13 +11,11 @@ import {
   LogOut,
   Grid3x3,
   Laptop,
-  RefreshCw,
   BatteryMedium,
   HardDrive,
   Video,
   Maximize,
   Minimize,
-
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
