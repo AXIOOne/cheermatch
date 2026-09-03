@@ -897,13 +897,13 @@ export default function MobileRecord() {
 
         )}
         {phase === "recording" && (
-          <div className="absolute inset-0 z-40 flex items-end justify-center pb-8 pointer-events-none">
+          <div className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
             <button
               onClick={stopRecording}
               aria-label={`Stop Recording, ${fmt(remaining)} left`}
-              className="pointer-events-auto group flex items-center justify-center h-24 w-24 rounded-full bg-black/40 backdrop-blur-sm border-4 border-white/90 shadow-2xl active:scale-95 transition"
+              className="pointer-events-auto group flex items-center justify-center h-16 w-16 rounded-full bg-black/40 backdrop-blur-sm border-4 border-white/90 shadow-2xl active:scale-95 transition"
             >
-              <span className="h-10 w-10 rounded-md bg-destructive group-hover:bg-destructive/90" />
+              <span className="h-7 w-7 rounded-md bg-destructive group-hover:bg-destructive/90" />
             </button>
           </div>
         )}
