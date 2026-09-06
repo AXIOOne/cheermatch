@@ -109,7 +109,7 @@ export default function SubmissionDetail() {
   });
 
   const overrideAttemptsMutation = useMutation({
-    mutationFn: async ({ ids, void: doVoid, reason }: { ids: string[]; void: boolean; reason?: string }) => {
+    mutationFn: async ({ ids, void: doVoid, reason, reopen }: { ids: string[]; void: boolean; reason?: string; reopen?: boolean }) => {
       const { error } = await sb
         .from('capture_attempts')
         .update(
@@ -119,14 +119,33 @@ export default function SubmissionDetail() {
         )
         .in('id', ids);
       if (error) throw error;
+
+      // Voiding attempts alone leaves the existing submission in place, which makes the
+      // mobile capture screen keep saying "Video already submitted". Reopening the
+      // submission lets the team record again.
+      if (doVoid && reopen && submissionId) {
+        const { error: subError } = await sb
+          .from('video_submissions')
+          .update({
+            status: 'revision_requested',
+            review_notes: reason || 'Attempts reset by admin — please record again.',
+          })
+          .eq('id', submissionId);
+        if (subError) throw subError;
+      }
     },
     onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: ['submission-capture-attempts', eventId, teamId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] });
       queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
-      toast({ title: vars.void ? 'Attempts overridden' : 'Attempt restored' });
+      toast({
+        title: vars.void ? 'Attempts overridden' : 'Attempt restored',
+        description: vars.void && vars.reopen ? 'The team can record and submit a new video.' : undefined,
+      });
     },
     onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
+
 
   const allAttempts = captureInfo?.attempts ?? [];
   const activeAttempts = allAttempts.filter((a) => !a.voided_at);
