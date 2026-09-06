@@ -463,14 +463,29 @@ export default function SubmissionDetail() {
               This clears the {activeAttempts.length} recorded attempt{activeAttempts.length === 1 ? '' : 's'} for {submission.team?.name || 'this team'} so they can record again. Attempts are kept in the history as overridden — nothing is deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="reset-reason">Reason (optional)</Label>
-            <Textarea
-              id="reset-reason"
-              value={resetReason}
-              onChange={(e) => setResetReason(e.target.value)}
-              placeholder="e.g. Camera failure during first take"
-            />
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 rounded-md border p-3">
+              <Checkbox
+                id="reset-reopen"
+                checked={reopenOnReset}
+                onCheckedChange={(v) => setReopenOnReset(v === true)}
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="reset-reopen" className="cursor-pointer">Allow a new video for this team</Label>
+                <p className="text-xs text-muted-foreground">
+                  Reopens the current submission so the mobile app stops showing “Video already submitted”. The existing video stays until a new one is uploaded.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reset-reason">Reason (optional)</Label>
+              <Textarea
+                id="reset-reason"
+                value={resetReason}
+                onChange={(e) => setResetReason(e.target.value)}
+                placeholder="e.g. Camera failure during first take"
+              />
+            </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -480,9 +495,11 @@ export default function SubmissionDetail() {
                   ids: activeAttempts.map((a) => a.id),
                   void: true,
                   reason: resetReason.trim() || 'Admin reset',
+                  reopen: reopenOnReset,
                 })
               }
             >
+
               Reset attempts
             </AlertDialogAction>
           </AlertDialogFooter>
