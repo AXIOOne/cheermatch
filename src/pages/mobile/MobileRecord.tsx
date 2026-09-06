@@ -33,6 +33,7 @@ import {
   clearAttempts,
   finalizeAttempt,
   listAttempts,
+  reconcileAttempts,
   reserveAttempt,
 } from "@/lib/capture-attempts";
 
@@ -213,7 +214,17 @@ export default function MobileRecord() {
         ? serverSeqs
         : Array.from(new Set([...serverSeqs, ...stored.map((s) => s.seq)]))
       ).sort((a, b) => a - b);
-      if (cancelled || seqs.length === 0) return;
+      if (serverOk) {
+        await reconcileAttempts(storageKey, serverSeqs);
+      }
+      if (cancelled) return;
+      if (seqs.length === 0) {
+        setAttempts([]);
+        setPreviewAttemptId(null);
+        setSelectedAttemptId(null);
+        if (reviewMode) setPhase("ready");
+        return;
+      }
 
       const restored: Attempt[] = seqs.map((seq) => {
         const s = localBySeq.get(seq);
