@@ -467,11 +467,11 @@ export default function MobileRecord() {
 
     const startedAt = Date.now();
     rec.ondataavailable = (e) => e.data && e.data.size > 0 && chunksRef.current.push(e.data);
-    rec.onstop = () => {
+    rec.onstop = async () => {
       const out = new Blob(chunksRef.current, { type: rec.mimeType || "video/mp4" });
       const durationSec = Math.min(maxDuration, Math.round((Date.now() - startedAt) / 1000));
       const url = URL.createObjectURL(out);
-      void finalizeAttempt(reserved.id, out, durationSec);
+      const savedLocally = await finalizeAttempt(reserved.id, out, durationSec);
       if (serverAttemptId) void mobileApi.finalizeAttempt(serverAttemptId, durationSec, "saved");
 
       setAttempts((prev) =>
@@ -481,6 +481,9 @@ export default function MobileRecord() {
       );
       setPreviewAttemptId(reserved.id);
       setPhase("preview");
+      if (!savedLocally) {
+        toast.error("This take could not be saved on this device. Keep this screen open and submit it before leaving.");
+      }
       if (autoStopRef.current) { window.clearTimeout(autoStopRef.current); autoStopRef.current = null; }
       wakeLockRef.current?.release().catch(() => {});
       wakeLockRef.current = null;

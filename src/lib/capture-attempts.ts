@@ -10,6 +10,7 @@
 const DB_NAME = "cm-capture";
 const STORE = "attempts";
 const DB_VERSION = 1;
+const VIDEO_CACHE = "cm-capture-videos";
 
 export type StoredAttempt = {
   id: number;
@@ -40,6 +41,32 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
+function videoRequest(id: number): Request {
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://local.cheermatch.invalid";
+  return new Request(`${origin}/__capture-video/${id}`);
+}
+
+async function readCachedVideo(id: number): Promise<Blob | null> {
+  if (typeof caches === "undefined") return null;
+  try {
+    const cache = await caches.open(VIDEO_CACHE);
+    const response = await cache.match(videoRequest(id));
+    return response ? await response.blob() : null;
+  } catch {
+    return null;
+  }
+}
+
+async function deleteCachedVideo(id: number): Promise<void> {
+  if (typeof caches === "undefined") return;
+  try {
+    const cache = await caches.open(VIDEO_CACHE);
+    await cache.delete(videoRequest(id));
+  } catch {
+    /* ignore cache cleanup failure */
+  }
+}
+
 function tx<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest<T>): Promise<T> {
   return openDb().then(
     (db) =>
@@ -58,7 +85,14 @@ export async function listAttempts(key: string): Promise<StoredAttempt[]> {
     const all = await tx<StoredAttempt[]>("readonly", (s) =>
       s.index("key").getAll(key) as IDBRequest<StoredAttempt[]>,
     );
-    return (all ?? []).sort((a, b) => a.seq - b.seq);
+    const hydrated = await Promise.all(
+      (all ?? []).map(async (attempt) => {
+        if (attempt.blob) return attempt;
+        const blob = await readCachedVideo(attempt.id);
+        return blob ? { ...attempt, blob, complete: true } : attempt;
+      }),
+    );
+    return hydrated.sort((a, b) => a.seq - b.seq);
   } catch {
     return [];
   }
@@ -83,13 +117,30 @@ export async function reserveAttempt(key: string, seq?: number): Promise<StoredA
   return record;
 }
 
-export async function finalizeAttempt(id: number, blob: Blob, durationSec: number): Promise<void> {
+export async function finalizeAttempt(id: number, blob: Blob, durationSec: number): Promise<boolean> {
   try {
     const current = await tx<StoredAttempt | undefined>("readonly", (s) => s.get(id));
-    if (!current) return;
+    if (!current) return false;
+
+    // Cache Storage handles large mobile video blobs more reliably than putting
+    // the entire recording inside an IndexedDB row (notably in iOS browsers).
+    if (typeof caches !== "undefined") {
+      try {
+        const cache = await caches.open(VIDEO_CACHE);
+        await cache.put(videoRequest(id), new Response(blob, {
+          headers: { "Content-Type": blob.type || "video/mp4" },
+        }));
+        await tx("readwrite", (s) => s.put({ ...current, blob: null, durationSec, complete: true }));
+        return true;
+      } catch {
+        /* fall through to IndexedDB blob storage */
+      }
+    }
+
     await tx("readwrite", (s) => s.put({ ...current, blob, durationSec, complete: true }));
+    return true;
   } catch {
-    /* ignore persistence failure */
+    return false;
   }
 }
 
@@ -98,6 +149,7 @@ export async function clearAttempts(key: string): Promise<void> {
     const all = await listAttempts(key);
     for (const a of all) {
       await tx("readwrite", (s) => s.delete(a.id));
+      await deleteCachedVideo(a.id);
     }
   } catch {
     /* ignore */
@@ -112,6 +164,7 @@ export async function reconcileAttempts(key: string, activeSeqs: number[]): Prom
     for (const attempt of all) {
       if (!active.has(attempt.seq)) {
         await tx("readwrite", (store) => store.delete(attempt.id));
+        await deleteCachedVideo(attempt.id);
       }
     }
   } catch {
