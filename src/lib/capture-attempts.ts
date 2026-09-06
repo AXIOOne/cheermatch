@@ -103,3 +103,18 @@ export async function clearAttempts(key: string): Promise<void> {
     /* ignore */
   }
 }
+
+/** Remove device records that are no longer active in the portal ledger. */
+export async function reconcileAttempts(key: string, activeSeqs: number[]): Promise<void> {
+  try {
+    const active = new Set(activeSeqs);
+    const all = await listAttempts(key);
+    for (const attempt of all) {
+      if (!active.has(attempt.seq)) {
+        await tx("readwrite", (store) => store.delete(attempt.id));
+      }
+    }
+  } catch {
+    /* ignore local persistence failure; the portal count remains authoritative */
+  }
+}

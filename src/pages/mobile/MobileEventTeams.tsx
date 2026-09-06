@@ -4,7 +4,7 @@ import { ChevronRight, Users, Video, Clapperboard } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { mobileApi } from "@/lib/mobile-api";
-import { attemptKey, listAttempts } from "@/lib/capture-attempts";
+import { attemptKey, listAttempts, reconcileAttempts } from "@/lib/capture-attempts";
 import { toast } from "sonner";
 
 
@@ -57,6 +57,14 @@ export default function MobileEventTeams() {
           for (const a of res.data) {
             counts[a.team_id] = (counts[a.team_id] ?? 0) + 1;
           }
+          await Promise.all(
+            teams.map((team) => {
+              const activeSeqs = res.data
+                .filter((attempt) => attempt.team_id === team.team_id)
+                .map((attempt) => Number(attempt.attempt_number));
+              return reconcileAttempts(attemptKey(eventId, team.team_id), activeSeqs);
+            }),
+          );
         }
       } catch { /* offline */ }
       if (!serverOk) {

@@ -55,6 +55,7 @@ async function call<T = unknown>(name: string, body?: Record<string, unknown>, m
     method,
     headers,
     body: method === "GET" ? undefined : JSON.stringify(payload),
+    cache: "no-store",
   });
   return await res.json() as Envelope<T>;
 }

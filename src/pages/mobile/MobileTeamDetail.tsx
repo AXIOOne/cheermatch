@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import VideoPlayer from "@/components/video/VideoPlayer";
 import { mobileApi } from "@/lib/mobile-api";
-import { attemptKey, listAttempts } from "@/lib/capture-attempts";
+import { attemptKey, listAttempts, reconcileAttempts } from "@/lib/capture-attempts";
 
 
 type TakeInfo = { seq: number; url: string | null; durationSec: number };
@@ -78,6 +78,9 @@ export default function MobileTeamDetail() {
           }
         } catch { /* offline */ }
         const stored = await listAttempts(attemptKey(eventId, teamId));
+        if (serverOk) {
+          await reconcileAttempts(attemptKey(eventId, teamId), serverSeqs);
+        }
         const localBySeq = new Map(stored.map((s) => [s.seq, s]));
         const seqs = (serverOk
           ? serverSeqs
