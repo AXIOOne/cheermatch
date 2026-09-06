@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video, Archive, ArchiveRestore, Trash2, Download, Upload, Clapperboard } from 'lucide-react';
 import { downloadSubmissionVideo, VideoPreparingError } from '@/lib/download-submission-video';
 import { useVideoPrep } from '@/hooks/useVideoPrep';
@@ -43,6 +44,7 @@ export default function SubmissionDetail() {
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [resetReason, setResetReason] = useState('');
+  const [reopenOnReset, setReopenOnReset] = useState(true);
 
   const updateStatusMutation = useMutation({
     mutationFn: async (status: SubmissionStatus) => {
@@ -109,7 +111,7 @@ export default function SubmissionDetail() {
   });
 
   const overrideAttemptsMutation = useMutation({
-    mutationFn: async ({ ids, void: doVoid, reason }: { ids: string[]; void: boolean; reason?: string }) => {
+    mutationFn: async ({ ids, void: doVoid, reason, reopen }: { ids: string[]; void: boolean; reason?: string; reopen?: boolean }) => {
       const { error } = await sb
         .from('capture_attempts')
         .update(
@@ -119,14 +121,33 @@ export default function SubmissionDetail() {
         )
         .in('id', ids);
       if (error) throw error;
+
+      // Voiding attempts alone leaves the existing submission in place, which makes the
+      // mobile capture screen keep saying "Video already submitted". Reopening the
+      // submission lets the team record again.
+      if (doVoid && reopen && submissionId) {
+        const { error: subError } = await sb
+          .from('video_submissions')
+          .update({
+            status: 'revision_requested',
+            review_notes: reason || 'Attempts reset by admin — please record again.',
+          })
+          .eq('id', submissionId);
+        if (subError) throw subError;
+      }
     },
     onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: ['submission-capture-attempts', eventId, teamId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] });
       queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
-      toast({ title: vars.void ? 'Attempts overridden' : 'Attempt restored' });
+      toast({
+        title: vars.void ? 'Attempts overridden' : 'Attempt restored',
+        description: vars.void && vars.reopen ? 'The team can record and submit a new video.' : undefined,
+      });
     },
     onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
+
 
   const allAttempts = captureInfo?.attempts ?? [];
   const activeAttempts = allAttempts.filter((a) => !a.voided_at);
@@ -444,14 +465,29 @@ export default function SubmissionDetail() {
               This clears the {activeAttempts.length} recorded attempt{activeAttempts.length === 1 ? '' : 's'} for {submission.team?.name || 'this team'} so they can record again. Attempts are kept in the history as overridden — nothing is deleted.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="reset-reason">Reason (optional)</Label>
-            <Textarea
-              id="reset-reason"
-              value={resetReason}
-              onChange={(e) => setResetReason(e.target.value)}
-              placeholder="e.g. Camera failure during first take"
-            />
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 rounded-md border p-3">
+              <Checkbox
+                id="reset-reopen"
+                checked={reopenOnReset}
+                onCheckedChange={(v) => setReopenOnReset(v === true)}
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="reset-reopen" className="cursor-pointer">Allow a new video for this team</Label>
+                <p className="text-xs text-muted-foreground">
+                  Reopens the current submission so the mobile app stops showing “Video already submitted”. The existing video stays until a new one is uploaded.
+                </p>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reset-reason">Reason (optional)</Label>
+              <Textarea
+                id="reset-reason"
+                value={resetReason}
+                onChange={(e) => setResetReason(e.target.value)}
+                placeholder="e.g. Camera failure during first take"
+              />
+            </div>
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -461,9 +497,11 @@ export default function SubmissionDetail() {
                   ids: activeAttempts.map((a) => a.id),
                   void: true,
                   reason: resetReason.trim() || 'Admin reset',
+                  reopen: reopenOnReset,
                 })
               }
             >
+
               Reset attempts
             </AlertDialogAction>
           </AlertDialogFooter>
