@@ -957,7 +957,10 @@ export default function SubmissionScoringDialog({
                                   <div className="flex items-center gap-2">
                                     <div className="text-right text-xs text-muted-foreground">
                                       {(f.field_type === 'difficulty_driver' || f.field_type === 'execution_driver') && (
-                                        <span className={`text-sm font-semibold mr-2 ${ov ? 'text-destructive line-through' : 'text-foreground'}`}>{Number(fieldScores[f.id]?.points || 0).toFixed(2)}</span>
+                                        <>
+                                          {ov && <span className="text-sm mr-1 text-muted-foreground line-through">{Number(fieldScores[f.id]?.points || 0).toFixed(2)}</span>}
+                                          <span className={`text-sm font-semibold mr-2 ${ov ? 'text-destructive' : 'text-foreground'}`}>{Number(ov ? (ov.new_points ?? 0) : (fieldScores[f.id]?.points || 0)).toFixed(2)}</span>
+                                        </>
                                       )}
                                       max {Number(f.max_points).toFixed(2)}
                                     </div>
