@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { calculateStructuredDeductions, sortByDisplayOrder } from '@/lib/scoring';
+import { calculateStructuredDeductions, sortByDisplayOrder, isFieldForPanel } from '@/lib/scoring';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -213,11 +213,7 @@ export default function SubmissionScoringDialog({
       .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0));
     return sections.map((s: any) => {
       const fields = ((s.fields as any[]) || [])
-        .filter((f: any) => {
-          const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
-          if (abbrs.length === 0) return true; // unassigned visible to all
-          return selectedPanelAbbrev ? abbrs.includes(selectedPanelAbbrev.toUpperCase()) : true;
-        })
+        .filter((f: any) => (selectedPanelAbbrev ? isFieldForPanel(f, selectedPanelAbbrev) : true))
         .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0));
       return { ...s, visibleFields: fields };
     }).filter(s => s.visibleFields.length > 0);
@@ -503,11 +499,7 @@ export default function SubmissionScoringDialog({
           // Recompute total_score from current detail rows
           const tplFields: any[] = (template?.sections || []).flatMap((s: any) => s.fields || []);
           const panelAbbr = (panels.find(p => p.id === selectedPanelId)?.abbreviation || '').toUpperCase();
-          const visible = tplFields.filter((f: any) => {
-            const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
-            if (abbrs.length === 0) return true;
-            return abbrs.includes(panelAbbr);
-          });
+          const visible = tplFields.filter((f: any) => isFieldForPanel(f, panelAbbr));
           const maxTotal = visible.reduce((s: number, f: any) => s + Number(f.max_points || 0), 0);
           const { data: freshDetails } = await sb.from('score_details')
             .select('field_id, points').eq('score_id', targetScoreId);
@@ -582,11 +574,7 @@ export default function SubmissionScoringDialog({
     // Sum effective points for the visible template fields (use this panel's visible fields).
     const tplFields: any[] = (template?.sections || []).flatMap((s: any) => s.fields || []);
     const panelAbbr = (panels.find(p => p.id === resolveScorePanelId(score))?.abbreviation || '').toUpperCase();
-    const visibleForPanel = tplFields.filter((f: any) => {
-      const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
-      if (abbrs.length === 0) return true;
-      return abbrs.includes(panelAbbr);
-    });
+    const visibleForPanel = tplFields.filter((f: any) => isFieldForPanel(f, panelAbbr));
     let max = 0;
     let raw = 0;
     visibleForPanel.forEach((f: any) => {
@@ -812,11 +800,7 @@ export default function SubmissionScoringDialog({
                         const score: any = allScores?.find((s: any) => resolveScorePanelId(s) === panel.id);
                         const panelAbbr = (panel.abbreviation || '').toUpperCase();
                         const panelMax = (template?.sections || []).reduce((sum: number, sec: any) => {
-                          const fields = (sec.fields || []).filter((f: any) => {
-                            const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
-                            if (abbrs.length === 0) return true;
-                            return abbrs.includes(panelAbbr);
-                          });
+                          const fields = (sec.fields || []).filter((f: any) => isFieldForPanel(f, panelAbbr));
                           return sum + fields.reduce((a: number, f: any) => a + Number(f.max_points || 0), 0);
                         }, 0);
                         const panelRaw = (score?.details || []).reduce((a: number, d: any) => a + Number(d.points || 0), 0);

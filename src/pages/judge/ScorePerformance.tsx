@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ArrowLeft, Save, Send, Loader2, Play, RotateCcw, Flag } from 'lucide-react';
 import { calculateStructuredDeductions, sortByDisplayOrder } from '@/lib/scoring';
 import { RubricReferenceSheet } from '@/components/judge/RubricReferenceSheet';
+import { fieldPanelAbbrevs } from '@/lib/scoring';
 
 interface FieldScore { field_id: string; points: number; notes: string; }
 const sb = supabase as any;
@@ -213,8 +214,11 @@ export default function ScorePerformance() {
           .filter((f: any) => {
             if (hasAllPanelsAssignment) return true;
             if (assignedSectionIds.has(s.id)) return true;
-            const abbrs = (f.panel_links || []).map((p: any) => p.panel_abbreviation?.toUpperCase());
-            if (abbrs.length === 0) return assignedPanelAbbrevs.size > 0;
+            const abbrs = fieldPanelAbbrevs(f);
+            // No restriction or "ALL" => every assigned panel judge scores it.
+            if (abbrs.length === 0 || abbrs.includes('ALL')) {
+              return assignedPanelAbbrevs.size > 0 || assignedSectionIds.size > 0;
+            }
             if (assignedPanelAbbrevs.size === 0) return false;
             return abbrs.some((abbrev: string) => assignedPanelAbbrevs.has(abbrev));
           })
