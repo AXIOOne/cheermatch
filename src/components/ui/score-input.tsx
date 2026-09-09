@@ -31,13 +31,13 @@ export function ScoreInput({
   const [text, setText] = React.useState<string>(() => formatValue(value, step));
   const [editing, setEditing] = React.useState(false);
 
-  // Keep the displayed text in sync when the value changes externally
-  // (e.g. +/- buttons or loaded scores), but not while the judge is typing.
+  // Keep the displayed text in sync when the value changes externally.
+  // Typing only changes local text, so this does not interrupt editing; it
+  // does ensure an admin override immediately replaces the previous score.
   React.useEffect(() => {
-    if (!editing) {
-      setText(formatValue(value, step));
-    }
-  }, [value, step, editing]);
+    setText(formatValue(value, step));
+    if (disabled) setEditing(false);
+  }, [value, step, disabled]);
 
   const clamp = (v: number) => Math.min(max, Math.max(min, v));
 
