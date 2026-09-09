@@ -611,7 +611,7 @@ export default function SubmissionScoringDialog({
       queryClient.invalidateQueries({ queryKey: ['submission-score-overrides', submissionId] });
       queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
       queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
-      toast({ title: 'Score overridden to 0' });
+      toast({ title: 'Score overridden' });
     },
     onError: (e: any) => toast({ variant: 'destructive', title: 'Override failed', description: e.message }),
   });
@@ -941,7 +941,7 @@ export default function SubmissionScoringDialog({
                                           <TooltipTrigger asChild>
                                             <p className="text-[11px] font-semibold text-destructive mt-1 inline-flex items-center gap-1 cursor-help">
                                               <Ban className="w-3 h-3" />
-                                              Overridden to 0 (was {Number(ov.original_points).toFixed(2)})
+                                              Overridden to {Number(ov.new_points ?? 0).toFixed(2)} (was {Number(ov.original_points).toFixed(2)})
                                               <Info className="w-3 h-3" />
                                             </p>
                                           </TooltipTrigger>
@@ -977,7 +977,7 @@ export default function SubmissionScoringDialog({
                                           className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
                                           onClick={() => setOverrideTarget({ field: f, currentPoints: Number(fieldScores[f.id]?.points || 0) })}
                                         >
-                                          <Ban className="w-3 h-3 mr-1" /> Override → 0
+                                          <Ban className="w-3 h-3 mr-1" /> Admin Override Score
                                         </Button>
                                       )
                                     )}
@@ -1198,12 +1198,13 @@ export default function SubmissionScoringDialog({
         fieldName={overrideTarget?.field?.name || ''}
         currentPoints={overrideTarget?.currentPoints || 0}
         maxPoints={Number(overrideTarget?.field?.max_points || 0)}
-        onConfirm={async (reason) => {
+        onConfirm={async (reason, newPoints) => {
           if (!overrideTarget || !currentPanelScore) return;
           await applyOverrideMutation.mutateAsync({
             scoreId: currentPanelScore.id,
             field: overrideTarget.field,
             currentPoints: overrideTarget.currentPoints,
+            newPoints,
             reason,
           });
           setOverrideTarget(null);
