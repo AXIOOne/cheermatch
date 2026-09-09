@@ -175,7 +175,8 @@ export default function ScoringQueue() {
         if (s.id) sectionIds.add(s.id);
         (s.fields || []).forEach((f: any) => {
           const links = f.panel_links || [];
-          if (links.length === 0) {
+          const abbrs = links.map((l: any) => String(l?.panel_abbreviation || '').toUpperCase());
+          if (links.length === 0 || abbrs.includes('ALL')) {
             hasUnrestricted = true;
           } else {
             links.forEach((l: any) => {

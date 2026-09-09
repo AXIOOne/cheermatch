@@ -44,3 +44,30 @@ export function aggregateValues(values: number[], mode: AggregationMode): number
       return values.reduce((a, b) => a + b, 0) / values.length;
   }
 }
+
+/**
+ * Panel abbreviations a scoring field is assigned to (uppercased).
+ */
+export function fieldPanelAbbrevs(field: any): string[] {
+  return ((field?.panel_links || []) as any[])
+    .map((p) => String(p?.panel_abbreviation || '').toUpperCase())
+    .filter(Boolean);
+}
+
+/**
+ * A field is scored by a panel when it has no panel restriction, when it is
+ * explicitly marked "ALL" (every panel judge scores it, scoresheet averages),
+ * or when the panel abbreviation is listed.
+ */
+export function isFieldForPanel(field: any, panelAbbrev: string | null | undefined): boolean {
+  const abbrs = fieldPanelAbbrevs(field);
+  if (abbrs.length === 0 || abbrs.includes('ALL')) return true;
+  if (!panelAbbrev) return false;
+  return abbrs.includes(String(panelAbbrev).toUpperCase());
+}
+
+/** True when the field is scored by every panel judge. */
+export function isAllPanelsField(field: any): boolean {
+  const abbrs = fieldPanelAbbrevs(field);
+  return abbrs.length === 0 || abbrs.includes('ALL');
+}
