@@ -590,15 +590,17 @@ export default function SubmissionScoringDialog({
   };
 
   const applyOverrideMutation = useMutation({
-    mutationFn: async ({ scoreId, field, currentPoints, reason }: { scoreId: string; field: any; currentPoints: number; reason: string }) => {
+    mutationFn: async ({ scoreId, field, currentPoints, newPoints, reason }: { scoreId: string; field: any; currentPoints: number; newPoints: number; reason: string }) => {
       const { data: userData } = await supabase.auth.getUser();
       const adminId = userData.user?.id;
       if (!adminId) throw new Error('Not authenticated');
+      const max = Number(field.max_points || 0);
+      const clamped = Math.min(Math.max(Number(newPoints) || 0, 0), max);
       const { error } = await sb.from('score_field_overrides').upsert({
         score_id: scoreId,
         field_id: field.id,
         original_points: currentPoints,
-        new_points: 0,
+        new_points: clamped,
         reason,
         overridden_by: adminId,
       }, { onConflict: 'score_id,field_id' });
