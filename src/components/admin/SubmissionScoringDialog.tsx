@@ -1083,6 +1083,14 @@ export default function SubmissionScoringDialog({
                                     step={Number(f.step) || 0.25}
                                     disabled={isCurrentPanelLocked || !!ov}
                                     label={f.name || 'Score'}
+                                    onError={(hasError) => {
+                                      setInvalidFields(prev => {
+                                        const next = new Set(prev);
+                                        if (hasError) next.add(f.id);
+                                        else next.delete(f.id);
+                                        return next;
+                                      });
+                                    }}
                                   />
                                 )}
                               </div>
