@@ -1076,6 +1076,7 @@ export default function SubmissionScoringDialog({
                                     max={Number(f.max_value)}
                                     step={Number(f.step) || 0.25}
                                     disabled={isCurrentPanelLocked || !!ov}
+                                    label={f.name || 'Score'}
                                   />
                                 )}
                               </div>
