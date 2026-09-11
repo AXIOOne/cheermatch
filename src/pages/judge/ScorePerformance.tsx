@@ -56,6 +56,7 @@ export default function ScorePerformance() {
   const [isSaving, setIsSaving] = useState(false);
   const [flagDialogOpen, setFlagDialogOpen] = useState(false);
   const [flagReason, setFlagReason] = useState('');
+  const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
 
   const { data: submission, isLoading: submissionLoading } = useQuery({
     queryKey: ['submission', submissionId],
