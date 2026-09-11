@@ -56,6 +56,7 @@ export default function ScorePerformance() {
   const [isSaving, setIsSaving] = useState(false);
   const [flagDialogOpen, setFlagDialogOpen] = useState(false);
   const [flagReason, setFlagReason] = useState('');
+  const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
 
   const { data: submission, isLoading: submissionLoading } = useQuery({
     queryKey: ['submission', submissionId],
@@ -263,6 +264,11 @@ export default function ScorePerformance() {
       setDeductionWarnings(dw);
     }
   }, [template, existingScore, visibleSections]);
+
+  // Clear field-level validation errors when the visible scoring form changes.
+  useEffect(() => {
+    setInvalidFields(new Set());
+  }, [visibleSections, submissionId]);
 
   // For driver fields (difficulty_driver / execution_driver), derive field points from selected radio options
   const driverFieldsById = useMemo(() => {
@@ -535,11 +541,11 @@ export default function ScorePerformance() {
               levelId={(submission.team as any)?.level_id} />
             {!isLocked && (
               <>
-                <Button variant="outline" onClick={() => saveMutation.mutate({ status: 'in_progress' })} disabled={isSaving}>
+                <Button variant="outline" onClick={() => saveMutation.mutate({ status: 'in_progress' })} disabled={isSaving || invalidFields.size > 0}>
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                   Save Draft
                 </Button>
-                <Button onClick={() => saveMutation.mutate({ status: 'submitted' })} disabled={isSaving}>
+                <Button onClick={() => saveMutation.mutate({ status: 'submitted' })} disabled={isSaving || invalidFields.size > 0}>
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                   Submit Score
                 </Button>
@@ -547,11 +553,16 @@ export default function ScorePerformance() {
                   variant="outline"
                   className="border-warning text-warning hover:bg-warning/10 hover:text-warning"
                   onClick={() => { setFlagReason(''); setFlagDialogOpen(true); }}
-                  disabled={isSaving}
+                  disabled={isSaving || invalidFields.size > 0}
                 >
                   <Flag className="w-4 h-4 mr-2" />
                   Submit & Flag
                 </Button>
+                {invalidFields.size > 0 && (
+                  <span className="text-xs text-destructive font-medium">
+                    {invalidFields.size} score{invalidFields.size === 1 ? '' : 's'} out of range — fix before submitting.
+                  </span>
+                )}
               </>
             )}
             {existingScore?.status === 'locked' && <span className="px-3 py-1 bg-muted rounded-full text-sm font-medium">Score Locked</span>}
@@ -741,6 +752,14 @@ export default function ScorePerformance() {
                               step={Number(f.step) || 0.25}
                               disabled={isLocked}
                               label={f.name || 'Score'}
+                              onError={(hasError) => {
+                                setInvalidFields(prev => {
+                                  const next = new Set(prev);
+                                  if (hasError) next.add(f.id);
+                                  else next.delete(f.id);
+                                  return next;
+                                });
+                              }}
                             />
                           )}
                         </div>
@@ -848,10 +867,14 @@ export default function ScorePerformance() {
                   toast({ variant: 'destructive', title: 'Reason required', description: 'Please describe why this score needs review.' });
                   return;
                 }
+                if (invalidFields.size > 0) {
+                  toast({ variant: 'destructive', title: 'Scores out of range', description: 'Please fix all scores outside the allowed range before submitting.' });
+                  return;
+                }
                 setFlagDialogOpen(false);
                 saveMutation.mutate({ status: 'submitted', needsReview: true, reviewReason: flagReason.trim() });
               }}
-              disabled={isSaving || !flagReason.trim()}
+              disabled={isSaving || !flagReason.trim() || invalidFields.size > 0}
               className="bg-warning text-warning-foreground hover:bg-warning/90"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Flag className="w-4 h-4 mr-2" />}

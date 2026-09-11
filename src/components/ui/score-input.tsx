@@ -13,6 +13,7 @@ interface ScoreInputProps {
   disabled?: boolean;
   className?: string;
   label?: string;
+  onError?: (hasError: boolean, reason?: 'above_max' | 'below_min') => void;
 }
 
 function formatValue(v: number, step: number): string {
@@ -30,17 +31,22 @@ export function ScoreInput({
   disabled = false,
   className,
   label,
+  onError,
 }: ScoreInputProps) {
   const [text, setText] = React.useState<string>(() => formatValue(value, step));
   const [editing, setEditing] = React.useState(false);
+  const [hasError, setHasError] = React.useState(false);
 
   // Keep the displayed text in sync when the value changes externally.
-  // Typing only changes local text, so this does not interrupt editing; it
-  // does ensure an admin override immediately replaces the previous score.
+  // When not editing, clear any stale error state.
   React.useEffect(() => {
-    setText(formatValue(value, step));
+    if (!editing) {
+      setText(formatValue(value, step));
+      setHasError(false);
+      onError?.(false);
+    }
     if (disabled) setEditing(false);
-  }, [value, step, disabled]);
+  }, [value, step, disabled, editing, onError]);
 
   const clamp = (v: number) => Math.min(max, Math.max(min, v));
 
@@ -62,6 +68,8 @@ export function ScoreInput({
     setEditing(false);
     const parsed = parseFloat(text);
     if (isNaN(parsed)) {
+      setHasError(false);
+      onError?.(false);
       setText(formatValue(value, step));
       return;
     }
@@ -73,17 +81,23 @@ export function ScoreInput({
       showError(
         `${label ? `${label}: ` : ''}Score cannot be higher than the maximum allowed score of ${formatValue(max, step)}.`
       );
-      setText(formatValue(value, step));
+      setHasError(true);
+      onError?.(true, 'above_max');
+      // Keep the invalid value visible in red so the judge must correct it.
       return;
     }
     if (rounded < min) {
       showError(
         `${label ? `${label}: ` : ''}Score cannot be lower than ${formatValue(min, step)}.`
       );
-      setText(formatValue(value, step));
+      setHasError(true);
+      onError?.(true, 'below_min');
+      // Keep the invalid value visible in red so the judge must correct it.
       return;
     }
 
+    setHasError(false);
+    onError?.(false);
     const clamped = clamp(rounded);
     setText(formatValue(clamped, step));
     if (clamped !== value) {
@@ -97,6 +111,8 @@ export function ScoreInput({
       commit();
     } else if (e.key === 'Escape') {
       setEditing(false);
+      setHasError(false);
+      onError?.(false);
       setText(formatValue(value, step));
     }
   };
@@ -104,7 +120,10 @@ export function ScoreInput({
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-1 rounded-md border border-input bg-background p-1',
+        'inline-flex items-center gap-1 rounded-md border p-1',
+        hasError
+          ? 'border-destructive bg-destructive/10'
+          : 'border-input bg-background',
         className
       )}
     >
@@ -125,6 +144,7 @@ export function ScoreInput({
         className={cn(
           'w-14 rounded-sm bg-transparent text-center font-semibold text-lg tabular-nums',
           'outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          hasError ? 'text-destructive' : 'text-foreground',
           disabled && 'cursor-not-allowed opacity-50'
         )}
         value={text}

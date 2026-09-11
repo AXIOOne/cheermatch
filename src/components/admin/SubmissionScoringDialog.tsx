@@ -63,6 +63,7 @@ export default function SubmissionScoringDialog({
   const [deductionWarnings, setDeductionWarnings] = useState<Record<string, number>>({});
   const [comments, setComments] = useState('');
   const [needsReview, setNeedsReview] = useState(false);
+  const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -263,6 +264,11 @@ export default function SubmissionScoringDialog({
       setNeedsReview(false);
     }
   }, [selectedPanelId, allScores, template, visibleSections]);
+
+  // Clear field-level validation errors when the visible scoring form changes.
+  useEffect(() => {
+    setInvalidFields(new Set());
+  }, [visibleSections, submissionId]);
 
   // Derive driver field points (difficulty_driver / execution_driver) from selected radio options
   const driverFieldsById = useMemo(() => {
@@ -1077,6 +1083,14 @@ export default function SubmissionScoringDialog({
                                     step={Number(f.step) || 0.25}
                                     disabled={isCurrentPanelLocked || !!ov}
                                     label={f.name || 'Score'}
+                                    onError={(hasError) => {
+                                      setInvalidFields(prev => {
+                                        const next = new Set(prev);
+                                        if (hasError) next.add(f.id);
+                                        else next.delete(f.id);
+                                        return next;
+                                      });
+                                    }}
                                   />
                                 )}
                               </div>
@@ -1171,18 +1185,23 @@ export default function SubmissionScoringDialog({
                       ) : (
                         <>
                           <Button variant="outline" onClick={() => saveMutation.mutate({ markReviewed: false })}
-                            disabled={isSaving} className="flex-1">
+                            disabled={isSaving || invalidFields.size > 0} className="flex-1">
                             {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                             Save Score
                           </Button>
                           <Button onClick={() => saveMutation.mutate({ markReviewed: true })}
-                            disabled={isSaving} className="flex-1">
+                            disabled={isSaving || invalidFields.size > 0} className="flex-1">
                             {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
                             Save & Mark as Reviewed
                           </Button>
                         </>
                       )}
                     </div>
+                    {!isCurrentPanelLocked && invalidFields.size > 0 && (
+                      <p className="text-xs text-destructive font-medium text-center">
+                        {invalidFields.size} score{invalidFields.size === 1 ? '' : 's'} out of range — fix before saving.
+                      </p>
+                    )}
 
                     {!assignedJudge && (
                       <p className="text-xs text-muted-foreground text-center">
