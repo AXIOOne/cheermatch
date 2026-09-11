@@ -740,6 +740,7 @@ export default function ScorePerformance() {
                               max={Number(f.max_value)}
                               step={Number(f.step) || 0.25}
                               disabled={isLocked}
+                              label={f.name || 'Score'}
                             />
                           )}
                         </div>
