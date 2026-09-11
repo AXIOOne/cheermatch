@@ -867,10 +867,14 @@ export default function ScorePerformance() {
                   toast({ variant: 'destructive', title: 'Reason required', description: 'Please describe why this score needs review.' });
                   return;
                 }
+                if (invalidFields.size > 0) {
+                  toast({ variant: 'destructive', title: 'Scores out of range', description: 'Please fix all scores outside the allowed range before submitting.' });
+                  return;
+                }
                 setFlagDialogOpen(false);
                 saveMutation.mutate({ status: 'submitted', needsReview: true, reviewReason: flagReason.trim() });
               }}
-              disabled={isSaving || !flagReason.trim()}
+              disabled={isSaving || !flagReason.trim() || invalidFields.size > 0}
               className="bg-warning text-warning-foreground hover:bg-warning/90"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Flag className="w-4 h-4 mr-2" />}
