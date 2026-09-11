@@ -747,6 +747,14 @@ export default function ScorePerformance() {
                               step={Number(f.step) || 0.25}
                               disabled={isLocked}
                               label={f.name || 'Score'}
+                              onError={(hasError) => {
+                                setInvalidFields(prev => {
+                                  const next = new Set(prev);
+                                  if (hasError) next.add(f.id);
+                                  else next.delete(f.id);
+                                  return next;
+                                });
+                              }}
                             />
                           )}
                         </div>
