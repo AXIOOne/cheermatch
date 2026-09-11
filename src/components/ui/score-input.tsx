@@ -111,6 +111,8 @@ export function ScoreInput({
       commit();
     } else if (e.key === 'Escape') {
       setEditing(false);
+      setHasError(false);
+      onError?.(false);
       setText(formatValue(value, step));
     }
   };
@@ -118,7 +120,10 @@ export function ScoreInput({
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-1 rounded-md border border-input bg-background p-1',
+        'inline-flex items-center gap-1 rounded-md border p-1',
+        hasError
+          ? 'border-destructive bg-destructive/10'
+          : 'border-input bg-background',
         className
       )}
     >
@@ -139,6 +144,7 @@ export function ScoreInput({
         className={cn(
           'w-14 rounded-sm bg-transparent text-center font-semibold text-lg tabular-nums',
           'outline-none focus-visible:ring-2 focus-visible:ring-ring',
+          hasError ? 'text-destructive' : 'text-foreground',
           disabled && 'cursor-not-allowed opacity-50'
         )}
         value={text}
