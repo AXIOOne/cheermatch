@@ -541,11 +541,11 @@ export default function ScorePerformance() {
               levelId={(submission.team as any)?.level_id} />
             {!isLocked && (
               <>
-                <Button variant="outline" onClick={() => saveMutation.mutate({ status: 'in_progress' })} disabled={isSaving}>
+                <Button variant="outline" onClick={() => saveMutation.mutate({ status: 'in_progress' })} disabled={isSaving || invalidFields.size > 0}>
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                   Save Draft
                 </Button>
-                <Button onClick={() => saveMutation.mutate({ status: 'submitted' })} disabled={isSaving}>
+                <Button onClick={() => saveMutation.mutate({ status: 'submitted' })} disabled={isSaving || invalidFields.size > 0}>
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                   Submit Score
                 </Button>
@@ -553,11 +553,16 @@ export default function ScorePerformance() {
                   variant="outline"
                   className="border-warning text-warning hover:bg-warning/10 hover:text-warning"
                   onClick={() => { setFlagReason(''); setFlagDialogOpen(true); }}
-                  disabled={isSaving}
+                  disabled={isSaving || invalidFields.size > 0}
                 >
                   <Flag className="w-4 h-4 mr-2" />
                   Submit & Flag
                 </Button>
+                {invalidFields.size > 0 && (
+                  <span className="text-xs text-destructive font-medium">
+                    {invalidFields.size} score{invalidFields.size === 1 ? '' : 's'} out of range — fix before submitting.
+                  </span>
+                )}
               </>
             )}
             {existingScore?.status === 'locked' && <span className="px-3 py-1 bg-muted rounded-full text-sm font-medium">Score Locked</span>}
