@@ -265,6 +265,11 @@ export default function SubmissionScoringDialog({
     }
   }, [selectedPanelId, allScores, template, visibleSections]);
 
+  // Clear field-level validation errors when the visible scoring form changes.
+  useEffect(() => {
+    setInvalidFields(new Set());
+  }, [visibleSections, submissionId]);
+
   // Derive driver field points (difficulty_driver / execution_driver) from selected radio options
   const driverFieldsById = useMemo(() => {
     const map: Record<string, any> = {};
