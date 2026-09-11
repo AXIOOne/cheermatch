@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface ScoreInputProps {
   value: number;
@@ -11,6 +12,7 @@ interface ScoreInputProps {
   step?: number;
   disabled?: boolean;
   className?: string;
+  label?: string;
 }
 
 function formatValue(v: number, step: number): string {
@@ -27,6 +29,7 @@ export function ScoreInput({
   step = 0.5,
   disabled = false,
   className,
+  label,
 }: ScoreInputProps) {
   const [text, setText] = React.useState<string>(() => formatValue(value, step));
   const [editing, setEditing] = React.useState(false);
@@ -51,6 +54,10 @@ export function ScoreInput({
     onChange(clamp(+(value + step).toFixed(2)));
   };
 
+  const showError = (message: string) => {
+    toast.error(message);
+  };
+
   const commit = () => {
     setEditing(false);
     const parsed = parseFloat(text);
@@ -58,9 +65,26 @@ export function ScoreInput({
       setText(formatValue(value, step));
       return;
     }
-    // Round to the nearest step increment and clamp to range
+    // Round to the nearest step increment
     const snapped = Math.round(parsed / step) * step;
-    const clamped = clamp(+snapped.toFixed(2));
+    const rounded = +snapped.toFixed(2);
+
+    if (rounded > max) {
+      showError(
+        `${label ? `${label}: ` : ''}Score cannot be higher than the maximum allowed score of ${formatValue(max, step)}.`
+      );
+      setText(formatValue(value, step));
+      return;
+    }
+    if (rounded < min) {
+      showError(
+        `${label ? `${label}: ` : ''}Score cannot be lower than ${formatValue(min, step)}.`
+      );
+      setText(formatValue(value, step));
+      return;
+    }
+
+    const clamped = clamp(rounded);
     setText(formatValue(clamped, step));
     if (clamped !== value) {
       onChange(clamped);
