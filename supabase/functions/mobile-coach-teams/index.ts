@@ -15,6 +15,13 @@ Deno.serve(async (req) => {
 
     const sb = serviceClient();
 
+    const { data: event } = await sb
+      .from("events")
+      .select(CAPTURE_WINDOW_SELECT)
+      .eq("id", eventId)
+      .maybeSingle();
+    const captureBlocked = captureBlockedReason(event);
+
     const { data: teams, error } = await sb
       .from("teams")
       .select(`
@@ -44,6 +51,8 @@ Deno.serve(async (req) => {
         division_name: (div?.name as string) ?? "",
         level_id: asId(lvl?.id),
         level_name: (lvl?.name as string) ?? "",
+        capture_open: captureBlocked === null,
+        capture_closed_reason: captureBlocked,
         submission: sub ? {
           id: asId(sub.id),
           status: (sub.status as string) ?? "",
