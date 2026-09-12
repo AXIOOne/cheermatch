@@ -3,6 +3,7 @@
 // Returns: { video_id, signed_url, api_request_url, callback_url }
 import { handleOptions, ok, fail, serviceClient, legacyAuth, parseBody } from "../_shared/legacy.ts";
 import { bcCreateVideo, bcGetUploadUrl, bcEnsureFolder, bcAddVideoToFolder } from "../_shared/brightcove.ts";
+import { captureBlockedReason, CAPTURE_WINDOW_SELECT } from "../_shared/capture-window.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const CALLBACK_SECRET = Deno.env.get("BRIGHTCOVE_INGEST_CALLBACK_SECRET")!;
@@ -33,11 +34,13 @@ Deno.serve(async (req) => {
     );
     if (!ownsTeam) return fail("Team not found");
 
-    // Look up event name for Brightcove folder
+    // Look up event (name for Brightcove folder + capture window enforcement)
     const { data: event } = await sb
       .from("events")
-      .select("name")
+      .select(`name, ${CAPTURE_WINDOW_SELECT}`)
       .eq("id", eventId).maybeSingle();
+    const blocked = captureBlockedReason(event);
+    if (blocked) return fail(blocked);
     const folderName = (event?.name ?? "").trim() || `Event ${eventId}`;
 
     // Create Brightcove video shell

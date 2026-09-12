@@ -5,6 +5,7 @@
 //   reserve  -> { event_id, team_id, device_info? } burns an attempt, returns attempt_number
 //   finalize -> { attempt_id, duration_seconds?, outcome? }
 import { handleOptions, ok, fail, serviceClient, legacyAuth, parseBody } from "../_shared/legacy.ts";
+import { captureBlockedReason, CAPTURE_WINDOW_SELECT } from "../_shared/capture-window.ts";
 
 Deno.serve(async (req) => {
   const pre = handleOptions(req);
@@ -49,6 +50,15 @@ Deno.serve(async (req) => {
         team.coach_user_id === user.user_id ||
         String(team.coach_email ?? "").toLowerCase() === String(user.email ?? "").toLowerCase();
       if (!owns) return fail("You are not assigned to this team");
+
+      // Enforce the event's capture window
+      const { data: event } = await sb
+        .from("events")
+        .select(CAPTURE_WINDOW_SELECT)
+        .eq("id", eventId)
+        .maybeSingle();
+      const blocked = captureBlockedReason(event);
+      if (blocked) return fail(blocked);
 
       const { data: existing } = await sb
         .from("capture_attempts")
