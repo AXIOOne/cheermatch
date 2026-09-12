@@ -55,6 +55,15 @@ Every endpoint returns JSON in this shape:
 
 ---
 
+## Capture window rules
+
+- Closed events (`completed` / `archived`) are **never** returned by `/mobile-coach-events` or `/competitionList`.
+- Capture is only permitted between the event's `submission_open_at` and `submission_close_at` (falling back to `sub_deadline`, then `end_date`, end-of-day UTC).
+- Outside that window, `capture-attempts` (`reserve`), `brightcove-upload-init`, and `brightcove-upload-complete` all return `status: false` with a message such as `The video capture window for this event closed …`.
+- `/mobile-coach-events` and `/mobile-coach-teams` include `capture_open` (boolean) and `capture_closed_reason` (string or `null`) so clients can disable the record button before the user tries.
+
+---
+
 ## Endpoints
 
 ### `POST /login`
