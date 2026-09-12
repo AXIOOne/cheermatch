@@ -2,6 +2,7 @@
 // Auth: legacy mobile session token
 // Returns the events that have at least one team owned by this coach.
 import { handleOptions, ok, fail, serviceClient, legacyAuth, asId, asMoney, formatDate } from "../_shared/legacy.ts";
+import { CLOSED_EVENT_STATUSES, isCaptureOpen, captureBlockedReason } from "../_shared/capture-window.ts";
 
 const mapStatus = (s: string): string => {
   switch (s) {
