@@ -2,6 +2,7 @@
 // Body: { team_id, event_id, video_id, api_request_url, duration_seconds, captured_at, device_info }
 import { handleOptions, ok, fail, serviceClient, legacyAuth, parseBody } from "../_shared/legacy.ts";
 import { bcIngestRequest } from "../_shared/brightcove.ts";
+import { captureBlockedReason, CAPTURE_WINDOW_SELECT } from "../_shared/capture-window.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const CALLBACK_SECRET = Deno.env.get("BRIGHTCOVE_INGEST_CALLBACK_SECRET")!;
@@ -32,6 +33,15 @@ Deno.serve(async (req) => {
         team.coach_email.toLowerCase() === user.email.toLowerCase())
     );
     if (!ownsTeam) return fail("Team not found");
+
+    // Enforce the event's capture window
+    const { data: event } = await sb
+      .from("events")
+      .select(CAPTURE_WINDOW_SELECT)
+      .eq("id", eventId)
+      .maybeSingle();
+    const blocked = captureBlockedReason(event);
+    if (blocked) return fail(blocked);
 
     // Trigger Brightcove ingest
     const callbackUrl = `${SUPABASE_URL}/functions/v1/brightcove-ingest-callback?secret=${encodeURIComponent(CALLBACK_SECRET)}`;
