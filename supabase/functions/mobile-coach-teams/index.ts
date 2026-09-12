@@ -1,5 +1,6 @@
 // GET /functions/v1/mobile-coach-teams?event_id=<uuid>
 import { handleOptions, ok, fail, serviceClient, legacyAuth, asId, parseBody } from "../_shared/legacy.ts";
+import { captureBlockedReason, CAPTURE_WINDOW_SELECT } from "../_shared/capture-window.ts";
 
 Deno.serve(async (req) => {
   const pre = handleOptions(req);
