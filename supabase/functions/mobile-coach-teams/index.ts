@@ -1,5 +1,6 @@
 // GET /functions/v1/mobile-coach-teams?event_id=<uuid>
 import { handleOptions, ok, fail, serviceClient, legacyAuth, asId, parseBody } from "../_shared/legacy.ts";
+import { captureBlockedReason, CAPTURE_WINDOW_SELECT } from "../_shared/capture-window.ts";
 
 Deno.serve(async (req) => {
   const pre = handleOptions(req);
@@ -13,6 +14,13 @@ Deno.serve(async (req) => {
     if (!eventId) return fail("event_id is required");
 
     const sb = serviceClient();
+
+    const { data: event } = await sb
+      .from("events")
+      .select(CAPTURE_WINDOW_SELECT)
+      .eq("id", eventId)
+      .maybeSingle();
+    const captureBlocked = captureBlockedReason(event);
 
     const { data: teams, error } = await sb
       .from("teams")
@@ -43,6 +51,8 @@ Deno.serve(async (req) => {
         division_name: (div?.name as string) ?? "",
         level_id: asId(lvl?.id),
         level_name: (lvl?.name as string) ?? "",
+        capture_open: captureBlocked === null,
+        capture_closed_reason: captureBlocked,
         submission: sub ? {
           id: asId(sub.id),
           status: (sub.status as string) ?? "",

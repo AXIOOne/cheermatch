@@ -2,6 +2,7 @@
 // Auth: legacy mobile session token
 // Returns the events that have at least one team owned by this coach.
 import { handleOptions, ok, fail, serviceClient, legacyAuth, asId, asMoney, formatDate } from "../_shared/legacy.ts";
+import { CLOSED_EVENT_STATUSES, isCaptureOpen, captureBlockedReason } from "../_shared/capture-window.ts";
 
 const mapStatus = (s: string): string => {
   switch (s) {
@@ -35,6 +36,7 @@ Deno.serve(async (req) => {
       .from("events")
       .select("id, name, description, start_date, end_date, status, sub_deadline, reg_cost, event_uuid, screen_capture_cnt, duration_of_capture, broadcast_channel, registration_open_at, registration_close_at, submission_open_at, submission_close_at, scoring_open_at, scoring_close_at")
       .in("id", eventIds)
+      .not("status", "in", `(${CLOSED_EVENT_STATUSES.join(",")})`)
       .order("start_date", { ascending: false });
     if (eErr) return fail(eErr.message);
 
@@ -57,6 +59,8 @@ Deno.serve(async (req) => {
       submission_close_at: (e.submission_close_at as string) ?? null,
       scoring_open_at: (e.scoring_open_at as string) ?? null,
       scoring_close_at: (e.scoring_close_at as string) ?? null,
+      capture_open: isCaptureOpen(e as never),
+      capture_closed_reason: captureBlockedReason(e as never),
     }));
 
     return ok("Events fetched successfully", list);
