@@ -13,6 +13,7 @@ import {
   formatDate,
   formatTime,
 } from "../_shared/legacy.ts";
+import { CLOSED_EVENT_STATUSES } from "../_shared/capture-window.ts";
 
 const mapStatus = (s: string): string => {
   switch (s) {
@@ -57,6 +58,7 @@ Deno.serve(async (req) => {
         scoring_templates:scoring_templates!scoring_templates_event_id_fkey(name, is_default)
       `)
       .eq("hide_from_website", false)
+      .not("status", "in", `(${CLOSED_EVENT_STATUSES.join(",")})`)
       .order("start_date", { ascending: false });
 
     if (error) return fail(error.message);
