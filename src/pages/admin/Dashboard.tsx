@@ -125,7 +125,7 @@ export default function Dashboard() {
             </CardTitle>
             <Activity className="w-5 h-5 text-primary" />
           </CardHeader>
-          <CardContent className="flex flex-col flex-1">
+          <CardContent className="flex flex-col flex-1 min-h-0">
             <div className="text-3xl font-bold">
               {currentLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : currentEvents?.length ?? 0}
             </div>
@@ -158,7 +158,7 @@ export default function Dashboard() {
             </CardTitle>
             <Calendar className="w-5 h-5 text-primary" />
           </CardHeader>
-          <CardContent className="flex flex-col flex-1">
+          <CardContent className="flex flex-col flex-1 min-h-0">
             <div className="text-3xl font-bold">
               {upcomingLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : upcomingEvents?.length ?? 0}
             </div>
@@ -195,7 +195,7 @@ export default function Dashboard() {
               </span>
             </div>
           </CardHeader>
-          <CardContent className="flex flex-col flex-1">
+          <CardContent className="flex flex-col flex-1 min-h-0">
             <div className="text-3xl font-bold">
               {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : onlineUsers?.length ?? 0}
             </div>
