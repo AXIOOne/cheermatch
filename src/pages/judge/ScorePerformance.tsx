@@ -748,6 +748,7 @@ export default function ScorePerformance() {
                             <ScoreInput
                               value={fieldScores[f.id]?.points || 0}
                               onChange={(v) => updateFieldScore(f.id, v)}
+                              min={Number(f.min_value ?? 0)}
                               max={Number(f.max_value)}
                               step={Number(f.step) || 0.25}
                               disabled={isLocked}
