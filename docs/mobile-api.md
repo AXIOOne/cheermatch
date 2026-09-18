@@ -275,7 +275,7 @@ List teams the authenticated coach can submit video for, at a given event. Each 
 }
 ```
 
-`submission.status` values: `pending`, `processing`, `approved`, `assigned`, `complete`, `rejected`, `revision_requested`.
+`submission.status` values: `pending`, `processing`, `ready`, `approved`, `assigned`, `complete`, `denied`, `revision_requested`. `ready` means transcoding finished and the video awaits admin review; `approved` is set by an admin.
 
 ---
 
