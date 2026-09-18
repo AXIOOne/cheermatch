@@ -259,6 +259,7 @@ export default function Submissions() {
 
   const stats = {
     total: eventScoped?.length || 0,
+    ready: countBy('ready'),
     imported: countBy('imported'),
     approved: countBy('approved'),
     denied: countBy('denied'),
@@ -422,6 +423,14 @@ export default function Submissions() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{stats.total}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Ready for Review</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-blue-600">{stats.ready}</p>
           </CardContent>
         </Card>
         <Card>
