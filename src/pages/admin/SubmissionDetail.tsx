@@ -237,7 +237,7 @@ export default function SubmissionDetail() {
               <Upload className="w-4 h-4 mr-2" /> Replace video
             </Button>
           )}
-          {!isArchived && (submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'denied') && (
+          {!isArchived && (submission.status === 'ready' || submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'denied') && (
             <Button
               size="sm"
               onClick={() => updateStatusMutation.mutate('approved')}
@@ -246,7 +246,7 @@ export default function SubmissionDetail() {
               <Check className="w-4 h-4 mr-2" /> Approve
             </Button>
           )}
-          {!isArchived && (submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'approved') && (
+          {!isArchived && (submission.status === 'ready' || submission.status === 'uploaded' || submission.status === 'imported' || submission.status === 'approved') && (
             <Button
               size="sm"
               variant="destructive"

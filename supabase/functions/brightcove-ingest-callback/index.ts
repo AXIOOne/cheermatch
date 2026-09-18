@@ -49,7 +49,8 @@ Deno.serve(async (req) => {
     // SUCCESS / FINISHED (action can be "dynamic-ingest", "CREATE", etc.).
     const done = ["FINISHED", "SUCCESS", "COMPLETE", "COMPLETED"].includes(status.toUpperCase());
     if (done) {
-      update.status = "approved";
+      // Transcoding finished — mark ready for admin review; approval is a manual step.
+      update.status = "ready";
       // Belt-and-braces: ensure the Brightcove video is ACTIVE so the player will play it.
       try { await bcActivateVideo(videoId); } catch (_) { /* non-fatal */ }
     }

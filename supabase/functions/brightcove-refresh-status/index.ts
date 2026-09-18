@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     if (thumbnail && !sub.thumbnail_url) update.thumbnail_url = thumbnail;
     if (duration && duration > 0) update.duration_seconds = duration;
     if (ready && (sub.status === "uploaded" || sub.status === "imported" || sub.status === "processing")) {
-      update.status = "approved";
+      update.status = "ready";
     }
     if (Object.keys(update).length > 0) {
       await sb.from("video_submissions").update(update).eq("id", submissionId);

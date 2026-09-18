@@ -275,7 +275,7 @@ List teams the authenticated coach can submit video for, at a given event. Each 
 }
 ```
 
-`submission.status` values: `pending`, `processing`, `approved`, `assigned`, `complete`, `rejected`, `revision_requested`.
+`submission.status` values: `pending`, `processing`, `ready`, `approved`, `assigned`, `complete`, `denied`, `revision_requested`. `ready` means transcoding finished and the video awaits admin review; `approved` is set by an admin.
 
 ---
 
@@ -372,7 +372,7 @@ Notify Cheermatch that the byte upload finished. This kicks off Brightcove's ing
 }
 ```
 
-After this call, poll `POST /mobile-submission` every few seconds until `status` becomes `approved` (Brightcove has finished transcoding and the video is playable).
+After this call, poll `POST /mobile-submission` every few seconds until `status` becomes `ready` (Brightcove has finished transcoding and the video is playable). `approved` is set later by an administrator reviewing the video.
 
 ---
 

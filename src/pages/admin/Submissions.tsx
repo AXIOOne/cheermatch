@@ -33,8 +33,8 @@ import type { Database } from '@/integrations/supabase/types';
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
 
 // Lifecycle statuses we surface in the UI.
-type LifecycleStatus = 'imported' | 'approved' | 'denied' | 'revision_requested';
-const LIFECYCLE_STATUSES: LifecycleStatus[] = ['imported', 'approved', 'denied', 'revision_requested'];
+type LifecycleStatus = 'ready' | 'imported' | 'approved' | 'denied' | 'revision_requested';
+const LIFECYCLE_STATUSES: LifecycleStatus[] = ['ready', 'imported', 'approved', 'denied', 'revision_requested'];
 
 interface SubmissionWithDetails {
   id: string;
@@ -62,6 +62,7 @@ interface SubmissionWithDetails {
 }
 
 const lifecycleConfig: Record<LifecycleStatus, { label: string; icon: React.ElementType; className: string }> = {
+  ready: { label: 'Ready for Review', icon: Inbox, className: 'bg-blue-100 text-blue-700' },
   imported: { label: 'Imported', icon: Inbox, className: 'bg-muted text-muted-foreground' },
   approved: { label: 'Approved', icon: CheckCircle, className: 'bg-green-100 text-green-700' },
   denied: { label: 'Denied', icon: XCircle, className: 'bg-destructive/10 text-destructive' },
@@ -258,6 +259,7 @@ export default function Submissions() {
 
   const stats = {
     total: eventScoped?.length || 0,
+    ready: countBy('ready'),
     imported: countBy('imported'),
     approved: countBy('approved'),
     denied: countBy('denied'),
@@ -421,6 +423,14 @@ export default function Submissions() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{stats.total}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Ready for Review</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-blue-600">{stats.ready}</p>
           </CardContent>
         </Card>
         <Card>
