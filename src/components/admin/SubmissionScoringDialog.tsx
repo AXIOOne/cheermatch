@@ -1079,7 +1079,7 @@ export default function SubmissionScoringDialog({
                                   <ScoreInput
                                     value={ov ? Number(ov.new_points ?? 0) : (fieldScores[f.id]?.points || 0)}
                                     onChange={(v) => updateFieldScore(f.id, v)}
-                                    min={0}
+                                    min={Number(f.min_value ?? 0)}
                                     max={Number(f.max_value)}
                                     step={Number(f.step) || 0.25}
                                     disabled={isCurrentPanelLocked || !!ov}
