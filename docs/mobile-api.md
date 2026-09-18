@@ -372,7 +372,7 @@ Notify Cheermatch that the byte upload finished. This kicks off Brightcove's ing
 }
 ```
 
-After this call, poll `POST /mobile-submission` every few seconds until `status` becomes `approved` (Brightcove has finished transcoding and the video is playable).
+After this call, poll `POST /mobile-submission` every few seconds until `status` becomes `ready` (Brightcove has finished transcoding and the video is playable). `approved` is set later by an administrator reviewing the video.
 
 ---
 
