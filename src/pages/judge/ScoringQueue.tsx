@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Play, CheckCircle, Clock, Video, Loader2 } from 'lucide-react';
+import { pickDivisionTemplateId } from '@/lib/scoring';
 
 const sb = supabase as any;
 const OPEN_STATUSES = new Set(['open_for_capture', 'open_for_scoring']);
