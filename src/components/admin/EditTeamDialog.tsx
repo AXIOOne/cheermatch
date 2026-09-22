@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { useEventDivisions } from '@/hooks/useEventDivisions';
 
 const schema = z.object({
   name: z.string().trim().min(1, 'Team name is required').max(120),
@@ -27,6 +28,7 @@ interface EditTeamDialogProps {
   team: {
     id: string;
     name: string;
+    event_id?: string | null;
     division_id: string;
     athletes_female?: number | null;
     athletes_male?: number | null;
@@ -62,18 +64,7 @@ export function EditTeamDialog({ open, onOpenChange, team, onSaved }: EditTeamDi
   }, [open, team.id]);
 
 
-  const { data: divisions } = useQuery({
-    queryKey: ['divisions-edit-team'],
-    queryFn: async () => {
-      const { data, error } = await sb
-        .from('divisions')
-        .select('id, name, discipline, level')
-        .order('discipline')
-        .order('name');
-      if (error) throw error;
-      return data as Array<{ id: string; name: string; discipline: string; level: string | null }>;
-    },
-  });
+  const { data: divisions } = useEventDivisions(team.event_id);
 
   const updateMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -134,7 +125,7 @@ export function EditTeamDialog({ open, onOpenChange, team, onSaved }: EditTeamDi
                       {divisions?.map((d) => (
                         <SelectItem key={d.id} value={d.id}>
                           {d.name}
-                          {d.level ? ` — ${d.level}` : ''}
+                          {d.level_name ? ` — ${d.level_name}` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>

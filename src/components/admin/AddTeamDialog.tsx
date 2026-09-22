@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useEventDivisions } from '@/hooks/useEventDivisions';
 import { Loader2 } from 'lucide-react';
 import { CoachSelect, type CoachOption } from './CoachSelect';
 
@@ -58,17 +59,7 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
     }
   }, [open]);
 
-  const { data: divisions } = useQuery({
-    queryKey: ['divisions-add-team'],
-    queryFn: async () => {
-      const { data, error } = await sb
-        .from('divisions')
-        .select('id, name, level')
-        .order('name');
-      if (error) throw error;
-      return data as Array<{ id: string; name: string; level: string | null }>;
-    },
-  });
+  const { data: divisions } = useEventDivisions(eventId);
 
   const { data: levels } = useQuery({
     queryKey: ['levels-add-team'],
@@ -146,7 +137,9 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
                     <FormControl><SelectTrigger><SelectValue placeholder="Select a division" /></SelectTrigger></FormControl>
                     <SelectContent>
                       {divisions?.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                        <SelectItem key={d.id} value={d.id}>
+                          {d.name}{d.level_name ? ` — ${d.level_name}` : ''}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
