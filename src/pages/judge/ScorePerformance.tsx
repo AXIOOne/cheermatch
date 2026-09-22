@@ -279,6 +279,21 @@ export default function ScorePerformance() {
     return map;
   }, [visibleSections]);
 
+  // Fields whose current value is below the template minimum. This includes
+  // untouched fields (they sit at 0), so submit is blocked until the judge
+  // deliberately scores every field that has a minimum.
+  const belowMinFields = useMemo(() => {
+    const list: any[] = [];
+    visibleSections.forEach((s: any) => s.visibleFields.forEach((f: any) => {
+      if (f.field_type === 'dropdown') return;
+      const min = Number(f.min_value ?? 0);
+      if (!(min > 0)) return;
+      const val = Number(fieldScores[f.id]?.points ?? 0);
+      if (val < min) list.push(f);
+    }));
+    return list;
+  }, [visibleSections, fieldScores]);
+
   useEffect(() => {
     const updates: Record<string, number> = {};
     Object.values(driverFieldsById).forEach((f: any) => {
@@ -384,6 +399,9 @@ export default function ScorePerformance() {
       const { status, needsReview = false, reviewReason = null } = args;
       if (!eventOpenForScoring) {
         throw new Error('This event is not open for scoring yet. The admin must release it before scores can be saved.');
+      }
+      if (status === 'submitted' && belowMinFields.length > 0) {
+        throw new Error(`These fields are below their required minimum and must be scored before submitting: ${belowMinFields.map((f: any) => f.name).join(', ')}.`);
       }
       setIsSaving(true);
       const totalScore = calculateTotalScore();
