@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Search, Loader2, Users, Download } from 'lucide-react';
+import { useEventDivisions } from '@/hooks/useEventDivisions';
 
 export default function EventParticipants() {
   const { eventId } = useParams<{ eventId: string }>();

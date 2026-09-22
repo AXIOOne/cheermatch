@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, FileText, AlertTriangle, Download } from 'lucide-react';
+import { useEventDivisions } from '@/hooks/useEventDivisions';
 
 interface Props {
   open: boolean;
