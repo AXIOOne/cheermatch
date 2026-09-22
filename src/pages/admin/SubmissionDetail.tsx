@@ -411,6 +411,7 @@ export default function SubmissionDetail() {
           team={{
             id: submission.team.id,
             name: submission.team.name,
+            event_id: submission.event_id,
             athletes_female: submission.team.athletes_female,
             athletes_male: submission.team.athletes_male,
             division_id: submission.team.division_id,

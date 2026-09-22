@@ -44,10 +44,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
           name,
           gym_name,
           coach_user_id,
-          division:divisions(id, name, scoring_template_id),
+          division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)),
           level:levels(name)
         ),
-        event:events(id, name, accuscore_end_at),
+        event:events(id, name, discipline, accuscore_end_at),
         scores:scores(
           id,
           total_score,
@@ -203,7 +203,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // template, then any event-bound template, then the global default.
     let templateId: string | null = submittedScores[0]?.template_id ?? null;
     if (!templateId) {
-      templateId = (division as any)?.scoring_template_id ?? null;
+      const links = ((division as any)?.discipline_links || []) as Array<{ discipline: string; scoring_template_id: string | null }>;
+      const eventDiscipline = (event as any)?.discipline ?? null;
+      templateId =
+        links.find((l) => l.discipline === eventDiscipline)?.scoring_template_id ??
+        (links.length === 1 ? links[0].scoring_template_id : null) ??
+        (division as any)?.scoring_template_id ??
+        null;
     }
     if (!templateId && event?.id) {
       const { data: tpls } = await supabase

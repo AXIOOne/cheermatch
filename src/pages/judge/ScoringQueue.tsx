@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Play, CheckCircle, Clock, Video, Loader2 } from 'lucide-react';
+import { pickDivisionTemplateId } from '@/lib/scoring';
 
 const sb = supabase as any;
 const OPEN_STATUSES = new Set(['open_for_capture', 'open_for_scoring']);
@@ -109,10 +110,10 @@ export default function ScoringQueue() {
           *,
           team:teams(
             id, name, gym_name, athletes_female, athletes_male, division_id, level_id,
-            division:divisions(id, name, scoring_template_id),
+            division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)),
             level:levels(name, level_number)
           ),
-          event:events(id, name)
+          event:events(id, name, discipline)
         `)
         .in('event_id', assignedEventIds)
         .in('status', ['approved', 'assigned', 'complete'])
@@ -136,7 +137,7 @@ export default function ScoringQueue() {
   const templateIds = useMemo(() => {
     const s = new Set<string>();
     (submissions || []).forEach((sub: any) => {
-      const tid = sub.team?.division?.scoring_template_id;
+      const tid = pickDivisionTemplateId(sub.team?.division, sub.event?.discipline);
       if (tid) s.add(tid);
     });
     return [...s];
@@ -192,7 +193,7 @@ export default function ScoringQueue() {
 
   const visibleSubmissions = useMemo(() => {
     return (submissions || []).filter((sub: any) => {
-      const tid = sub.team?.division?.scoring_template_id;
+      const tid = pickDivisionTemplateId(sub.team?.division, sub.event?.discipline);
       const matchingAssignments = getSubmissionAssignments(sub);
       if (matchingAssignments.length === 0) return false;
       if (!tid) return true; // no template info yet — don't hide

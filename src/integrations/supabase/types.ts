@@ -205,6 +205,48 @@ export type Database = {
           },
         ]
       }
+      division_disciplines: {
+        Row: {
+          created_at: string
+          discipline: string
+          division_id: string
+          id: string
+          scoring_template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          discipline: string
+          division_id: string
+          id?: string
+          scoring_template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          discipline?: string
+          division_id?: string
+          id?: string
+          scoring_template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "division_disciplines_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "divisions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "division_disciplines_scoring_template_id_fkey"
+            columns: ["scoring_template_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       divisions: {
         Row: {
           created_at: string
@@ -212,6 +254,7 @@ export type Database = {
           discipline: string
           id: string
           level: string | null
+          level_id: string | null
           max_age: number | null
           min_age: number | null
           name: string
@@ -223,6 +266,7 @@ export type Database = {
           discipline?: string
           id?: string
           level?: string | null
+          level_id?: string | null
           max_age?: number | null
           min_age?: number | null
           name: string
@@ -234,12 +278,20 @@ export type Database = {
           discipline?: string
           id?: string
           level?: string | null
+          level_id?: string | null
           max_age?: number | null
           min_age?: number | null
           name?: string
           scoring_template_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "divisions_level_id_fkey"
+            columns: ["level_id"]
+            isOneToOne: false
+            referencedRelation: "levels"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "divisions_scoring_template_id_fkey"
             columns: ["scoring_template_id"]

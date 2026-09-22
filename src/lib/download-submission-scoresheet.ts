@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { buildScoresheet, type RawField, type ScoreType } from '@/lib/build-scoresheet';
 import { buildScoresheetPdf, downloadPdf } from '@/lib/scoresheet-pdf';
+import { pickDivisionTemplateId } from '@/lib/scoring';
 
 const sb = supabase as any;
 
@@ -13,9 +14,9 @@ export async function generateSubmissionScoresheetBytes(
     .select(`
       id, event_id,
       team:teams!inner(id, name, gym_name,
-        division:divisions!inner(id, name, scoring_template_id),
+        division:divisions!inner(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)),
         level:levels(id, name)),
-      event:events!inner(id, name, accuscore_end_at)
+      event:events!inner(id, name, discipline, accuscore_end_at)
     `)
     .eq('id', submissionId)
     .maybeSingle();
@@ -63,7 +64,10 @@ export async function generateSubmissionScoresheetBytes(
   // the global default. This ensures every criterion row renders even before
   // scores are submitted.
   if (!templateId) {
-    templateId = (submission as any).team?.division?.scoring_template_id ?? null;
+    templateId = pickDivisionTemplateId(
+      (submission as any).team?.division,
+      (submission as any).event?.discipline
+    );
   }
   if (!templateId) {
     const { data: tpls } = await sb

@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, Save, Send, Loader2, Play, RotateCcw, Flag } from 'lucide-react';
-import { calculateStructuredDeductions, sortByDisplayOrder, fieldPanelAbbrevs } from '@/lib/scoring';
+import { calculateStructuredDeductions, sortByDisplayOrder, fieldPanelAbbrevs, pickDivisionTemplateId } from '@/lib/scoring';
 import { RubricReferenceSheet } from '@/components/judge/RubricReferenceSheet';
 
 interface FieldScore { field_id: string; points: number; notes: string; }
@@ -63,8 +63,8 @@ export default function ScorePerformance() {
     queryFn: async () => {
       const { data, error } = await supabase.from('video_submissions').select(`
         *, team:teams(id, name, gym_name, athletes_female, athletes_male, division_id, level_id,
-          division:divisions(id, name, scoring_template_id), level:levels(name, level_number)),
-        event:events(id, name, status, scoring_open_at, scoring_close_at)
+          division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)), level:levels(name, level_number)),
+        event:events(id, name, status, discipline, scoring_open_at, scoring_close_at)
       `).eq('id', submissionId!).maybeSingle();
       if (error) throw error;
       return data;
@@ -136,7 +136,10 @@ export default function ScorePerformance() {
     ).values()];
   }, [judgeAssignments]);
 
-  const divisionTemplateId: string | null = (submission as any)?.team?.division?.scoring_template_id || null;
+  const divisionTemplateId: string | null = pickDivisionTemplateId(
+    (submission as any)?.team?.division,
+    (submission as any)?.event?.discipline
+  );
   const { data: template, isLoading: templateLoading } = useQuery({
     queryKey: ['scoring-template-v2', divisionTemplateId, submission?.id],
     queryFn: async () => {

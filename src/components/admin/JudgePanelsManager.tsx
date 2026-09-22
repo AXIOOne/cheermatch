@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2, Loader2, GripVertical } from 'lucide-react';
+import { pickDivisionTemplateId } from '@/lib/scoring';
 
 interface JudgePanel {
   id: string;
@@ -43,15 +44,27 @@ export default function JudgePanelsManager({ eventId, onClose }: JudgePanelsMana
   const { data: templatePanels } = useQuery({
     queryKey: ['event-template-panels', eventId],
     queryFn: async () => {
+      const { data: eventRow } = await (supabase as any)
+        .from('events')
+        .select('discipline')
+        .eq('id', eventId)
+        .maybeSingle();
+      const discipline: string | null = eventRow?.discipline ?? null;
+
       const { data: teams, error: tErr } = await (supabase as any)
         .from('teams')
-        .select('division:divisions(scoring_template_id)')
+        .select('division:divisions(id, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id))')
         .eq('event_id', eventId);
       if (tErr) throw tErr;
       const templateIds = [
         ...new Set(
           (teams || [])
-            .map((t: any) => (Array.isArray(t.division) ? t.division[0] : t.division)?.scoring_template_id)
+            .map((t: any) =>
+              pickDivisionTemplateId(
+                Array.isArray(t.division) ? t.division[0] : t.division,
+                discipline
+              )
+            )
             .filter(Boolean)
         ),
       ];

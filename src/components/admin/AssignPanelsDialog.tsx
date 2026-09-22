@@ -10,6 +10,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { Check, CheckCircle2, ChevronDown, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { pickDivisionTemplateId } from '@/lib/scoring';
 import { cn } from '@/lib/utils';
 import JudgePanelsManager from './JudgePanelsManager';
 
@@ -58,9 +59,16 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
       const teamIds = [...new Set((subs || []).map(s => s.team_id).filter(Boolean))];
       if (teamIds.length === 0) return [];
 
-      const { data: teams, error: teamsError } = await supabase
+      const { data: eventRow } = await (supabase as any)
+        .from('events')
+        .select('discipline')
+        .eq('id', eventId)
+        .maybeSingle();
+      const discipline: string | null = eventRow?.discipline ?? null;
+
+      const { data: teams, error: teamsError } = await (supabase as any)
         .from('teams')
-        .select('division:divisions(id, name, scoring_template_id)')
+        .select('division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id))')
         .eq('event_id', eventId)
         .in('id', teamIds);
       if (teamsError) throw teamsError;
@@ -68,7 +76,11 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
       const byId = new Map<string, AssignmentDivision>();
       (teams || []).forEach((team: any) => {
         if (team.division?.id) {
-          byId.set(team.division.id, team.division);
+          byId.set(team.division.id, {
+            id: team.division.id,
+            name: team.division.name,
+            scoring_template_id: pickDivisionTemplateId(team.division, discipline),
+          });
         }
       });
 

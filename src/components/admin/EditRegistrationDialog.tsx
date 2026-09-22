@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { CoachSelect, useCoaches, type CoachOption } from './CoachSelect';
+import { useEventDivisions } from '@/hooks/useEventDivisions';
 
 const schema = z.object({
   name: z.string().trim().min(1, 'Team name is required').max(120),
@@ -74,14 +75,7 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
     setCoach(match);
   }, [open, team?.id, coaches]);
 
-  const { data: divisions } = useQuery({
-    queryKey: ['divisions-edit-reg'],
-    queryFn: async () => {
-      const { data, error } = await sb.from('divisions').select('id, name').order('name');
-      if (error) throw error;
-      return data as Array<{ id: string; name: string }>;
-    },
-  });
+  const { data: divisions } = useEventDivisions(team?.event_id);
 
   const { data: levels } = useQuery({
     queryKey: ['levels-edit-reg'],
@@ -158,7 +152,7 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select a division" /></SelectTrigger></FormControl>
                     <SelectContent>
-                      {divisions?.map((d) => (<SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>))}
+                      {divisions?.map((d) => (<SelectItem key={d.id} value={d.id}>{d.name}{d.level_name ? ` — ${d.level_name}` : ''}</SelectItem>))}
                     </SelectContent>
                   </Select>
                   <FormMessage />

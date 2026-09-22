@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, FileText, AlertTriangle, Download } from 'lucide-react';
+import { useEventDivisions } from '@/hooks/useEventDivisions';
 
 interface Props {
   open: boolean;
@@ -61,14 +62,7 @@ export function BulkImportTeamsDialog({ open, onOpenChange, eventId }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: divisions } = useQuery({
-    queryKey: ['divisions-for-import'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('divisions').select('id, name');
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const { data: divisions } = useEventDivisions(eventId);
   const { data: levels } = useQuery({
     queryKey: ['levels-for-import'],
     queryFn: async () => {
