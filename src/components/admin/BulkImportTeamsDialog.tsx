@@ -61,14 +61,7 @@ export function BulkImportTeamsDialog({ open, onOpenChange, eventId }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: divisions } = useQuery({
-    queryKey: ['divisions-for-import'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('divisions').select('id, name');
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
+  const { data: divisions } = useEventDivisions(eventId);
   const { data: levels } = useQuery({
     queryKey: ['levels-for-import'],
     queryFn: async () => {

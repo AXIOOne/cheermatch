@@ -29,17 +29,7 @@ export default function EventParticipants() {
     },
   });
 
-  const { data: divisions } = useQuery({
-    queryKey: ['event-divisions'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('divisions')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: divisions } = useEventDivisions(eventId);
 
   const { data: levels } = useQuery({
     queryKey: ['event-levels'],
