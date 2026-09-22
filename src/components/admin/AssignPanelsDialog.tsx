@@ -10,6 +10,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { Check, CheckCircle2, ChevronDown, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { pickDivisionTemplateId } from '@/lib/scoring';
 import { cn } from '@/lib/utils';
 import JudgePanelsManager from './JudgePanelsManager';
 

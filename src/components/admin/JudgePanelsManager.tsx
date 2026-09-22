@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2, Loader2, GripVertical } from 'lucide-react';
+import { pickDivisionTemplateId } from '@/lib/scoring';
 
 interface JudgePanel {
   id: string;
