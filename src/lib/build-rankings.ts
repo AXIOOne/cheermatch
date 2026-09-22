@@ -79,6 +79,13 @@ export async function fetchEventScoringData(eventId: string): Promise<EventScori
     sectionAbbrByField: new Map(),
   };
 
+  const { data: eventRow } = await sb
+    .from('events')
+    .select('discipline')
+    .eq('id', eventId)
+    .maybeSingle();
+  const eventDiscipline: string | null = eventRow?.discipline ?? null;
+
   const { data: submissions, error: subErr } = await sb
     .from('video_submissions')
     .select(`
