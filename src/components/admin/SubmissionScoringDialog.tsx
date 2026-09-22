@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { calculateStructuredDeductions, sortByDisplayOrder, isFieldForPanel } from '@/lib/scoring';
+import { calculateStructuredDeductions, sortByDisplayOrder, isFieldForPanel, pickDivisionTemplateId } from '@/lib/scoring';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,

@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, Save, Send, Loader2, Play, RotateCcw, Flag } from 'lucide-react';
-import { calculateStructuredDeductions, sortByDisplayOrder, fieldPanelAbbrevs } from '@/lib/scoring';
+import { calculateStructuredDeductions, sortByDisplayOrder, fieldPanelAbbrevs, pickDivisionTemplateId } from '@/lib/scoring';
 import { RubricReferenceSheet } from '@/components/judge/RubricReferenceSheet';
 
 interface FieldScore { field_id: string; points: number; notes: string; }

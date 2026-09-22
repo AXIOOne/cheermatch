@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { buildScoresheet, type RawField, type ScoreType } from '@/lib/build-scoresheet';
+import { pickDivisionTemplateId } from '@/lib/scoring';
 
 const sb = supabase as any;
 

@@ -136,7 +136,7 @@ export default function ScoringQueue() {
   const templateIds = useMemo(() => {
     const s = new Set<string>();
     (submissions || []).forEach((sub: any) => {
-      const tid = sub.team?.division?.scoring_template_id;
+      const tid = pickDivisionTemplateId(sub.team?.division, sub.event?.discipline);
       if (tid) s.add(tid);
     });
     return [...s];
@@ -192,7 +192,7 @@ export default function ScoringQueue() {
 
   const visibleSubmissions = useMemo(() => {
     return (submissions || []).filter((sub: any) => {
-      const tid = sub.team?.division?.scoring_template_id;
+      const tid = pickDivisionTemplateId(sub.team?.division, sub.event?.discipline);
       const matchingAssignments = getSubmissionAssignments(sub);
       if (matchingAssignments.length === 0) return false;
       if (!tid) return true; // no template info yet — don't hide
