@@ -71,3 +71,39 @@ export function isAllPanelsField(field: any): boolean {
   const abbrs = fieldPanelAbbrevs(field);
   return abbrs.length === 0 || abbrs.includes('ALL');
 }
+
+export type DivisionDisciplineLink = {
+  discipline: string;
+  scoring_template_id: string | null;
+};
+
+export type DivisionTemplateSource =
+  | {
+      scoring_template_id?: string | null;
+      discipline_links?: DivisionDisciplineLink[] | null;
+    }
+  | null
+  | undefined;
+
+/**
+ * Resolve the scoring template for a division within a given discipline.
+ * Divisions can be activated for several disciplines, each with its own
+ * template; the division's legacy single template stays as a fallback.
+ */
+export function pickDivisionTemplateId(
+  division: DivisionTemplateSource,
+  discipline?: string | null
+): string | null {
+  if (!division) return null;
+  const links = division.discipline_links || [];
+  if (discipline) {
+    const match = links.find((l) => l?.discipline === discipline);
+    if (match?.scoring_template_id) return match.scoring_template_id;
+  }
+  if (links.length === 1 && links[0]?.scoring_template_id) return links[0].scoring_template_id;
+  return division.scoring_template_id ?? null;
+}
+
+/** PostgREST select fragment for a division plus its per-discipline templates. */
+export const DIVISION_TEMPLATE_SELECT =
+  'id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)';
