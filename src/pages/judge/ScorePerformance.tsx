@@ -563,7 +563,7 @@ export default function ScorePerformance() {
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
                   Save Draft
                 </Button>
-                <Button onClick={() => saveMutation.mutate({ status: 'submitted' })} disabled={isSaving || invalidFields.size > 0}>
+                <Button onClick={() => saveMutation.mutate({ status: 'submitted' })} disabled={isSaving || invalidFields.size > 0 || belowMinFields.length > 0}>
                   {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send className="w-4 h-4 mr-2" />}
                   Submit Score
                 </Button>
@@ -571,14 +571,16 @@ export default function ScorePerformance() {
                   variant="outline"
                   className="border-warning text-warning hover:bg-warning/10 hover:text-warning"
                   onClick={() => { setFlagReason(''); setFlagDialogOpen(true); }}
-                  disabled={isSaving || invalidFields.size > 0}
+                  disabled={isSaving || invalidFields.size > 0 || belowMinFields.length > 0}
                 >
                   <Flag className="w-4 h-4 mr-2" />
                   Submit & Flag
                 </Button>
-                {invalidFields.size > 0 && (
+                {(invalidFields.size > 0 || belowMinFields.length > 0) && (
                   <span className="text-xs text-destructive font-medium">
-                    {invalidFields.size} score{invalidFields.size === 1 ? '' : 's'} out of range — fix before submitting.
+                    {invalidFields.size > 0 && `${invalidFields.size} score${invalidFields.size === 1 ? '' : 's'} out of range — fix before submitting.`}
+                    {invalidFields.size > 0 && belowMinFields.length > 0 && ' '}
+                    {belowMinFields.length > 0 && `${belowMinFields.length} field${belowMinFields.length === 1 ? '' : 's'} below required minimum — score ${belowMinFields.length === 1 ? 'it' : 'them'} before submitting.`}
                   </span>
                 )}
               </>
@@ -890,10 +892,14 @@ export default function ScorePerformance() {
                   toast({ variant: 'destructive', title: 'Scores out of range', description: 'Please fix all scores outside the allowed range before submitting.' });
                   return;
                 }
+                if (belowMinFields.length > 0) {
+                  toast({ variant: 'destructive', title: 'Fields below minimum', description: `Score these fields before submitting: ${belowMinFields.map((f: any) => f.name).join(', ')}.` });
+                  return;
+                }
                 setFlagDialogOpen(false);
                 saveMutation.mutate({ status: 'submitted', needsReview: true, reviewReason: flagReason.trim() });
               }}
-              disabled={isSaving || !flagReason.trim() || invalidFields.size > 0}
+              disabled={isSaving || !flagReason.trim() || invalidFields.size > 0 || belowMinFields.length > 0}
               className="bg-warning text-warning-foreground hover:bg-warning/90"
             >
               {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Flag className="w-4 h-4 mr-2" />}
