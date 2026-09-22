@@ -109,10 +109,10 @@ export default function ScoringQueue() {
           *,
           team:teams(
             id, name, gym_name, athletes_female, athletes_male, division_id, level_id,
-            division:divisions(id, name, scoring_template_id),
+            division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)),
             level:levels(name, level_number)
           ),
-          event:events(id, name)
+          event:events(id, name, discipline)
         `)
         .in('event_id', assignedEventIds)
         .in('status', ['approved', 'assigned', 'complete'])

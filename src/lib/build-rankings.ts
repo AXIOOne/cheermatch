@@ -83,7 +83,7 @@ export async function fetchEventScoringData(eventId: string): Promise<EventScori
     .select(`
       id,
       team:teams!inner(id, name, gym_name,
-        division:divisions(id, name, scoring_template_id),
+        division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)),
         level:levels(id, name))
     `)
     .eq('event_id', eventId)
@@ -153,7 +153,7 @@ export async function fetchEventScoringData(eventId: string): Promise<EventScori
     const subScores = scoresBySubmission.get(sub.id) || [];
     const tid =
       subScores[0]?.template_id ??
-      sub.team?.division?.scoring_template_id ??
+      pickDivisionTemplateId(sub.team?.division, eventDiscipline) ??
       eventTemplateId ??
       globalTemplateId ??
       null;

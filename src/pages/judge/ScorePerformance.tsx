@@ -63,8 +63,8 @@ export default function ScorePerformance() {
     queryFn: async () => {
       const { data, error } = await supabase.from('video_submissions').select(`
         *, team:teams(id, name, gym_name, athletes_female, athletes_male, division_id, level_id,
-          division:divisions(id, name, scoring_template_id), level:levels(name, level_number)),
-        event:events(id, name, status, scoring_open_at, scoring_close_at)
+          division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)), level:levels(name, level_number)),
+        event:events(id, name, status, discipline, scoring_open_at, scoring_close_at)
       `).eq('id', submissionId!).maybeSingle();
       if (error) throw error;
       return data;
@@ -136,7 +136,10 @@ export default function ScorePerformance() {
     ).values()];
   }, [judgeAssignments]);
 
-  const divisionTemplateId: string | null = (submission as any)?.team?.division?.scoring_template_id || null;
+  const divisionTemplateId: string | null = pickDivisionTemplateId(
+    (submission as any)?.team?.division,
+    (submission as any)?.event?.discipline
+  );
   const { data: template, isLoading: templateLoading } = useQuery({
     queryKey: ['scoring-template-v2', divisionTemplateId, submission?.id],
     queryFn: async () => {

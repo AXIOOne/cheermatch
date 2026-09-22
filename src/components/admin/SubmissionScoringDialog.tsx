@@ -81,7 +81,7 @@ export default function SubmissionScoringDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('video_submissions')
-        .select(`*, team:teams(id, name, gym_name, athletes_female, athletes_male, division:divisions(id, name, scoring_template_id), level:levels(name, level_number)), event:events(id, name)`)
+        .select(`*, team:teams(id, name, gym_name, athletes_female, athletes_male, division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)), level:levels(name, level_number)), event:events(id, name, discipline)`)
         .eq('id', submissionId!).maybeSingle();
       if (error) throw error;
       return data;
@@ -89,7 +89,10 @@ export default function SubmissionScoringDialog({
     enabled: !!submissionId && open,
   });
 
-  const divisionTemplateId: string | null = submission?.team?.division?.scoring_template_id || null;
+  const divisionTemplateId: string | null = pickDivisionTemplateId(
+    (submission as any)?.team?.division,
+    (submission as any)?.event?.discipline
+  );
   const { data: template } = useQuery({
     queryKey: ['division-scoring-template-v2', divisionTemplateId, submissionId],
     queryFn: async () => {
