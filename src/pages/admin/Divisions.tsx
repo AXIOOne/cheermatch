@@ -1,30 +1,18 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Layers, Loader2, Trash2, Pencil } from 'lucide-react';
-
-const CHEER_LEVELS = [
-  'Level 1',
-  'Level 2',
-  'Level 3',
-  'Level 4',
-  'Level 4.2',
-  'Level 5',
-  'Level 6',
-] as const;
 
 const DISCIPLINES = [
   { value: 'allstar_cheer', label: 'All-Star Cheer' },
@@ -37,29 +25,14 @@ const DISCIPLINES = [
   { value: 'usa_dance', label: 'USA Dance' },
 ] as const;
 
-const disciplineLabel = (v: string) =>
-  DISCIPLINES.find((d) => d.value === v)?.label ?? v;
+const disciplineLabel = (v: string) => DISCIPLINES.find((d) => d.value === v)?.label ?? v;
 
-const DISCIPLINE_VALUES = DISCIPLINES.map((d) => d.value) as [string, ...string[]];
+const NO_LEVEL = '__none__';
 
-const divisionSchema = z
-  .object({
-    discipline: z.enum(DISCIPLINE_VALUES),
-    name: z.string().min(1, 'Division title is required'),
-    scoring_template_id: z.string().min(1, 'Scoring template is required'),
-    level: z.string().optional(),
-  })
-  .superRefine((val, ctx) => {
-    if (val.discipline === 'allstar_cheer' && !val.level) {
-      ctx.addIssue({
-        path: ['level'],
-        code: z.ZodIssueCode.custom,
-        message: 'Level is required for All-Star Cheer divisions',
-      });
-    }
-  });
+type DisciplineState = Record<string, { active: boolean; templateId: string }>;
 
-type DivisionFormData = z.infer<typeof divisionSchema>;
+const emptyDisciplineState = (): DisciplineState =>
+  Object.fromEntries(DISCIPLINES.map((d) => [d.value, { active: false, templateId: '' }]));
 
 const sb = supabase as any;
 
@@ -67,47 +40,34 @@ export default function Divisions() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDivision, setEditingDivision] = useState<any | null>(null);
   const [filter, setFilter] = useState<string>('all');
+  const [name, setName] = useState('');
+  const [levelId, setLevelId] = useState<string>(NO_LEVEL);
+  const [disciplineState, setDisciplineState] = useState<DisciplineState>(emptyDisciplineState());
+  const [formError, setFormError] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  const form = useForm<DivisionFormData>({
-    resolver: zodResolver(divisionSchema),
-    defaultValues: { discipline: 'allstar_cheer', name: '', scoring_template_id: '', level: '' },
-  });
-
-  const discipline = form.watch('discipline');
-  const scoringTemplateId = form.watch('scoring_template_id');
-
-  const openCreate = () => {
-    setEditingDivision(null);
-    form.reset({ discipline: 'allstar_cheer', name: '', scoring_template_id: '', level: '' });
-    setIsDialogOpen(true);
-  };
-
-  const openEdit = (div: any) => {
-    setEditingDivision(div);
-    form.reset({
-      discipline: (div.discipline as any) ?? 'allstar_cheer',
-      name: div.name ?? '',
-      scoring_template_id: div.scoring_template_id ?? '',
-      level: div.level ?? '',
-    });
-    setIsDialogOpen(true);
-  };
-
-  const handleDialogChange = (open: boolean) => {
-    setIsDialogOpen(open);
-    if (!open) setEditingDivision(null);
-  };
 
   const { data: divisions, isLoading } = useQuery({
     queryKey: ['divisions'],
     queryFn: async () => {
       const { data, error } = await sb
         .from('divisions')
-        .select('*, template:scoring_templates(id, name)')
-        .order('discipline')
+        .select(
+          '*, level_ref:levels(id, name), discipline_links:division_disciplines(id, discipline, scoring_template_id, template:scoring_templates(id, name))'
+        )
         .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: levels } = useQuery({
+    queryKey: ['levels-for-divisions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('levels')
+        .select('id, name, level_number')
+        .order('level_number');
       if (error) throw error;
       return data;
     },
@@ -125,58 +85,129 @@ export default function Divisions() {
     },
   });
 
-  const filteredTemplates = useMemo(() => {
-    if (!scoringTemplates) return [];
-    const selectedDiscipline = discipline || 'allstar_cheer';
-    return scoringTemplates.filter((t: any) => (t.discipline ?? 'allstar_cheer') === selectedDiscipline);
-  }, [scoringTemplates, discipline]);
+  const templatesFor = (discipline: string) =>
+    (scoringTemplates || []).filter(
+      (t: any) => (t.discipline ?? 'allstar_cheer') === discipline
+    );
 
-  // Only clear the template when the admin actively switches discipline —
-  // never when simply opening an existing division whose template belongs elsewhere.
-  const prevDisciplineRef = useRef<string | null>(null);
-  useEffect(() => {
-    const prev = prevDisciplineRef.current;
-    prevDisciplineRef.current = discipline;
-    if (prev === null || prev === discipline) return;
-    const valid = filteredTemplates?.some((t: any) => t.id === scoringTemplateId);
-    if (scoringTemplateId && !valid) {
-      form.setValue('scoring_template_id', '');
-    }
-  }, [discipline, filteredTemplates, scoringTemplateId, form]);
+  const openCreate = () => {
+    setEditingDivision(null);
+    setName('');
+    setLevelId(NO_LEVEL);
+    setDisciplineState(emptyDisciplineState());
+    setFormError(null);
+    setIsDialogOpen(true);
+  };
+
+  const openEdit = (div: any) => {
+    setEditingDivision(div);
+    setName(div.name ?? '');
+    setLevelId(div.level_id ?? NO_LEVEL);
+    const state = emptyDisciplineState();
+    (div.discipline_links || []).forEach((link: any) => {
+      if (state[link.discipline]) {
+        state[link.discipline] = {
+          active: true,
+          templateId: link.scoring_template_id ?? '',
+        };
+      }
+    });
+    setDisciplineState(state);
+    setFormError(null);
+    setIsDialogOpen(true);
+  };
+
+  const handleDialogChange = (open: boolean) => {
+    setIsDialogOpen(open);
+    if (!open) setEditingDivision(null);
+  };
 
   const filteredDivisions = useMemo(() => {
     if (!divisions) return [];
     if (filter === 'all') return divisions;
-    return divisions.filter((d: any) => d.discipline === filter);
+    return divisions.filter((d: any) =>
+      (d.discipline_links || []).some((l: any) => l.discipline === filter)
+    );
   }, [divisions, filter]);
 
   const upsertMutation = useMutation({
-    mutationFn: async (data: DivisionFormData) => {
+    mutationFn: async () => {
+      const activeDisciplines = DISCIPLINES.filter((d) => disciplineState[d.value]?.active);
       const payload = {
-        name: data.name,
-        discipline: data.discipline,
-        scoring_template_id: data.scoring_template_id,
-        level: data.discipline === 'allstar_cheer' ? data.level || null : null,
+        name: name.trim(),
+        level_id: levelId === NO_LEVEL ? null : levelId,
+        // keep legacy columns roughly in sync for older code paths
+        discipline: activeDisciplines[0]?.value ?? 'allstar_cheer',
+        scoring_template_id: disciplineState[activeDisciplines[0]?.value ?? '']?.templateId || null,
       };
-      if (editingDivision) {
-        const { error } = await sb.from('divisions').update(payload).eq('id', editingDivision.id);
+
+      let divisionId = editingDivision?.id as string | undefined;
+      if (divisionId) {
+        const { error } = await sb.from('divisions').update(payload).eq('id', divisionId);
         if (error) throw error;
       } else {
-        const { error } = await sb.from('divisions').insert([payload]);
+        const { data, error } = await sb.from('divisions').insert([payload]).select('id').single();
+        if (error) throw error;
+        divisionId = data.id;
+      }
+
+      const existing: any[] = editingDivision?.discipline_links || [];
+      const wanted = activeDisciplines.map((d) => ({
+        discipline: d.value,
+        scoring_template_id: disciplineState[d.value].templateId || null,
+      }));
+
+      const toDelete = existing.filter((e) => !wanted.some((w) => w.discipline === e.discipline));
+      if (toDelete.length) {
+        const { error } = await sb
+          .from('division_disciplines')
+          .delete()
+          .in('id', toDelete.map((e) => e.id));
+        if (error) throw error;
+      }
+
+      if (wanted.length) {
+        const { error } = await sb
+          .from('division_disciplines')
+          .upsert(
+            wanted.map((w) => ({ ...w, division_id: divisionId })),
+            { onConflict: 'division_id,discipline' }
+          );
         if (error) throw error;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['divisions'] });
+      queryClient.invalidateQueries({ queryKey: ['event-divisions-by-discipline'] });
       toast({ title: editingDivision ? 'Division updated' : 'Division created' });
       setIsDialogOpen(false);
       setEditingDivision(null);
-      form.reset();
     },
     onError: (error: any) => {
       toast({ variant: 'destructive', title: 'Error', description: error.message });
     },
   });
+
+  const submit = () => {
+    setFormError(null);
+    if (!name.trim()) {
+      setFormError('Division title is required');
+      return;
+    }
+    const active = DISCIPLINES.filter((d) => disciplineState[d.value]?.active);
+    if (active.length === 0) {
+      setFormError('Activate the division for at least one discipline');
+      return;
+    }
+    const missing = active.filter((d) => !disciplineState[d.value].templateId);
+    if (missing.length > 0) {
+      setFormError(
+        `Select a scoring template for: ${missing.map((d) => d.label).join(', ')}`
+      );
+      return;
+    }
+    upsertMutation.mutate();
+  };
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -185,6 +216,7 @@ export default function Divisions() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['divisions'] });
+      queryClient.invalidateQueries({ queryKey: ['event-divisions-by-discipline'] });
       toast({ title: 'Division deleted' });
     },
     onError: (error: any) => {
@@ -198,7 +230,7 @@ export default function Divisions() {
         <div>
           <h1 className="text-3xl font-bold text-foreground">Divisions</h1>
           <p className="text-muted-foreground mt-1">
-            Cheer and dance divisions available across all events
+            Create a division once, then activate it for each discipline it runs in
           </p>
         </div>
         <Button onClick={openCreate}>
@@ -228,29 +260,34 @@ export default function Divisions() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Discipline</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Level</TableHead>
-                  <TableHead>Scoring Template</TableHead>
+                  <TableHead>Active Disciplines</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredDivisions.map((div: any) => (
                   <TableRow key={div.id}>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {disciplineLabel(div.discipline ?? 'allstar_cheer')}
-                      </Badge>
-                    </TableCell>
                     <TableCell className="font-medium">{div.name}</TableCell>
                     <TableCell>
-                      {div.level || <span className="text-muted-foreground">—</span>}
+                      {div.level_ref?.name || div.level || (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
-                      {div.template?.name || (
-                        <span className="text-muted-foreground italic">Not set</span>
-                      )}
+                      <div className="flex flex-wrap gap-1">
+                        {(div.discipline_links || []).length > 0 ? (
+                          (div.discipline_links || []).map((link: any) => (
+                            <Badge key={link.id} variant="outline" className="font-normal">
+                              {disciplineLabel(link.discipline)}
+                              {link.template?.name ? ` · ${link.template.name}` : ' · no template'}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground italic">Not activated</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" onClick={() => openEdit(div)}>
@@ -282,130 +319,117 @@ export default function Divisions() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingDivision ? 'Edit Division' : 'New Division'}</DialogTitle>
           </DialogHeader>
-          <Form {...form}>
-            <form
-              onSubmit={form.handleSubmit((d) => upsertMutation.mutate(d))}
-              className="space-y-4"
-            >
-              <FormField
-                control={form.control}
-                name="discipline"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Discipline</FormLabel>
-                    <Select
-                      onValueChange={(v) => {
-                        field.onChange(v);
-                        if (v !== 'allstar_cheer') form.setValue('level', '');
-                      }}
-                      value={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {DISCIPLINES.map((d) => (
-                          <SelectItem key={d.value} value={d.value}>
-                            {d.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <Label>Division Title</Label>
+              <Input
+                placeholder="Youth, Junior, Senior Coed..."
+                value={name}
+                onChange={(e) => setName(e.target.value)}
               />
+            </div>
 
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Division Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Youth, Junior, Senior..." {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="space-y-2">
+              <Label>Level (optional)</Label>
+              <Select value={levelId} onValueChange={setLevelId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="No level" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_LEVEL}>No level</SelectItem>
+                  {(levels || []).map((l: any) => (
+                    <SelectItem key={l.id} value={l.id}>
+                      {l.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-              <FormField
-                control={form.control}
-                name="scoring_template_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Scoring Template</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a scoring template" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {filteredTemplates && filteredTemplates.length > 0 ? (
-                          filteredTemplates.map((t: any) => (
-                            <SelectItem key={t.id} value={t.id}>
-                              {t.name}
-                              {t.is_default ? ' (default)' : ''}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="__none__" disabled>
-                            No templates available for this discipline
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {discipline === 'allstar_cheer' && (
-                <FormField
-                  control={form.control}
-                  name="level"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Level</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || undefined}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a level" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {CHEER_LEVELS.map((lvl) => (
-                            <SelectItem key={lvl} value={lvl}>
-                              {lvl}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              <div className="flex justify-end gap-2 pt-4">
-                <Button type="button" variant="outline" onClick={() => handleDialogChange(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={upsertMutation.isPending}>
-                  {upsertMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingDivision ? 'Save Changes' : 'Create Division'}
-                </Button>
+            <div className="space-y-3">
+              <div>
+                <Label>Disciplines</Label>
+                <p className="text-sm text-muted-foreground">
+                  Activate this division for each discipline and choose the scoring template used
+                  there.
+                </p>
               </div>
-            </form>
-          </Form>
+
+              <div className="space-y-2">
+                {DISCIPLINES.map((d) => {
+                  const state = disciplineState[d.value] || { active: false, templateId: '' };
+                  const options = templatesFor(d.value);
+                  return (
+                    <div
+                      key={d.value}
+                      className="flex items-center gap-3 rounded-md border border-border p-3"
+                    >
+                      <Checkbox
+                        id={`disc-${d.value}`}
+                        checked={state.active}
+                        onCheckedChange={(checked) =>
+                          setDisciplineState((prev) => ({
+                            ...prev,
+                            [d.value]: { ...state, active: checked === true },
+                          }))
+                        }
+                      />
+                      <Label htmlFor={`disc-${d.value}`} className="w-40 cursor-pointer">
+                        {d.label}
+                      </Label>
+                      <div className="flex-1">
+                        <Select
+                          value={state.templateId || undefined}
+                          disabled={!state.active}
+                          onValueChange={(v) =>
+                            setDisciplineState((prev) => ({
+                              ...prev,
+                              [d.value]: { active: true, templateId: v },
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a scoring template" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {options.length > 0 ? (
+                              options.map((t: any) => (
+                                <SelectItem key={t.id} value={t.id}>
+                                  {t.name}
+                                  {t.is_default ? ' (default)' : ''}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="__no_templates__" disabled>
+                                No templates for this discipline
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {formError && <p className="text-sm text-destructive">{formError}</p>}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => handleDialogChange(false)}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={submit} disabled={upsertMutation.isPending}>
+                {upsertMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {editingDivision ? 'Save Changes' : 'Create Division'}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
