@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ArrowLeft, Save, Send, Loader2, Play, RotateCcw, Flag } from 'lucide-react';
 import { calculateStructuredDeductions, sortByDisplayOrder, fieldPanelAbbrevs, pickDivisionTemplateId } from '@/lib/scoring';
 import { RubricReferenceSheet } from '@/components/judge/RubricReferenceSheet';
+import VideoPlayer from '@/components/video/VideoPlayer';
 
 interface FieldScore { field_id: string; points: number; notes: string; }
 const sb = supabase as any;
@@ -603,7 +604,9 @@ export default function ScorePerformance() {
             <CardContent className="p-0">
               <div className="aspect-video bg-black rounded-t-lg flex items-center justify-center">
                 {submission.video_url ? (
-                  <video src={submission.video_url} controls className="w-full h-full rounded-t-lg" />
+                  <div className="w-full h-full">
+                    <VideoPlayer url={submission.video_url} thumbnailUrl={submission.thumbnail_url} status={submission.status} submissionId={submission.id} />
+                  </div>
                 ) : (
                   <div className="text-white/50 text-center">
                     <Play className="w-16 h-16 mx-auto mb-2" /><p>Video not available</p>
