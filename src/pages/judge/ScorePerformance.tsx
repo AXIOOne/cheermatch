@@ -681,7 +681,11 @@ export default function ScorePerformance() {
                               {(f.field_type === 'difficulty_driver' || f.field_type === 'execution_driver') && (
                                 <span className="text-sm font-semibold mr-2">{Number(fieldScores[f.id]?.points || 0).toFixed(2)}</span>
                               )}
-                              <span className="text-xs text-muted-foreground">max {Number(f.max_points).toFixed(2)}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {Number(f.min_value ?? 0) > 0
+                                  ? `range ${Number(f.min_value).toFixed(2)} – ${Number(f.max_points).toFixed(2)}`
+                                  : `max ${Number(f.max_points).toFixed(2)}`}
+                              </span>
                             </div>
                           </div>
                           {f.field_type === 'dropdown' ? (() => {
