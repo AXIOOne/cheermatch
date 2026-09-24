@@ -69,6 +69,16 @@ export default function ScoringTemplates() {
   const [deductions, setDeductions] = useState<DeductionType[]>([]);
   const [templatePanels, setTemplatePanels] = useState<TemplatePanel[]>([]);
   const [disciplineFilter, setDisciplineFilter] = useState<string>('all');
+  const [expandedTemplates, setExpandedTemplates] = useState<Set<string>>(new Set());
+
+  const toggleTemplateExpanded = (id: string) => {
+    setExpandedTemplates((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -720,23 +730,35 @@ export default function ScoringTemplates() {
                     {getTotalPoints(tpl).toFixed(2)} pts
                   </Badge>
                 </div>
-                {tpl.sections && tpl.sections.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Sections</p>
-                    {tpl.sections.slice(0, 4).map((s: any) => {
-                      const pts = (s.fields || []).reduce((a: number, f: any) => a + Number(f.max_points || 0), 0);
-                      return (
-                        <div key={s.id} className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">{s.abbreviation} — {s.name}</span>
-                          <span className="font-medium">{pts.toFixed(1)} pts</span>
-                        </div>
-                      );
-                    })}
-                    {tpl.sections.length > 4 && (
-                      <p className="text-xs text-muted-foreground">+{tpl.sections.length - 4} more...</p>
-                    )}
-                  </div>
-                )}
+                {tpl.sections && tpl.sections.length > 0 && (() => {
+                  const isExpanded = expandedTemplates.has(tpl.id);
+                  const visibleSections = isExpanded ? tpl.sections : tpl.sections.slice(0, 4);
+                  return (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Sections</p>
+                      {visibleSections.map((s: any) => {
+                        const pts = (s.fields || []).reduce((a: number, f: any) => a + Number(f.max_points || 0), 0);
+                        return (
+                          <div key={s.id} className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">{s.abbreviation} — {s.name}</span>
+                            <span className="font-medium">{pts.toFixed(1)} pts</span>
+                          </div>
+                        );
+                      })}
+                      {tpl.sections.length > 4 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleTemplateExpanded(tpl.id)}
+                          className="text-xs text-primary hover:underline cursor-pointer"
+                        >
+                          {isExpanded
+                            ? 'Show less'
+                            : `+${tpl.sections.length - 4} more...`}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })()}
                 {tpl.deduction_types && tpl.deduction_types.length > 0 && (
                   <div className="mt-3 pt-3 border-t">
                     <p className="text-xs text-muted-foreground">
