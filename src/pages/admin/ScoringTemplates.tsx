@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, ClipboardList, Loader2, Pencil, Trash2, Lock, Unlock, Eye, Layers, Copy, Users } from 'lucide-react';
+import { Plus, ClipboardList, Loader2, Pencil, Trash2, Lock, Unlock, Eye, Layers, Copy, Users, ChevronDown, ChevronRight } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SectionTabs, { ScoringSection } from '@/components/admin/SectionTabs';
@@ -679,64 +679,67 @@ export default function ScoringTemplates() {
               <Badge variant="secondary" className="text-xs">{group.templates.length}</Badge>
               <div className="flex-1 h-px bg-border" />
             </div>
-            <div className="grid gap-6 grid-cols-1">
-          {group.templates.map((tpl: any) => (
-
-            <Card key={tpl.id} className={`relative ${tpl.is_locked ? 'border-warning/50' : ''}`}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-lg">{tpl.name}</CardTitle>
-                      {tpl.is_locked && (
-                        <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/30">
-                          <Lock className="w-3 h-3 mr-1" /> Locked
-                        </Badge>
-                      )}
-                    </div>
-                    <CardDescription>Divisions: {divisionLabel(tpl)}</CardDescription>
-                    {tpl.is_default && (
-                      <p className="text-xs text-muted-foreground mt-1">Default template for unassigned divisions</p>
-                    )}
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => duplicateMutation.mutate(tpl)} title="Duplicate">
-                      <Copy className="w-4 h-4 text-muted-foreground" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleLockToggle(tpl)}
-                      title={tpl.is_locked ? 'Unlock' : 'Lock'}>
-                      {tpl.is_locked ? <Unlock className="w-4 h-4 text-warning" /> : <Lock className="w-4 h-4 text-muted-foreground" />}
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(tpl)} disabled={tpl.is_locked}>
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" disabled={tpl.is_locked}
-                      onClick={() => { if (confirm('Delete this template?')) deleteMutation.mutate(tpl.id); }}>
-                      <Trash2 className={`w-4 h-4 ${tpl.is_locked ? 'text-muted-foreground' : 'text-destructive'}`} />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">{tpl.description}</p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <Badge variant="outline" className="text-xs">
-                    <Layers className="w-3 h-3 mr-1" />{tpl.sections?.length || 0} Sections
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    <Eye className="w-3 h-3 mr-1" />{fieldCount(tpl)} Fields
-                  </Badge>
-                  <Badge variant="secondary" className="text-xs font-bold">
+            <div className="grid gap-2 grid-cols-1">
+          {group.templates.map((tpl: any) => {
+            const isExpanded = expandedTemplates.has(tpl.id);
+            return (
+            <Card key={tpl.id} className={`relative overflow-hidden ${tpl.is_locked ? 'border-warning/50' : ''}`}>
+              <div
+                className="flex items-center justify-between gap-2 px-4 py-2.5 cursor-pointer hover:bg-muted/40 transition-colors"
+                onClick={() => toggleTemplateExpanded(tpl.id)}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <CardTitle className="text-base font-medium truncate">{tpl.name}</CardTitle>
+                  {tpl.is_default && (
+                    <Badge variant="outline" className="text-[10px] shrink-0">Default</Badge>
+                  )}
+                  {tpl.is_locked && (
+                    <Badge variant="secondary" className="bg-warning/10 text-warning border-warning/30 shrink-0">
+                      <Lock className="w-3 h-3 mr-1" /> Locked
+                    </Badge>
+                  )}
+                  <Badge variant="secondary" className="text-xs font-bold shrink-0">
                     {getTotalPoints(tpl).toFixed(2)} pts
                   </Badge>
                 </div>
-                {tpl.sections && tpl.sections.length > 0 && (() => {
-                  const isExpanded = expandedTemplates.has(tpl.id);
-                  const visibleSections = isExpanded ? tpl.sections : tpl.sections.slice(0, 4);
-                  return (
+                <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" onClick={() => duplicateMutation.mutate(tpl)} title="Duplicate">
+                    <Copy className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleLockToggle(tpl)}
+                    title={tpl.is_locked ? 'Unlock' : 'Lock'}>
+                    {tpl.is_locked ? <Unlock className="w-4 h-4 text-warning" /> : <Lock className="w-4 h-4 text-muted-foreground" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => handleEdit(tpl)} disabled={tpl.is_locked}>
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" disabled={tpl.is_locked}
+                    onClick={() => { if (confirm('Delete this template?')) deleteMutation.mutate(tpl.id); }}>
+                    <Trash2 className={`w-4 h-4 ${tpl.is_locked ? 'text-muted-foreground' : 'text-destructive'}`} />
+                  </Button>
+                </div>
+              </div>
+              {isExpanded && (
+                <CardContent className="pt-1 pb-4 border-t">
+                  <p className="text-sm text-muted-foreground mb-4">{tpl.description}</p>
+                  <p className="text-xs text-muted-foreground mb-4">Divisions: {divisionLabel(tpl)}</p>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <Badge variant="outline" className="text-xs">
+                      <Layers className="w-3 h-3 mr-1" />{tpl.sections?.length || 0} Sections
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      <Eye className="w-3 h-3 mr-1" />{fieldCount(tpl)} Fields
+                    </Badge>
+                  </div>
+                  {tpl.sections && tpl.sections.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Sections</p>
-                      {visibleSections.map((s: any) => {
+                      {tpl.sections.map((s: any) => {
                         const pts = (s.fields || []).reduce((a: number, f: any) => a + Number(f.max_points || 0), 0);
                         return (
                           <div key={s.id} className="flex justify-between text-sm">
@@ -745,30 +748,20 @@ export default function ScoringTemplates() {
                           </div>
                         );
                       })}
-                      {tpl.sections.length > 4 && (
-                        <button
-                          type="button"
-                          onClick={() => toggleTemplateExpanded(tpl.id)}
-                          className="text-xs text-primary hover:underline cursor-pointer"
-                        >
-                          {isExpanded
-                            ? 'Show less'
-                            : `+${tpl.sections.length - 4} more...`}
-                        </button>
-                      )}
                     </div>
-                  );
-                })()}
-                {tpl.deduction_types && tpl.deduction_types.length > 0 && (
-                  <div className="mt-3 pt-3 border-t">
-                    <p className="text-xs text-muted-foreground">
-                      {tpl.deduction_types.length} deduction type{tpl.deduction_types.length !== 1 ? 's' : ''} defined
-                    </p>
-                  </div>
-                )}
-              </CardContent>
+                  )}
+                  {tpl.deduction_types && tpl.deduction_types.length > 0 && (
+                    <div className="mt-3 pt-3 border-t">
+                      <p className="text-xs text-muted-foreground">
+                        {tpl.deduction_types.length} deduction type{tpl.deduction_types.length !== 1 ? 's' : ''} defined
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              )}
             </Card>
-          ))}
+            );
+          })}
             </div>
           </div>
           ))}
