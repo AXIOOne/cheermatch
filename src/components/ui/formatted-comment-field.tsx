@@ -4,6 +4,24 @@ import { Textarea, type TextareaProps } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+function renderInline(line: string, key: number) {
+  const parts = line.split(/(\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*)/g);
+  return (
+    <div key={key} className="min-h-[1.25rem]">
+      {parts.map((p, i) => {
+        if (/^\*\*[^*]+\*\*$/.test(p)) return <strong key={i}>{p.slice(2, -2)}</strong>;
+        if (/^__[^_]+__$/.test(p)) return <u key={i}>{p.slice(2, -2)}</u>;
+        if (/^\*[^*]+\*$/.test(p)) return <em key={i}>{p.slice(1, -1)}</em>;
+        return <span key={i}>{p}</span>;
+      })}
+    </div>
+  );
+}
+
+export function FormattedCommentPreview({ text, className }: { text: string; className?: string }) {
+  return <div className={cn('text-sm', className)}>{text.split(/\r?\n/).map(renderInline)}</div>;
+}
+
 type WrapKind = 'bold' | 'italic' | 'underline';
 
 const WRAPPERS: Record<WrapKind, string> = {
@@ -81,6 +99,12 @@ export const FormattedCommentField = forwardRef<HTMLTextAreaElement, FormattedCo
           className={className}
           {...rest}
         />
+        {/(\*\*|__|\*)\S/.test(value) && (
+          <div className="rounded-md border border-dashed bg-muted/40 px-3 py-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Preview</div>
+            <FormattedCommentPreview text={value} />
+          </div>
+        )}
       </div>
     );
   },

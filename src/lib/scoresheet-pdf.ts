@@ -21,6 +21,60 @@ const BORDER = rgb(0, 0, 0);
 const TEXT = rgb(0, 0, 0);
 const MUTED = rgb(0.35, 0.35, 0.35);
 
+
+type RichRun = { text: string; b: boolean; i: boolean; u: boolean };
+type RichWord = RichRun & { space: boolean };
+
+/** Parse **bold**, *italic*, __underline__ markers into word runs per paragraph. */
+function parseRich(text: string): RichWord[][] {
+  return text.split(/\r?\n/).map((para) => {
+    const words: RichWord[] = [];
+    let b = false, i = false, u = false, buf = '', pendingSpace = false;
+    const flush = () => {
+      if (buf) { words.push({ text: buf, b, i, u, space: pendingSpace }); pendingSpace = false; buf = ''; }
+    };
+    for (let k = 0; k < para.length; k++) {
+      const two = para.slice(k, k + 2);
+      if (two === '**') { flush(); b = !b; k++; continue; }
+      if (two === '__') { flush(); u = !u; k++; continue; }
+      if (para[k] === '*') { flush(); i = !i; continue; }
+      if (para[k] === ' ') { flush(); pendingSpace = true; continue; }
+      buf += para[k];
+    }
+    flush();
+    return words;
+  });
+}
+
+function drawRichText(
+  page: PDFPage, text: string, x: number, yTop: number, maxW: number, size: number,
+  fonts: { font: PDFFont; bold: PDFFont; italic: PDFFont }, color: ReturnType<typeof rgb>,
+  measureOnly = false,
+): number {
+  const lineH = size + 3;
+  const pick = (w: RichRun) => (w.b ? fonts.bold : w.i ? fonts.italic : fonts.font);
+  let y = yTop;
+  let lines = 0;
+  for (const para of parseRich(text)) {
+    let cx = 0;
+    lines++;
+    for (const w of para) {
+      const f = pick(w);
+      const spaceW = w.space && cx > 0 ? f.widthOfTextAtSize(' ', size) : 0;
+      const ww = f.widthOfTextAtSize(w.text, size);
+      if (cx > 0 && cx + spaceW + ww > maxW) { lines++; y -= lineH; cx = 0; }
+      const sx = cx > 0 ? spaceW : 0;
+      if (!measureOnly) {
+        page.drawText(w.text, { x: x + cx + sx, y, size, font: f, color });
+        if (w.u) page.drawLine({ start: { x: x + cx + sx, y: y - 1.5 }, end: { x: x + cx + sx + ww, y: y - 1.5 }, thickness: 0.5, color });
+      }
+      cx += sx + ww;
+    }
+    y -= lineH;
+  }
+  return lines;
+}
+
 function formatDateTime(iso?: string | null): string {
   if (!iso) return '—';
   try {
@@ -400,8 +454,9 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
       const bodyFont = hasComment ? font : italic;
       const bodyColor = hasComment ? TEXT : MUTED;
       const text = hasComment ? jc.comments : 'No comments provided.';
-      const lines = wrapText(text, bodyFont, bodySize, CONTENT_W - boxPad * 2);
-      const textBlockH = lines.length * (bodySize + 3);
+      const richFonts = hasComment ? { font, bold, italic } : { font: italic, bold: italic, italic };
+      const lineCount = drawRichText(page, text, 0, 0, CONTENT_W - boxPad * 2, bodySize, richFonts, bodyColor, true);
+      const textBlockH = lineCount * (bodySize + 3);
       const boxH = labelSize + 6 + textBlockH + boxPad * 2;
 
       ensureSpace(boxH + boxGap);
@@ -424,14 +479,7 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
         borderColor: BORDER, borderWidth: 0.75,
       });
 
-      let ty = innerTop - boxPad - bodySize;
-      for (const ln of lines) {
-        page.drawText(ln, {
-          x: MARGIN + boxPad, y: ty,
-          size: bodySize, font: bodyFont, color: bodyColor,
-        });
-        ty -= bodySize + 3;
-      }
+      drawRichText(page, text, MARGIN + boxPad, innerTop - boxPad - bodySize, CONTENT_W - boxPad * 2, bodySize, richFonts, bodyColor);
 
       cursorY = boxBot - boxGap;
     }
@@ -526,9 +574,10 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     const bodyFont = hasComment ? font : italic;
     const bodyColor = hasComment ? TEXT : MUTED;
     const text = hasComment ? data.safety_comments : 'No comments provided.';
-    const lines = wrapText(text, bodyFont, bodySize, CONTENT_W - boxPad * 2);
+    const richFonts = hasComment ? { font, bold, italic } : { font: italic, bold: italic, italic };
+    const lineCount = drawRichText(page, text, 0, 0, CONTENT_W - boxPad * 2, bodySize, richFonts, bodyColor, true);
     // Ensure a minimum of 4 body lines of vertical space in the box.
-    const minLines = Math.max(lines.length, 4);
+    const minLines = Math.max(lineCount, 4);
     const textBlockH = minLines * (bodySize + 3);
     const innerH = textBlockH + boxPad * 2;
     const boxH = labelSize + 6 + innerH;
@@ -545,14 +594,7 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
       x: MARGIN, y: innerBot, width: CONTENT_W, height: innerH,
       borderColor: BORDER, borderWidth: 0.75,
     });
-    let ty = innerTop - boxPad - bodySize;
-    for (const ln of lines) {
-      page.drawText(ln, {
-        x: MARGIN + boxPad, y: ty,
-        size: bodySize, font: bodyFont, color: bodyColor,
-      });
-      ty -= bodySize + 3;
-    }
+    drawRichText(page, text, MARGIN + boxPad, innerTop - boxPad - bodySize, CONTENT_W - boxPad * 2, bodySize, richFonts, bodyColor);
     cursorY = innerBot - 4;
   }
 
