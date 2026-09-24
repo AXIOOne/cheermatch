@@ -414,58 +414,27 @@ export default function Submissions() {
 
 
 
-      {/* Stats Cards */}
+      {/* Stats strip */}
       {!isPendingTab && (
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{stats.total}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Ready for Review</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-blue-600">{stats.ready}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Imported</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-muted-foreground">{stats.imported}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Approved</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-green-600">{stats.approved}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Denied</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-destructive">{stats.denied}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Revisions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold text-amber-600">{stats.revision_requested}</p>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="mb-6">
+        <CardContent className="p-0">
+          <div className="grid grid-cols-3 md:grid-cols-6 divide-x divide-y md:divide-y-0">
+            {[
+              { label: 'Total', value: stats.total, className: '' },
+              { label: 'Ready for Review', value: stats.ready, className: 'text-blue-600' },
+              { label: 'Imported', value: stats.imported, className: 'text-muted-foreground' },
+              { label: 'Approved', value: stats.approved, className: 'text-green-600' },
+              { label: 'Denied', value: stats.denied, className: 'text-destructive' },
+              { label: 'Revisions', value: stats.revision_requested, className: 'text-amber-600' },
+            ].map((s) => (
+              <div key={s.label} className="px-4 py-3 text-center">
+                <p className="text-xs font-medium text-muted-foreground truncate">{s.label}</p>
+                <p className={`text-2xl font-bold ${s.className}`}>{s.value}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
       )}
 
 
