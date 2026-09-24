@@ -69,6 +69,16 @@ export default function ScoringTemplates() {
   const [deductions, setDeductions] = useState<DeductionType[]>([]);
   const [templatePanels, setTemplatePanels] = useState<TemplatePanel[]>([]);
   const [disciplineFilter, setDisciplineFilter] = useState<string>('all');
+  const [expandedTemplates, setExpandedTemplates] = useState<Set<string>>(new Set());
+
+  const toggleTemplateExpanded = (id: string) => {
+    setExpandedTemplates((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
