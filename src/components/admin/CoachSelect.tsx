@@ -18,6 +18,7 @@ export interface CoachOption {
   full_name: string | null;
   organization_id: string | null;
   organization_name: string | null;
+  phone?: string | null;
 }
 
 export function useCoaches() {
@@ -34,7 +35,7 @@ export function useCoaches() {
 
       const { data: profiles, error } = await sb
         .from('profiles')
-        .select('user_id, email, full_name, organization_id, organizations(name)')
+        .select('user_id, email, full_name, phone, organization_id, organizations(name)')
         .in('user_id', ids)
         .order('full_name');
       if (error) throw error;
@@ -43,6 +44,7 @@ export function useCoaches() {
         user_id: p.user_id,
         email: p.email,
         full_name: p.full_name,
+        phone: p.phone ?? null,
         organization_id: p.organization_id ?? null,
         organization_name: p.organizations?.name ?? null,
       })) as CoachOption[];
@@ -101,7 +103,7 @@ export function CoachSelect({ value, onChange }: CoachSelectProps) {
       const created = await queryClient.invalidateQueries({ queryKey: ['coach-options'] });
       const { data: profile } = await sb
         .from('profiles')
-        .select('user_id, email, full_name, organization_id, organizations(name)')
+        .select('user_id, email, full_name, phone, organization_id, organizations(name)')
         .ilike('email', newCoach.email.trim())
         .maybeSingle();
 
@@ -110,6 +112,7 @@ export function CoachSelect({ value, onChange }: CoachSelectProps) {
           user_id: profile.user_id,
           email: profile.email,
           full_name: profile.full_name,
+          phone: profile.phone ?? null,
           organization_id: profile.organization_id ?? null,
           organization_name: profile.organizations?.name ?? null,
         });
