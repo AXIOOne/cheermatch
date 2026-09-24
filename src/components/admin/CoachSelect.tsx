@@ -133,33 +133,61 @@ export function CoachSelect({ value, onChange }: CoachSelectProps) {
 
   return (
     <div className="space-y-2">
-      <Select
-        value={value || ''}
-        onValueChange={(v) => {
-          if (v === '__add__') {
-            setAddOpen(true);
-            return;
-          }
-          onChange((coaches || []).find((c) => c.user_id === v) || null);
-        }}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder={isLoading ? 'Loading coaches...' : 'Select a coach'} />
-        </SelectTrigger>
-        <SelectContent>
-          {(coaches || []).map((c) => (
-            <SelectItem key={c.user_id} value={c.user_id}>
-              {(c.full_name || c.email)}
-              {c.organization_name ? ` — ${c.organization_name}` : ' — no organization'}
-            </SelectItem>
-          ))}
-          <SelectItem value="__add__">
-            <span className="flex items-center gap-2">
-              <UserRoundPlus className="w-4 h-4" /> Add new coach
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className="w-full justify-between font-normal"
+          >
+            <span className="truncate">
+              {selected
+                ? `${selected.full_name || selected.email}${selected.organization_name ? ` — ${selected.organization_name}` : ''}`
+                : isLoading
+                  ? 'Loading coaches...'
+                  : 'Select a coach'}
             </span>
-          </SelectItem>
-        </SelectContent>
-      </Select>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search coaches..." />
+            <CommandList>
+              <CommandEmpty>No coach found.</CommandEmpty>
+              <CommandGroup>
+                {(coaches || []).map((c) => (
+                  <CommandItem
+                    key={c.user_id}
+                    value={`${c.full_name || ''} ${c.email} ${c.organization_name || ''}`}
+                    onSelect={() => {
+                      onChange(c);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check className={cn('mr-2 h-4 w-4', value === c.user_id ? 'opacity-100' : 'opacity-0')} />
+                    <span className="truncate">
+                      {c.full_name || c.email}
+                      {c.organization_name ? ` — ${c.organization_name}` : ' — no organization'}
+                    </span>
+                  </CommandItem>
+                ))}
+                <CommandItem
+                  value="__add_new_coach__"
+                  onSelect={() => {
+                    setOpen(false);
+                    setAddOpen(true);
+                  }}
+                >
+                  <UserRoundPlus className="mr-2 h-4 w-4" /> Add new coach
+                </CommandItem>
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
       {selected && !selected.organization_id && (
         <p className="text-xs text-destructive">
           This coach has no organization assigned. Set one under Settings → User Roles before saving.
