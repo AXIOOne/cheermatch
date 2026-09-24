@@ -253,7 +253,7 @@ export default function ScorePerformance() {
       });
       setDeductionCounts(dc);
       setDeductionWarnings(dw);
-      setComments((existingScore.comments || '').replace(/\*\*|__/g, ''));
+      setComments(existingScore.comments || '');
     } else {
       const init: Record<string, FieldScore> = {};
       allFields.forEach((f: any) => { init[f.id] = { field_id: f.id, points: 0, notes: '' }; });
