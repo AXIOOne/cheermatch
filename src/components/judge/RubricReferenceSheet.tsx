@@ -24,6 +24,11 @@ const DISCIPLINES: { label: string; href: string; external?: boolean }[] = [
     href: 'https://www.varsity.com/nca/school/competitions/rules-scoring/',
     external: true,
   },
+  {
+    label: 'USA School Cheer',
+    href: 'https://www.varsity.com/usa/school/competitions/rulesandscoring/',
+    external: true,
+  },
 ];
 
 export function RubricReferenceSheet(_props: Props) {
