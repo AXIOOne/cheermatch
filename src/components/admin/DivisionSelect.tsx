@@ -38,7 +38,7 @@ export function DivisionSelect({ value, onChange, divisions, placeholder = 'Sele
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent className="w-[max(var(--radix-popover-trigger-width),28rem)] max-w-[90vw] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search divisions..." />
           <CommandList>
@@ -54,7 +54,7 @@ export function DivisionSelect({ value, onChange, divisions, placeholder = 'Sele
                   }}
                 >
                   <Check className={cn('mr-2 h-4 w-4', value === d.id ? 'opacity-100' : 'opacity-0')} />
-                  <span className="truncate">
+                  <span className="whitespace-normal break-words">
                     {d.name}{d.level_name ? ` — ${d.level_name}` : ''}
                   </span>
                 </CommandItem>

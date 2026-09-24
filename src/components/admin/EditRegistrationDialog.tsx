@@ -151,8 +151,8 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
                   <FormLabel>Division</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select a division" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {divisions?.map((d) => (<SelectItem key={d.id} value={d.id}>{d.name}{d.level_name ? ` — ${d.level_name}` : ''}</SelectItem>))}
+                    <SelectContent className="max-w-[90vw]">
+                      {divisions?.map((d) => (<SelectItem key={d.id} value={d.id} className="whitespace-normal">{d.name}{d.level_name ? ` — ${d.level_name}` : ''}</SelectItem>))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
