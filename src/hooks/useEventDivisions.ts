@@ -7,6 +7,7 @@ export type EventDivisionOption = {
   id: string;
   name: string;
   level_name: string | null;
+  level_id: string | null;
   scoring_template_id: string | null;
 };
 
@@ -40,6 +41,7 @@ export function useEventDivisions(eventId?: string | null) {
         id: d.id,
         name: d.name,
         level_name: d.level_ref?.name ?? d.level ?? null,
+        level_id: d.level_ref?.id ?? null,
         scoring_template_id: d.discipline_links?.[0]?.scoring_template_id ?? null,
       }));
     },

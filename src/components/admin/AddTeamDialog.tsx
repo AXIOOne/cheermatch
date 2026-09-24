@@ -17,9 +17,7 @@ import { CoachSelect, type CoachOption } from './CoachSelect';
 
 const schema = z.object({
   name: z.string().trim().min(1, 'Team name is required').max(120),
-  coach_phone: z.string().trim().max(40).optional().or(z.literal('')),
   division_id: z.string().min(1, 'Division is required'),
-  level_id: z.string().min(1, 'Level is required'),
   athletes_male: z.coerce.number().int().min(0).max(500),
   athletes_female: z.coerce.number().int().min(0).max(500),
 });
@@ -44,9 +42,7 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
-      coach_phone: '',
       division_id: '',
-      level_id: '',
       athletes_male: 0,
       athletes_female: 0,
     },
@@ -64,7 +60,7 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
   const { data: levels } = useQuery({
     queryKey: ['levels-add-team'],
     queryFn: async () => {
-      const { data, error } = await sb.from('levels').select('id, name').order('name');
+      const { data, error } = await sb.from('levels').select('id, name');
       if (error) throw error;
       return data as Array<{ id: string; name: string }>;
     },
@@ -73,6 +69,11 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
       if (!coach) throw new Error('Please select a coach for this registration.');
+      const division = divisions?.find((d) => d.id === data.division_id);
+      const levelId =
+        division?.level_id ??
+        levels?.find((l) => l.name.toLowerCase() === (division?.level_name || '').toLowerCase())?.id;
+      if (!levelId) throw new Error('This division has no level set. Assign a level to the division first.');
       const { error } = await sb.from('teams').insert({
         event_id: eventId,
         name: data.name,
@@ -80,10 +81,10 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
         organization_id: coach.organization_id,
         coach_name: coach.full_name || coach.email,
         coach_email: coach.email,
-        coach_phone: data.coach_phone || null,
+        coach_phone: coach.phone || null,
         coach_user_id: coach.user_id,
         division_id: data.division_id,
-        level_id: data.level_id,
+        level_id: levelId,
         athletes_male: data.athletes_male,
         athletes_female: data.athletes_female,
       });
@@ -122,16 +123,8 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
                   <FormMessage />
                 </FormItem>
               )} />
-              <FormField control={form.control} name="coach_phone" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Coach Phone</FormLabel>
-                  <FormControl><Input type="tel" {...field} /></FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <div />
               <FormField control={form.control} name="division_id" render={({ field }) => (
-                <FormItem>
+                <FormItem className="sm:col-span-2">
                   <FormLabel>Division</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select a division" /></SelectTrigger></FormControl>
@@ -140,20 +133,6 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
                         <SelectItem key={d.id} value={d.id}>
                           {d.name}{d.level_name ? ` — ${d.level_name}` : ''}
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )} />
-              <FormField control={form.control} name="level_id" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Level</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select a level" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {levels?.map((l) => (
-                        <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
