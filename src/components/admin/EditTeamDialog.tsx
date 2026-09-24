@@ -121,9 +121,9 @@ export function EditTeamDialog({ open, onOpenChange, team, onSaved }: EditTeamDi
                         <SelectValue placeholder="Select a division" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="max-w-[90vw]">
                       {divisions?.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
+                        <SelectItem key={d.id} value={d.id} className="whitespace-normal">
                           {d.name}
                           {d.level_name ? ` — ${d.level_name}` : ''}
                         </SelectItem>
