@@ -26,6 +26,11 @@ const DISCIPLINES: Discipline[] = [
     href: 'https://www.varsity.com/nca/school/competitions/rules-scoring/',
     external: true,
   },
+  {
+    label: 'USA School Cheer',
+    href: 'https://www.varsity.com/usa/school/competitions/rulesandscoring/',
+    external: true,
+  },
 ];
 
 interface Props {
