@@ -9,11 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useEventDivisions } from '@/hooks/useEventDivisions';
 import { Loader2 } from 'lucide-react';
 import { CoachSelect, type CoachOption } from './CoachSelect';
+import { DivisionSelect } from './DivisionSelect';
 
 const schema = z.object({
   name: z.string().trim().min(1, 'Team name is required').max(120),
@@ -126,16 +126,7 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
               <FormField control={form.control} name="division_id" render={({ field }) => (
                 <FormItem className="sm:col-span-2">
                   <FormLabel>Division</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select a division" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {divisions?.map((d) => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.name}{d.level_name ? ` — ${d.level_name}` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <DivisionSelect value={field.value} onChange={field.onChange} divisions={divisions} />
                   <FormMessage />
                 </FormItem>
               )} />

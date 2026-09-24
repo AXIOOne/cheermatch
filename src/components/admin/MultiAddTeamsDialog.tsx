@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useEventDivisions } from '@/hooks/useEventDivisions';
 import { Loader2, Plus, X } from 'lucide-react';
 import { CoachSelect, type CoachOption } from './CoachSelect';
+import { DivisionSelect } from './DivisionSelect';
 
 const sb = supabase as any;
 
@@ -111,16 +111,12 @@ export function MultiAddTeamsDialog({ open, onOpenChange, eventId }: Props) {
               </div>
               <div className="col-span-2 md:col-span-3 space-y-1">
                 <Label className="text-xs">Division</Label>
-                <Select value={r.division_id} onValueChange={(v) => update(r.key, { division_id: v })}>
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
-                    {divisions?.map((d) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {d.name}{d.level_name ? ` — ${d.level_name}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <DivisionSelect
+                  value={r.division_id}
+                  onChange={(v) => update(r.key, { division_id: v })}
+                  divisions={divisions}
+                  placeholder="Select"
+                />
               </div>
               <div className="md:col-span-1 space-y-1">
                 <Label className="text-xs">Male</Label>
