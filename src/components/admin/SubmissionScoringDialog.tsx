@@ -247,7 +247,7 @@ export default function SubmissionScoringDialog({
       });
       setDeductionCounts(loadedDed);
       setDeductionWarnings(loadedWarn);
-      setComments((panelScore.comments || '').replace(/\*\*|__/g, ''));
+      setComments(panelScore.comments || '');
       setNeedsReview(Boolean(panelScore.needs_review));
     } else {
       const init: Record<string, FieldScore> = {};
