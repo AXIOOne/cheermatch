@@ -51,13 +51,13 @@ interface FormattedCommentFieldProps {
 export const FormattedCommentField = forwardRef<HTMLDivElement, FormattedCommentFieldProps>(
   ({ value, onChange, placeholder, disabled, rows = 3, toolbarClassName, className }, ref) => {
     const editorRef = useRef<HTMLDivElement>(null);
-    const lastEmitted = useRef(value);
+    const lastEmitted = useRef('');
     const [spellCheck, setSpellCheck] = useState(true);
     useImperativeHandle(ref, () => editorRef.current as HTMLDivElement);
 
     useEffect(() => {
       const editor = editorRef.current;
-      if (!editor || value === lastEmitted.current) return;
+      if (!editor || editorToMarkers(editor) === value) return;
       editor.innerHTML = markersToHtml(value);
       lastEmitted.current = value;
     }, [value]);
@@ -121,7 +121,6 @@ export const FormattedCommentField = forwardRef<HTMLDivElement, FormattedComment
             className,
           )}
           style={{ minHeight: `${Math.max(rows, 3) * 1.5 + 1}rem` }}
-          dangerouslySetInnerHTML={{ __html: markersToHtml(value) }}
         />
       </div>
     );
