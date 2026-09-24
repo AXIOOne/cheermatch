@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Search, Loader2, Users, Plus, Pencil, Upload } from 'lucide-react';
 import { AddTeamDialog } from '@/components/admin/AddTeamDialog';
+import { MultiAddTeamsDialog } from '@/components/admin/MultiAddTeamsDialog';
 import { EditRegistrationDialog } from '@/components/admin/EditRegistrationDialog';
 import { BulkImportTeamsDialog } from '@/components/admin/BulkImportTeamsDialog';
 import { CoachAccountsPanel } from '@/components/admin/CoachAccountsPanel';
@@ -17,6 +18,7 @@ export default function EventRegistrations() {
   const { eventId } = useParams<{ eventId: string }>();
   const [searchQuery, setSearchQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
+  const [multiOpen, setMultiOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editTeam, setEditTeam] = useState<any>(null);
 
@@ -81,6 +83,10 @@ export default function EventRegistrations() {
             <Button variant="outline" onClick={() => setImportOpen(true)}>
               <Upload className="w-4 h-4 mr-2" />
               Import CSV
+            </Button>
+            <Button variant="outline" onClick={() => setMultiOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Multiple
             </Button>
             <Button onClick={() => setAddOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
@@ -185,6 +191,9 @@ export default function EventRegistrations() {
 
       {eventId && (
         <AddTeamDialog open={addOpen} onOpenChange={setAddOpen} eventId={eventId} />
+      )}
+      {eventId && (
+        <MultiAddTeamsDialog open={multiOpen} onOpenChange={setMultiOpen} eventId={eventId} />
       )}
       {eventId && (
         <BulkImportTeamsDialog open={importOpen} onOpenChange={setImportOpen} eventId={eventId} />
