@@ -139,6 +139,7 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
                   <FormMessage />
                 </FormItem>
               )} />
+              <FormField control={form.control} name="athletes_male" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Male Athletes</FormLabel>
                   <FormControl><Input type="number" min={0} {...field} /></FormControl>
