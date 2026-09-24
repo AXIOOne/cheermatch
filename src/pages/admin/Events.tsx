@@ -194,7 +194,7 @@ export default function Events() {
 
   const createMutation = useMutation({
     mutationFn: async (data: EventFormData) => {
-      const { error } = await supabase.from('events').insert([{
+      const { data: newEvent, error } = await supabase.from('events').insert([{
         name: data.name,
         description: data.description || null,
         start_date: data.start_date,
@@ -212,8 +212,19 @@ export default function Events() {
         scoring_open_at: toIso(data.scoring_open_at),
         scoring_close_at: toIso(data.scoring_close_at),
         created_by: user!.id,
-      } as any]);
+      } as any]).select('id').single();
       if (error) throw error;
+
+      // Every event gets a Safety & Deductions (SD) panel by default
+      if (newEvent?.id) {
+        const { error: panelError } = await supabase.from('judge_panels').insert({
+          event_id: newEvent.id,
+          name: 'Safety & Deductions',
+          abbreviation: 'SD',
+          display_order: 0,
+        } as any);
+        if (panelError) throw panelError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events'] });
