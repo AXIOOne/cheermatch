@@ -1811,7 +1811,7 @@ export type Database = {
           event_id: string
           gym_name: string
           id: string
-          level_id: string
+          level_id: string | null
           name: string
           organization_id: string | null
           updated_at: string
@@ -1828,7 +1828,7 @@ export type Database = {
           event_id: string
           gym_name: string
           id?: string
-          level_id: string
+          level_id?: string | null
           name: string
           organization_id?: string | null
           updated_at?: string
@@ -1845,7 +1845,7 @@ export type Database = {
           event_id?: string
           gym_name?: string
           id?: string
-          level_id?: string
+          level_id?: string | null
           name?: string
           organization_id?: string | null
           updated_at?: string
