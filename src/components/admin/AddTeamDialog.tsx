@@ -72,8 +72,8 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
       const division = divisions?.find((d) => d.id === data.division_id);
       const levelId =
         division?.level_id ??
-        levels?.find((l) => l.name.toLowerCase() === (division?.level_name || '').toLowerCase())?.id;
-      if (!levelId) throw new Error('This division has no level set. Assign a level to the division first.');
+        levels?.find((l) => l.name.toLowerCase() === (division?.level_name || '').toLowerCase())?.id ??
+        null;
       const { error } = await sb.from('teams').insert({
         event_id: eventId,
         name: data.name,
