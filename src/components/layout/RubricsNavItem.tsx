@@ -21,6 +21,11 @@ const DISCIPLINES: Discipline[] = [
     href: 'https://www.unitedscoringpartners.com',
     external: true,
   },
+  {
+    label: 'NCA School Cheer',
+    href: 'https://www.varsity.com/nca/school/competitions/rules-scoring/',
+    external: true,
+  },
 ];
 
 interface Props {
