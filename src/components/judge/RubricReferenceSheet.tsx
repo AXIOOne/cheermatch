@@ -19,6 +19,11 @@ const DISCIPLINES: { label: string; href: string; external?: boolean }[] = [
     href: 'https://www.unitedscoringpartners.com',
     external: true,
   },
+  {
+    label: 'NCA School Cheer',
+    href: 'https://www.varsity.com/nca/school/competitions/rules-scoring/',
+    external: true,
+  },
 ];
 
 export function RubricReferenceSheet(_props: Props) {
