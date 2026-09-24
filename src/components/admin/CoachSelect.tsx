@@ -6,8 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserRoundPlus } from 'lucide-react';
+import { Check, ChevronsUpDown, Loader2, UserRoundPlus } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { useOrganizations } from '@/hooks/useOrganizations';
 
 const sb = supabase as any;
@@ -72,6 +75,7 @@ export function CoachSelect({ value, onChange }: CoachSelectProps) {
   const { data: coaches, isLoading } = useCoaches();
   const { data: organizations } = useOrganizations({ activeOnly: true });
 
+  const [open, setOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newCoach, setNewCoach] = useState({ full_name: '', email: '', organization_id: '' });
