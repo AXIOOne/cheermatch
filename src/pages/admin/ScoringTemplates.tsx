@@ -679,7 +679,7 @@ export default function ScoringTemplates() {
               <Badge variant="secondary" className="text-xs">{group.templates.length}</Badge>
               <div className="flex-1 h-px bg-border" />
             </div>
-            <div className="grid gap-6 grid-cols-1">
+            <div className="grid gap-2 grid-cols-1">
           {group.templates.map((tpl: any) => {
             const isExpanded = expandedTemplates.has(tpl.id);
             return (
