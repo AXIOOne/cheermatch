@@ -1166,54 +1166,58 @@ export default function SubmissionScoringDialog({
 
                     )}
 
+                </>
+              )}
+              </div>
+
+              {/* Comments & save — full width below video and scores */}
+              <div className="lg:col-span-3 space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Feedback & Comments</label>
+                  <FormattedCommentField placeholder="Overall feedback for the team..."
+                    value={comments} onChange={setComments} rows={3}
+                    disabled={isCurrentPanelLocked} className="mt-1" toolbarClassName="mt-1" />
+                </div>
+
+                <div className="flex flex-col md:flex-row md:items-center gap-3">
+                  <div className="flex items-center justify-between gap-4 p-3 rounded-lg border bg-warning/5 border-warning/30 flex-1">
                     <div>
-                      <label className="text-sm font-medium">Feedback & Comments</label>
-                      <FormattedCommentField placeholder="Overall feedback for the team..."
-                        value={comments} onChange={setComments} rows={3}
-                        disabled={isCurrentPanelLocked} className="mt-1" toolbarClassName="mt-1" />
+                      <label htmlFor="needs-review-switch" className="text-sm font-medium cursor-pointer">Flag for review</label>
+                      <p className="text-xs text-muted-foreground">Mark as needing review.</p>
                     </div>
-
-                    <div className="flex items-center justify-between p-3 rounded-lg border bg-warning/5 border-warning/30">
-                      <div>
-                        <label htmlFor="needs-review-switch" className="text-sm font-medium cursor-pointer">Flag for review</label>
-                        <p className="text-xs text-muted-foreground">Mark as needing review.</p>
-                      </div>
-                      <Switch id="needs-review-switch" checked={needsReview}
-                        onCheckedChange={setNeedsReview} disabled={isCurrentPanelLocked} />
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                      {isCurrentPanelLocked ? (
-                        <Badge variant="secondary" className="py-2 px-4">
-                          <CheckCircle className="w-4 h-4 mr-2" /> Score Locked
-                        </Badge>
-                      ) : (
-                        <>
-                          <Button variant="outline" onClick={() => saveMutation.mutate({ markReviewed: false })}
-                            disabled={isSaving || invalidFields.size > 0} className="flex-1">
-                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                            Save Score
-                          </Button>
-                          <Button onClick={() => saveMutation.mutate({ markReviewed: true })}
-                            disabled={isSaving || invalidFields.size > 0} className="flex-1">
-                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                            Save & Mark as Reviewed
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                    {!isCurrentPanelLocked && invalidFields.size > 0 && (
-                      <p className="text-xs text-destructive font-medium text-center">
-                        {invalidFields.size} score{invalidFields.size === 1 ? '' : 's'} out of range — fix before saving.
-                      </p>
+                    <Switch id="needs-review-switch" checked={needsReview}
+                      onCheckedChange={setNeedsReview} disabled={isCurrentPanelLocked} />
+                  </div>
+                  <div className="flex gap-2">
+                    {isCurrentPanelLocked ? (
+                      <Badge variant="secondary" className="py-2 px-4">
+                        <CheckCircle className="w-4 h-4 mr-2" /> Score Locked
+                      </Badge>
+                    ) : (
+                      <>
+                        <Button variant="outline" onClick={() => saveMutation.mutate({ markReviewed: false })}
+                          disabled={isSaving || invalidFields.size > 0}>
+                          {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                          Save Score
+                        </Button>
+                        <Button onClick={() => saveMutation.mutate({ markReviewed: true })}
+                          disabled={isSaving || invalidFields.size > 0}>
+                          {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                          Save & Mark as Reviewed
+                        </Button>
+                      </>
                     )}
-
-                    {!assignedJudge && (
-                      <p className="text-xs text-muted-foreground text-center">
-                        No judge assigned to this panel — saving will record the score under your admin account.
-                      </p>
-                    )}
-                  </>
+                  </div>
+                </div>
+                {!isCurrentPanelLocked && invalidFields.size > 0 && (
+                  <p className="text-xs text-destructive font-medium text-center">
+                    {invalidFields.size} score{invalidFields.size === 1 ? '' : 's'} out of range — fix before saving.
+                  </p>
+                )}
+                {!assignedJudge && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    No judge assigned to this panel — saving will record the score under your admin account.
+                  </p>
                 )}
               </div>
             </div>
