@@ -535,35 +535,30 @@ export default function EventScoring() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {submissions.map((submission, index) => {
+                {sortedSubmissions.map((submission) => {
                   const coach = submission.team?.coach_user_id 
                     ? coachProfiles?.[submission.team.coach_user_id] 
                     : null;
                   const overallStatus = getOverallStatus(submission);
                   
                   return (
-                    <TableRow key={submission.id}>
-                      <TableCell className="font-mono text-muted-foreground">
-                        {(index + 1).toString().padStart(4, '0')}
+                    <TableRow key={submission.id} className="hover:bg-muted/40">
+                      <TableCell className="py-1.5 px-3 font-mono text-xs text-muted-foreground">
+                        {(subNumberById.get(submission.id) || 0).toString().padStart(4, '0')}
                       </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">
-                            {submission.team?.name || 'Unknown Team'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {submission.team?.gym_name || '—'}
-                          </p>
-                        </div>
-
+                      <TableCell className="py-1.5 px-3">
+                        <p className="font-medium text-sm leading-tight">
+                          {submission.team?.name || 'Unknown Team'}
+                          <span className="font-normal text-muted-foreground"> · {submission.team?.gym_name || '—'}</span>
+                        </p>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-1.5 px-3 text-sm">
                         {submission.team?.division?.name || '—'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-1.5 px-3 text-sm text-muted-foreground">
                         {coach?.full_name || coach?.email || '—'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-1.5 px-3">
                         <Badge
                           variant="outline"
                           className={
