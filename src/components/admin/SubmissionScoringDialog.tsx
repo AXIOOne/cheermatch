@@ -651,13 +651,45 @@ export default function SubmissionScoringDialog({
   const isCurrentPanelReviewed = Boolean(currentPanelScore?.reviewed_at);
   const isCurrentPanelSubmitted = currentPanelScore?.status === 'submitted';
 
+  const currentPanelStatus = getPanelStatus(selectedPanelId);
+
+  const panelStatusColors: Record<string, string> = {
+    pending: 'bg-destructive text-destructive-foreground',
+    in_progress: 'bg-primary text-primary-foreground',
+    submitted: 'bg-success text-success-foreground',
+    needs_review: 'bg-warning text-warning-foreground',
+    locked: 'bg-muted text-muted-foreground',
+    reviewed: 'bg-success text-success-foreground',
+  };
+  const statusLabels: Record<string, string> = {
+    pending: 'Pending',
+    in_progress: 'Draft',
+    submitted: 'Submitted',
+    needs_review: 'Needs Review',
+    locked: 'Locked',
+    reviewed: 'Reviewed',
+  };
+
+  // One summary row per panel: status, assigned judge, and running score.
+  const panelSummaries = panels.map((panel) => {
+    const panelAbbr = (panel.abbreviation || '').toUpperCase();
+    const judge: any = judgeAssignments?.find((ja: any) => ja.panel_id === panel.id);
+    const score: any = allScores?.find((s: any) => resolveScorePanelId(s) === panel.id);
+    const panelMax = (template?.sections || []).reduce((sum: number, sec: any) => {
+      const fields = (sec.fields || []).filter((f: any) => isFieldForPanel(f, panelAbbr));
+      return sum + fields.reduce((a: number, f: any) => a + Number(f.max_points || 0), 0);
+    }, 0);
+    const panelRaw = (score?.details || []).reduce((a: number, d: any) => a + Number(d.points || 0), 0);
+    return { panel, status: getPanelStatus(panel.id), judge, score, panelRaw, panelMax };
+  });
+
   if (!submissionId) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-4 flex-wrap pr-8">
+      <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0 space-y-2">
+          <DialogTitle className="flex items-center gap-3 flex-wrap pr-8">
             <span>Score Submission</span>
             {submission && (
               <Badge variant="outline" className="font-normal">
@@ -669,6 +701,11 @@ export default function SubmissionScoringDialog({
                 <User className="w-3 h-3" />
                 {panels.find(p => p.id === selectedPanelId)?.abbreviation || 'Panel'}:{' '}
                 {assignedJudge?.judge?.full_name || assignedJudge?.judge?.email || 'Unassigned'}
+              </Badge>
+            )}
+            {selectedPanelId && (
+              <Badge className={`font-normal border-transparent ${panelStatusColors[currentPanelStatus] || ''}`}>
+                {statusLabels[currentPanelStatus] || currentPanelStatus}
               </Badge>
             )}
             <div className="ml-auto flex items-center gap-2">
@@ -733,15 +770,46 @@ export default function SubmissionScoringDialog({
               )}
             </div>
           </DialogTitle>
+          {/* Panel assignments — toggle, status, and assigned judge, always at the top */}
+          <div className="flex flex-wrap items-stretch gap-2 pr-8">
+            {panelSummaries.map(({ panel, status, judge, score, panelRaw, panelMax }) => (
+              <button
+                key={panel.id}
+                type="button"
+                onClick={() => setSelectedPanelId(panel.id)}
+                className={`px-3 py-1.5 rounded-lg border text-left transition-all ${
+                  selectedPanelId === panel.id
+                    ? 'ring-2 ring-primary ring-offset-1 border-primary'
+                    : 'border-transparent'
+                } ${panelStatusColors[status] || 'bg-muted text-muted-foreground'}`}
+              >
+                <span className="flex items-center gap-1 text-sm font-bold">
+                  {status === 'reviewed' && <CheckCircle className="w-3.5 h-3.5" />}
+                  {panel.abbreviation}
+                </span>
+                <span className="block text-[11px] leading-tight opacity-90 max-w-[150px] truncate">
+                  {judge?.judge?.full_name || judge?.judge?.email || 'Unassigned'}
+                </span>
+                {score && (
+                  <span className="block text-[10px] opacity-80 font-mono">
+                    {panelRaw.toFixed(2)} / {panelMax.toFixed(2)}
+                  </span>
+                )}
+                {status === 'in_progress' && (
+                  <span className="block text-[10px] font-medium uppercase tracking-wide opacity-90">Draft</span>
+                )}
+              </button>
+            ))}
+          </div>
         </DialogHeader>
 
         {submissionLoading ? (
           <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
         ) : (
           <div className="flex-1 overflow-y-auto">
-            <div className="grid lg:grid-cols-2 gap-6">
+            <div className="grid lg:grid-cols-3 gap-4">
               {/* Video */}
-              <div className="space-y-4">
+              <div className="lg:col-span-2 space-y-4">
                 <Card>
                   <CardContent className="p-0">
                     {(() => {
@@ -793,76 +861,10 @@ export default function SubmissionScoringDialog({
                 </Card>
 
 
-                <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-base">Panel Scoring Status</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-3">
-                      {panels.map((panel) => {
-                        const status = getPanelStatus(panel.id);
-                        const colors: Record<string, string> = {
-                          pending: 'bg-destructive text-destructive-foreground',
-                          in_progress: 'bg-primary text-primary-foreground',
-                          submitted: 'bg-success text-success-foreground',
-                          needs_review: 'bg-warning text-warning-foreground',
-                          locked: 'bg-muted text-muted-foreground',
-                          reviewed: 'bg-success text-success-foreground',
-                        };
-                        const score: any = allScores?.find((s: any) => resolveScorePanelId(s) === panel.id);
-                        const panelAbbr = (panel.abbreviation || '').toUpperCase();
-                        const panelMax = (template?.sections || []).reduce((sum: number, sec: any) => {
-                          const fields = (sec.fields || []).filter((f: any) => isFieldForPanel(f, panelAbbr));
-                          return sum + fields.reduce((a: number, f: any) => a + Number(f.max_points || 0), 0);
-                        }, 0);
-                        const panelRaw = (score?.details || []).reduce((a: number, d: any) => a + Number(d.points || 0), 0);
-                        return (
-                          <div key={panel.id}
-                            className={`px-3 py-2 rounded-lg text-center cursor-pointer transition-all ${selectedPanelId === panel.id ? 'ring-2 ring-primary ring-offset-2' : ''} ${colors[status] || ''}`}
-                            onClick={() => setSelectedPanelId(panel.id)}>
-                            <p className="font-bold flex items-center justify-center gap-1">
-                              {status === 'reviewed' && <CheckCircle className="w-3.5 h-3.5" />}
-                              {panel.abbreviation}
-                            </p>
-                            {score && (
-                              <p className="text-xs opacity-90">{panelRaw.toFixed(2)} / {panelMax.toFixed(2)}</p>
-                            )}
-                            {status === 'in_progress' && (
-                              <p className="text-[10px] font-medium uppercase tracking-wide opacity-90">Draft</p>
-                            )}
-                          </div>
-                        );
-
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
 
               {/* Scoring Form */}
               <div className="space-y-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1">
-                        <label className="text-sm font-medium mb-1 block">Scoring Panel</label>
-                        <Select value={selectedPanelId} onValueChange={setSelectedPanelId}>
-                          <SelectTrigger><SelectValue placeholder="Select panel" /></SelectTrigger>
-                          <SelectContent>
-                            {panels.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} ({p.abbreviation})</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {assignedJudge && (
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Assigned Judge</p>
-                          <p className="text-sm font-medium flex items-center gap-1">
-                            <User className="w-3 h-3" />
-                            {assignedJudge.judge?.full_name || assignedJudge.judge?.email || 'Unassigned'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
 
                 {currentPanelScore?.status === 'in_progress' && (
                   <div className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-3">
@@ -900,7 +902,7 @@ export default function SubmissionScoringDialog({
                         </div>
                       </div>
                     )}
-                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                    <div className="space-y-4 max-h-[520px] overflow-y-auto pr-2">
                       {visibleSections.length === 0 && !isSdPanel && (
                         <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
                           No scoring fields are assigned to this panel.
@@ -1164,54 +1166,58 @@ export default function SubmissionScoringDialog({
 
                     )}
 
+                </>
+              )}
+              </div>
+
+              {/* Comments & save — full width below video and scores */}
+              <div className="lg:col-span-3 space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Feedback & Comments</label>
+                  <FormattedCommentField placeholder="Overall feedback for the team..."
+                    value={comments} onChange={setComments} rows={3}
+                    disabled={isCurrentPanelLocked} className="mt-1" toolbarClassName="mt-1" />
+                </div>
+
+                <div className="flex flex-col md:flex-row md:items-center gap-3">
+                  <div className="flex items-center justify-between gap-4 p-3 rounded-lg border bg-warning/5 border-warning/30 flex-1">
                     <div>
-                      <label className="text-sm font-medium">Feedback & Comments</label>
-                      <FormattedCommentField placeholder="Overall feedback for the team..."
-                        value={comments} onChange={setComments} rows={3}
-                        disabled={isCurrentPanelLocked} className="mt-1" toolbarClassName="mt-1" />
+                      <label htmlFor="needs-review-switch" className="text-sm font-medium cursor-pointer">Flag for review</label>
+                      <p className="text-xs text-muted-foreground">Mark as needing review.</p>
                     </div>
-
-                    <div className="flex items-center justify-between p-3 rounded-lg border bg-warning/5 border-warning/30">
-                      <div>
-                        <label htmlFor="needs-review-switch" className="text-sm font-medium cursor-pointer">Flag for review</label>
-                        <p className="text-xs text-muted-foreground">Mark as needing review.</p>
-                      </div>
-                      <Switch id="needs-review-switch" checked={needsReview}
-                        onCheckedChange={setNeedsReview} disabled={isCurrentPanelLocked} />
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                      {isCurrentPanelLocked ? (
-                        <Badge variant="secondary" className="py-2 px-4">
-                          <CheckCircle className="w-4 h-4 mr-2" /> Score Locked
-                        </Badge>
-                      ) : (
-                        <>
-                          <Button variant="outline" onClick={() => saveMutation.mutate({ markReviewed: false })}
-                            disabled={isSaving || invalidFields.size > 0} className="flex-1">
-                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                            Save Score
-                          </Button>
-                          <Button onClick={() => saveMutation.mutate({ markReviewed: true })}
-                            disabled={isSaving || invalidFields.size > 0} className="flex-1">
-                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
-                            Save & Mark as Reviewed
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                    {!isCurrentPanelLocked && invalidFields.size > 0 && (
-                      <p className="text-xs text-destructive font-medium text-center">
-                        {invalidFields.size} score{invalidFields.size === 1 ? '' : 's'} out of range — fix before saving.
-                      </p>
+                    <Switch id="needs-review-switch" checked={needsReview}
+                      onCheckedChange={setNeedsReview} disabled={isCurrentPanelLocked} />
+                  </div>
+                  <div className="flex gap-2">
+                    {isCurrentPanelLocked ? (
+                      <Badge variant="secondary" className="py-2 px-4">
+                        <CheckCircle className="w-4 h-4 mr-2" /> Score Locked
+                      </Badge>
+                    ) : (
+                      <>
+                        <Button variant="outline" onClick={() => saveMutation.mutate({ markReviewed: false })}
+                          disabled={isSaving || invalidFields.size > 0}>
+                          {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                          Save Score
+                        </Button>
+                        <Button onClick={() => saveMutation.mutate({ markReviewed: true })}
+                          disabled={isSaving || invalidFields.size > 0}>
+                          {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                          Save & Mark as Reviewed
+                        </Button>
+                      </>
                     )}
-
-                    {!assignedJudge && (
-                      <p className="text-xs text-muted-foreground text-center">
-                        No judge assigned to this panel — saving will record the score under your admin account.
-                      </p>
-                    )}
-                  </>
+                  </div>
+                </div>
+                {!isCurrentPanelLocked && invalidFields.size > 0 && (
+                  <p className="text-xs text-destructive font-medium text-center">
+                    {invalidFields.size} score{invalidFields.size === 1 ? '' : 's'} out of range — fix before saving.
+                  </p>
+                )}
+                {!assignedJudge && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    No judge assigned to this panel — saving will record the score under your admin account.
+                  </p>
                 )}
               </div>
             </div>
