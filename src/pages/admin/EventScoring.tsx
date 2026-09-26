@@ -561,7 +561,7 @@ export default function EventScoring() {
                       <TableCell className="py-1.5 px-3">
                         <Badge
                           variant="outline"
-                          className={
+                          className={'text-[11px] px-2 py-0 ' + (
                             overallStatus.needsReview
                               ? 'bg-warning/10 text-warning border-warning/20'
                               : overallStatus.allReviewed
