@@ -571,7 +571,7 @@ export default function EventScoring() {
                               : overallStatus.hasDraft
                               ? 'bg-primary/10 text-primary border-primary/20'
                               : 'bg-muted text-muted-foreground border-transparent'
-                          }
+                          )}
                         >
                           {overallStatus.text}
                         </Badge>
