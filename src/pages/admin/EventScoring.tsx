@@ -473,8 +473,8 @@ export default function EventScoring() {
 
       {/* Panel Legend */}
       {panels && panels.length > 0 && (
-        <Card className="mb-4">
-          <CardContent className="p-4">
+        <Card className="mb-3">
+          <CardContent className="py-2.5 px-4">
             <div className="flex items-center gap-6 flex-wrap">
               <span className="text-sm font-medium text-muted-foreground">Status Legend:</span>
               <div className="flex items-center gap-2">
@@ -519,15 +519,15 @@ export default function EventScoring() {
           ) : submissions && submissions.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-20">Sub #</TableHead>
-                  <TableHead>Team</TableHead>
-                  <TableHead>Team Division</TableHead>
-                  <TableHead>Coach</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[160px]">Action</TableHead>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="h-8 px-3 w-16 text-xs">Sub #</TableHead>
+                  <TableHead className="h-8 px-3 text-xs">Team</TableHead>
+                  <TableHead className="h-8 px-3 text-xs">Team Division</TableHead>
+                  <TableHead className="h-8 px-3 text-xs">Coach</TableHead>
+                  <TableHead className="h-8 px-3 text-xs">Status</TableHead>
+                  <TableHead className="h-8 px-3 w-[120px] text-xs">Action</TableHead>
                   {panels?.map((panel) => (
-                    <TableHead key={panel.id} className="text-center w-12">
+                    <TableHead key={panel.id} className="h-8 px-2 text-center w-10 text-xs">
                       {panel.abbreviation}
                     </TableHead>
                   ))}
