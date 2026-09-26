@@ -902,7 +902,7 @@ export default function SubmissionScoringDialog({
                         </div>
                       </div>
                     )}
-                    <div className="space-y-4 max-h-[520px] overflow-y-auto pr-2">
+                    <div className="space-y-4 max-h-[340px] overflow-y-auto pr-2">
                       {visibleSections.length === 0 && !isSdPanel && (
                         <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
                           No scoring fields are assigned to this panel.
@@ -1120,7 +1120,7 @@ export default function SubmissionScoringDialog({
 
 
                         {template.deduction_types && template.deduction_types.length > 0 ? (
-                          <div className="space-y-2">
+                          <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1">
                             {sortByDisplayOrder(template.deduction_types as any[]).map((dt: any) => (
                               <div key={dt.id} className="flex items-center justify-between gap-3">
                                 <div className="min-w-0 flex-1">
