@@ -416,55 +416,55 @@ export default function EventScoring() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-full">
-                <BarChart3 className="w-6 h-6 text-primary" />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-full">
+                <BarChart3 className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Submissions</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-xs text-muted-foreground">Total Submissions</p>
+                <p className="text-lg font-bold leading-tight">{stats.total}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-success/10 rounded-full">
-                <CheckCircle className="w-6 h-6 text-success" />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-success/10 rounded-full">
+                <CheckCircle className="w-4 h-4 text-success" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Fully Scored</p>
-                <p className="text-2xl font-bold">{stats.fullyScored}</p>
+                <p className="text-xs text-muted-foreground">Fully Scored</p>
+                <p className="text-lg font-bold leading-tight">{stats.fullyScored}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-warning/10 rounded-full">
-                <Clock className="w-6 h-6 text-warning" />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-warning/10 rounded-full">
+                <Clock className="w-4 h-4 text-warning" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold">{stats.pending}</p>
+                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-lg font-bold leading-tight">{stats.pending}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-warning/10 rounded-full">
-                <AlertCircle className="w-6 h-6 text-warning" />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-warning/10 rounded-full">
+                <AlertCircle className="w-4 h-4 text-warning" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Needs Review</p>
-                <p className="text-2xl font-bold">{stats.needsReview}</p>
+                <p className="text-xs text-muted-foreground">Needs Review</p>
+                <p className="text-lg font-bold leading-tight">{stats.needsReview}</p>
               </div>
             </div>
           </CardContent>
