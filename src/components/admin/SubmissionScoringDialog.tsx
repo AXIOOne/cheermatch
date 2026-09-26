@@ -861,76 +861,10 @@ export default function SubmissionScoringDialog({
                 </Card>
 
 
-                <Card>
-                  <CardHeader className="pb-2"><CardTitle className="text-base">Panel Scoring Status</CardTitle></CardHeader>
-                  <CardContent>
-                    <div className="flex flex-wrap gap-3">
-                      {panels.map((panel) => {
-                        const status = getPanelStatus(panel.id);
-                        const colors: Record<string, string> = {
-                          pending: 'bg-destructive text-destructive-foreground',
-                          in_progress: 'bg-primary text-primary-foreground',
-                          submitted: 'bg-success text-success-foreground',
-                          needs_review: 'bg-warning text-warning-foreground',
-                          locked: 'bg-muted text-muted-foreground',
-                          reviewed: 'bg-success text-success-foreground',
-                        };
-                        const score: any = allScores?.find((s: any) => resolveScorePanelId(s) === panel.id);
-                        const panelAbbr = (panel.abbreviation || '').toUpperCase();
-                        const panelMax = (template?.sections || []).reduce((sum: number, sec: any) => {
-                          const fields = (sec.fields || []).filter((f: any) => isFieldForPanel(f, panelAbbr));
-                          return sum + fields.reduce((a: number, f: any) => a + Number(f.max_points || 0), 0);
-                        }, 0);
-                        const panelRaw = (score?.details || []).reduce((a: number, d: any) => a + Number(d.points || 0), 0);
-                        return (
-                          <div key={panel.id}
-                            className={`px-3 py-2 rounded-lg text-center cursor-pointer transition-all ${selectedPanelId === panel.id ? 'ring-2 ring-primary ring-offset-2' : ''} ${colors[status] || ''}`}
-                            onClick={() => setSelectedPanelId(panel.id)}>
-                            <p className="font-bold flex items-center justify-center gap-1">
-                              {status === 'reviewed' && <CheckCircle className="w-3.5 h-3.5" />}
-                              {panel.abbreviation}
-                            </p>
-                            {score && (
-                              <p className="text-xs opacity-90">{panelRaw.toFixed(2)} / {panelMax.toFixed(2)}</p>
-                            )}
-                            {status === 'in_progress' && (
-                              <p className="text-[10px] font-medium uppercase tracking-wide opacity-90">Draft</p>
-                            )}
-                          </div>
-                        );
-
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
               </div>
 
               {/* Scoring Form */}
               <div className="space-y-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1">
-                        <label className="text-sm font-medium mb-1 block">Scoring Panel</label>
-                        <Select value={selectedPanelId} onValueChange={setSelectedPanelId}>
-                          <SelectTrigger><SelectValue placeholder="Select panel" /></SelectTrigger>
-                          <SelectContent>
-                            {panels.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} ({p.abbreviation})</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      {assignedJudge && (
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Assigned Judge</p>
-                          <p className="text-sm font-medium flex items-center gap-1">
-                            <User className="w-3 h-3" />
-                            {assignedJudge.judge?.full_name || assignedJudge.judge?.email || 'Unassigned'}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
 
                 {currentPanelScore?.status === 'in_progress' && (
                   <div className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-3">
@@ -968,7 +902,7 @@ export default function SubmissionScoringDialog({
                         </div>
                       </div>
                     )}
-                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                    <div className="space-y-4 max-h-[520px] overflow-y-auto pr-2">
                       {visibleSections.length === 0 && !isSdPanel && (
                         <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">
                           No scoring fields are assigned to this panel.
