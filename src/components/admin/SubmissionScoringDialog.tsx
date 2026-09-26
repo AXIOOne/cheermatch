@@ -807,9 +807,9 @@ export default function SubmissionScoringDialog({
           <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
         ) : (
           <div className="flex-1 overflow-y-auto">
-            <div className="grid lg:grid-cols-3 gap-4">
+            <div className="grid lg:grid-cols-[11fr_9fr] gap-4 items-start">
               {/* Video */}
-              <div className="lg:col-span-2 space-y-4">
+              <div className="space-y-4">
                 <Card>
                   <CardContent className="p-0">
                     {(() => {
@@ -1171,7 +1171,7 @@ export default function SubmissionScoringDialog({
               </div>
 
               {/* Comments & save — full width below video and scores */}
-              <div className="lg:col-span-3 space-y-4">
+              <div className="lg:col-span-2 space-y-4">
                 <div>
                   <label className="text-sm font-medium">Feedback & Comments</label>
                   <FormattedCommentField placeholder="Overall feedback for the team..."
