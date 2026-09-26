@@ -175,6 +175,21 @@ export default function EventScoring() {
     enabled: !!submissions && submissions.length > 0,
   });
 
+  // Submission numbers stay fixed to creation order; the table itself is always
+  // grouped by division so teams in the same division appear together.
+  const { sortedSubmissions, subNumberById } = useMemo(() => {
+    const list = submissions || [];
+    const numbers = new Map<string, number>();
+    list.forEach((s, i) => numbers.set(s.id, i + 1));
+    const sorted = [...list].sort((a, b) => {
+      const divA = a.team?.division?.name || '—';
+      const divB = b.team?.division?.name || '—';
+      if (divA !== divB) return divA.localeCompare(divB);
+      return (numbers.get(a.id) || 0) - (numbers.get(b.id) || 0);
+    });
+    return { sortedSubmissions: sorted, subNumberById: numbers };
+  }, [submissions]);
+
   const sendScoreSheetMutation = useMutation({
     mutationFn: async (submissionId: string) => {
       const { data, error } = await supabase.functions.invoke('send-scoresheet-email', {
