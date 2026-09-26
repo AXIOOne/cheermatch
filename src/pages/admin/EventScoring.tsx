@@ -576,12 +576,12 @@ export default function EventScoring() {
                           {overallStatus.text}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-1.5 px-3">
                         <div className="flex items-center gap-1">
                           <Button
                             variant="default"
                             size="sm"
-                            className="h-8 bg-success text-success-foreground hover:bg-success/90"
+                            className="h-7 px-2.5 text-xs bg-success text-success-foreground hover:bg-success/90"
                             disabled={sendingScoreFor === submission.id || !overallStatus.allReviewed}
                             onClick={() =>
                               setConfirmSendFor({ id: submission.id, teamName: submission.team?.name || 'this team' })
