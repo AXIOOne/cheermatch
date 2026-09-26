@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -174,6 +174,21 @@ export default function EventScoring() {
     },
     enabled: !!submissions && submissions.length > 0,
   });
+
+  // Submission numbers stay fixed to creation order; the table itself is always
+  // grouped by division so teams in the same division appear together.
+  const { sortedSubmissions, subNumberById } = useMemo(() => {
+    const list = submissions || [];
+    const numbers = new Map<string, number>();
+    list.forEach((s, i) => numbers.set(s.id, i + 1));
+    const sorted = [...list].sort((a, b) => {
+      const divA = a.team?.division?.name || '—';
+      const divB = b.team?.division?.name || '—';
+      if (divA !== divB) return divA.localeCompare(divB);
+      return (numbers.get(a.id) || 0) - (numbers.get(b.id) || 0);
+    });
+    return { sortedSubmissions: sorted, subNumberById: numbers };
+  }, [submissions]);
 
   const sendScoreSheetMutation = useMutation({
     mutationFn: async (submissionId: string) => {
@@ -401,55 +416,55 @@ export default function EventScoring() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-full">
-                <BarChart3 className="w-6 h-6 text-primary" />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-full">
+                <BarChart3 className="w-4 h-4 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Submissions</p>
-                <p className="text-2xl font-bold">{stats.total}</p>
+                <p className="text-xs text-muted-foreground">Total Submissions</p>
+                <p className="text-lg font-bold leading-tight">{stats.total}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-success/10 rounded-full">
-                <CheckCircle className="w-6 h-6 text-success" />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-success/10 rounded-full">
+                <CheckCircle className="w-4 h-4 text-success" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Fully Scored</p>
-                <p className="text-2xl font-bold">{stats.fullyScored}</p>
+                <p className="text-xs text-muted-foreground">Fully Scored</p>
+                <p className="text-lg font-bold leading-tight">{stats.fullyScored}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-warning/10 rounded-full">
-                <Clock className="w-6 h-6 text-warning" />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-warning/10 rounded-full">
+                <Clock className="w-4 h-4 text-warning" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold">{stats.pending}</p>
+                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-lg font-bold leading-tight">{stats.pending}</p>
               </div>
             </div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-warning/10 rounded-full">
-                <AlertCircle className="w-6 h-6 text-warning" />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-warning/10 rounded-full">
+                <AlertCircle className="w-4 h-4 text-warning" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Needs Review</p>
-                <p className="text-2xl font-bold">{stats.needsReview}</p>
+                <p className="text-xs text-muted-foreground">Needs Review</p>
+                <p className="text-lg font-bold leading-tight">{stats.needsReview}</p>
               </div>
             </div>
           </CardContent>
@@ -458,8 +473,8 @@ export default function EventScoring() {
 
       {/* Panel Legend */}
       {panels && panels.length > 0 && (
-        <Card className="mb-4">
-          <CardContent className="p-4">
+        <Card className="mb-3">
+          <CardContent className="py-2.5 px-4">
             <div className="flex items-center gap-6 flex-wrap">
               <span className="text-sm font-medium text-muted-foreground">Status Legend:</span>
               <div className="flex items-center gap-2">
@@ -504,15 +519,15 @@ export default function EventScoring() {
           ) : submissions && submissions.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-20">Sub #</TableHead>
-                  <TableHead>Team</TableHead>
-                  <TableHead>Team Division</TableHead>
-                  <TableHead>Coach</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-[160px]">Action</TableHead>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className="h-8 px-3 w-16 text-xs">Sub #</TableHead>
+                  <TableHead className="h-8 px-3 text-xs">Team</TableHead>
+                  <TableHead className="h-8 px-3 text-xs">Team Division</TableHead>
+                  <TableHead className="h-8 px-3 text-xs">Coach</TableHead>
+                  <TableHead className="h-8 px-3 text-xs">Status</TableHead>
+                  <TableHead className="h-8 px-3 w-[120px] text-xs">Action</TableHead>
                   {panels?.map((panel) => (
-                    <TableHead key={panel.id} className="text-center w-12">
+                    <TableHead key={panel.id} className="h-8 px-2 text-center w-10 text-xs">
                       {panel.abbreviation}
                     </TableHead>
                   ))}
@@ -520,38 +535,33 @@ export default function EventScoring() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {submissions.map((submission, index) => {
+                {sortedSubmissions.map((submission) => {
                   const coach = submission.team?.coach_user_id 
                     ? coachProfiles?.[submission.team.coach_user_id] 
                     : null;
                   const overallStatus = getOverallStatus(submission);
                   
                   return (
-                    <TableRow key={submission.id}>
-                      <TableCell className="font-mono text-muted-foreground">
-                        {(index + 1).toString().padStart(4, '0')}
+                    <TableRow key={submission.id} className="hover:bg-muted/40">
+                      <TableCell className="py-1.5 px-3 font-mono text-xs text-muted-foreground">
+                        {(subNumberById.get(submission.id) || 0).toString().padStart(4, '0')}
                       </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">
-                            {submission.team?.name || 'Unknown Team'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {submission.team?.gym_name || '—'}
-                          </p>
-                        </div>
-
+                      <TableCell className="py-1.5 px-3">
+                        <p className="font-medium text-sm leading-tight">
+                          {submission.team?.name || 'Unknown Team'}
+                          <span className="font-normal text-muted-foreground"> · {submission.team?.gym_name || '—'}</span>
+                        </p>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-1.5 px-3 text-sm">
                         {submission.team?.division?.name || '—'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-1.5 px-3 text-sm text-muted-foreground">
                         {coach?.full_name || coach?.email || '—'}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-1.5 px-3">
                         <Badge
                           variant="outline"
-                          className={
+                          className={'text-[11px] px-2 py-0 ' + (
                             overallStatus.needsReview
                               ? 'bg-warning/10 text-warning border-warning/20'
                               : overallStatus.allReviewed
@@ -561,17 +571,17 @@ export default function EventScoring() {
                               : overallStatus.hasDraft
                               ? 'bg-primary/10 text-primary border-primary/20'
                               : 'bg-muted text-muted-foreground border-transparent'
-                          }
+                          )}
                         >
                           {overallStatus.text}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-1.5 px-3">
                         <div className="flex items-center gap-1">
                           <Button
                             variant="default"
                             size="sm"
-                            className="h-8 bg-success text-success-foreground hover:bg-success/90"
+                            className="h-7 px-2.5 text-xs bg-success text-success-foreground hover:bg-success/90"
                             disabled={sendingScoreFor === submission.id || !overallStatus.allReviewed}
                             onClick={() =>
                               setConfirmSendFor({ id: submission.id, teamName: submission.team?.name || 'this team' })
@@ -589,7 +599,7 @@ export default function EventScoring() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8"
+                                className="h-7 w-7"
                                 aria-label="More actions"
                               >
                                 <MoreHorizontal className="w-4 h-4" />
@@ -622,7 +632,7 @@ export default function EventScoring() {
 
 
                       {panels?.map((panel) => (
-                        <TableCell key={panel.id} className="text-center">
+                        <TableCell key={panel.id} className="py-1.5 px-2 text-center">
                           <div className="flex justify-center">
                             <StatusIndicator
                               status={getPanelStatus(submission, panel.id)}
