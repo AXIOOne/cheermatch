@@ -632,7 +632,7 @@ export default function EventScoring() {
 
 
                       {panels?.map((panel) => (
-                        <TableCell key={panel.id} className="text-center">
+                        <TableCell key={panel.id} className="py-1.5 px-2 text-center">
                           <div className="flex justify-center">
                             <StatusIndicator
                               status={getPanelStatus(submission, panel.id)}
