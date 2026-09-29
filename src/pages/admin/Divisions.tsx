@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Layers, Loader2, Trash2, Pencil } from 'lucide-react';
+import { Plus, Layers, Loader2, Trash2, Pencil, Search } from 'lucide-react';
 
 const DISCIPLINES = [
   { value: 'allstar_cheer', label: 'All-Star Cheer' },
@@ -40,6 +40,7 @@ export default function Divisions() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDivision, setEditingDivision] = useState<any | null>(null);
   const [filter, setFilter] = useState<string>('all');
+  const [search, setSearch] = useState('');
   const [name, setName] = useState('');
   const [levelId, setLevelId] = useState<string>(NO_LEVEL);
   const [disciplineState, setDisciplineState] = useState<DisciplineState>(emptyDisciplineState());
@@ -124,11 +125,28 @@ export default function Divisions() {
 
   const filteredDivisions = useMemo(() => {
     if (!divisions) return [];
-    if (filter === 'all') return divisions;
-    return divisions.filter((d: any) =>
-      (d.discipline_links || []).some((l: any) => l.discipline === filter)
-    );
-  }, [divisions, filter]);
+    let result = divisions;
+    if (filter !== 'all') {
+      result = result.filter((d: any) =>
+        (d.discipline_links || []).some((l: any) => l.discipline === filter)
+      );
+    }
+    const q = search.trim().toLowerCase();
+    if (q) {
+      result = result.filter((d: any) => {
+        const levelName = (d.level_ref?.name || d.level || '').toLowerCase();
+        const disciplineNames = (d.discipline_links || [])
+          .map((l: any) => disciplineLabel(l.discipline).toLowerCase())
+          .join(' ');
+        return (
+          d.name?.toLowerCase().includes(q) ||
+          levelName.includes(q) ||
+          disciplineNames.includes(q)
+        );
+      });
+    }
+    return result;
+  }, [divisions, filter, search]);
 
   const upsertMutation = useMutation({
     mutationFn: async () => {
@@ -239,16 +257,27 @@ export default function Divisions() {
         </Button>
       </div>
 
-      <Tabs value={filter} onValueChange={setFilter} className="mb-4">
-        <TabsList className="flex flex-wrap h-auto">
-          <TabsTrigger value="all">All</TabsTrigger>
-          {DISCIPLINES.map((d) => (
-            <TabsTrigger key={d.value} value={d.value}>
-              {d.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <Tabs value={filter} onValueChange={setFilter} className="flex-1">
+          <TabsList className="flex flex-wrap h-auto">
+            <TabsTrigger value="all">All</TabsTrigger>
+            {DISCIPLINES.map((d) => (
+              <TabsTrigger key={d.value} value={d.value}>
+                {d.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <div className="relative w-64 shrink-0">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search divisions..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
 
       <Card>
         <CardContent className="p-0">
