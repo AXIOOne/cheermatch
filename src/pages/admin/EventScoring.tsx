@@ -327,8 +327,9 @@ export default function EventScoring() {
   const stats = {
     total: submissions?.length || 0,
     fullyScored: submissions?.filter(s => {
-      if (!panels || panels.length === 0) return false;
-      return panels.every(p => {
+      const rp = relevantPanels(s);
+      if (rp.length === 0) return false;
+      return rp.every(p => {
         const sc = findScoreForPanel(s, p.id);
         return sc?.status === 'submitted';
       });
@@ -337,8 +338,9 @@ export default function EventScoring() {
       s.scores.some(sc => sc.needs_review && !sc.reviewed_at)
     ).length || 0,
     pending: submissions?.filter(s => {
-      if (!panels || panels.length === 0) return s.scores.length === 0;
-      return !panels.every(p => {
+      const rp = relevantPanels(s);
+      if (rp.length === 0) return s.scores.length === 0;
+      return !rp.every(p => {
         const sc = findScoreForPanel(s, p.id);
         return sc?.status === 'submitted';
       });
@@ -363,24 +365,25 @@ export default function EventScoring() {
   ): { text: string; allComplete: boolean; allReviewed: boolean; needsReview: boolean; hasDraft: boolean } => {
     const needsReview = submission.scores.some(s => s.needs_review && !s.reviewed_at);
     const hasDraft = submission.scores.some(s => s.status === 'in_progress');
-    if (!panels || panels.length === 0) {
+    const subPanels = relevantPanels(submission);
+    if (subPanels.length === 0) {
       const hasSubmitted = submission.scores.some(s => s.status === 'submitted');
       const hasReviewed = hasSubmitted && submission.scores.every(s => s.status !== 'submitted' || s.reviewed_at);
       const text = needsReview ? 'NEEDS REVIEW' : hasReviewed ? 'REVIEWED' : hasSubmitted ? 'SCORED' : hasDraft ? 'DRAFT SAVED' : 'PENDING';
       return { text, allComplete: hasSubmitted, allReviewed: hasReviewed, needsReview, hasDraft };
     }
 
-    const completedPanels = panels.filter(p => {
+    const completedPanels = subPanels.filter(p => {
       const sc = findScoreForPanel(submission, p.id);
       return sc?.status === 'submitted';
     }).length;
-    const reviewedPanels = panels.filter(p => {
+    const reviewedPanels = subPanels.filter(p => {
       const sc = findScoreForPanel(submission, p.id);
       return sc?.status === 'submitted' && sc?.reviewed_at;
     }).length;
 
-    const allComplete = completedPanels === panels.length;
-    const allReviewed = allComplete && reviewedPanels === panels.length;
+    const allComplete = completedPanels === subPanels.length;
+    const allReviewed = allComplete && reviewedPanels === subPanels.length;
     if (needsReview) return { text: 'NEEDS REVIEW', allComplete, allReviewed, needsReview, hasDraft };
     if (allReviewed) return { text: 'REVIEWED', allComplete, allReviewed, needsReview, hasDraft };
     if (allComplete) return { text: 'COMPLETE', allComplete, allReviewed, needsReview, hasDraft };
