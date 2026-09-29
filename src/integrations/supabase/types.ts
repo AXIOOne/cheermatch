@@ -1923,7 +1923,7 @@ export type Database = {
           submitted_at: string | null
           submitted_by: string | null
           submitted_via: string
-          team_id: string
+          team_id: string | null
           thumbnail_url: string | null
           updated_at: string
           video_url: string | null
@@ -1948,7 +1948,7 @@ export type Database = {
           submitted_at?: string | null
           submitted_by?: string | null
           submitted_via?: string
-          team_id: string
+          team_id?: string | null
           thumbnail_url?: string | null
           updated_at?: string
           video_url?: string | null
@@ -1973,7 +1973,7 @@ export type Database = {
           submitted_at?: string | null
           submitted_by?: string | null
           submitted_via?: string
-          team_id?: string
+          team_id?: string | null
           thumbnail_url?: string | null
           updated_at?: string
           video_url?: string | null
