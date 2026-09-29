@@ -58,6 +58,41 @@ export default function EventRegistrations() {
     },
   });
 
+  // Video submissions for this event, so the delete confirmation can warn when a submission is kept
+  const { data: eventSubmissions } = useQuery({
+    queryKey: ['event-teams-submissions', eventId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('video_submissions')
+        .select('id, team_id')
+        .eq('event_id', eventId!);
+      if (error) throw error;
+      return data as Array<{ id: string; team_id: string | null }>;
+    },
+    enabled: !!eventId,
+  });
+
+  const submissionCountByTeam = useMemo(() => {
+    const map = new Map<string, number>();
+    (eventSubmissions ?? []).forEach((s) => {
+      if (s.team_id) map.set(s.team_id, (map.get(s.team_id) ?? 0) + 1);
+    });
+    return map;
+  }, [eventSubmissions]);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (teamId: string) => {
+      const { error } = await supabase.from('teams').delete().eq('id', teamId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['event-teams', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['event-participants', eventId] });
+      setDeleteTeam(null);
+    },
+  });
+
   const filteredTeams = useMemo(() => {
     if (!teams) return [];
     if (!searchQuery) return teams;
