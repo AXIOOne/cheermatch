@@ -28,6 +28,7 @@ const DISCIPLINES = [
 const disciplineLabel = (v: string) => DISCIPLINES.find((d) => d.value === v)?.label ?? v;
 
 const NO_LEVEL = '__none__';
+const ALL_LEVELS = '__all__';
 
 type DisciplineState = Record<string, { active: boolean; templateId: string }>;
 
@@ -41,6 +42,7 @@ export default function Divisions() {
   const [editingDivision, setEditingDivision] = useState<any | null>(null);
   const [filter, setFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const [levelFilter, setLevelFilter] = useState<string>(ALL_LEVELS);
   const [name, setName] = useState('');
   const [levelId, setLevelId] = useState<string>(NO_LEVEL);
   const [disciplineState, setDisciplineState] = useState<DisciplineState>(emptyDisciplineState());
@@ -131,6 +133,12 @@ export default function Divisions() {
         (d.discipline_links || []).some((l: any) => l.discipline === filter)
       );
     }
+    if (levelFilter !== ALL_LEVELS) {
+      result = result.filter((d: any) => {
+        if (levelFilter === NO_LEVEL) return !d.level_id && !d.level;
+        return d.level_id === levelFilter || (!d.level_id && d.level === (levels || []).find((l: any) => l.id === levelFilter)?.name);
+      });
+    }
     const q = search.trim().toLowerCase();
     if (q) {
       result = result.filter((d: any) => {
@@ -146,7 +154,7 @@ export default function Divisions() {
       });
     }
     return result;
-  }, [divisions, filter, search]);
+  }, [divisions, filter, search, levelFilter, levels]);
 
   const upsertMutation = useMutation({
     mutationFn: async () => {
@@ -277,6 +285,20 @@ export default function Divisions() {
             className="pl-8"
           />
         </div>
+        <Select value={levelFilter} onValueChange={setLevelFilter}>
+          <SelectTrigger className="w-44 shrink-0">
+            <SelectValue placeholder="All levels" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_LEVELS}>All levels</SelectItem>
+            {(levels || []).map((l: any) => (
+              <SelectItem key={l.id} value={l.id}>
+                {l.name}
+              </SelectItem>
+            ))}
+            <SelectItem value={NO_LEVEL}>No level</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Card>
