@@ -118,6 +118,7 @@ export default function ScoringQueue() {
         .in('event_id', assignedEventIds)
         .in('status', ['approved', 'assigned', 'complete'])
         .is('archived_at', null)
+        .not('team_id', 'is', null)
         .order('created_at', { ascending: true });
 
       if (selectedEvent && selectedEvent !== 'all') {
