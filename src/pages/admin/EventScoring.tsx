@@ -29,6 +29,7 @@ import AssignPanelsDialog from '@/components/admin/AssignPanelsDialog';
 import SubmissionScoringDialog from '@/components/admin/SubmissionScoringDialog';
 import { downloadSubmissionScoresheet, generateSubmissionScoresheetBytes } from '@/lib/download-submission-scoresheet';
 import { downloadPdf } from '@/lib/scoresheet-pdf';
+import { panelsForTemplate, pickDivisionTemplateId } from '@/lib/scoring';
 
 
 interface JudgePanel {
@@ -57,7 +58,12 @@ interface Submission {
     name: string;
     gym_name: string;
     coach_user_id: string;
-    division: { id: string; name: string } | null;
+    division: {
+      id: string;
+      name: string;
+      scoring_template_id?: string | null;
+      discipline_links?: { discipline: string; scoring_template_id: string | null }[] | null;
+    } | null;
     level: { id: string; name: string } | null;
   } | null;
   scores: Score[];
@@ -118,7 +124,7 @@ export default function EventScoring() {
             name, 
             gym_name,
             coach_user_id,
-            division:divisions(id, name),
+            division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)),
             level:levels(id, name)
           ),
           scores:scores(id, status, total_score, panel_id, judge_user_id, needs_review, reviewed_at, review_reason)
@@ -156,6 +162,44 @@ export default function EventScoring() {
 
   const resolveScorePanelId = (score: Score): string | null =>
     score.panel_id ?? judgePanelByUser?.[score.judge_user_id] ?? null;
+
+  // Templates used by the event's submissions, with each field's panel tags, so
+  // panels that have nothing to score in a submission's template can be hidden.
+  const submissionTemplateIds = useMemo(() => {
+    const ids = new Set<string>();
+    (submissions || []).forEach((s) => {
+      const tid = pickDivisionTemplateId(s.team?.division, event?.discipline);
+      if (tid) ids.add(tid);
+    });
+    return [...ids];
+  }, [submissions, event?.discipline]);
+
+  const { data: templates } = useQuery({
+    queryKey: ['event-scoring-templates', submissionTemplateIds.join(',')],
+    enabled: submissionTemplateIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('scoring_templates')
+        .select('id, sections:scoring_sections(id, fields:scoring_fields(id, panel_links:scoring_field_panels(panel_abbreviation)))')
+        .in('id', submissionTemplateIds);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const templateById = useMemo(
+    () => new Map((templates || []).map((t: any) => [t.id, t])),
+    [templates]
+  );
+
+  // Panels relevant to a submission: only those with fields in its template
+  // (SD is always kept). Falls back to all panels while templates load.
+  const relevantPanels = (submission: Submission): JudgePanel[] => {
+    if (!panels) return [];
+    const tid = pickDivisionTemplateId(submission.team?.division, event?.discipline);
+    const template = tid ? templateById.get(tid) : null;
+    return panelsForTemplate(template, panels);
+  };
 
   const { data: coachProfiles } = useQuery({
     queryKey: ['coach-profiles', eventId],
@@ -283,8 +327,9 @@ export default function EventScoring() {
   const stats = {
     total: submissions?.length || 0,
     fullyScored: submissions?.filter(s => {
-      if (!panels || panels.length === 0) return false;
-      return panels.every(p => {
+      const rp = relevantPanels(s);
+      if (rp.length === 0) return false;
+      return rp.every(p => {
         const sc = findScoreForPanel(s, p.id);
         return sc?.status === 'submitted';
       });
@@ -293,8 +338,9 @@ export default function EventScoring() {
       s.scores.some(sc => sc.needs_review && !sc.reviewed_at)
     ).length || 0,
     pending: submissions?.filter(s => {
-      if (!panels || panels.length === 0) return s.scores.length === 0;
-      return !panels.every(p => {
+      const rp = relevantPanels(s);
+      if (rp.length === 0) return s.scores.length === 0;
+      return !rp.every(p => {
         const sc = findScoreForPanel(s, p.id);
         return sc?.status === 'submitted';
       });
@@ -319,24 +365,25 @@ export default function EventScoring() {
   ): { text: string; allComplete: boolean; allReviewed: boolean; needsReview: boolean; hasDraft: boolean } => {
     const needsReview = submission.scores.some(s => s.needs_review && !s.reviewed_at);
     const hasDraft = submission.scores.some(s => s.status === 'in_progress');
-    if (!panels || panels.length === 0) {
+    const subPanels = relevantPanels(submission);
+    if (subPanels.length === 0) {
       const hasSubmitted = submission.scores.some(s => s.status === 'submitted');
       const hasReviewed = hasSubmitted && submission.scores.every(s => s.status !== 'submitted' || s.reviewed_at);
       const text = needsReview ? 'NEEDS REVIEW' : hasReviewed ? 'REVIEWED' : hasSubmitted ? 'SCORED' : hasDraft ? 'DRAFT SAVED' : 'PENDING';
       return { text, allComplete: hasSubmitted, allReviewed: hasReviewed, needsReview, hasDraft };
     }
 
-    const completedPanels = panels.filter(p => {
+    const completedPanels = subPanels.filter(p => {
       const sc = findScoreForPanel(submission, p.id);
       return sc?.status === 'submitted';
     }).length;
-    const reviewedPanels = panels.filter(p => {
+    const reviewedPanels = subPanels.filter(p => {
       const sc = findScoreForPanel(submission, p.id);
       return sc?.status === 'submitted' && sc?.reviewed_at;
     }).length;
 
-    const allComplete = completedPanels === panels.length;
-    const allReviewed = allComplete && reviewedPanels === panels.length;
+    const allComplete = completedPanels === subPanels.length;
+    const allReviewed = allComplete && reviewedPanels === subPanels.length;
     if (needsReview) return { text: 'NEEDS REVIEW', allComplete, allReviewed, needsReview, hasDraft };
     if (allReviewed) return { text: 'REVIEWED', allComplete, allReviewed, needsReview, hasDraft };
     if (allComplete) return { text: 'COMPLETE', allComplete, allReviewed, needsReview, hasDraft };
@@ -634,20 +681,27 @@ export default function EventScoring() {
                       </TableCell>
 
 
-                      {panels?.map((panel) => (
-                        <TableCell key={panel.id} className="py-1.5 px-2 text-center">
-                          <div className="flex justify-center">
-                            <StatusIndicator
-                              status={getPanelStatus(submission, panel.id)}
-                              label={`${submission.team?.name || 'Team'} ${panel.abbreviation}`}
-                              onClick={() => {
-                                setScoringPanelId(panel.id);
-                                setScoringSubmissionId(submission.id);
-                              }}
-                            />
-                          </div>
-                        </TableCell>
-                      ))}
+                      {panels?.map((panel) => {
+                        const relevant = relevantPanels(submission).some(p => p.id === panel.id);
+                        return (
+                          <TableCell key={panel.id} className="py-1.5 px-2 text-center">
+                            <div className="flex justify-center">
+                              {relevant ? (
+                                <StatusIndicator
+                                  status={getPanelStatus(submission, panel.id)}
+                                  label={`${submission.team?.name || 'Team'} ${panel.abbreviation}`}
+                                  onClick={() => {
+                                    setScoringPanelId(panel.id);
+                                    setScoringSubmissionId(submission.id);
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-muted-foreground/40 text-xs" title={`${panel.abbreviation} has no fields in this template`}>—</span>
+                              )}
+                            </div>
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   );
                 })}
@@ -679,7 +733,10 @@ export default function EventScoring() {
         }}
         submissionId={scoringSubmissionId}
         eventId={eventId!}
-        panels={panels || []}
+        panels={(() => {
+          const openSub = (submissions || []).find(s => s.id === scoringSubmissionId);
+          return openSub ? relevantPanels(openSub) : (panels || []);
+        })()}
         initialPanelId={scoringPanelId}
       />
 

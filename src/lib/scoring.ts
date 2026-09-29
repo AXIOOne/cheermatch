@@ -72,6 +72,27 @@ export function isAllPanelsField(field: any): boolean {
   return abbrs.length === 0 || abbrs.includes('ALL');
 }
 
+/**
+ * Panels that actually have something to score in a template. A panel is kept
+ * when at least one template field is assigned to it; the deductions panel
+ * (SD) is always kept because deductions are not template fields. When the
+ * template is unknown, every panel is kept so nothing is hidden by mistake.
+ */
+export function panelsForTemplate<T extends { abbreviation?: string | null }>(
+  template: any,
+  panels: T[] | null | undefined
+): T[] {
+  if (!panels) return [];
+  if (!template) return panels;
+  const fields = (template.sections || []).flatMap((s: any) => s?.fields || []);
+  return panels.filter((p) => {
+    const abbr = String(p.abbreviation || '').toUpperCase();
+    if (!abbr) return true;
+    if (abbr === 'SD') return true;
+    return fields.some((f: any) => isFieldForPanel(f, abbr));
+  });
+}
+
 export type DivisionDisciplineLink = {
   discipline: string;
   scoring_template_id: string | null;
