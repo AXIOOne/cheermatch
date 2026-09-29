@@ -54,7 +54,7 @@ interface SubmissionWithDetails {
     gym_name: string;
     division: { name: string };
     level: { name: string };
-  };
+  } | null;
   event: {
     id: string;
     name: string;
@@ -131,7 +131,7 @@ export default function Submissions() {
           archived_at,
           archived_by,
           status_before_archive,
-          team:teams!inner(
+          team:teams(
             id,
             name,
             gym_name,
@@ -241,8 +241,8 @@ export default function Submissions() {
     const lifecycle = toLifecycle(submission.status);
     const matchesSearch =
       searchQuery === '' ||
-      submission.team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      submission.team.gym_name.toLowerCase().includes(searchQuery.toLowerCase());
+      submission.team?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      submission.team?.gym_name?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || lifecycle === statusFilter;
     const matchesEvent = eventFilter === 'all' || submission.event.id === eventFilter;
@@ -280,7 +280,7 @@ export default function Submissions() {
 
   // A team is "awaiting video" for an event when it has attempts but no live submission there
   const submittedKeys = new Set(
-    (submissions ?? []).filter((s) => !s.archived_at).map((s) => teamEventKey(s.event.id, s.team.id)),
+    (submissions ?? []).filter((s) => !s.archived_at).map((s) => teamEventKey(s.event.id, s.team?.id ?? '')),
   );
 
   type PendingCapture = {
@@ -355,8 +355,8 @@ export default function Submissions() {
 
   const selectedSubmissions = selectedRows.map(s => ({
     id: s.id,
-    teamName: s.team.name,
-    gymName: s.team.gym_name,
+    teamName: s.team?.name ?? 'Registration deleted',
+    gymName: s.team?.gym_name ?? '',
     eventId: s.event.id,
     eventName: s.event.name,
   }));
@@ -493,7 +493,7 @@ export default function Submissions() {
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => openDelete(selectedRows.map(s => ({ id: s.id, teamName: s.team.name })))}
+                        onClick={() => openDelete(selectedRows.map(s => ({ id: s.id, teamName: s.team?.name ?? 'Registration deleted' })))}
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
                         Delete permanently
