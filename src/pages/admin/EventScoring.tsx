@@ -163,6 +163,44 @@ export default function EventScoring() {
   const resolveScorePanelId = (score: Score): string | null =>
     score.panel_id ?? judgePanelByUser?.[score.judge_user_id] ?? null;
 
+  // Templates used by the event's submissions, with each field's panel tags, so
+  // panels that have nothing to score in a submission's template can be hidden.
+  const submissionTemplateIds = useMemo(() => {
+    const ids = new Set<string>();
+    (submissions || []).forEach((s) => {
+      const tid = pickDivisionTemplateId(s.team?.division, event?.discipline);
+      if (tid) ids.add(tid);
+    });
+    return [...ids];
+  }, [submissions, event?.discipline]);
+
+  const { data: templates } = useQuery({
+    queryKey: ['event-scoring-templates', submissionTemplateIds.join(',')],
+    enabled: submissionTemplateIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('scoring_templates')
+        .select('id, sections:scoring_sections(id, fields:scoring_fields(id, panel_links:scoring_field_panels(panel_abbreviation)))')
+        .in('id', submissionTemplateIds);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const templateById = useMemo(
+    () => new Map((templates || []).map((t: any) => [t.id, t])),
+    [templates]
+  );
+
+  // Panels relevant to a submission: only those with fields in its template
+  // (SD is always kept). Falls back to all panels while templates load.
+  const relevantPanels = (submission: Submission): JudgePanel[] => {
+    if (!panels) return [];
+    const tid = pickDivisionTemplateId(submission.team?.division, event?.discipline);
+    const template = tid ? templateById.get(tid) : null;
+    return panelsForTemplate(template, panels);
+  };
+
   const { data: coachProfiles } = useQuery({
     queryKey: ['coach-profiles', eventId],
     queryFn: async () => {
