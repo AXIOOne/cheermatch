@@ -681,20 +681,27 @@ export default function EventScoring() {
                       </TableCell>
 
 
-                      {panels?.map((panel) => (
-                        <TableCell key={panel.id} className="py-1.5 px-2 text-center">
-                          <div className="flex justify-center">
-                            <StatusIndicator
-                              status={getPanelStatus(submission, panel.id)}
-                              label={`${submission.team?.name || 'Team'} ${panel.abbreviation}`}
-                              onClick={() => {
-                                setScoringPanelId(panel.id);
-                                setScoringSubmissionId(submission.id);
-                              }}
-                            />
-                          </div>
-                        </TableCell>
-                      ))}
+                      {panels?.map((panel) => {
+                        const relevant = relevantPanels(submission).some(p => p.id === panel.id);
+                        return (
+                          <TableCell key={panel.id} className="py-1.5 px-2 text-center">
+                            <div className="flex justify-center">
+                              {relevant ? (
+                                <StatusIndicator
+                                  status={getPanelStatus(submission, panel.id)}
+                                  label={`${submission.team?.name || 'Team'} ${panel.abbreviation}`}
+                                  onClick={() => {
+                                    setScoringPanelId(panel.id);
+                                    setScoringSubmissionId(submission.id);
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-muted-foreground/40 text-xs" title={`${panel.abbreviation} has no fields in this template`}>—</span>
+                              )}
+                            </div>
+                          </TableCell>
+                        );
+                      })}
                     </TableRow>
                   );
                 })}
@@ -726,7 +733,10 @@ export default function EventScoring() {
         }}
         submissionId={scoringSubmissionId}
         eventId={eventId!}
-        panels={panels || []}
+        panels={(() => {
+          const openSub = (submissions || []).find(s => s.id === scoringSubmissionId);
+          return openSub ? relevantPanels(openSub) : (panels || []);
+        })()}
         initialPanelId={scoringPanelId}
       />
 
