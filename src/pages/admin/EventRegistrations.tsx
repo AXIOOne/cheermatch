@@ -257,6 +257,29 @@ export default function EventRegistrations() {
           team={editTeam}
         />
       )}
+
+      <AlertDialog open={!!deleteTeam} onOpenChange={(o) => !o && setDeleteTeam(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete registration?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTeam && (submissionCountByTeam.get(deleteTeam.id) ?? 0) > 0
+                ? `"${deleteTeam.name}" has a video submission. The registration will be deleted, but the video submission will be kept and unlinked from any registration.`
+                : `This will permanently delete the registration for "${deleteTeam?.name}".`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTeam && deleteMutation.mutate(deleteTeam.id)}
+              disabled={deleteMutation.isPending}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
