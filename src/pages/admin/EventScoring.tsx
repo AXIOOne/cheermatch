@@ -125,6 +125,7 @@ export default function EventScoring() {
         `)
         .eq('event_id', eventId)
         .is('archived_at', null)
+        .not('team_id', 'is', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as Submission[];
