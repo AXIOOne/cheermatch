@@ -28,6 +28,7 @@ const DISCIPLINES = [
 const disciplineLabel = (v: string) => DISCIPLINES.find((d) => d.value === v)?.label ?? v;
 
 const NO_LEVEL = '__none__';
+const ALL_LEVELS = '__all__';
 
 type DisciplineState = Record<string, { active: boolean; templateId: string }>;
 
