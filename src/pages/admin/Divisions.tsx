@@ -41,6 +41,7 @@ export default function Divisions() {
   const [editingDivision, setEditingDivision] = useState<any | null>(null);
   const [filter, setFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const [levelFilter, setLevelFilter] = useState<string>(ALL_LEVELS);
   const [name, setName] = useState('');
   const [levelId, setLevelId] = useState<string>(NO_LEVEL);
   const [disciplineState, setDisciplineState] = useState<DisciplineState>(emptyDisciplineState());
