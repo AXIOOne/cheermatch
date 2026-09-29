@@ -133,6 +133,12 @@ export default function Divisions() {
         (d.discipline_links || []).some((l: any) => l.discipline === filter)
       );
     }
+    if (levelFilter !== ALL_LEVELS) {
+      result = result.filter((d: any) => {
+        if (levelFilter === NO_LEVEL) return !d.level_id && !d.level;
+        return d.level_id === levelFilter || (!d.level_id && d.level === (levels || []).find((l: any) => l.id === levelFilter)?.name);
+      });
+    }
     const q = search.trim().toLowerCase();
     if (q) {
       result = result.filter((d: any) => {
@@ -148,7 +154,7 @@ export default function Divisions() {
       });
     }
     return result;
-  }, [divisions, filter, search]);
+  }, [divisions, filter, search, levelFilter, levels]);
 
   const upsertMutation = useMutation({
     mutationFn: async () => {
