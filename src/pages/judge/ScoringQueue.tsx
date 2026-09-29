@@ -128,7 +128,9 @@ export default function ScoringQueue() {
       const { data, error } = await query;
       if (error) throw error;
 
-      return (data || []).filter((sub: any) => getSubmissionAssignments(sub).length > 0);
+      return (data || []).filter((sub: any) =>
+        sub.team !== null && getSubmissionAssignments(sub).length > 0
+      );
     },
     enabled: !!user && !!assignments,
   });
