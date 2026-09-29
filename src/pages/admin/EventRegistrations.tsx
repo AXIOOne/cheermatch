@@ -1,13 +1,17 @@
 import { useState, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Search, Loader2, Users, Plus, Pencil, Upload } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { ArrowLeft, Search, Loader2, Users, Plus, Pencil, Upload, Trash2 } from 'lucide-react';
 import { AddTeamDialog } from '@/components/admin/AddTeamDialog';
 import { MultiAddTeamsDialog } from '@/components/admin/MultiAddTeamsDialog';
 import { EditRegistrationDialog } from '@/components/admin/EditRegistrationDialog';
@@ -21,6 +25,8 @@ export default function EventRegistrations() {
   const [multiOpen, setMultiOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [editTeam, setEditTeam] = useState<any>(null);
+  const [deleteTeam, setDeleteTeam] = useState<any>(null);
+  const queryClient = useQueryClient();
 
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ['event', eventId],
