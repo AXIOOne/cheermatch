@@ -165,10 +165,21 @@ export default function EventRegistrations() {
                     </TableCell>
                     <TableCell className="text-right">{(team.athletes_female || 0) + (team.athletes_male || 0)} <span className="text-muted-foreground">({team.athletes_female || 0}F / {team.athletes_male || 0}M)</span></TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => setEditTeam(team)}>
-                        <Pencil className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => setEditTeam(team)}>
+                          <Pencil className="w-4 h-4 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground/60 hover:text-destructive"
+                          onClick={() => setDeleteTeam(team)}
+                        >
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
