@@ -52,8 +52,8 @@ interface SubmissionWithDetails {
     id: string;
     name: string;
     gym_name: string;
-    division: { name: string };
-    level: { name: string };
+    division: { name: string } | null;
+    level: { name: string } | null;
   } | null;
   event: {
     id: string;
