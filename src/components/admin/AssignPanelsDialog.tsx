@@ -10,7 +10,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { Check, CheckCircle2, ChevronDown, ChevronsUpDown, Loader2 } from 'lucide-react';
-import { pickDivisionTemplateId } from '@/lib/scoring';
+import { isFieldForPanel, pickDivisionTemplateId } from '@/lib/scoring';
 import { cn } from '@/lib/utils';
 import JudgePanelsManager from './JudgePanelsManager';
 
@@ -148,14 +148,51 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
     return match?.id ?? null;
   };
 
+  // Fields per section, with their panel tags, so sections that have no fields
+  // (or no fields for their own panel) can be hidden from the assignment list.
+  const sectionIds = useMemo(() => (sections || []).map(s => s.id), [sections]);
+
+  const { data: sectionFields } = useQuery({
+    queryKey: ['section-fields-for-assignment', sectionIds.join(',')],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('scoring_fields')
+        .select('id, section_id, panel_links:scoring_field_panels(panel_abbreviation)')
+        .in('section_id', sectionIds);
+      if (error) throw error;
+      return data as Array<{ id: string; section_id: string; panel_links: { panel_abbreviation: string }[] }>;
+    },
+    enabled: sectionIds.length > 0,
+  });
+
+  const fieldsBySection = useMemo(() => {
+    const grouped = new Map<string, any[]>();
+    (sectionFields || []).forEach(field => {
+      const existing = grouped.get(field.section_id) || [];
+      grouped.set(field.section_id, [...existing, field]);
+    });
+    return grouped;
+  }, [sectionFields]);
+
+  const sectionHasWork = (section: AssignmentSection): boolean => {
+    const fields = fieldsBySection.get(section.id);
+    if (!fields) return true; // still loading — show optimistically
+    if (fields.length === 0) return false;
+    const abbr = (section.default_panel_abbreviation || section.abbreviation || '').toUpperCase();
+    if (!abbr) return true;
+    return fields.some(f => isFieldForPanel(f, abbr));
+  };
+
   const sectionsByTemplate = useMemo(() => {
     const grouped = new Map<string, AssignmentSection[]>();
     (sections || []).forEach(section => {
+      if (!sectionHasWork(section)) return;
       const existing = grouped.get(section.template_id) || [];
       grouped.set(section.template_id, [...existing, section]);
     });
     return grouped;
-  }, [sections]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections, fieldsBySection]);
 
   // Extra rows: event panels matching a template panel with no section of the
   // same abbreviation (deductions panel, etc.). Keyed by template id.
