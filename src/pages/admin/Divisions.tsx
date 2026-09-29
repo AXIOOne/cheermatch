@@ -40,6 +40,7 @@ export default function Divisions() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDivision, setEditingDivision] = useState<any | null>(null);
   const [filter, setFilter] = useState<string>('all');
+  const [search, setSearch] = useState('');
   const [name, setName] = useState('');
   const [levelId, setLevelId] = useState<string>(NO_LEVEL);
   const [disciplineState, setDisciplineState] = useState<DisciplineState>(emptyDisciplineState());
@@ -124,11 +125,28 @@ export default function Divisions() {
 
   const filteredDivisions = useMemo(() => {
     if (!divisions) return [];
-    if (filter === 'all') return divisions;
-    return divisions.filter((d: any) =>
-      (d.discipline_links || []).some((l: any) => l.discipline === filter)
-    );
-  }, [divisions, filter]);
+    let result = divisions;
+    if (filter !== 'all') {
+      result = result.filter((d: any) =>
+        (d.discipline_links || []).some((l: any) => l.discipline === filter)
+      );
+    }
+    const q = search.trim().toLowerCase();
+    if (q) {
+      result = result.filter((d: any) => {
+        const levelName = (d.level_ref?.name || d.level || '').toLowerCase();
+        const disciplineNames = (d.discipline_links || [])
+          .map((l: any) => disciplineLabel(l.discipline).toLowerCase())
+          .join(' ');
+        return (
+          d.name?.toLowerCase().includes(q) ||
+          levelName.includes(q) ||
+          disciplineNames.includes(q)
+        );
+      });
+    }
+    return result;
+  }, [divisions, filter, search]);
 
   const upsertMutation = useMutation({
     mutationFn: async () => {
