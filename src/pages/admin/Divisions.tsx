@@ -285,6 +285,20 @@ export default function Divisions() {
             className="pl-8"
           />
         </div>
+        <Select value={levelFilter} onValueChange={setLevelFilter}>
+          <SelectTrigger className="w-44 shrink-0">
+            <SelectValue placeholder="All levels" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_LEVELS}>All levels</SelectItem>
+            {(levels || []).map((l: any) => (
+              <SelectItem key={l.id} value={l.id}>
+                {l.name}
+              </SelectItem>
+            ))}
+            <SelectItem value={NO_LEVEL}>No level</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <Card>
