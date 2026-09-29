@@ -71,8 +71,8 @@ export default function SubmissionDetail() {
           id, video_url, thumbnail_url, brightcove_video_id, status, submitted_at, created_at, duration_seconds,
           review_notes, reviewed_at, archived_at, status_before_archive,
           event_id,
-          team:teams!inner(id, name, gym_name, athletes_female, athletes_male, division_id,
-            division:divisions!inner(id, name), level:levels!inner(name, level_number)),
+          team:teams(id, name, gym_name, athletes_female, athletes_male, division_id,
+            division:divisions(id, name), level:levels(name, level_number)),
           event:events!inner(id, name, start_date, end_date)
         `)
         .eq('id', submissionId!).maybeSingle();
@@ -298,14 +298,14 @@ export default function SubmissionDetail() {
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold text-foreground">{submission.team?.name}</h1>
+              <h1 className="text-3xl font-bold text-foreground">{submission.team?.name || 'Registration deleted'}</h1>
               {isAdmin && (
                 <Button variant="ghost" size="sm" onClick={() => setEditTeamOpen(true)}>
                   <Pencil className="w-4 h-4 mr-1" /> Edit Team
                 </Button>
               )}
             </div>
-            <p className="text-lg text-muted-foreground mt-1">{submission.team?.gym_name}</p>
+            <p className="text-lg text-muted-foreground mt-1">{submission.team?.gym_name || '—'}</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 mt-4">
