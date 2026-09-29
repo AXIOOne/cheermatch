@@ -135,8 +135,8 @@ export default function Submissions() {
             id,
             name,
             gym_name,
-            division:divisions!inner(name),
-            level:levels!inner(name)
+            division:divisions(name),
+            level:levels(name)
           ),
           event:events!inner(id, name)
         `)
