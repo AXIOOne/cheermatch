@@ -128,7 +128,9 @@ export default function EventScoring() {
         .not('team_id', 'is', null)
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return data as Submission[];
+      // A deleted registration leaves its video submission intact, but the
+      // joined team is null. Never expose those detached videos for scoring.
+      return (data || []).filter((submission) => submission.team !== null) as Submission[];
     },
   });
 
