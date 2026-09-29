@@ -29,6 +29,7 @@ import AssignPanelsDialog from '@/components/admin/AssignPanelsDialog';
 import SubmissionScoringDialog from '@/components/admin/SubmissionScoringDialog';
 import { downloadSubmissionScoresheet, generateSubmissionScoresheetBytes } from '@/lib/download-submission-scoresheet';
 import { downloadPdf } from '@/lib/scoresheet-pdf';
+import { panelsForTemplate, pickDivisionTemplateId } from '@/lib/scoring';
 
 
 interface JudgePanel {
@@ -57,7 +58,12 @@ interface Submission {
     name: string;
     gym_name: string;
     coach_user_id: string;
-    division: { id: string; name: string } | null;
+    division: {
+      id: string;
+      name: string;
+      scoring_template_id?: string | null;
+      discipline_links?: { discipline: string; scoring_template_id: string | null }[] | null;
+    } | null;
     level: { id: string; name: string } | null;
   } | null;
   scores: Score[];
@@ -118,7 +124,7 @@ export default function EventScoring() {
             name, 
             gym_name,
             coach_user_id,
-            division:divisions(id, name),
+            division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)),
             level:levels(id, name)
           ),
           scores:scores(id, status, total_score, panel_id, judge_user_id, needs_review, reviewed_at, review_reason)
