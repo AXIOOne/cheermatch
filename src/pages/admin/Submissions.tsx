@@ -79,7 +79,7 @@ export default function Submissions() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [eventFilter, setEventFilter] = useState<string>('all');
-  const [tab, setTab] = useState<'current' | 'archived' | 'pending'>('current');
+  const [tab, setTab] = useState<'current' | 'archived' | 'pending' | 'detached'>('current');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkEmailOpen, setBulkEmailOpen] = useState(false);
   const [archiveConfirmOpen, setArchiveConfirmOpen] = useState(false);
@@ -233,9 +233,14 @@ export default function Submissions() {
 
   const isArchivedTab = tab === 'archived';
   const isPendingTab = tab === 'pending';
+  const isDetachedTab = tab === 'detached';
   const tabScoped = isPendingTab
     ? []
-    : submissions?.filter((s) => (isArchivedTab ? !!s.archived_at : !s.archived_at));
+    : submissions?.filter((s) => {
+        if (isArchivedTab) return !!s.archived_at;
+        if (isDetachedTab) return !s.archived_at && !s.team;
+        return !s.archived_at && !!s.team;
+      });
 
   const filteredSubmissions = tabScoped?.filter((submission) => {
     const lifecycle = toLifecycle(submission.status);
@@ -325,10 +330,11 @@ export default function Submissions() {
 
 
   const archivedCount = submissions?.filter((s) => !!s.archived_at).length || 0;
-  const currentCount = submissions?.filter((s) => !s.archived_at).length || 0;
+  const detachedCount = submissions?.filter((s) => !s.archived_at && !s.team).length || 0;
+  const currentCount = submissions?.filter((s) => !s.archived_at && !!s.team).length || 0;
 
   const switchTab = (value: string) => {
-    setTab(value === 'archived' ? 'archived' : value === 'pending' ? 'pending' : 'current');
+    setTab(value === 'archived' ? 'archived' : value === 'pending' ? 'pending' : value === 'detached' ? 'detached' : 'current');
     setSelectedIds(new Set());
   };
 
@@ -408,6 +414,7 @@ export default function Submissions() {
           <TabsTrigger value="current">Current ({currentCount})</TabsTrigger>
           <TabsTrigger value="pending">Awaiting video ({pendingCaptures.length})</TabsTrigger>
           <TabsTrigger value="archived">Archived ({archivedCount})</TabsTrigger>
+          <TabsTrigger value="detached">Registration deleted ({detachedCount})</TabsTrigger>
         </TabsList>
       </Tabs>
 
