@@ -566,7 +566,7 @@ export default function Submissions() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground align-top">
                         <div className="flex flex-col gap-1.5">
-                          <p className="text-sm font-semibold text-muted-foreground leading-tight whitespace-nowrap">{submission.team.name}</p>
+                          <p className="text-sm font-semibold text-muted-foreground leading-tight whitespace-nowrap">{submission.team?.name ?? 'Registration deleted'}</p>
                           <button
                             type="button"
                             onClick={(e) => {
@@ -582,12 +582,12 @@ export default function Submissions() {
                           </button>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground break-words max-w-[220px]">{submission.team.gym_name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground break-words max-w-[220px]">{submission.team?.gym_name ?? '—'}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{submission.event.name}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         <div>
-                          <p className="text-sm text-muted-foreground leading-tight">{submission.team.division.name}</p>
-                          <p className="text-sm text-muted-foreground leading-tight">{submission.team.level.name}</p>
+                          <p className="text-sm text-muted-foreground leading-tight">{submission.team?.division?.name ?? '—'}</p>
+                          <p className="text-sm text-muted-foreground leading-tight">{submission.team?.level?.name ?? '—'}</p>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -598,7 +598,7 @@ export default function Submissions() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {(() => {
-                          const att = attemptsByTeam.get(teamEventKey(submission.event.id, submission.team.id));
+                          const att = submission.team?.id ? attemptsByTeam.get(teamEventKey(submission.event.id, submission.team.id)) : undefined;
                           return att ? (
                             <span
                               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground"
@@ -629,7 +629,7 @@ export default function Submissions() {
                           {!isArchivedTab && (
                             <GenerateReviewLink
                               submissionId={submission.id}
-                              teamName={submission.team.name}
+                              teamName={submission.team?.name ?? 'Registration deleted'}
                               variant="default"
                               size="sm"
                             />
@@ -669,7 +669,7 @@ export default function Submissions() {
                                 size="icon"
                                 className="h-8 w-8 rounded-none text-muted-foreground hover:text-primary"
                                 title="Replace video"
-                                onClick={() => setReplaceTarget({ id: submission.id, teamName: submission.team.name })}
+                                onClick={() => setReplaceTarget({ id: submission.id, teamName: submission.team?.name ?? 'Registration deleted' })}
                               >
                                 <Upload className="w-4 h-4" />
                               </Button>
@@ -724,7 +724,7 @@ export default function Submissions() {
                                   size="icon"
                                   className="h-8 w-8 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                                   title="Delete permanently"
-                                  onClick={() => openDelete([{ id: submission.id, teamName: submission.team.name }])}
+                                  onClick={() => openDelete([{ id: submission.id, teamName: submission.team?.name ?? 'Registration deleted' }])}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
@@ -890,7 +890,7 @@ export default function Submissions() {
       <Dialog open={!!videoModalSubmission} onOpenChange={(o) => { if (!o) setVideoModalSubmission(null); }}>
         <DialogContent className="max-w-4xl w-[calc(100%-2rem)]">
           <DialogHeader>
-            <DialogTitle>{videoModalSubmission?.team.name} — Performance Video</DialogTitle>
+            <DialogTitle>{videoModalSubmission?.team?.name ?? 'Registration deleted'} — Performance Video</DialogTitle>
           </DialogHeader>
           {videoModalSubmission && (
             <VideoPlayer
@@ -898,7 +898,7 @@ export default function Submissions() {
               thumbnailUrl={videoModalSubmission.thumbnail_url}
               status={videoModalSubmission.status}
               submissionId={videoModalSubmission.id}
-              title={`${videoModalSubmission.team.name} performance video`}
+              title={`${videoModalSubmission.team?.name ?? 'Registration deleted'} performance video`}
             />
           )}
         </DialogContent>
