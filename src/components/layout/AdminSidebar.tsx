@@ -96,7 +96,7 @@ export function AdminSidebar() {
           />
           {!collapsed && (
             <span className="text-sm font-semibold text-sidebar-foreground truncate">
-              v2.0
+              Scoring Portal v 2.0
             </span>
           )}
         </div>
