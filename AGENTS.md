@@ -1,0 +1,1 @@
+- AccuScore: coach requests via scoresheet-email token links; form definitions are jsonb field lists in accuscore_forms so new forms need no code; coach access only through security-definer RPCs (get_accuscore_context, submit_accuscore_request) that enforce the cutoff. Why: public link, server-enforced window.
