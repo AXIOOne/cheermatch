@@ -8,6 +8,13 @@
       "when": 1790948092318,
       "tag": "0000_accuscore",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790948111306,
+      "tag": "0001_accuscore_enable_general_form",
+      "breakpoints": true
     }
   ]
 }
