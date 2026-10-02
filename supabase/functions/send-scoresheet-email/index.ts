@@ -28,7 +28,33 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { submissionId }: ScoreSheetRequest = await req.json();
+    // Admin-only
+    const authHeader = req.headers.get("Authorization") || "";
+    const jwt = authHeader.replace(/^Bearer\s+/i, "");
+    const { data: authData } = await supabase.auth.getUser(jwt);
+    const callerId = authData?.user?.id;
+    if (!callerId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } });
+    }
+    const { data: isAdmin } = await supabase.rpc("has_role", { _user_id: callerId, _role: "admin" });
+    if (!isAdmin) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } });
+    }
+
+    const body = await req.json();
+    const accuscoreRequestId: string | null = typeof body?.accuscoreRequestId === "string" ? body.accuscoreRequestId : null;
+    const appUrl: string = typeof body?.appUrl === "string" && /^https?:\/\//.test(body.appUrl)
+      ? body.appUrl.replace(/\/$/, "") : "https://score.cheermatch.com";
+    let submissionId: string | null = typeof body?.submissionId === "string" ? body.submissionId : null;
+
+    let accuscoreReq: any = null;
+    if (accuscoreRequestId) {
+      const { data } = await supabase.from("accuscore_requests")
+        .select("*, form:accuscore_forms(name)").eq("id", accuscoreRequestId).single();
+      if (!data) throw new Error("AccuScore request not found");
+      accuscoreReq = data;
+      submissionId = data.submission_id;
+    }
 
     if (!submissionId) {
       throw new Error("Missing submission ID");
@@ -114,6 +140,42 @@ Deno.serve(async (req: Request): Promise<Response> => {
         overrideLookup[o.score_id][o.field_id] = Number(o.new_points || 0);
       });
     }
+
+    // AccuScore link: reuse or create this team's review token
+    const esc = (s: string) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+    let accuscoreUrl: string | null = null;
+    const cutoff = (event as any)?.accuscore_end_at as string | null;
+    {
+      const { data: existing } = await supabase.from("scoring_review_tokens")
+        .select("id, token").eq("submission_id", submissionId).eq("coach_email", coachProfile.email)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      let token = existing?.token as string | undefined;
+      const expiresAt = cutoff || new Date(Date.now() + 30 * 86400000).toISOString();
+      if (!token) {
+        token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+        await supabase.from("scoring_review_tokens").insert({
+          submission_id: submissionId, token, coach_email: coachProfile.email,
+          coach_name: coachProfile.full_name, expires_at: expiresAt, created_by: callerId, status: "pending",
+        });
+      } else {
+        await supabase.from("scoring_review_tokens").update({ expires_at: expiresAt }).eq("id", existing!.id);
+      }
+      accuscoreUrl = `${appUrl}/review/${token}`;
+    }
+    const cutoffText = cutoff ? new Date(cutoff).toLocaleString("en-US", { timeZone: (event as any)?.time_zone || "America/Chicago", dateStyle: "medium", timeStyle: "short" }) : null;
+    const accuscoreBlock = !accuscoreReq && accuscoreUrl ? `
+      <div style="background:#f0fdfa;border:1px solid #99f6e4;padding:16px;border-radius:8px;margin:20px 0;text-align:center;">
+        <p style="margin:0 0 10px 0;"><strong>Need a score reviewed?</strong> Submit an AccuScore request${cutoffText ? ` before <strong>${esc(cutoffText)}</strong>` : ""}. After the cutoff, scores are final.</p>
+        <a href="${accuscoreUrl}" style="display:inline-block;background:#14b8a6;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Open AccuScore Request</a>
+      </div>` : "";
+    const decisionLabel: Record<string, string> = { honored: "Honored", denied: "Denied", duplicate: "Duplicate" };
+    const responseBlock = accuscoreReq ? `
+      <div style="background:#f5f5f5;padding:16px;border-radius:8px;margin:20px 0;">
+        <p style="margin:0;"><strong>AccuScore request:</strong> ${esc(accuscoreReq.form?.name || "Score review")}</p>
+        <p style="margin:8px 0 0 0;"><strong>Decision:</strong> ${esc(decisionLabel[accuscoreReq.status] || accuscoreReq.status)}</p>
+        <p style="margin:8px 0 0 0;white-space:pre-wrap;"><strong>Response:</strong><br/>${esc(accuscoreReq.admin_response || "")}</p>
+      </div>
+      <p>Your current scoresheet is attached.</p>` : "";
 
     // Calculate overall average
     const avgScore = submittedScores.reduce((sum: number, s: any) => sum + (s.total_score || 0), 0) / submittedScores.length;
