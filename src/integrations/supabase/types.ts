@@ -14,6 +14,138 @@ export type Database = {
   }
   public: {
     Tables: {
+      accuscore_forms: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          fields: Json
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          fields?: Json
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          fields?: Json
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      accuscore_requests: {
+        Row: {
+          admin_response: string | null
+          answers: Json
+          coach_email: string | null
+          coach_name: string | null
+          created_at: string
+          division_name: string | null
+          event_id: string
+          form_id: string | null
+          gym_name: string | null
+          id: string
+          responded_at: string | null
+          responded_by: string | null
+          status: string
+          submission_id: string | null
+          team_id: string | null
+          team_name: string | null
+          token_id: string | null
+        }
+        Insert: {
+          admin_response?: string | null
+          answers?: Json
+          coach_email?: string | null
+          coach_name?: string | null
+          created_at?: string
+          division_name?: string | null
+          event_id: string
+          form_id?: string | null
+          gym_name?: string | null
+          id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          status?: string
+          submission_id?: string | null
+          team_id?: string | null
+          team_name?: string | null
+          token_id?: string | null
+        }
+        Update: {
+          admin_response?: string | null
+          answers?: Json
+          coach_email?: string | null
+          coach_name?: string | null
+          created_at?: string
+          division_name?: string | null
+          event_id?: string
+          form_id?: string | null
+          gym_name?: string | null
+          id?: string
+          responded_at?: string | null
+          responded_by?: string | null
+          status?: string
+          submission_id?: string | null
+          team_id?: string | null
+          team_name?: string | null
+          token_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accuscore_requests_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accuscore_requests_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "accuscore_forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accuscore_requests_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "video_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accuscore_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accuscore_requests_token_id_fkey"
+            columns: ["token_id"]
+            isOneToOne: false
+            referencedRelation: "scoring_review_tokens"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       capture_attempts: {
         Row: {
           attempt_number: number
@@ -339,6 +471,42 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      event_accuscore_forms: {
+        Row: {
+          created_at: string
+          event_id: string
+          form_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          form_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          form_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_accuscore_forms_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_accuscore_forms_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "accuscore_forms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       events: {
         Row: {
@@ -2014,6 +2182,7 @@ export type Database = {
         }[]
       }
       generate_short_uuid: { Args: never; Returns: string }
+      get_accuscore_context: { Args: { review_token: string }; Returns: Json }
       get_review_by_token: {
         Args: { review_token: string }
         Returns: {
@@ -2055,6 +2224,10 @@ export type Database = {
         }[]
       }
       mark_review_viewed: { Args: { review_token: string }; Returns: boolean }
+      submit_accuscore_request: {
+        Args: { _answers: Json; _form_id: string; review_token: string }
+        Returns: string
+      }
       submit_review_request: {
         Args: { notes: string; review_token: string }
         Returns: boolean

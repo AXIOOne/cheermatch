@@ -240,7 +240,7 @@ export default function EventScoring() {
   const sendScoreSheetMutation = useMutation({
     mutationFn: async (submissionId: string) => {
       const { data, error } = await supabase.functions.invoke('send-scoresheet-email', {
-        body: { submissionId },
+        body: { submissionId, appUrl: window.location.origin },
       });
       if (error) throw error;
       return data;
