@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle, CheckCircle, Lock } from 'lucide-react';
@@ -16,7 +17,7 @@ import { format } from 'date-fns';
 export interface AccuScoreField {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'time' | 'number' | 'select' | 'radio';
+  type: 'text' | 'textarea' | 'time' | 'number' | 'select' | 'radio' | 'checkbox' | 'checkbox-group';
   required?: boolean;
   options?: string[];
   help?: string;
@@ -46,7 +47,7 @@ export default function ScoreReview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [formId, setFormId] = useState('');
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState(false);
 
@@ -72,14 +73,22 @@ export default function ScoreReview() {
 
   const submit = async () => {
     if (!form || !token) return;
-    const missing = form.fields.filter((f) => f.required && !answers[f.key]?.trim());
+    const missing = form.fields.filter((f) => {
+      if (!f.required) return false;
+      const answer = answers[f.key];
+      return Array.isArray(answer) ? answer.length === 0 : !answer?.trim();
+    });
     if (missing.length) {
       toast({ variant: 'destructive', title: 'Missing information', description: `Please complete: ${missing.map((m) => m.label).join(', ')}` });
       return;
     }
     setSubmitting(true);
-    const clean: Record<string, string> = {};
-    form.fields.forEach((f) => { if (answers[f.key]) clean[f.key] = answers[f.key].trim().slice(0, 4000); });
+    const clean: Record<string, string | string[]> = {};
+    form.fields.forEach((f) => {
+      const answer = answers[f.key];
+      if (Array.isArray(answer) && answer.length) clean[f.key] = answer;
+      else if (typeof answer === 'string' && answer) clean[f.key] = answer.trim().slice(0, 4000);
+    });
     const { error } = await (supabase as any).rpc('submit_accuscore_request', { review_token: token, _form_id: form.id, _answers: clean });
     setSubmitting(false);
     if (error) {
@@ -106,7 +115,7 @@ export default function ScoreReview() {
     );
   }
 
-  const set = (k: string, v: string) => setAnswers((a) => ({ ...a, [k]: v }));
+  const set = (k: string, v: string | string[]) => setAnswers((a) => ({ ...a, [k]: v }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -167,15 +176,40 @@ export default function ScoreReview() {
                     <div key={f.key} className="space-y-1">
                       <Label>{f.label}{f.required && <span className="text-destructive"> *</span>}</Label>
                       {f.type === 'textarea' ? (
-                        <Textarea rows={4} value={answers[f.key] || ''} onChange={(e) => set(f.key, e.target.value)} maxLength={4000} />
+                        <Textarea rows={4} value={typeof answers[f.key] === 'string' ? answers[f.key] : ''} onChange={(e) => set(f.key, e.target.value)} maxLength={4000} />
+                      ) : f.type === 'checkbox' ? (
+                        <label className="flex items-start gap-2 rounded-md border p-3 cursor-pointer">
+                          <Checkbox
+                            checked={answers[f.key] === 'Acknowledged'}
+                            onCheckedChange={(checked) => set(f.key, checked ? 'Acknowledged' : '')}
+                            className="mt-0.5"
+                          />
+                          <span className="text-sm">I acknowledge this statement</span>
+                        </label>
+                      ) : f.type === 'checkbox-group' ? (
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {(f.options || []).map((option) => {
+                            const selected = Array.isArray(answers[f.key]) ? answers[f.key] as string[] : [];
+                            return (
+                              <label key={option} className="flex items-start gap-2 rounded-md border p-3 cursor-pointer">
+                                <Checkbox
+                                  checked={selected.includes(option)}
+                                  onCheckedChange={(checked) => set(f.key, checked ? [...selected, option] : selected.filter((item) => item !== option))}
+                                  className="mt-0.5"
+                                />
+                                <span className="text-sm">{option}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
                       ) : f.type === 'select' || f.type === 'radio' ? (
-                        <Select value={answers[f.key] || ''} onValueChange={(v) => set(f.key, v)}>
+                        <Select value={typeof answers[f.key] === 'string' ? answers[f.key] : ''} onValueChange={(v) => set(f.key, v)}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>{(f.options || []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                         </Select>
                       ) : (
                         <Input
-                          value={answers[f.key] || ''}
+                          value={typeof answers[f.key] === 'string' ? answers[f.key] : ''}
                           onChange={(e) => set(f.key, e.target.value)}
                           placeholder={f.type === 'time' ? 'mm:ss' : undefined}
                           inputMode={f.type === 'number' ? 'decimal' : undefined}
