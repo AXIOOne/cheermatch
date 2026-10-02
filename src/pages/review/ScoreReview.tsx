@@ -4,339 +4,215 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Play, Trophy, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, Lock } from 'lucide-react';
 import logoBlack from '@/assets/logo-black.png';
+import { format } from 'date-fns';
 
-interface ScoreField {
-  name: string;
-  points: number;
-  max_points: number;
-  section_name?: string;
+export interface AccuScoreField {
+  key: string;
+  label: string;
+  type: 'text' | 'textarea' | 'time' | 'number' | 'select' | 'radio';
+  required?: boolean;
+  options?: string[];
+  help?: string;
 }
 
-interface Score {
-  score_id: string;
-  total_score: number;
-  deductions: number;
-  comments: string | null;
-  submitted_at: string;
-  fields: ScoreField[] | null;
-}
-
-interface ReviewData {
+interface Ctx {
   token_id: string;
-  token_status: string;
   coach_email: string;
   coach_name: string | null;
-  expires_at: string;
-  team_name: string;
-  gym_name: string;
-  division_name: string;
-  level_name: string;
   event_name: string;
-  video_url: string | null;
-  thumbnail_url: string | null;
-  submission_status: string;
-  scores: Score[] | null;
+  team_name: string | null;
+  gym_name: string | null;
+  division_name: string | null;
+  level_name: string | null;
+  cutoff_at: string | null;
+  is_open: boolean;
+  forms: { id: string; name: string; description: string | null; fields: AccuScoreField[] }[];
+  requests: { id: string; form_name: string | null; status: string; created_at: string; admin_response: string | null }[];
 }
+
+const STATUS_LABEL: Record<string, string> = { new: 'Under review', honored: 'Honored', denied: 'Denied', duplicate: 'Duplicate' };
 
 export default function ScoreReview() {
   const { token } = useParams<{ token: string }>();
-  const [reviewData, setReviewData] = useState<ReviewData | null>(null);
+  const { toast } = useToast();
+  const [ctx, setCtx] = useState<Ctx | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reviewNotes, setReviewNotes] = useState('');
+  const [formId, setFormId] = useState('');
+  const [answers, setAnswers] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const { toast } = useToast();
+  const [justSubmitted, setJustSubmitted] = useState(false);
 
-  useEffect(() => {
-    async function fetchReview() {
-      if (!token) {
-        setError('Invalid review link');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error: fetchError } = await supabase
-          .rpc('get_review_by_token', { review_token: token });
-
-        if (fetchError) throw fetchError;
-
-        if (!data || data.length === 0) {
-          setError('This review link is invalid or has expired');
-          setLoading(false);
-          return;
-        }
-
-        setReviewData(data[0] as unknown as ReviewData);
-
-        // Mark as viewed
-        await supabase.rpc('mark_review_viewed', { review_token: token });
-      } catch (err: any) {
-        setError(err.message || 'Failed to load review data');
-      } finally {
-        setLoading(false);
-      }
+  const load = async () => {
+    if (!token) return;
+    const { data, error } = await (supabase as any).rpc('get_accuscore_context', { review_token: token });
+    if (error) setError(error.message);
+    else if (!data) setError('This AccuScore link is invalid.');
+    else {
+      setCtx(data as Ctx);
+      if ((data as Ctx).forms.length === 1) setFormId((data as Ctx).forms[0].id);
     }
-
-    fetchReview();
-  }, [token]);
-
-  const handleSubmitReview = async () => {
-    if (!token || !reviewNotes.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Please provide details',
-        description: 'Explain what you would like reviewed about this score.',
-      });
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const { data, error } = await supabase
-        .rpc('submit_review_request', { 
-          review_token: token, 
-          notes: reviewNotes 
-        });
-
-      if (error) throw error;
-
-      setSubmitted(true);
-      toast({
-        title: 'Review request submitted',
-        description: 'An administrator will review your request.',
-      });
-    } catch (err: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: err.message || 'Failed to submit review request',
-      });
-    } finally {
-      setSubmitting(false);
-    }
+    setLoading(false);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    load();
+    if (token) supabase.rpc('mark_review_viewed', { review_token: token });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
-  if (error) {
+  const form = ctx?.forms.find((f) => f.id === formId);
+
+  const submit = async () => {
+    if (!form || !token) return;
+    const missing = form.fields.filter((f) => f.required && !answers[f.key]?.trim());
+    if (missing.length) {
+      toast({ variant: 'destructive', title: 'Missing information', description: `Please complete: ${missing.map((m) => m.label).join(', ')}` });
+      return;
+    }
+    setSubmitting(true);
+    const clean: Record<string, string> = {};
+    form.fields.forEach((f) => { if (answers[f.key]) clean[f.key] = answers[f.key].trim().slice(0, 4000); });
+    const { error } = await (supabase as any).rpc('submit_accuscore_request', { review_token: token, _form_id: form.id, _answers: clean });
+    setSubmitting(false);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Could not submit', description: error.message });
+      return;
+    }
+    setAnswers({});
+    setJustSubmitted(true);
+    toast({ title: 'AccuScore request submitted' });
+    load();
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-background"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+
+  if (error || !ctx) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-8 text-center">
-            <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
-            <h1 className="text-xl font-bold mb-2">Unable to Load Review</h1>
-            <p className="text-muted-foreground">{error}</p>
-          </CardContent>
-        </Card>
+        <Card className="max-w-md w-full"><CardContent className="pt-8 text-center">
+          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
+          <h1 className="text-xl font-bold mb-2">Unable to load AccuScore</h1>
+          <p className="text-muted-foreground">{error}</p>
+        </CardContent></Card>
       </div>
     );
   }
 
-  if (!reviewData) return null;
-
-  const hasRequestedReview = reviewData.token_status === 'review_requested' || submitted;
-  const isResolved = reviewData.token_status === 'resolved';
+  const set = (k: string, v: string) => setAnswers((a) => ({ ...a, [k]: v }));
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-card">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <img src={logoBlack} alt="CheerMatch" className="h-8" />
-          <span className="text-sm text-muted-foreground">Score Review Portal</span>
+          <span className="text-sm text-muted-foreground">AccuScore Request</span>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-8">
-        {/* Team Info */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">{reviewData.team_name}</h1>
-          <p className="text-lg text-muted-foreground">{reviewData.gym_name}</p>
-          <div className="flex flex-wrap gap-3 mt-4">
-            <span className="px-3 py-1 rounded-full text-sm font-medium bg-primary/10 text-primary">
-              {reviewData.event_name}
-            </span>
-            <span className="px-3 py-1 rounded-full text-sm font-medium bg-secondary text-secondary-foreground">
-              {reviewData.division_name}
-            </span>
-            <span className="px-3 py-1 rounded-full text-sm font-medium bg-muted text-muted-foreground">
-              {reviewData.level_name}
-            </span>
-          </div>
-        </div>
+      <main className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+        <Card>
+          <CardHeader><CardTitle>Team details</CardTitle></CardHeader>
+          <CardContent className="grid sm:grid-cols-2 gap-4">
+            {[
+              ['Event', ctx.event_name], ['Gym', ctx.gym_name], ['Team', ctx.team_name],
+              ['Division', ctx.division_name], ['Level', ctx.level_name], ['Coach', ctx.coach_name || ctx.coach_email],
+            ].map(([l, v]) => (
+              <div key={l as string}>
+                <Label className="text-xs text-muted-foreground">{l}</Label>
+                <Input value={(v as string) || '—'} readOnly className="bg-muted" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Video Section */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Play className="w-5 h-5" />
-                  Performance Video
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {reviewData.video_url ? (
-                  <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                    <video
-                      src={reviewData.video_url}
-                      controls
-                      className="w-full h-full"
-                      poster={reviewData.thumbnail_url || undefined}
-                    />
+        {!ctx.is_open ? (
+          <Card><CardContent className="pt-8 pb-8 text-center">
+            <Lock className="w-10 h-10 mx-auto mb-3 text-muted-foreground" />
+            <p className="font-semibold">The AccuScore window has closed</p>
+            <p className="text-sm text-muted-foreground">Scores are final{ctx.cutoff_at ? ` as of ${format(new Date(ctx.cutoff_at), 'PPp')}` : ''}.</p>
+          </CardContent></Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Submit a request</CardTitle>
+              {ctx.cutoff_at && <p className="text-sm text-muted-foreground">Requests close {format(new Date(ctx.cutoff_at), 'PPp')}. After that, scores are final.</p>}
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {justSubmitted && (
+                <div className="flex items-center gap-2 rounded-md bg-primary/10 p-3 text-sm">
+                  <CheckCircle className="w-4 h-4 text-primary" /> Your request was received. You'll get an email with the decision. You can submit another below.
+                </div>
+              )}
+              {ctx.forms.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No AccuScore forms are available for this event.</p>
+              ) : (
+                <>
+                  <div className="space-y-1">
+                    <Label>Request type</Label>
+                    <Select value={formId} onValueChange={(v) => { setFormId(v); setAnswers({}); }}>
+                      <SelectTrigger><SelectValue placeholder="Choose a form" /></SelectTrigger>
+                      <SelectContent>{ctx.forms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                    {form?.description && <p className="text-xs text-muted-foreground">{form.description}</p>}
                   </div>
-                ) : (
-                  <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                    <p className="text-muted-foreground">Video not available</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Scores Section */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5" />
-                  Scores
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {reviewData.scores && reviewData.scores.length > 0 ? (
-                  <div className="space-y-6">
-                    {reviewData.scores.map((score, idx) => (
-                      <div key={score.score_id} className="space-y-4">
-                        {reviewData.scores!.length > 1 && (
-                          <p className="text-sm font-medium text-muted-foreground">
-                            Judge {idx + 1}
-                          </p>
-                        )}
-                        
-                        {/* % Perfection Score */}
-                        <div className="flex items-center justify-between p-4 bg-primary/10 rounded-lg">
-                          <span className="font-medium">% Perfection Score</span>
-                          <span className="text-2xl font-bold text-primary">
-                            {score.total_score != null ? `${score.total_score.toFixed(2)}%` : 'N/A'}
-                          </span>
-                        </div>
-
-                        {/* Deductions */}
-                        {score.deductions && score.deductions > 0 && (
-                          <div className="flex items-center justify-between p-3 bg-destructive/10 rounded-lg">
-                            <span className="text-sm font-medium">Deductions</span>
-                            <span className="font-bold text-destructive">
-                              -{score.deductions}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Field Breakdown */}
-                        {score.fields && score.fields.length > 0 && (
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium text-muted-foreground">
-                              Score Breakdown
-                            </p>
-                            {score.fields.map((f, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-center justify-between py-2 border-b last:border-0"
-                              >
-                                <span className="text-sm">
-                                  {f.section_name ? <span className="text-muted-foreground mr-1">{f.section_name} —</span> : null}
-                                  {f.name}
-                                </span>
-                                <span className="text-sm font-medium">
-                                  {f.points} / {f.max_points}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Comments */}
-                        {score.comments && (
-                          <div className="p-3 bg-muted rounded-lg">
-                            <p className="text-sm font-medium mb-1">Judge Comments</p>
-                            <p className="text-sm text-muted-foreground">{score.comments}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-center py-8">
-                    Scores have not been submitted yet.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Review Request Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Request Score Review</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isResolved ? (
-                  <div className="text-center py-4">
-                    <CheckCircle className="w-10 h-10 mx-auto mb-3 text-green-500" />
-                    <p className="font-medium">Review Completed</p>
-                    <p className="text-sm text-muted-foreground">
-                      This review request has been resolved.
-                    </p>
-                  </div>
-                ) : hasRequestedReview ? (
-                  <div className="text-center py-4">
-                    <Clock className="w-10 h-10 mx-auto mb-3 text-primary" />
-                    <p className="font-medium">Review Request Submitted</p>
-                    <p className="text-sm text-muted-foreground">
-                      An administrator will review your request and contact you.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      If you believe there is an error in the scoring, you may request a review. 
-                      Please provide details about what you would like reviewed.
-                    </p>
-                    <Textarea
-                      placeholder="Explain what you would like reviewed..."
-                      value={reviewNotes}
-                      onChange={(e) => setReviewNotes(e.target.value)}
-                      rows={4}
-                    />
-                    <Button 
-                      onClick={handleSubmitReview} 
-                      disabled={submitting || !reviewNotes.trim()}
-                      className="w-full"
-                    >
-                      {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                      Submit Review Request
+                  {form?.fields.map((f) => (
+                    <div key={f.key} className="space-y-1">
+                      <Label>{f.label}{f.required && <span className="text-destructive"> *</span>}</Label>
+                      {f.type === 'textarea' ? (
+                        <Textarea rows={4} value={answers[f.key] || ''} onChange={(e) => set(f.key, e.target.value)} maxLength={4000} />
+                      ) : f.type === 'select' || f.type === 'radio' ? (
+                        <Select value={answers[f.key] || ''} onValueChange={(v) => set(f.key, v)}>
+                          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                          <SelectContent>{(f.options || []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                        </Select>
+                      ) : (
+                        <Input
+                          value={answers[f.key] || ''}
+                          onChange={(e) => set(f.key, e.target.value)}
+                          placeholder={f.type === 'time' ? 'mm:ss' : undefined}
+                          inputMode={f.type === 'number' ? 'decimal' : undefined}
+                          maxLength={500}
+                        />
+                      )}
+                      {f.help && <p className="text-xs text-muted-foreground">{f.help}</p>}
+                    </div>
+                  ))}
+                  {form && (
+                    <Button className="w-full" onClick={submit} disabled={submitting}>
+                      {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Submit AccuScore Request
                     </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Footer */}
-        <footer className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
-          <p>This link expires on {new Date(reviewData.expires_at).toLocaleDateString()}</p>
-        </footer>
+        {ctx.requests.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle>Your requests</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              {ctx.requests.map((r) => (
+                <div key={r.id} className="border rounded-md p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium">{r.form_name || 'Request'}</span>
+                    <Badge variant={r.status === 'new' ? 'secondary' : 'default'}>{STATUS_LABEL[r.status] || r.status}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{format(new Date(r.created_at), 'PPp')}</p>
+                  {r.admin_response && <p className="text-sm mt-2 whitespace-pre-wrap">{r.admin_response}</p>}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );
