@@ -224,6 +224,11 @@ export default function Events() {
           display_order: 0,
         } as any);
         if (panelError) throw panelError;
+        // Enable all active AccuScore forms by default (adjust when editing the event)
+        const { data: forms } = await (supabase as any).from('accuscore_forms').select('id').eq('is_active', true);
+        if (forms?.length) {
+          await (supabase as any).from('event_accuscore_forms').insert(forms.map((f: any) => ({ event_id: newEvent.id, form_id: f.id })));
+        }
       }
     },
     onSuccess: () => {
@@ -488,6 +493,14 @@ export default function Events() {
                       </FormItem>
                     )}
                   />
+                  <div className="rounded-md border p-3 space-y-2">
+                    <p className="text-sm font-medium">AccuScore forms available to coaches</p>
+                    {editingEvent ? (
+                      <EventAccuScoreForms eventId={editingEvent.id} />
+                    ) : (
+                      <p className="text-xs text-muted-foreground">All forms are turned on for new events. Edit the event afterward to change them.</p>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
