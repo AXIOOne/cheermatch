@@ -2,6 +2,20 @@ import type { HelpTopic } from './types';
 
 export const adminTopics: HelpTopic[] = [
   {
+    slug: 'accuscore',
+    title: 'AccuScore Review Requests',
+    summary: 'How coaches request score reviews and how admins respond.',
+    audience: 'admin',
+    keywords: ['accuscore', 'review', 'appeal', 'coach', 'honored', 'denied', 'duplicate', 'cutoff'],
+    blocks: [
+      { type: 'p', text: 'Every scoresheet email includes an AccuScore link for that team. The link opens a form with the gym, team, division and level already filled in. Coaches can submit requests until the event\'s AccuScore cutoff; after that, scores are final.' },
+      { type: 'heading', text: 'Event setup' },
+      { type: 'steps', items: ['Open the event in Events and set the AccuScore Review Cutoff.', 'Under "AccuScore forms available to coaches", tick the forms coaches can use. New events start with every form turned on.'] },
+      { type: 'heading', text: 'Responding to a request' },
+      { type: 'steps', items: ['Go to AccuScore in the sidebar and open the event. Completed and Archived events are in the Closed tab.', 'Open a request from the New tab.', 'Use Open Scoring to change scores in the same score submission window as the Scoring Control Panel.', 'Choose Honored, Denied or Duplicate, write a response, then click Send Response.', 'The coach is emailed your decision with an updated scoresheet, and the request moves to Completed.'] },
+    ],
+  },
+  {
     slug: 'getting-started',
     title: 'Getting Started & Portal Overview',
     summary: 'How the portal is organised, who can access what, and the typical lifecycle of an event.',
