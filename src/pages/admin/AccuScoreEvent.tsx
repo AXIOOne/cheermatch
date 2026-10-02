@@ -26,6 +26,8 @@ const STATUS: Record<string, { label: string; variant: 'default' | 'secondary' |
   duplicate: { label: 'Duplicate', variant: 'outline' },
 };
 
+const displayAnswer = (answer: unknown) => Array.isArray(answer) ? answer.join(', ') : String(answer);
+
 export default function AccuScoreEvent() {
   const { eventId } = useParams<{ eventId: string }>();
   const { toast } = useToast();
@@ -166,11 +168,11 @@ export default function AccuScoreEvent() {
                 {fields.filter((f) => selected.answers?.[f.key]).map((f) => (
                   <div key={f.key}>
                     <p className="text-xs text-muted-foreground">{f.label}</p>
-                    <p className="text-sm whitespace-pre-wrap">{selected.answers[f.key]}</p>
+                    <p className="text-sm whitespace-pre-wrap">{displayAnswer(selected.answers[f.key])}</p>
                   </div>
                 ))}
                 {extraKeys.map((k) => (
-                  <div key={k}><p className="text-xs text-muted-foreground">{k}</p><p className="text-sm whitespace-pre-wrap">{String(selected.answers[k])}</p></div>
+                  <div key={k}><p className="text-xs text-muted-foreground">{k}</p><p className="text-sm whitespace-pre-wrap">{displayAnswer(selected.answers[k])}</p></div>
                 ))}
               </div>
 
