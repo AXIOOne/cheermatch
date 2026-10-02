@@ -121,6 +121,39 @@ export default function JudgePanelsManager({ eventId, onClose }: JudgePanelsMana
     },
   });
 
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [orderedPanels, setOrderedPanels] = useState<JudgePanel[] | null>(null);
+
+  const handleDragOver = (overId: string) => {
+    const list = [...(orderedPanels ?? panels ?? [])];
+    const from = list.findIndex((p) => p.id === dragId);
+    const to = list.findIndex((p) => p.id === overId);
+    if (from < 0 || to < 0) return;
+    const [moved] = list.splice(from, 1);
+    list.splice(to, 0, moved);
+    setOrderedPanels(list);
+  };
+
+  const persistOrder = async () => {
+    const list = orderedPanels;
+    setDragId(null);
+    if (!list) return;
+    const changed = list.filter((p, idx) => p.display_order !== idx);
+    if (changed.length === 0) { setOrderedPanels(null); return; }
+    const results = await Promise.all(
+      list.map((p, idx) =>
+        p.display_order === idx
+          ? Promise.resolve({ error: null })
+          : supabase.from('judge_panels').update({ display_order: idx }).eq('id', p.id)
+      )
+    );
+    const err = results.find((r) => r.error)?.error;
+    await queryClient.invalidateQueries({ queryKey: ['judge-panels', eventId] });
+    setOrderedPanels(null);
+    if (err) toast({ variant: 'destructive', title: 'Error', description: err.message });
+    else toast({ title: 'Panel order saved' });
+  };
+
   const handleAddPanel = () => {
     if (!newPanel.name.trim() || !newPanel.abbreviation.trim()) {
       toast({ variant: 'destructive', title: 'Please provide name and abbreviation' });
@@ -237,8 +270,19 @@ export default function JudgePanelsManager({ eventId, onClose }: JudgePanelsMana
               </TableRow>
             </TableHeader>
             <TableBody>
-              {panels.map((panel) => (
-                <TableRow key={panel.id}>
+              {(orderedPanels ?? panels).map((panel) => (
+                <TableRow
+                  key={panel.id}
+                  draggable
+                  onDragStart={() => setDragId(panel.id)}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (dragId && dragId !== panel.id) handleDragOver(panel.id);
+                  }}
+                  onDrop={(e) => e.preventDefault()}
+                  onDragEnd={() => persistOrder()}
+                  className={dragId === panel.id ? 'opacity-50' : ''}
+                >
                   <TableCell>
                     <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
                   </TableCell>
