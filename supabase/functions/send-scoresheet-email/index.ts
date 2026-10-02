@@ -73,7 +73,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)),
           level:levels(name)
         ),
-        event:events(id, name, discipline, accuscore_end_at),
+        event:events(id, name, discipline, accuscore_end_at, time_zone),
         scores:scores(
           id,
           total_score,
@@ -226,7 +226,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
           </div>
           <div class="content">
             <p>Dear ${coachProfile.full_name || "Coach"},</p>
-            <p>Here are the official scores for your team's performance:</p>
+            <p>${accuscoreReq ? "We have reviewed your AccuScore request." : "Here are the official scores for your team's performance:"}</p>
+            ${responseBlock}
             
             <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 20px 0;">
               <p style="margin: 0;"><strong>Team:</strong> ${team.name || "Team"}</p>
@@ -240,6 +241,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
               <div class="score-big">${avgScore.toFixed(2)}</div>
             </div>
 
+            ${accuscoreBlock}
             <h2>Score Breakdown</h2>
             ${scoreBreakdownHtml}
 
@@ -393,7 +395,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "CheerMatch <noreply@cheermatch.com>",
       to: [coachProfile.email],
-      subject: `Score Sheet - ${team.name || "Team"} | ${event?.name || "Event"}`,
+      subject: accuscoreReq ? `AccuScore Response - ${team.name || "Team"} | ${event?.name || "Event"}` : `Score Sheet - ${team.name || "Team"} | ${event?.name || "Event"}`,
       html: emailHtml,
       attachments: [{
         filename: `${safeName}.pdf`,
