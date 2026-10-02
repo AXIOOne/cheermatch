@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Folder, FolderLock, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
+import { AccuScoreFormsManager } from '@/components/admin/AccuScoreFormsManager';
 
 const CLOSED = ['completed', 'archived'];
 
@@ -63,9 +64,11 @@ export default function AccuScore() {
           <TabsList>
             <TabsTrigger value="open">Open events ({open.length})</TabsTrigger>
             <TabsTrigger value="closed">Closed ({closed.length})</TabsTrigger>
+            <TabsTrigger value="forms">Forms</TabsTrigger>
           </TabsList>
           <TabsContent value="open"><List items={open} /></TabsContent>
           <TabsContent value="closed"><List items={closed} closedFolder /></TabsContent>
+          <TabsContent value="forms"><AccuScoreFormsManager /></TabsContent>
         </Tabs>
       )}
     </div>
