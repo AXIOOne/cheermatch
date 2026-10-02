@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle, CheckCircle, Lock } from 'lucide-react';
@@ -202,8 +203,17 @@ export default function ScoreReview() {
                             );
                           })}
                         </div>
-                      ) : f.type === 'select' || f.type === 'radio' ? (
-                        <Select value={typeof answers[f.key] === 'string' ? answers[f.key] : ''} onValueChange={(v) => set(f.key, v)}>
+                      ) : f.type === 'radio' ? (
+                        <RadioGroup value={typeof answers[f.key] === 'string' ? answers[f.key] as string : ''} onValueChange={(v) => set(f.key, v)}>
+                          {(f.options || []).map((option) => (
+                            <label key={option} className="flex items-center gap-2 rounded-md border p-3 cursor-pointer">
+                              <RadioGroupItem value={option} />
+                              <span className="text-sm">{option}</span>
+                            </label>
+                          ))}
+                        </RadioGroup>
+                      ) : f.type === 'select' ? (
+                        <Select value={typeof answers[f.key] === 'string' ? answers[f.key] as string : ''} onValueChange={(v) => set(f.key, v)}>
                           <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                           <SelectContent>{(f.options || []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                         </Select>
