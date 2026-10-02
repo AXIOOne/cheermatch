@@ -279,7 +279,7 @@ export default function JudgePanelsManager({ eventId, onClose }: JudgePanelsMana
                     e.preventDefault();
                     if (dragId && dragId !== panel.id) handleDragOver(panel.id);
                   }}
-                  onDrop={(e) => { e.preventDefault(); persistOrder(); }}
+                  onDrop={(e) => e.preventDefault()}
                   onDragEnd={() => persistOrder()}
                   className={dragId === panel.id ? 'opacity-50' : ''}
                 >
