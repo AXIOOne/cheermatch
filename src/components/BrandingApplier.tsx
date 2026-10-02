@@ -14,6 +14,8 @@ export function BrandingApplier() {
     root.style.setProperty('--primary', branding.primaryColor);
     root.style.setProperty('--sidebar-primary', branding.primaryColor);
     root.style.setProperty('--ring', branding.primaryColor);
+    root.style.setProperty('--accent', branding.primaryColor);
+    root.style.setProperty('--sidebar-ring', branding.primaryColor);
   }, [branding?.primaryColor]);
 
   return null;
