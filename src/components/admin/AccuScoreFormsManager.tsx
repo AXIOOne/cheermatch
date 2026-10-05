@@ -11,8 +11,9 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, ArrowUp, ArrowDown, Copy } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, ArrowUp, ArrowDown, Copy, Eye } from 'lucide-react';
 import type { AccuScoreField } from '@/pages/review/ScoreReview';
+import { AccuScoreFormFields, type AccuScoreAnswers } from '@/components/accuscore/AccuScoreFormFields';
 
 const TYPES: { value: AccuScoreField['type']; label: string }[] = [
   { value: 'text', label: 'Short text' },
@@ -42,6 +43,9 @@ export function AccuScoreFormsManager() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Form | null>(null);
   const [saving, setSaving] = useState(false);
+  const [previewing, setPreviewing] = useState<Form | null>(null);
+  const [showLivePreview, setShowLivePreview] = useState(false);
+  const [previewAnswers, setPreviewAnswers] = useState<AccuScoreAnswers>({});
 
   const { data: forms, isLoading } = useQuery({
     queryKey: ['accuscore-forms-admin'],
@@ -134,8 +138,9 @@ export function AccuScoreFormsManager() {
               </div>
               {!f.is_active && <Badge variant="outline">Off</Badge>}
               <Switch checked={f.is_active} onCheckedChange={(v) => toggleActive(f, v)} aria-label="Active" />
+              <Button variant="ghost" size="icon" aria-label="Preview as coach" onClick={() => { setPreviewAnswers({}); setPreviewing(f); }}><Eye className="w-4 h-4" /></Button>
               <Button variant="ghost" size="icon" aria-label="Duplicate" onClick={() => setEditing({ ...f, id: undefined, slug: '', name: `${f.name} (copy)` })}><Copy className="w-4 h-4" /></Button>
-              <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setEditing(structuredClone(f))}><Pencil className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => { setShowLivePreview(false); setEditing(structuredClone(f)); }}><Pencil className="w-4 h-4" /></Button>
               <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => remove(f)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
             </div>
           ))}
@@ -143,10 +148,18 @@ export function AccuScoreFormsManager() {
       </Card>
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editing?.id ? 'Edit form' : 'New form'}</DialogTitle></DialogHeader>
+        <DialogContent className={`${showLivePreview ? 'max-w-6xl' : 'max-w-3xl'} max-h-[90vh] overflow-y-auto`}>
+          <DialogHeader>
+            <div className="flex items-center justify-between gap-3 pr-6">
+              <DialogTitle>{editing?.id ? 'Edit form' : 'New form'}</DialogTitle>
+              <Button variant="outline" size="sm" onClick={() => { setPreviewAnswers({}); setShowLivePreview((v) => !v); }}>
+                <Eye className="w-4 h-4 mr-1" /> {showLivePreview ? 'Hide preview' : 'Preview as coach'}
+              </Button>
+            </div>
+          </DialogHeader>
           {editing && (
-            <div className="space-y-4">
+            <div className={showLivePreview ? 'grid gap-6 lg:grid-cols-2' : undefined}>
+            <div className="space-y-4 min-w-0">
               <div className="grid grid-cols-[1fr_120px] gap-3">
                 <div><Label>Form name</Label><Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
                 <div><Label>Order</Label><Input type="number" value={editing.display_order} onChange={(e) => setEditing({ ...editing, display_order: Number(e.target.value) || 0 })} /></div>
@@ -186,11 +199,45 @@ export function AccuScoreFormsManager() {
                 </Button>
               </div>
             </div>
+            {showLivePreview && (
+              <div className="rounded-md border bg-muted/30 p-4 space-y-4 min-w-0">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Coach preview — unsaved changes</p>
+                  <p className="font-semibold mt-1">{editing.name || 'Untitled form'}</p>
+                  {editing.description && <p className="text-xs text-muted-foreground mt-0.5">{editing.description}</p>}
+                </div>
+                <AccuScoreFormFields
+                  fields={editing.fields.map((f, i) => ({ ...f, key: f.key || `preview_${i}` }))}
+                  answers={previewAnswers}
+                  onChange={(k, v) => setPreviewAnswers((a) => ({ ...a, [k]: v }))}
+                />
+                <Button className="w-full" disabled>Submit AccuScore Request</Button>
+              </div>
+            )}
+            </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
             <Button onClick={save} disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}Save form</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!previewing} onOpenChange={(o) => !o && setPreviewing(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Coach preview — {previewing?.name}</DialogTitle></DialogHeader>
+          {previewing && (
+            <div className="space-y-4">
+              {previewing.description && <p className="text-sm text-muted-foreground">{previewing.description}</p>}
+              <AccuScoreFormFields
+                fields={previewing.fields}
+                answers={previewAnswers}
+                onChange={(k, v) => setPreviewAnswers((a) => ({ ...a, [k]: v }))}
+              />
+              <Button className="w-full" disabled>Submit AccuScore Request</Button>
+              <p className="text-xs text-muted-foreground text-center">Preview only — nothing is submitted.</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
