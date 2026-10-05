@@ -36,7 +36,7 @@ function SkillScripting({ value, onChange }: { value: string[]; onChange: (v: st
     <div className="space-y-2">
       <div className="flex gap-2 pr-10">
         <span className="flex-1 text-xs font-medium text-muted-foreground">Skill</span>
-        <span className="w-32 text-xs font-medium text-muted-foreground"># performed in video</span>
+        <span className="w-32 text-xs font-medium text-muted-foreground"># performed</span>
       </div>
       {rows.map((r, i) => (
         <div key={i} className="flex gap-2">
