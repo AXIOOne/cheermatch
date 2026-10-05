@@ -15,6 +15,13 @@
       "when": 1790948111306,
       "tag": "0001_accuscore_enable_general_form",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791242459765,
+      "tag": "0002_accuscore_enabled_toggle",
+      "breakpoints": true
     }
   ]
 }

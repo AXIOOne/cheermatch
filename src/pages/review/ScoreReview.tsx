@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle, CheckCircle, Lock } from 'lucide-react';
 import logoBlack from '@/assets/portal-logo.png.asset.json';
@@ -38,10 +38,10 @@ export default function ScoreReview() {
   const [ctx, setCtx] = useState<Ctx | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [formId, setFormId] = useState('');
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
+  const [selected, setSelected] = useState<string[]>([]);
+  const [answersByForm, setAnswersByForm] = useState<Record<string, Record<string, string | string[]>>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [justSubmitted, setJustSubmitted] = useState(false);
+  const [justSubmitted, setJustSubmitted] = useState<string[]>([]);
 
   const load = async () => {
     if (!token) return;
@@ -50,7 +50,7 @@ export default function ScoreReview() {
     else if (!data) setError('This AccuScore link is invalid.');
     else {
       setCtx(data as Ctx);
-      if ((data as Ctx).forms.length === 1) setFormId((data as Ctx).forms[0].id);
+      if ((data as Ctx).forms.length === 1) setSelected([(data as Ctx).forms[0].id]);
     }
     setLoading(false);
   };
@@ -61,36 +61,48 @@ export default function ScoreReview() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const form = ctx?.forms.find((f) => f.id === formId);
+  const toggleForm = (id: string, on: boolean) =>
+    setSelected((s) => (on ? [...s, id] : s.filter((x) => x !== id)));
 
   const submit = async () => {
-    if (!form || !token) return;
-    const missing = form.fields.filter((f) => {
-      if (!f.required) return false;
-      const answer = answers[f.key];
-      if (f.type === 'skills') return filledSkillRows(answer).length === 0;
-      return Array.isArray(answer) ? answer.length === 0 : !answer?.trim();
-    });
-    if (missing.length) {
-      toast({ variant: 'destructive', title: 'Missing information', description: `Please complete: ${missing.map((m) => m.label).join(', ')}` });
+    if (!ctx || !token || selected.length === 0) return;
+    const chosen = ctx.forms.filter((f) => selected.includes(f.id));
+    const problems: string[] = [];
+    for (const form of chosen) {
+      const answers = answersByForm[form.id] || {};
+      const missing = form.fields.filter((f) => {
+        if (!f.required || f.type === 'section') return false;
+        const answer = answers[f.key];
+        if (f.type === 'skills') return filledSkillRows(answer).length === 0;
+        return Array.isArray(answer) ? answer.length === 0 : !answer?.trim();
+      });
+      if (missing.length) problems.push(`${form.name}: ${missing.map((m) => m.label).join(', ')}`);
+    }
+    if (problems.length) {
+      toast({ variant: 'destructive', title: 'Missing information', description: problems.join(' • ') });
       return;
     }
     setSubmitting(true);
-    const clean: Record<string, string | string[]> = {};
-    form.fields.forEach((f) => {
-      const answer = f.type === 'skills' ? filledSkillRows(answers[f.key]) : answers[f.key];
-      if (Array.isArray(answer) && answer.length) clean[f.key] = answer;
-      else if (typeof answer === 'string' && answer) clean[f.key] = answer.trim().slice(0, 4000);
-    });
-    const { error } = await (supabase as any).rpc('submit_accuscore_request', { review_token: token, _form_id: form.id, _answers: clean });
-    setSubmitting(false);
-    if (error) {
-      toast({ variant: 'destructive', title: 'Could not submit', description: error.message });
-      return;
+    const sent: string[] = [];
+    const failed: string[] = [];
+    for (const form of chosen) {
+      const answers = answersByForm[form.id] || {};
+      const clean: Record<string, string | string[]> = {};
+      form.fields.forEach((f) => {
+        if (f.type === 'section') return;
+        const answer = f.type === 'skills' ? filledSkillRows(answers[f.key]) : answers[f.key];
+        if (Array.isArray(answer) && answer.length) clean[f.key] = answer;
+        else if (typeof answer === 'string' && answer) clean[f.key] = answer.trim().slice(0, 4000);
+      });
+      const { error } = await (supabase as any).rpc('submit_accuscore_request', { review_token: token, _form_id: form.id, _answers: clean });
+      if (error) failed.push(`${form.name}: ${error.message}`); else sent.push(form.name);
     }
-    setAnswers({});
-    setJustSubmitted(true);
-    toast({ title: 'AccuScore request submitted' });
+    setSubmitting(false);
+    const sentIds = chosen.filter((f) => sent.includes(f.name)).map((f) => f.id);
+    setSelected((s) => s.filter((id) => !sentIds.includes(id)));
+    setAnswersByForm((a) => { const n = { ...a }; sentIds.forEach((id) => delete n[id]); return n; });
+    if (sent.length) { setJustSubmitted(sent); toast({ title: `${sent.length} AccuScore request${sent.length > 1 ? 's' : ''} submitted` }); }
+    if (failed.length) toast({ variant: 'destructive', title: 'Some requests could not be submitted', description: failed.join(' • ') });
     load();
   };
 
@@ -108,7 +120,6 @@ export default function ScoreReview() {
     );
   }
 
-  const set = (k: string, v: string | string[]) => setAnswers((a) => ({ ...a, [k]: v }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -148,29 +159,44 @@ export default function ScoreReview() {
               {ctx.cutoff_at && <p className="text-sm text-muted-foreground">Requests close {format(new Date(ctx.cutoff_at), 'PPp')}. After that, scores are final.</p>}
             </CardHeader>
             <CardContent className="space-y-4">
-              {justSubmitted && (
-                <div className="flex items-center gap-2 rounded-md bg-primary/10 p-3 text-sm">
-                  <CheckCircle className="w-4 h-4 text-primary" /> Your request was received. You'll get an email with the decision. You can submit another below.
+              {justSubmitted.length > 0 && (
+                <div className="flex items-start gap-2 rounded-md bg-primary/10 p-3 text-sm">
+                  <CheckCircle className="w-4 h-4 text-primary mt-0.5" />
+                  <span>Received {justSubmitted.length > 1 ? 'separate requests' : 'your request'} for: <strong>{justSubmitted.join(', ')}</strong>. You'll get an email with each decision. You can submit more below.</span>
                 </div>
               )}
               {ctx.forms.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No AccuScore forms are available for this event.</p>
               ) : (
                 <>
-                  <div className="space-y-1">
-                    <Label>Request type</Label>
-                    <Select value={formId} onValueChange={(v) => { setFormId(v); setAnswers({}); }}>
-                      <SelectTrigger><SelectValue placeholder="Choose a form" /></SelectTrigger>
-                      <SelectContent>{ctx.forms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                    {form?.description && <p className="text-xs text-muted-foreground">{form.description}</p>}
-                  </div>
-                  {form && <AccuScoreFormFields fields={form.fields} answers={answers} onChange={set} />}
-                  {form && (
-                    <Button className="w-full" onClick={submit} disabled={submitting}>
-                      {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Submit AccuScore Request
-                    </Button>
-                  )}
+                  <p className="text-sm text-muted-foreground">Choose one or more forms. Each form is sent as its own request.</p>
+                  {ctx.forms.map((f) => {
+                    const on = selected.includes(f.id);
+                    return (
+                      <div key={f.id} className={`rounded-md border ${on ? 'border-primary' : ''}`}>
+                        <label className="flex items-start gap-3 p-3 cursor-pointer">
+                          <Checkbox checked={on} onCheckedChange={(v) => toggleForm(f.id, !!v)} className="mt-0.5" />
+                          <div>
+                            <p className="font-medium">{f.name}</p>
+                            {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
+                          </div>
+                        </label>
+                        {on && (
+                          <div className="border-t p-3">
+                            <AccuScoreFormFields
+                              fields={f.fields}
+                              answers={answersByForm[f.id] || {}}
+                              onChange={(k, v) => setAnswersByForm((a) => ({ ...a, [f.id]: { ...(a[f.id] || {}), [k]: v } }))}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <Button className="w-full" onClick={submit} disabled={submitting || selected.length === 0}>
+                    {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    Submit {selected.length > 1 ? `${selected.length} AccuScore Requests` : 'AccuScore Request'}
+                  </Button>
                 </>
               )}
             </CardContent>
