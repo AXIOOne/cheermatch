@@ -31,7 +31,7 @@ export interface IntegrationSettings {
 
 export interface BrandingSettings {
   logoUrl: string;
-  primaryColor: string; // HSL string like "168 76% 50%"
+  primaryColor: string; // HSL string like "206 63% 63%"
 }
 
 export interface PlatformSettings {
