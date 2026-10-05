@@ -148,8 +148,15 @@ export function AccuScoreFormsManager() {
       </Card>
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editing?.id ? 'Edit form' : 'New form'}</DialogTitle></DialogHeader>
+        <DialogContent className={`${showLivePreview ? 'max-w-6xl' : 'max-w-3xl'} max-h-[90vh] overflow-y-auto`}>
+          <DialogHeader>
+            <div className="flex items-center justify-between gap-3 pr-6">
+              <DialogTitle>{editing?.id ? 'Edit form' : 'New form'}</DialogTitle>
+              <Button variant="outline" size="sm" onClick={() => { setPreviewAnswers({}); setShowLivePreview((v) => !v); }}>
+                <Eye className="w-4 h-4 mr-1" /> {showLivePreview ? 'Hide preview' : 'Preview as coach'}
+              </Button>
+            </div>
+          </DialogHeader>
           {editing && (
             <div className="space-y-4">
               <div className="grid grid-cols-[1fr_120px] gap-3">
