@@ -55,9 +55,9 @@
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 0 0% 15%;
     --sidebar-ring: 168 76% 50%;
-    --sidebar-header: 0 0% 97%;
+    --sidebar-header: 0 0% 82%;
     --sidebar-header-foreground: 0 0% 15%;
-    --sidebar-header-border: 0 0% 85%;
+    --sidebar-header-border: 0 0% 70%;
   }
 
   .dark {
@@ -97,9 +97,9 @@
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 0 0% 15%;
     --sidebar-ring: 168 76% 55%;
-    --sidebar-header: 0 0% 97%;
+    --sidebar-header: 0 0% 82%;
     --sidebar-header-foreground: 0 0% 15%;
-    --sidebar-header-border: 0 0% 85%;
+    --sidebar-header-border: 0 0% 70%;
   }
 }
 
