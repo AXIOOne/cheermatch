@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { Switch } from '@/components/ui/switch';
 import { EventAccuScoreForms } from '@/components/admin/EventAccuScoreForms';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
