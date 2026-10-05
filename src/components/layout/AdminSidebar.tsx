@@ -88,11 +88,11 @@ export function AdminSidebar() {
       <SidebarRail />
 
       <SidebarHeader className="bg-sidebar-header border-b border-sidebar-header-border">
-        <div className={cn('flex items-center', collapsed ? 'justify-center p-1.5' : 'justify-center px-2 py-1.5')}>
+        <div className={cn('flex items-center', collapsed ? 'justify-center p-0' : 'justify-center px-2 py-1.5')}>
           <img
             src={logoSrc}
             alt="Portal"
-            className={cn('object-contain', collapsed ? 'h-8 w-8' : 'h-8 max-w-full')}
+            className={cn('object-contain shrink-0', collapsed ? 'h-8 w-8' : 'h-8 max-w-full')}
           />
         </div>
       </SidebarHeader>
