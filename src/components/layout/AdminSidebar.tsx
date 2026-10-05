@@ -87,7 +87,7 @@ export function AdminSidebar() {
       <SidebarRail />
 
       <SidebarHeader className="bg-sidebar-header border-b border-sidebar-header-border">
-        <div className={cn('flex items-center', collapsed ? 'justify-center p-0' : 'justify-center px-2 py-1.5')}>
+        <div className={cn('flex items-center', collapsed ? 'justify-center p-0' : 'justify-start pl-2 pr-2 py-1.5')}>
           <img
             src={logoSrc}
             alt="Portal"
