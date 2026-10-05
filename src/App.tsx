@@ -22,6 +22,7 @@ import Divisions from "./pages/admin/Divisions";
 import Settings from "./pages/admin/Settings";
 import AccuScore from "./pages/admin/AccuScore";
 import AccuScoreEvent from "./pages/admin/AccuScoreEvent";
+import AccuScoreRequest from "./pages/admin/AccuScoreRequest";
 import UserRoles from "./pages/admin/UserRoles";
 import Organizations from "./pages/admin/Organizations";
 import Submissions from "./pages/admin/Submissions";
@@ -100,7 +101,8 @@ const App = () => (
                 <Route path="broadcast" element={<Broadcast />} />
                 <Route path="reviews" element={<Navigate to="/admin/accuscore" replace />} />
                 <Route path="accuscore" element={<AccuScore />} />
-                <Route path="accuscore/:eventId" element={<AccuScoreEvent />} />
+<Route path="accuscore/:eventId" element={<AccuScoreEvent />} />
+                <Route path="accuscore/:eventId/:requestId" element={<AccuScoreRequest />} />
                 <Route path="roles" element={<UserRoles />} />
                 <Route path="organizations" element={<Organizations />} />
                 <Route path="settings" element={<Settings />} />
