@@ -82,9 +82,10 @@ export function AccuScoreFormsManager() {
     const fields = editing.fields.map((f) => ({
       ...f,
       key: f.key || slugify(f.label).replace(/-/g, '_') || `field_${Math.random().toString(36).slice(2, 7)}`,
+      required: f.type === 'section' ? undefined : f.required,
       options: HAS_OPTIONS.includes(f.type) ? (f.options || []).map((o) => o.trim()).filter(Boolean) : undefined,
     }));
-    if (fields.some((f) => !f.label.trim())) return toast.error('Every question needs a label');
+    if (fields.some((f) => !f.label.trim())) return toast.error('Every question and section needs a title');
     if (fields.some((f) => HAS_OPTIONS.includes(f.type) && !f.options?.length)) return toast.error('Choice questions need at least one option');
     const keys = fields.map((f) => f.key);
     if (new Set(keys).size !== keys.length) return toast.error('Two questions share the same label — make them unique');
@@ -114,6 +115,23 @@ export function AccuScoreFormsManager() {
     setEditing((e) => {
       if (!e) return e;
       const arr = [...e.fields];
+      if (arr[i].type === 'section') {
+        // move the whole section block (section + its questions) past the neighbouring block
+        const blockEnd = (start: number) => { let k = start + 1; while (k < arr.length && arr[k].type !== 'section') k++; return k; };
+        const end = blockEnd(i);
+        if (d < 0) {
+          let p = i - 1; while (p > 0 && arr[p].type !== 'section') p--;
+          if (i === 0) return e;
+          const block = arr.splice(i, end - i);
+          arr.splice(p < 0 ? 0 : p, 0, ...block);
+        } else {
+          if (end >= arr.length) return e;
+          const nextEnd = arr[end].type === 'section' ? blockEnd(end) : end + 1;
+          const block = arr.splice(i, end - i);
+          arr.splice(nextEnd - block.length, 0, ...block);
+        }
+        return { ...e, fields: arr };
+      }
       const j = i + d;
       if (j < 0 || j >= arr.length) return e;
       [arr[i], arr[j]] = [arr[j], arr[i]];
@@ -135,7 +153,7 @@ export function AccuScoreFormsManager() {
             <div key={f.id} className="flex items-center gap-3 px-4 py-3">
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{f.name}</p>
-                <p className="text-xs text-muted-foreground">{f.fields.length} questions</p>
+                <p className="text-xs text-muted-foreground">{f.fields.filter((x) => x.type !== 'section').length} questions{f.fields.some((x) => x.type === 'section') ? ` · ${f.fields.filter((x) => x.type === 'section').length} sections` : ''}</p>
               </div>
               {!f.is_active && <Badge variant="outline">Off</Badge>}
               <Switch checked={f.is_active} onCheckedChange={(v) => toggleActive(f, v)} aria-label="Active" />
@@ -169,7 +187,21 @@ export function AccuScoreFormsManager() {
 
               <div className="space-y-3">
                 <Label>Questions</Label>
-                {editing.fields.map((f, i) => (
+                {editing.fields.map((f, i) => f.type === 'section' ? (
+                  <Card key={i} className="border-primary/40 bg-primary/5">
+                    <CardContent className="p-3 space-y-2">
+                      <div className="flex gap-2 items-center">
+                        <Badge variant="outline" className="border-primary/40 text-primary">Section</Badge>
+                        <Input className="flex-1 font-heading font-semibold" placeholder="Section title (e.g. Difficulty)" value={f.label} onChange={(e) => updField(i, { label: e.target.value })} />
+                        <Button variant="ghost" size="icon" aria-label="Move section up" onClick={() => move(i, -1)} disabled={i === 0}><ArrowUp className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" aria-label="Move section down" onClick={() => move(i, 1)}><ArrowDown className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" aria-label="Remove section" onClick={() => setEditing({ ...editing, fields: editing.fields.filter((_, j) => j !== i) })}><Trash2 className="w-4 h-4 text-destructive" /></Button>
+                      </div>
+                      <Input placeholder="Section description (optional)" value={f.help || ''} onChange={(e) => updField(i, { help: e.target.value })} />
+                      <p className="text-xs text-muted-foreground">Questions below belong to this section until the next one. Moving a section moves its questions too; removing it keeps its questions.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
                   <Card key={i}>
                     <CardContent className="p-3 space-y-2">
                       <div className="flex gap-2 items-start">
@@ -197,6 +229,9 @@ export function AccuScoreFormsManager() {
                 ))}
                 <Button variant="outline" size="sm" onClick={() => setEditing({ ...editing, fields: [...editing.fields, { key: '', label: '', type: 'text' }] })}>
                   <Plus className="w-4 h-4 mr-1" /> Add question
+                </Button>
+                <Button variant="outline" size="sm" className="ml-2" onClick={() => setEditing({ ...editing, fields: [...editing.fields, { key: '', label: '', type: 'section' }] })}>
+                  <Plus className="w-4 h-4 mr-1" /> Add section
                 </Button>
               </div>
             </div>

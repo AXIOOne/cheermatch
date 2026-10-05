@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export interface AccuScoreField {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'time' | 'number' | 'select' | 'radio' | 'checkbox' | 'checkbox-group' | 'skills';
+  type: 'text' | 'textarea' | 'time' | 'number' | 'select' | 'radio' | 'checkbox' | 'checkbox-group' | 'skills' | 'section';
   required?: boolean;
   options?: string[];
   help?: string;
@@ -72,7 +72,12 @@ interface Props {
 export function AccuScoreFormFields({ fields, answers, onChange }: Props) {
   return (
     <>
-      {fields.map((f, i) => (
+      {fields.map((f, i) => f.type === 'section' ? (
+        <div key={f.key || i} className="pt-3 first:pt-0 border-b border-border pb-1">
+          <h3 className="font-heading text-lg font-semibold text-foreground">{f.label}</h3>
+          {f.help && <p className="text-xs text-muted-foreground">{f.help}</p>}
+        </div>
+      ) : (
         <div key={f.key || i} className="space-y-1">
           <Label>{f.label}{f.required && <span className="text-destructive"> *</span>}</Label>
           {f.type === 'skills' ? (
