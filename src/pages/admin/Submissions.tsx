@@ -389,27 +389,11 @@ export default function Submissions() {
               Upload video
             </Button>
           )}
-          <div className="w-full md:w-[280px]">
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Event</label>
-            <Select value={eventFilter} onValueChange={setEventFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select an event" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Events</SelectItem>
-                {events?.map((event) => (
-                  <SelectItem key={event.id} value={event.id}>
-                    {event.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </div>
 
 
-      <Tabs value={tab} onValueChange={switchTab} className="mb-6">
+      <Tabs value={tab} onValueChange={switchTab} className="mb-6 overflow-x-auto">
         <TabsList>
           <TabsTrigger value="current">Current ({currentCount})</TabsTrigger>
           <TabsTrigger value="pending">Awaiting video ({pendingCaptures.length})</TabsTrigger>
@@ -425,7 +409,7 @@ export default function Submissions() {
       {!isPendingTab && (
       <Card className="mb-6">
         <CardContent className="p-0">
-          <div className="grid grid-cols-3 md:grid-cols-6 divide-x divide-y md:divide-y-0">
+          <div className="grid grid-cols-3 lg:grid-cols-6 divide-x divide-y lg:divide-y-0">
             {[
               { label: 'Total', value: stats.total, className: '' },
               { label: 'Ready for Review', value: stats.ready, className: 'text-blue-600' },
@@ -449,8 +433,8 @@ export default function Submissions() {
       <Card className="mb-6">
         <CardContent className="p-4">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4">
+              <div className="relative min-w-[220px] flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by team or gym name..."
@@ -467,6 +451,19 @@ export default function Submissions() {
                   <SelectItem value="all">All Statuses</SelectItem>
                   {LIFECYCLE_STATUSES.map((s) => (
                     <SelectItem key={s} value={s}>{lifecycleConfig[s].label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={eventFilter} onValueChange={setEventFilter}>
+                <SelectTrigger className="w-full md:w-[260px]">
+                  <SelectValue placeholder="All Events" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Events</SelectItem>
+                  {events?.map((event) => (
+                    <SelectItem key={event.id} value={event.id}>
+                      {event.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -528,7 +525,7 @@ export default function Submissions() {
       {/* Submissions Table */}
 
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           {isLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
