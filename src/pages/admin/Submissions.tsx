@@ -470,6 +470,19 @@ export default function Submissions() {
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={eventFilter} onValueChange={setEventFilter}>
+                <SelectTrigger className="w-full md:w-[260px]">
+                  <SelectValue placeholder="All Events" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Events</SelectItem>
+                  {events?.map((event) => (
+                    <SelectItem key={event.id} value={event.id}>
+                      {event.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Bulk Actions Bar */}
