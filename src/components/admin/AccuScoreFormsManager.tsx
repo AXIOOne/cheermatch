@@ -138,8 +138,9 @@ export function AccuScoreFormsManager() {
               </div>
               {!f.is_active && <Badge variant="outline">Off</Badge>}
               <Switch checked={f.is_active} onCheckedChange={(v) => toggleActive(f, v)} aria-label="Active" />
+              <Button variant="ghost" size="icon" aria-label="Preview as coach" onClick={() => { setPreviewAnswers({}); setPreviewing(f); }}><Eye className="w-4 h-4" /></Button>
               <Button variant="ghost" size="icon" aria-label="Duplicate" onClick={() => setEditing({ ...f, id: undefined, slug: '', name: `${f.name} (copy)` })}><Copy className="w-4 h-4" /></Button>
-              <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => setEditing(structuredClone(f))}><Pencil className="w-4 h-4" /></Button>
+              <Button variant="ghost" size="icon" aria-label="Edit" onClick={() => { setShowLivePreview(false); setEditing(structuredClone(f)); }}><Pencil className="w-4 h-4" /></Button>
               <Button variant="ghost" size="icon" aria-label="Delete" onClick={() => remove(f)}><Trash2 className="w-4 h-4 text-destructive" /></Button>
             </div>
           ))}
