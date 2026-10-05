@@ -199,26 +199,6 @@ export default function ScoreReview() {
                   </Button>
                 </>
               )}
-              {ctx.forms.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No AccuScore forms are available for this event.</p>
-              ) : (
-                <>
-                  <div className="space-y-1">
-                    <Label>Request type</Label>
-                    <Select value={formId} onValueChange={(v) => { setFormId(v); setAnswers({}); }}>
-                      <SelectTrigger><SelectValue placeholder="Choose a form" /></SelectTrigger>
-                      <SelectContent>{ctx.forms.map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                    {form?.description && <p className="text-xs text-muted-foreground">{form.description}</p>}
-                  </div>
-                  {form && <AccuScoreFormFields fields={form.fields} answers={answers} onChange={set} />}
-                  {form && (
-                    <Button className="w-full" onClick={submit} disabled={submitting}>
-                      {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}Submit AccuScore Request
-                    </Button>
-                  )}
-                </>
-              )}
             </CardContent>
           </Card>
         )}
