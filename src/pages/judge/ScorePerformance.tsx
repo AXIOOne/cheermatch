@@ -333,6 +333,8 @@ export default function ScorePerformance() {
   // Tracks the previously injected auto-text via a ref so it can be replaced
   // cleanly without leaving a visible marker in the textarea.
   const autoCommentsRef = useRef('');
+  const playerWrapRef = useRef<HTMLDivElement>(null);
+  const [replayKey, setReplayKey] = useState(0);
   useEffect(() => {
     const execFields = Object.values(driverFieldsById).filter(
       (f: any) => f.field_type === 'execution_driver'
