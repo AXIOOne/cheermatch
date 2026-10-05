@@ -24,6 +24,7 @@ const TYPES: { value: AccuScoreField['type']; label: string }[] = [
   { value: 'radio', label: 'Single choice (radio)' },
   { value: 'checkbox-group', label: 'Multiple choice (checkboxes)' },
   { value: 'checkbox', label: 'Acknowledgment checkbox' },
+  { value: 'skills', label: 'Skill scripting (skill + # performed)' },
 ];
 const HAS_OPTIONS = ['select', 'radio', 'checkbox-group'];
 
