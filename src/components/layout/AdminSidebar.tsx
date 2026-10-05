@@ -87,18 +87,13 @@ export function AdminSidebar() {
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarRail />
 
-      <SidebarHeader>
-        <div className={cn('flex items-center', collapsed ? 'justify-center p-2' : 'gap-3 px-2 py-3')}>
+      <SidebarHeader className="bg-sidebar-header border-b border-sidebar-header-border">
+        <div className={cn('flex items-center', collapsed ? 'justify-center p-2' : 'justify-center px-2 py-4')}>
           <img
             src={logoSrc}
             alt="Portal"
-            className={cn('object-contain', collapsed ? 'h-7 w-7' : 'h-8 max-w-full')}
+            className={cn('object-contain', collapsed ? 'h-8 w-8' : 'h-10 max-w-full')}
           />
-          {!collapsed && (
-            <span className="text-sm font-semibold text-sidebar-foreground truncate">
-              Scoring Portal v 2.0
-            </span>
-          )}
         </div>
       </SidebarHeader>
 
