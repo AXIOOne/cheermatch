@@ -38,10 +38,10 @@ export default function ScoreReview() {
   const [ctx, setCtx] = useState<Ctx | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [formId, setFormId] = useState('');
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
+  const [selected, setSelected] = useState<string[]>([]);
+  const [answersByForm, setAnswersByForm] = useState<Record<string, Record<string, string | string[]>>>({});
   const [submitting, setSubmitting] = useState(false);
-  const [justSubmitted, setJustSubmitted] = useState(false);
+  const [justSubmitted, setJustSubmitted] = useState<string[]>([]);
 
   const load = async () => {
     if (!token) return;
@@ -50,7 +50,7 @@ export default function ScoreReview() {
     else if (!data) setError('This AccuScore link is invalid.');
     else {
       setCtx(data as Ctx);
-      if ((data as Ctx).forms.length === 1) setFormId((data as Ctx).forms[0].id);
+      if ((data as Ctx).forms.length === 1) setSelected([(data as Ctx).forms[0].id]);
     }
     setLoading(false);
   };
@@ -61,36 +61,48 @@ export default function ScoreReview() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const form = ctx?.forms.find((f) => f.id === formId);
+  const toggleForm = (id: string, on: boolean) =>
+    setSelected((s) => (on ? [...s, id] : s.filter((x) => x !== id)));
 
   const submit = async () => {
-    if (!form || !token) return;
-    const missing = form.fields.filter((f) => {
-      if (!f.required) return false;
-      const answer = answers[f.key];
-      if (f.type === 'skills') return filledSkillRows(answer).length === 0;
-      return Array.isArray(answer) ? answer.length === 0 : !answer?.trim();
-    });
-    if (missing.length) {
-      toast({ variant: 'destructive', title: 'Missing information', description: `Please complete: ${missing.map((m) => m.label).join(', ')}` });
+    if (!ctx || !token || selected.length === 0) return;
+    const chosen = ctx.forms.filter((f) => selected.includes(f.id));
+    const problems: string[] = [];
+    for (const form of chosen) {
+      const answers = answersByForm[form.id] || {};
+      const missing = form.fields.filter((f) => {
+        if (!f.required || f.type === 'section') return false;
+        const answer = answers[f.key];
+        if (f.type === 'skills') return filledSkillRows(answer).length === 0;
+        return Array.isArray(answer) ? answer.length === 0 : !answer?.trim();
+      });
+      if (missing.length) problems.push(`${form.name}: ${missing.map((m) => m.label).join(', ')}`);
+    }
+    if (problems.length) {
+      toast({ variant: 'destructive', title: 'Missing information', description: problems.join(' • ') });
       return;
     }
     setSubmitting(true);
-    const clean: Record<string, string | string[]> = {};
-    form.fields.forEach((f) => {
-      const answer = f.type === 'skills' ? filledSkillRows(answers[f.key]) : answers[f.key];
-      if (Array.isArray(answer) && answer.length) clean[f.key] = answer;
-      else if (typeof answer === 'string' && answer) clean[f.key] = answer.trim().slice(0, 4000);
-    });
-    const { error } = await (supabase as any).rpc('submit_accuscore_request', { review_token: token, _form_id: form.id, _answers: clean });
-    setSubmitting(false);
-    if (error) {
-      toast({ variant: 'destructive', title: 'Could not submit', description: error.message });
-      return;
+    const sent: string[] = [];
+    const failed: string[] = [];
+    for (const form of chosen) {
+      const answers = answersByForm[form.id] || {};
+      const clean: Record<string, string | string[]> = {};
+      form.fields.forEach((f) => {
+        if (f.type === 'section') return;
+        const answer = f.type === 'skills' ? filledSkillRows(answers[f.key]) : answers[f.key];
+        if (Array.isArray(answer) && answer.length) clean[f.key] = answer;
+        else if (typeof answer === 'string' && answer) clean[f.key] = answer.trim().slice(0, 4000);
+      });
+      const { error } = await (supabase as any).rpc('submit_accuscore_request', { review_token: token, _form_id: form.id, _answers: clean });
+      if (error) failed.push(`${form.name}: ${error.message}`); else sent.push(form.name);
     }
-    setAnswers({});
-    setJustSubmitted(true);
-    toast({ title: 'AccuScore request submitted' });
+    setSubmitting(false);
+    const sentIds = chosen.filter((f) => sent.includes(f.name)).map((f) => f.id);
+    setSelected((s) => s.filter((id) => !sentIds.includes(id)));
+    setAnswersByForm((a) => { const n = { ...a }; sentIds.forEach((id) => delete n[id]); return n; });
+    if (sent.length) { setJustSubmitted(sent); toast({ title: `${sent.length} AccuScore request${sent.length > 1 ? 's' : ''} submitted` }); }
+    if (failed.length) toast({ variant: 'destructive', title: 'Some requests could not be submitted', description: failed.join(' • ') });
     load();
   };
 
