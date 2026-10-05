@@ -44,8 +44,14 @@ export default function AccuScore() {
                 {e.accuscore_end_at ? `Cutoff ${format(new Date(e.accuscore_end_at), 'PPp')}` : 'No cutoff set'}
               </p>
             </div>
-            {e.counts.new > 0 && <Badge variant="destructive">{e.counts.new} new</Badge>}
-            <Badge variant="outline">{e.counts.done} completed</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant={e.counts.new > 0 ? 'destructive' : 'outline'} className="tabular-nums">
+                {e.counts.new} pending
+              </Badge>
+              <Badge variant="outline" className="tabular-nums">
+                {e.counts.done} completed
+              </Badge>
+            </div>
             <ChevronRight className="w-4 h-4 text-muted-foreground" />
           </Link>
         ))}
