@@ -60,6 +60,7 @@ const eventSchema = z.object({
   time_zone: z.string().min(1, 'Time zone is required'),
   discipline: z.enum(['allstar_cheer','allstar_dance','nca_cheer','nca_dance','uca_cheer','uca_dance','usa_cheer','usa_dance']),
   accuscore_end_at: z.string().optional(),
+  accuscore_enabled: z.boolean().default(true),
   status: z.enum(['draft', 'registration_open', 'registration_closed', 'open_for_capture', 'open_for_scoring', 'in_progress', 'completed', 'archived']),
   duration_of_capture: z.coerce.number().int().min(15, 'Must be at least 15 seconds').max(900, 'Must be 900 seconds or less'),
   screen_capture_cnt: z.coerce.number().int().min(1, 'At least 1 attempt').max(5, 'At most 5 attempts'),
@@ -130,6 +131,7 @@ export default function Events() {
       time_zone: 'America/New_York',
       discipline: 'allstar_cheer',
       accuscore_end_at: '',
+      accuscore_enabled: true,
       status: 'registration_open',
       duration_of_capture: 150,
       screen_capture_cnt: 2,
@@ -203,6 +205,7 @@ export default function Events() {
         time_zone: data.time_zone,
         discipline: data.discipline,
         accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
+        accuscore_enabled: data.accuscore_enabled,
         status: data.status,
         duration_of_capture: data.duration_of_capture,
         screen_capture_cnt: data.screen_capture_cnt,
@@ -254,6 +257,7 @@ export default function Events() {
         time_zone: data.time_zone,
         discipline: data.discipline,
         accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
+        accuscore_enabled: data.accuscore_enabled,
         status: data.status,
         duration_of_capture: data.duration_of_capture,
         screen_capture_cnt: data.screen_capture_cnt,
@@ -328,6 +332,7 @@ export default function Events() {
       accuscore_end_at: event.accuscore_end_at
         ? new Date(event.accuscore_end_at).toISOString().slice(0, 16)
         : '',
+      accuscore_enabled: (event as any).accuscore_enabled ?? true,
       status: event.status,
       duration_of_capture: event.duration_of_capture ?? 150,
       screen_capture_cnt: event.screen_capture_cnt ?? 2,
@@ -482,6 +487,22 @@ export default function Events() {
                   </div>
                   <FormField
                     control={form.control}
+                    name="accuscore_enabled"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-md border p-3">
+                        <div>
+                          <FormLabel>Enable AccuScore</FormLabel>
+                          <p className="text-xs text-muted-foreground">Include the AccuScore request link in scoresheet emails.</p>
+                        </div>
+                        <FormControl>
+                          <Switch checked={field.value !== false} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  {form.watch('accuscore_enabled') !== false && (<>
+                  <FormField
+                    control={form.control}
                     name="accuscore_end_at"
                     render={({ field }) => (
                       <FormItem>
@@ -489,7 +510,8 @@ export default function Events() {
                         <FormControl>
                           <Input type="datetime-local" {...field} />
                         </FormControl>
-                        <p className="text-xs text-muted-foreground">When coaches can no longer request a scoresheet review.</p>
+                        <p className="text-xs text-muted-foreground">When coaches can no longer request a scoresheet review. Shown next to the link in scoresheet emails.</p>
+                        {!field.value && <p className="text-xs text-destructive">No cutoff set — emails will say "No cutoff set".</p>}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -502,6 +524,7 @@ export default function Events() {
                       <p className="text-xs text-muted-foreground">All forms are turned on for new events. Edit the event afterward to change them.</p>
                     )}
                   </div>
+                  </>)}
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
                       control={form.control}
