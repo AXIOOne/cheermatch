@@ -347,6 +347,22 @@ export default function EventScoring() {
     }).length || 0,
   };
 
+  // Submissions whose scoresheet email has been sent (a review token is
+  // created for the submission when the scoresheet email goes out).
+  const { data: sentSubmissionIds } = useQuery({
+    queryKey: ['scoresheet-sent', eventId, (submissions || []).map(s => s.id).join(',')],
+    enabled: !!submissions && submissions.length > 0,
+    queryFn: async () => {
+      const ids = (submissions || []).map(s => s.id);
+      const { data, error } = await supabase
+        .from('scoring_review_tokens')
+        .select('submission_id')
+        .in('submission_id', ids);
+      if (error) throw error;
+      return new Set((data || []).map(r => r.submission_id as string));
+    },
+  });
+
   // Get panel scoring status for a submission
   const getPanelStatus = (
     submission: Submission,
@@ -609,22 +625,32 @@ export default function EventScoring() {
                         {coach?.full_name || coach?.email || '—'}
                       </TableCell>
                       <TableCell className="py-1.5 px-3">
-                        <Badge
-                          variant="outline"
-                          className={'text-[11px] px-2 py-0 ' + (
-                            overallStatus.needsReview
-                              ? 'bg-warning/10 text-warning border-warning/20'
-                              : overallStatus.allReviewed
-                              ? 'bg-success/10 text-success border-success/20'
-                              : overallStatus.allComplete
-                              ? 'bg-warning/10 text-warning border-warning/20'
-                              : overallStatus.hasDraft
-                              ? 'bg-primary/10 text-primary border-primary/20'
-                              : 'bg-muted text-muted-foreground border-transparent'
+                        <div className="flex items-center gap-1">
+                          <Badge
+                            variant="outline"
+                            className={'text-[11px] px-2 py-0 ' + (
+                              overallStatus.needsReview
+                                ? 'bg-warning/10 text-warning border-warning/20'
+                                : overallStatus.allReviewed
+                                ? 'bg-success/10 text-success border-success/20'
+                                : overallStatus.allComplete
+                                ? 'bg-warning/10 text-warning border-warning/20'
+                                : overallStatus.hasDraft
+                                ? 'bg-primary/10 text-primary border-primary/20'
+                                : 'bg-muted text-muted-foreground border-transparent'
+                            )}
+                          >
+                            {overallStatus.text}
+                          </Badge>
+                          {sentSubmissionIds?.has(submission.id) && (
+                            <Badge
+                              variant="outline"
+                              className="text-[11px] px-2 py-0 bg-primary/10 text-primary border-primary/20"
+                            >
+                              SENT
+                            </Badge>
                           )}
-                        >
-                          {overallStatus.text}
-                        </Badge>
+                        </div>
                       </TableCell>
                       <TableCell className="py-1.5 px-3">
                         <div className="flex items-center gap-1">
