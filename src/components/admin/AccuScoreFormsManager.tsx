@@ -11,8 +11,9 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Loader2, Plus, Pencil, Trash2, ArrowUp, ArrowDown, Copy } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, ArrowUp, ArrowDown, Copy, Eye } from 'lucide-react';
 import type { AccuScoreField } from '@/pages/review/ScoreReview';
+import { AccuScoreFormFields, type AccuScoreAnswers } from '@/components/accuscore/AccuScoreFormFields';
 
 const TYPES: { value: AccuScoreField['type']; label: string }[] = [
   { value: 'text', label: 'Short text' },
@@ -42,6 +43,9 @@ export function AccuScoreFormsManager() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Form | null>(null);
   const [saving, setSaving] = useState(false);
+  const [previewing, setPreviewing] = useState<Form | null>(null);
+  const [showLivePreview, setShowLivePreview] = useState(false);
+  const [previewAnswers, setPreviewAnswers] = useState<AccuScoreAnswers>({});
 
   const { data: forms, isLoading } = useQuery({
     queryKey: ['accuscore-forms-admin'],
