@@ -393,7 +393,7 @@ export default function Submissions() {
       </div>
 
 
-      <Tabs value={tab} onValueChange={switchTab} className="mb-6">
+      <Tabs value={tab} onValueChange={switchTab} className="mb-6 overflow-x-auto">
         <TabsList>
           <TabsTrigger value="current">Current ({currentCount})</TabsTrigger>
           <TabsTrigger value="pending">Awaiting video ({pendingCaptures.length})</TabsTrigger>
