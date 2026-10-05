@@ -94,7 +94,7 @@ export function AdminSidebar() {
             className={cn('object-contain shrink-0', collapsed ? 'h-8 w-8' : 'h-8 max-w-full')}
           />
           {!collapsed && (
-            <span className="font-display text-sidebar-header-foreground text-base font-semibold uppercase tracking-[0.28em] leading-none">
+            <span className="font-display text-sidebar-header-foreground text-lg font-extrabold italic uppercase tracking-[0.18em] leading-none">
               VIRTUAL
             </span>
           )}
