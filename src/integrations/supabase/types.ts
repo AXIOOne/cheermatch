@@ -510,6 +510,7 @@ export type Database = {
       }
       events: {
         Row: {
+          accuscore_enabled: boolean
           accuscore_end_at: string | null
           broadcast_channel: string
           broadcast_deadline_date: string | null
@@ -553,6 +554,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accuscore_enabled?: boolean
           accuscore_end_at?: string | null
           broadcast_channel?: string
           broadcast_deadline_date?: string | null
@@ -596,6 +598,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accuscore_enabled?: boolean
           accuscore_end_at?: string | null
           broadcast_channel?: string
           broadcast_deadline_date?: string | null
