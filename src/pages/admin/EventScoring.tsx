@@ -625,22 +625,32 @@ export default function EventScoring() {
                         {coach?.full_name || coach?.email || '—'}
                       </TableCell>
                       <TableCell className="py-1.5 px-3">
-                        <Badge
-                          variant="outline"
-                          className={'text-[11px] px-2 py-0 ' + (
-                            overallStatus.needsReview
-                              ? 'bg-warning/10 text-warning border-warning/20'
-                              : overallStatus.allReviewed
-                              ? 'bg-success/10 text-success border-success/20'
-                              : overallStatus.allComplete
-                              ? 'bg-warning/10 text-warning border-warning/20'
-                              : overallStatus.hasDraft
-                              ? 'bg-primary/10 text-primary border-primary/20'
-                              : 'bg-muted text-muted-foreground border-transparent'
+                        <div className="flex items-center gap-1">
+                          <Badge
+                            variant="outline"
+                            className={'text-[11px] px-2 py-0 ' + (
+                              overallStatus.needsReview
+                                ? 'bg-warning/10 text-warning border-warning/20'
+                                : overallStatus.allReviewed
+                                ? 'bg-success/10 text-success border-success/20'
+                                : overallStatus.allComplete
+                                ? 'bg-warning/10 text-warning border-warning/20'
+                                : overallStatus.hasDraft
+                                ? 'bg-primary/10 text-primary border-primary/20'
+                                : 'bg-muted text-muted-foreground border-transparent'
+                            )}
+                          >
+                            {overallStatus.text}
+                          </Badge>
+                          {sentSubmissionIds?.has(submission.id) && (
+                            <Badge
+                              variant="outline"
+                              className="text-[11px] px-2 py-0 bg-primary/10 text-primary border-primary/20"
+                            >
+                              SENT
+                            </Badge>
                           )}
-                        >
-                          {overallStatus.text}
-                        </Badge>
+                        </div>
                       </TableCell>
                       <TableCell className="py-1.5 px-3">
                         <div className="flex items-center gap-1">
