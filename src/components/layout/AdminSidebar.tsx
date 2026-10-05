@@ -31,7 +31,6 @@ import {
   Video,
   MessageSquare,
   HelpCircle,
-  ClipboardCheck,
 } from 'lucide-react';
 
 interface NavItemProps {
