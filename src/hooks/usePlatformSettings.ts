@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import portalLogo from '@/assets/portal-logo.png.asset.json';
 
 export interface SecuritySettings {
   minPasswordLength: number;
@@ -66,7 +67,7 @@ const DEFAULT_INTEGRATIONS: IntegrationSettings = {
 };
 
 const DEFAULT_BRANDING: BrandingSettings = {
-  logoUrl: '',
+  logoUrl: portalLogo.url,
   primaryColor: '168 76% 50%',
 };
 

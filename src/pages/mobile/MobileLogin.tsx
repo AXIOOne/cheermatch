@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { mobileApi } from "@/lib/mobile-api";
 import { useMobileAuth } from "@/hooks/useMobileAuth";
-import logoWhite from "@/assets/logo-white.png.asset.json";
+import logoWhite from "@/assets/portal-logo.png.asset.json";
 
 export default function MobileLogin() {
   const navigate = useNavigate();

@@ -12,7 +12,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle, CheckCircle, Lock } from 'lucide-react';
-import logoBlack from '@/assets/logo-black.png';
+import logoBlack from '@/assets/portal-logo.png.asset.json';
 import { format } from 'date-fns';
 
 export interface AccuScoreField {
@@ -122,7 +122,7 @@ export default function ScoreReview() {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <img src={logoBlack} alt="CheerMatch" className="h-8" />
+          <img src={logoBlack.url} alt="Portal logo" className="h-8" />
           <span className="text-sm text-muted-foreground">AccuScore Request</span>
         </div>
       </header>

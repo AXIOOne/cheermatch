@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import logoBlack from '@/assets/logo-black.png';
+import logoBlack from '@/assets/portal-logo.png.asset.json';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -70,7 +70,7 @@ export default function Auth() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex items-center justify-center mb-8">
-          <img src={logoBlack} alt="CheerMatch" className="h-12" />
+          <img src={logoBlack.url} alt="Portal logo" className="h-12" />
         </div>
 
         <Card className="shadow-champion border-0">
