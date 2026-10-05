@@ -16,7 +16,7 @@ import {
 
 const CHILDREN = [
   { to: '/admin/events', label: 'Events', icon: Calendar, end: true },
-  { to: '/admin/reviews', label: 'AccuScore', icon: MessageSquareText },
+  { to: '/admin/accuscore', label: 'AccuScore', icon: MessageSquareText },
 ];
 
 export function EventsNavItem() {
