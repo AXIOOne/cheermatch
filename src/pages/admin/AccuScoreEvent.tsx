@@ -165,7 +165,11 @@ export default function AccuScoreEvent() {
 
               <div className="space-y-3">
                 <p className="text-sm font-semibold">Coach's request</p>
-                {fields.filter((f) => selected.answers?.[f.key]).map((f) => (
+                {fields.filter((f, i) => f.type === 'section'
+                  ? fields.slice(i + 1, (fields.findIndex((g, j) => j > i && g.type === 'section') + 1 || fields.length + 1) - 1).some((g) => selected.answers?.[g.key])
+                  : selected.answers?.[f.key]).map((f) => f.type === 'section' ? (
+                  <p key={f.key} className="font-heading font-semibold text-sm border-b border-border pt-2 pb-0.5">{f.label}</p>
+                ) : (
                   <div key={f.key}>
                     <p className="text-xs text-muted-foreground">{f.label}</p>
                     <p className="text-sm whitespace-pre-wrap">{displayAnswer(selected.answers[f.key])}</p>
