@@ -73,7 +73,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)),
           level:levels(name)
         ),
-        event:events(id, name, discipline, accuscore_end_at, time_zone),
+        event:events(id, name, discipline, accuscore_end_at, accuscore_enabled, time_zone),
         scores:scores(
           id,
           total_score,
@@ -145,7 +145,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const esc = (s: string) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
     let accuscoreUrl: string | null = null;
     const cutoff = (event as any)?.accuscore_end_at as string | null;
-    {
+    const { count: enabledFormCount } = await supabase.from("event_accuscore_forms")
+      .select("id, form:accuscore_forms!inner(is_active)", { count: "exact", head: true })
+      .eq("event_id", (event as any)?.id).eq("form.is_active", true);
+    const accuscoreOn = (event as any)?.accuscore_enabled !== false && (enabledFormCount || 0) > 0;
+    if (accuscoreOn || accuscoreReq) {
       const { data: existing } = await supabase.from("scoring_review_tokens")
         .select("id, token").eq("submission_id", submissionId).eq("coach_email", coachProfile.email)
         .order("created_at", { ascending: false }).limit(1).maybeSingle();
@@ -162,11 +166,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }
       accuscoreUrl = `${appUrl}/review/${token}`;
     }
-    const cutoffText = cutoff ? new Date(cutoff).toLocaleString("en-US", { timeZone: (event as any)?.time_zone || "America/Chicago", dateStyle: "medium", timeStyle: "short" }) : null;
-    const accuscoreBlock = !accuscoreReq && accuscoreUrl ? `
-      <div style="background:#f0fdfa;border:1px solid #99f6e4;padding:16px;border-radius:8px;margin:20px 0;text-align:center;">
-        <p style="margin:0 0 10px 0;"><strong>Need a score reviewed?</strong> Submit an AccuScore request${cutoffText ? ` before <strong>${esc(cutoffText)}</strong>` : ""}. After the cutoff, scores are final.</p>
-        <a href="${accuscoreUrl}" style="display:inline-block;background:#14b8a6;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Open AccuScore Request</a>
+    const tz = (event as any)?.time_zone || "America/Chicago";
+    const cutoffText = cutoff ? new Date(cutoff).toLocaleString("en-US", { timeZone: tz, dateStyle: "full", timeStyle: "short", timeZoneName: "short" } as any) : null;
+    const accuscoreBlock = !accuscoreReq && accuscoreOn && accuscoreUrl ? `
+      <div style="background:#f0fdfa;border:1px solid #99f6e4;padding:16px;border-radius:8px;margin:20px 0;">
+        <p style="margin:0 0 12px 0;"><strong>Need a score reviewed?</strong> Submit one or more AccuScore requests. After the cutoff, scores are final.</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
+          <td style="vertical-align:middle;padding-right:12px;"><a href="${accuscoreUrl}" style="display:inline-block;background:#14b8a6;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Open AccuScore Request</a></td>
+          <td style="vertical-align:middle;font-size:13px;color:#334155;"><strong>Requests accepted until:</strong><br/>${cutoffText ? esc(cutoffText) : "No cutoff set"}</td>
+        </tr></table>
       </div>` : "";
     const decisionLabel: Record<string, string> = { honored: "Honored", denied: "Denied", duplicate: "Duplicate" };
     const responseBlock = accuscoreReq ? `
