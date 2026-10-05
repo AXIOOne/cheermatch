@@ -347,6 +347,22 @@ export default function EventScoring() {
     }).length || 0,
   };
 
+  // Submissions whose scoresheet email has been sent (a review token is
+  // created for the submission when the scoresheet email goes out).
+  const { data: sentSubmissionIds } = useQuery({
+    queryKey: ['scoresheet-sent', eventId, (submissions || []).map(s => s.id).join(',')],
+    enabled: !!submissions && submissions.length > 0,
+    queryFn: async () => {
+      const ids = (submissions || []).map(s => s.id);
+      const { data, error } = await supabase
+        .from('scoring_review_tokens')
+        .select('submission_id')
+        .in('submission_id', ids);
+      if (error) throw error;
+      return new Set((data || []).map(r => r.submission_id as string));
+    },
+  });
+
   // Get panel scoring status for a submission
   const getPanelStatus = (
     submission: Submission,
