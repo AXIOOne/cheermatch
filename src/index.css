@@ -110,10 +110,12 @@
 
   body {
     @apply bg-background text-foreground antialiased;
+    font-family: "Roboto", system-ui, -apple-system, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-bold tracking-tight;
+    font-family: "Zilla Slab", Georgia, "Times New Roman", serif;
   }
 }
 
