@@ -68,6 +68,7 @@ export default function ScoreReview() {
     const missing = form.fields.filter((f) => {
       if (!f.required) return false;
       const answer = answers[f.key];
+      if (f.type === 'skills') return filledSkillRows(answer).length === 0;
       return Array.isArray(answer) ? answer.length === 0 : !answer?.trim();
     });
     if (missing.length) {
