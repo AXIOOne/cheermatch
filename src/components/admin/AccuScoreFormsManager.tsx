@@ -199,11 +199,45 @@ export function AccuScoreFormsManager() {
                 </Button>
               </div>
             </div>
+            {showLivePreview && (
+              <div className="rounded-md border bg-muted/30 p-4 space-y-4 min-w-0">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Coach preview — unsaved changes</p>
+                  <p className="font-semibold mt-1">{editing.name || 'Untitled form'}</p>
+                  {editing.description && <p className="text-xs text-muted-foreground mt-0.5">{editing.description}</p>}
+                </div>
+                <AccuScoreFormFields
+                  fields={editing.fields.map((f, i) => ({ ...f, key: f.key || `preview_${i}` }))}
+                  answers={previewAnswers}
+                  onChange={(k, v) => setPreviewAnswers((a) => ({ ...a, [k]: v }))}
+                />
+                <Button className="w-full" disabled>Submit AccuScore Request</Button>
+              </div>
+            )}
+            </div>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
             <Button onClick={save} disabled={saving}>{saving && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}Save form</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!previewing} onOpenChange={(o) => !o && setPreviewing(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle>Coach preview — {previewing?.name}</DialogTitle></DialogHeader>
+          {previewing && (
+            <div className="space-y-4">
+              {previewing.description && <p className="text-sm text-muted-foreground">{previewing.description}</p>}
+              <AccuScoreFormFields
+                fields={previewing.fields}
+                answers={previewAnswers}
+                onChange={(k, v) => setPreviewAnswers((a) => ({ ...a, [k]: v }))}
+              />
+              <Button className="w-full" disabled>Submit AccuScore Request</Button>
+              <p className="text-xs text-muted-foreground text-center">Preview only — nothing is submitted.</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
