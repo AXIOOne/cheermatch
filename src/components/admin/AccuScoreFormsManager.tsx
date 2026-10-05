@@ -158,7 +158,8 @@ export function AccuScoreFormsManager() {
             </div>
           </DialogHeader>
           {editing && (
-            <div className="space-y-4">
+            <div className={showLivePreview ? 'grid gap-6 lg:grid-cols-2' : undefined}>
+            <div className="space-y-4 min-w-0">
               <div className="grid grid-cols-[1fr_120px] gap-3">
                 <div><Label>Form name</Label><Input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
                 <div><Label>Order</Label><Input type="number" value={editing.display_order} onChange={(e) => setEditing({ ...editing, display_order: Number(e.target.value) || 0 })} /></div>
