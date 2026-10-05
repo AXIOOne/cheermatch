@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle, CheckCircle, Lock } from 'lucide-react';
 import logoBlack from '@/assets/portal-logo.png.asset.json';
 import { format } from 'date-fns';
-import { AccuScoreFormFields, type AccuScoreField } from '@/components/accuscore/AccuScoreFormFields';
+import { AccuScoreFormFields, filledSkillRows, type AccuScoreField } from '@/components/accuscore/AccuScoreFormFields';
 
 export type { AccuScoreField };
 
@@ -78,7 +78,7 @@ export default function ScoreReview() {
     setSubmitting(true);
     const clean: Record<string, string | string[]> = {};
     form.fields.forEach((f) => {
-      const answer = answers[f.key];
+      const answer = f.type === 'skills' ? filledSkillRows(answers[f.key]) : answers[f.key];
       if (Array.isArray(answer) && answer.length) clean[f.key] = answer;
       else if (typeof answer === 'string' && answer) clean[f.key] = answer.trim().slice(0, 4000);
     });
