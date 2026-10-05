@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle, CheckCircle, Lock } from 'lucide-react';
 import logoBlack from '@/assets/portal-logo.png.asset.json';
@@ -120,7 +120,6 @@ export default function ScoreReview() {
     );
   }
 
-  const set = (k: string, v: string | string[]) => setAnswers((a) => ({ ...a, [k]: v }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -160,10 +159,45 @@ export default function ScoreReview() {
               {ctx.cutoff_at && <p className="text-sm text-muted-foreground">Requests close {format(new Date(ctx.cutoff_at), 'PPp')}. After that, scores are final.</p>}
             </CardHeader>
             <CardContent className="space-y-4">
-              {justSubmitted && (
-                <div className="flex items-center gap-2 rounded-md bg-primary/10 p-3 text-sm">
-                  <CheckCircle className="w-4 h-4 text-primary" /> Your request was received. You'll get an email with the decision. You can submit another below.
+              {justSubmitted.length > 0 && (
+                <div className="flex items-start gap-2 rounded-md bg-primary/10 p-3 text-sm">
+                  <CheckCircle className="w-4 h-4 text-primary mt-0.5" />
+                  <span>Received {justSubmitted.length > 1 ? 'separate requests' : 'your request'} for: <strong>{justSubmitted.join(', ')}</strong>. You'll get an email with each decision. You can submit more below.</span>
                 </div>
+              )}
+              {ctx.forms.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No AccuScore forms are available for this event.</p>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">Choose one or more forms. Each form is sent as its own request.</p>
+                  {ctx.forms.map((f) => {
+                    const on = selected.includes(f.id);
+                    return (
+                      <div key={f.id} className={`rounded-md border ${on ? 'border-primary' : ''}`}>
+                        <label className="flex items-start gap-3 p-3 cursor-pointer">
+                          <Checkbox checked={on} onCheckedChange={(v) => toggleForm(f.id, !!v)} className="mt-0.5" />
+                          <div>
+                            <p className="font-medium">{f.name}</p>
+                            {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
+                          </div>
+                        </label>
+                        {on && (
+                          <div className="border-t p-3">
+                            <AccuScoreFormFields
+                              fields={f.fields}
+                              answers={answersByForm[f.id] || {}}
+                              onChange={(k, v) => setAnswersByForm((a) => ({ ...a, [f.id]: { ...(a[f.id] || {}), [k]: v } }))}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <Button className="w-full" onClick={submit} disabled={submitting || selected.length === 0}>
+                    {submitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    Submit {selected.length > 1 ? `${selected.length} AccuScore Requests` : 'AccuScore Request'}
+                  </Button>
+                </>
               )}
               {ctx.forms.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No AccuScore forms are available for this event.</p>
