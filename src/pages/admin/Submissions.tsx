@@ -409,7 +409,7 @@ export default function Submissions() {
       {!isPendingTab && (
       <Card className="mb-6">
         <CardContent className="p-0">
-          <div className="grid grid-cols-3 md:grid-cols-6 divide-x divide-y md:divide-y-0">
+          <div className="grid grid-cols-3 lg:grid-cols-6 divide-x divide-y lg:divide-y-0">
             {[
               { label: 'Total', value: stats.total, className: '' },
               { label: 'Ready for Review', value: stats.ready, className: 'text-blue-600' },
