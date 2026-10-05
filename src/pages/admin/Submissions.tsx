@@ -389,22 +389,6 @@ export default function Submissions() {
               Upload video
             </Button>
           )}
-          <div className="w-full md:w-[280px]">
-            <label className="text-sm font-medium text-muted-foreground mb-1.5 block">Event</label>
-            <Select value={eventFilter} onValueChange={setEventFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select an event" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Events</SelectItem>
-                {events?.map((event) => (
-                  <SelectItem key={event.id} value={event.id}>
-                    {event.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </div>
 
