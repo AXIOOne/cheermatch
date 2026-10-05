@@ -87,12 +87,17 @@ export function AdminSidebar() {
       <SidebarRail />
 
       <SidebarHeader className="bg-sidebar-header border-b border-sidebar-header-border">
-        <div className={cn('flex items-center', collapsed ? 'justify-center p-0' : 'justify-start pl-2 pr-2 py-1.5')}>
+        <div className={cn('flex items-center gap-2', collapsed ? 'justify-center p-0' : 'justify-start pl-2 pr-2 py-1.5')}>
           <img
             src={logoSrc}
             alt="Portal"
             className={cn('object-contain shrink-0', collapsed ? 'h-8 w-8' : 'h-8 max-w-full')}
           />
+          {!collapsed && (
+            <span className="font-heading text-sidebar-header-foreground text-lg font-semibold uppercase tracking-[0.18em] leading-none">
+              VIRTUAL
+            </span>
+          )}
         </div>
       </SidebarHeader>
 
