@@ -105,8 +105,15 @@ export default function SubmissionScoringDialog({
         ),
         deduction_types:deduction_types(*)
       `;
-      if (divisionTemplateId) {
-        const { data, error } = await sb.from('scoring_templates').select(baseSelect).eq('id', divisionTemplateId).maybeSingle();
+      let templateId = divisionTemplateId;
+      if (!templateId && submissionId) {
+        // Registration deleted / no division: reuse the scoresheet judges already scored on.
+        const { data: s } = await sb.from('scores').select('template_id')
+          .eq('submission_id', submissionId).not('template_id', 'is', null).limit(1).maybeSingle();
+        templateId = s?.template_id ?? null;
+      }
+      if (templateId) {
+        const { data, error } = await sb.from('scoring_templates').select(baseSelect).eq('id', templateId).maybeSingle();
         if (error) throw error;
         if (data) return data;
       }
