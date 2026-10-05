@@ -31,7 +31,6 @@ import {
   Video,
   MessageSquare,
   HelpCircle,
-  ClipboardCheck,
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -105,7 +104,6 @@ export function AdminSidebar() {
               <EventsNavItem />
               <RubricsNavItem to="/admin/rubrics" />
               <NavItem to="/admin/submissions" icon={<Video className="w-5 h-5" />} label="Submissions" />
-              <NavItem to="/admin/accuscore" icon={<ClipboardCheck className="w-5 h-5" />} label="AccuScore" />
               <NavItem to="/admin/broadcast" icon={<MessageSquare className="w-5 h-5" />} label="Judge Broadcast" />
               <SettingsNavItem />
               <NavItem to="/admin/help" icon={<HelpCircle className="w-5 h-5" />} label="Help" />
