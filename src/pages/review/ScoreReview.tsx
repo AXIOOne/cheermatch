@@ -3,26 +3,17 @@ import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, AlertCircle, CheckCircle, Lock } from 'lucide-react';
 import logoBlack from '@/assets/portal-logo.png.asset.json';
 import { format } from 'date-fns';
+import { AccuScoreFormFields, type AccuScoreField } from '@/components/accuscore/AccuScoreFormFields';
 
-export interface AccuScoreField {
-  key: string;
-  label: string;
-  type: 'text' | 'textarea' | 'time' | 'number' | 'select' | 'radio' | 'checkbox' | 'checkbox-group';
-  required?: boolean;
-  options?: string[];
-  help?: string;
-}
+export type { AccuScoreField };
 
 interface Ctx {
   token_id: string;
