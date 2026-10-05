@@ -604,8 +604,8 @@ export default function ScorePerformance() {
             <CardContent className="p-0">
               <div className="aspect-video bg-black rounded-t-lg flex items-center justify-center">
                 {submission.video_url ? (
-                  <div className="w-full h-full">
-                    <VideoPlayer url={submission.video_url} thumbnailUrl={submission.thumbnail_url} status={submission.status} submissionId={submission.id} />
+                  <div className="w-full h-full" ref={playerWrapRef}>
+                    <VideoPlayer key={replayKey} url={submission.video_url} thumbnailUrl={submission.thumbnail_url} status={submission.status} submissionId={submission.id} />
                   </div>
                 ) : (
                   <div className="text-white/50 text-center">
@@ -619,7 +619,11 @@ export default function ScorePerformance() {
                     ? `${Math.floor(submission.duration_seconds / 60)}:${(submission.duration_seconds % 60).toString().padStart(2, '0')}`
                     : 'Duration unknown'}
                 </div>
-                <Button variant="outline" size="sm"><RotateCcw className="w-4 h-4 mr-1" /> Replay</Button>
+                <Button variant="outline" size="sm" disabled={!submission.video_url} onClick={() => {
+                  const v = playerWrapRef.current?.querySelector('video');
+                  if (v) { v.currentTime = 0; void v.play().catch(() => {}); }
+                  else setReplayKey((k) => k + 1);
+                }}><RotateCcw className="w-4 h-4 mr-1" /> Replay</Button>
               </div>
             </CardContent>
           </Card>
