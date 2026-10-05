@@ -16,7 +16,7 @@ export default {
       fontFamily: {
         heading: ['"Zilla Slab"', 'Georgia', '"Times New Roman"', 'serif'],
         body: ['"Roboto"', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['"Orbitron"', 'system-ui', 'sans-serif'],
+        display: ['"Exo 2"', 'system-ui', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
