@@ -16,8 +16,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 9%;
 
-    /* CheerMatch Teal - Primary */
-    --primary: 168 76% 50%;
+    /* CheerMatch Blue - Primary */
+    --primary: 206 63% 63%;
     --primary-foreground: 0 0% 100%;
 
     /* Dark accent for contrast */
@@ -27,8 +27,8 @@
     --muted: 0 0% 94%;
     --muted-foreground: 0 0% 45%;
 
-    /* Teal accent */
-    --accent: 168 76% 50%;
+    /* Blue accent */
+    --accent: 206 63% 63%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -36,7 +36,7 @@
 
     --border: 0 0% 88%;
     --input: 0 0% 88%;
-    --ring: 168 76% 50%;
+    --ring: 206 63% 63%;
 
     --radius: 0.625rem;
 
@@ -49,12 +49,12 @@
     /* Sidebar - Black */
     --sidebar-background: 0 0% 0%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 168 76% 50%;
+    --sidebar-primary: 206 63% 63%;
     --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 0 0% 12%;
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 168 76% 50%;
+    --sidebar-ring: 206 63% 63%;
     --sidebar-header: 0 0% 82%;
     --sidebar-header-foreground: 0 0% 15%;
     --sidebar-header-border: 0 0% 70%;
@@ -70,7 +70,7 @@
     --popover: 0 0% 10%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 168 76% 55%;
+    --primary: 206 63% 68%;
     --primary-foreground: 0 0% 9%;
 
     --secondary: 0 0% 20%;
@@ -79,7 +79,7 @@
     --muted: 0 0% 15%;
     --muted-foreground: 0 0% 60%;
 
-    --accent: 168 76% 55%;
+    --accent: 206 63% 68%;
     --accent-foreground: 0 0% 9%;
 
     --destructive: 0 62% 50%;
@@ -87,16 +87,16 @@
 
     --border: 0 0% 18%;
     --input: 0 0% 18%;
-    --ring: 168 76% 55%;
+    --ring: 206 63% 68%;
 
     --sidebar-background: 0 0% 0%;
     --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 168 76% 55%;
+    --sidebar-primary: 206 63% 68%;
     --sidebar-primary-foreground: 0 0% 0%;
     --sidebar-accent: 0 0% 12%;
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 168 76% 55%;
+    --sidebar-ring: 206 63% 68%;
     --sidebar-header: 0 0% 82%;
     --sidebar-header-foreground: 0 0% 15%;
     --sidebar-header-border: 0 0% 70%;
@@ -121,14 +121,14 @@
 
 @layer utilities {
   .gradient-champion {
-    background: linear-gradient(135deg, hsl(168 76% 50%) 0%, hsl(168 76% 40%) 100%);
+    background: linear-gradient(135deg, hsl(206 63% 63%) 0%, hsl(206 63% 50%) 100%);
   }
   
   .gradient-teal {
-    background: linear-gradient(135deg, hsl(168 76% 50%) 0%, hsl(168 76% 45%) 100%);
+    background: linear-gradient(135deg, hsl(206 63% 63%) 0%, hsl(206 63% 55%) 100%);
   }
 
   .shadow-champion {
-    box-shadow: 0 4px 20px -4px hsl(168 76% 50% / 0.25);
+    box-shadow: 0 4px 20px -4px hsl(206 63% 63% / 0.25);
   }
 }

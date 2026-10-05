@@ -169,10 +169,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const tz = (event as any)?.time_zone || "America/Chicago";
     const cutoffText = cutoff ? new Date(cutoff).toLocaleString("en-US", { timeZone: tz, dateStyle: "full", timeStyle: "short", timeZoneName: "short" } as any) : null;
     const accuscoreBlock = !accuscoreReq && accuscoreOn && accuscoreUrl ? `
-      <div style="background:#f0fdfa;border:1px solid #99f6e4;padding:16px;border-radius:8px;margin:20px 0;">
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;padding:16px;border-radius:8px;margin:20px 0;">
         <p style="margin:0 0 12px 0;"><strong>Need a score reviewed?</strong> Submit one or more AccuScore requests. After the cutoff, scores are final.</p>
         <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
-          <td style="vertical-align:middle;padding-right:12px;"><a href="${accuscoreUrl}" style="display:inline-block;background:#14b8a6;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Open AccuScore Request</a></td>
+          <td style="vertical-align:middle;padding-right:12px;"><a href="${accuscoreUrl}" style="display:inline-block;background:#6ea8dd;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Open AccuScore Request</a></td>
           <td style="vertical-align:middle;font-size:13px;color:#334155;"><strong>Requests accepted until:</strong><br/>${cutoffText ? esc(cutoffText) : "No cutoff set"}</td>
         </tr></table>
       </div>` : "";

@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
         <p>Hello${team?.coach_name ? ' ' + team.coach_name : ''},</p>
         <p>An administrator has reviewed your submission for <strong>${event?.name ?? 'your event'}</strong>
         and requested a revision.</p>
-        ${notes ? `<blockquote style="background:#f1f5f9;border-left:4px solid #14b8a6;padding:12px 16px;margin:16px 0;border-radius:6px"><strong>Reviewer notes:</strong><br>${notes.replace(/\n/g, '<br>')}</blockquote>` : ''}
+        ${notes ? `<blockquote style="background:#f1f5f9;border-left:4px solid #6ea8dd;padding:12px 16px;margin:16px 0;border-radius:6px"><strong>Reviewer notes:</strong><br>${notes.replace(/\n/g, '<br>')}</blockquote>` : ''}
         <p>Please open the Cheermatch Mobile Capture App, find the team, and submit a new video.</p>
         <p style="color:#64748b;font-size:12px;margin-top:32px">— Cheermatch</p>
       </div>`

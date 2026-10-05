@@ -68,7 +68,7 @@ const DEFAULT_INTEGRATIONS: IntegrationSettings = {
 
 const DEFAULT_BRANDING: BrandingSettings = {
   logoUrl: portalLogo.url,
-  primaryColor: '168 76% 50%',
+  primaryColor: '206 63% 63%',
 };
 
 export function usePlatformSettings() {
