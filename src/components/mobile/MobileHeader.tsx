@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
-import logoWhite from "@/assets/logo-white.png.asset.json";
+import logoWhite from "@/assets/portal-logo.png.asset.json";
 
 /**
  * Branded header shown at the top of the mobile capture app.

@@ -3,7 +3,7 @@ import { ChevronLeft, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMobileAuth } from "@/hooks/useMobileAuth";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
-import logoWhite from "@/assets/logo-white.png.asset.json";
+import logoWhite from "@/assets/portal-logo.png.asset.json";
 
 export function MobileLayout() {
   const navigate = useNavigate();
