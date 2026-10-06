@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, Folder, FolderLock, ChevronRight } from 'lucide-react';
 import { format } from 'date-fns';
@@ -56,13 +55,15 @@ export default function AccuScore() {
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Badge variant={e.counts.new > 0 ? 'destructive' : 'outline'} className="tabular-nums">
-                  {e.counts.new} pending
-                </Badge>
-                <Badge variant="outline" className="tabular-nums">
-                  {e.counts.done} completed
-                </Badge>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="rounded-lg border-2 border-red-600 bg-background px-3 py-1.5 text-center leading-tight">
+                  <span className="block text-base font-extrabold tabular-nums text-foreground">{e.counts.new}</span>
+                  <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-foreground">Pending</span>
+                </div>
+                <div className="rounded-lg border-2 border-green-700 bg-background px-3 py-1.5 text-center leading-tight">
+                  <span className="block text-base font-extrabold tabular-nums text-foreground">{e.counts.done}</span>
+                  <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-foreground">Completed</span>
+                </div>
               </div>
               <ChevronRight className="w-4 h-4 text-muted-foreground" />
             </Link>
