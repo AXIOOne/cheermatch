@@ -15,7 +15,7 @@ export default function AccuScore() {
     queryKey: ['accuscore-events'],
     queryFn: async () => {
       const [{ data: events, error }, { data: reqs }] = await Promise.all([
-        supabase.from('events').select('id, name, status, start_date, accuscore_end_at').order('start_date', { ascending: false }),
+        supabase.from('events').select('id, name, status, start_date, accuscore_end_at, accuscore_enabled').order('start_date', { ascending: false }),
         (supabase as any).from('accuscore_requests').select('event_id, status'),
       ]);
       if (error) throw error;
