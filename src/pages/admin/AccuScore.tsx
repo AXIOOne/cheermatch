@@ -56,11 +56,11 @@ export default function AccuScore() {
                 </div>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <div className="rounded-lg border-2 border-red-600 bg-background px-3 py-1.5 text-center leading-tight">
+                <div className="rounded-lg border-2 border-border bg-background px-3 py-1.5 text-center leading-tight">
                   <span className="block text-base font-extrabold tabular-nums text-foreground">{e.counts.new}</span>
-                  <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-foreground">Pending</span>
+                  <span className={`block text-[9px] font-bold uppercase tracking-[0.12em] ${e.counts.new > 0 ? 'text-red-600' : 'text-foreground'}`}>Pending</span>
                 </div>
-                <div className="rounded-lg border-2 border-green-700 bg-background px-3 py-1.5 text-center leading-tight">
+                <div className="rounded-lg border-2 border-border bg-background px-3 py-1.5 text-center leading-tight">
                   <span className="block text-base font-extrabold tabular-nums text-foreground">{e.counts.done}</span>
                   <span className="block text-[9px] font-bold uppercase tracking-[0.12em] text-foreground">Completed</span>
                 </div>
