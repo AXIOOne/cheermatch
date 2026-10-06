@@ -35,26 +35,39 @@ export default function AccuScore() {
     <Card>
       <CardContent className="p-0 divide-y">
         {items.length === 0 && <p className="p-8 text-center text-muted-foreground">No events here.</p>}
-        {items.map((e) => (
-          <Link key={e.id} to={`/admin/accuscore/${e.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
-            {closedFolder ? <FolderLock className="w-5 h-5 text-muted-foreground" /> : <Folder className="w-5 h-5 text-primary" />}
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{e.name}</p>
-              <p className="text-xs text-muted-foreground">
-                {e.accuscore_end_at ? `Cutoff ${format(new Date(e.accuscore_end_at), 'PPp')}` : 'No cutoff set'}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={e.counts.new > 0 ? 'destructive' : 'outline'} className="tabular-nums">
-                {e.counts.new} pending
-              </Badge>
-              <Badge variant="outline" className="tabular-nums">
-                {e.counts.done} completed
-              </Badge>
-            </div>
-            <ChevronRight className="w-4 h-4 text-muted-foreground" />
-          </Link>
-        ))}
+        {items.map((e) => {
+          const cutoff = e.accuscore_end_at ? new Date(e.accuscore_end_at) : null;
+          const requestsOpen = !closedFolder && e.accuscore_enabled !== false && (!cutoff || cutoff > new Date());
+          return (
+            <Link key={e.id} to={`/admin/accuscore/${e.id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50">
+              {closedFolder ? <FolderLock className="w-5 h-5 text-muted-foreground" /> : <Folder className="w-5 h-5 text-primary" />}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{e.name}</p>
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    {requestsOpen && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-500 opacity-75" />}
+                    <span className={`relative inline-flex rounded-full h-2 w-2 ${requestsOpen ? 'bg-green-500' : 'bg-muted-foreground/40'}`} />
+                  </span>
+                  <span className={requestsOpen ? 'text-green-600 font-medium' : 'text-muted-foreground'}>
+                    {requestsOpen ? 'Currently open' : 'Requests closed'}
+                  </span>
+                  <span className="text-muted-foreground">
+                    · {cutoff ? `Cutoff ${format(cutoff, 'PPp')}` : 'No cutoff set'}
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant={e.counts.new > 0 ? 'destructive' : 'outline'} className="tabular-nums">
+                  {e.counts.new} pending
+                </Badge>
+                <Badge variant="outline" className="tabular-nums">
+                  {e.counts.done} completed
+                </Badge>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </Link>
+          );
+        })}
       </CardContent>
     </Card>
   );
