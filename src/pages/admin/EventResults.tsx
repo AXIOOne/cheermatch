@@ -125,6 +125,62 @@ export default function EventResults() {
   };
 
 
+  const csvEscape = (v: string | number) => {
+    const s = String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const downloadCsv = (filename: string, lines: (string | number)[][]) => {
+    const csv = lines.map((cols) => cols.map(csvEscape).join(',')).join('\r\n');
+    const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportCsv = () => {
+    if (!hasContent) return;
+    const safe = `${event?.name || 'Event'} - ${mode === 'averages' ? 'Division Averages Report' : MODE_TITLES[mode]}`
+      .replace(/[^\w\s-]/g, '').trim();
+    if (mode === 'averages') {
+      const lines: (string | number)[][] = [];
+      avgSections.forEach((section) => {
+        lines.push([section.title]);
+        lines.push(['Team Name', ...section.columns.map((c) => c.label)]);
+        section.rows.forEach((row) => {
+          lines.push([
+            averagesTeamName(row),
+            ...section.columns.map((c) => formatAverageCell(row.cells[c.key])),
+          ]);
+        });
+        lines.push([]);
+      });
+      downloadCsv(`${safe}.csv`, lines);
+      return;
+    }
+    const lines: (string | number)[][] = [];
+    sections.forEach((section) => {
+      if (mode !== 'overall') lines.push([section.title]);
+      lines.push(['Rank', 'Team Name', 'Max', 'Raw Score', 'Deductions', '% Perf', 'Event Score']);
+      section.rows.forEach((row) => {
+        lines.push([
+          row.rank,
+          displayTeamName(row),
+          row.max.toFixed(2),
+          row.raw_score.toFixed(2),
+          row.deductions.toFixed(2),
+          row.perfection.toFixed(2),
+          row.perfection.toFixed(4),
+        ]);
+      });
+      lines.push([]);
+    });
+    downloadCsv(`${safe}.csv`, lines);
+  };
+
   const getRankBadge = (rank: number) => {
     if (rank === 1) return <Medal className="w-5 h-5 text-yellow-500" />;
     if (rank === 2) return <Medal className="w-5 h-5 text-muted-foreground" />;
@@ -158,6 +214,10 @@ export default function EventResults() {
                 By division (separate pages)
               </label>
             )}
+            <Button variant="outline" onClick={handleExportCsv} disabled={!hasContent}>
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
             <Button variant="outline" onClick={handleExport} disabled={exporting || !hasContent}>
               {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
               Export PDF
