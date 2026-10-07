@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
       const email = r.coach_email.trim().toLowerCase()
       return {
         event_id: eventId,
-        name: r.team_name,
+        name: (r.team_name || '').trim(),
         gym_name: r.gym_name,
         division_id: r.division_id,
         level_id: r.level_id,
