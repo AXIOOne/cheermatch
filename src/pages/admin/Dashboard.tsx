@@ -129,7 +129,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="font-heading text-primary mt-1">Hi {firstName}! Welcome to Varsity Virtual.</p>
+          <p className="font-heading text-primary text-2xl font-bold mt-2">Hi {firstName}! Welcome to Varsity Virtual.</p>
         </div>
         <Button asChild>
           <Link to="/admin/events">
