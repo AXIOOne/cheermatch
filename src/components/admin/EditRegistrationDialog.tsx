@@ -16,10 +16,10 @@ import { CoachSelect, useCoaches, type CoachOption } from './CoachSelect';
 import { useEventDivisions } from '@/hooks/useEventDivisions';
 
 const schema = z.object({
-  name: z.string().trim().min(1, 'Team name is required').max(120),
+  name: z.string().trim().max(120).optional().or(z.literal('')),
   coach_phone: z.string().trim().max(40).optional().or(z.literal('')),
   division_id: z.string().min(1, 'Division is required'),
-  level_id: z.string().min(1, 'Level is required'),
+  level_id: z.string().optional().or(z.literal('')),
   athletes_male: z.coerce.number().int().min(0).max(500),
   athletes_female: z.coerce.number().int().min(0).max(500),
 });
@@ -102,11 +102,11 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
       const { error } = await sb
         .from('teams')
         .update({
-          name: data.name,
+          name: data.name || null,
           ...coachFields,
           coach_phone: data.coach_phone || null,
           division_id: data.division_id,
-          level_id: data.level_id,
+          level_id: data.level_id || null,
           athletes_male: data.athletes_male,
           athletes_female: data.athletes_female,
         })
@@ -140,7 +140,7 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
                 <Input value={coach?.organization_name || team?.gym_name || ''} readOnly placeholder="Select a coach" />
               </div>
               <FormField control={form.control} name="name" render={({ field }) => (
-                <FormItem><FormLabel>Team Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Team Name <span className="text-muted-foreground font-normal">(optional)</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="coach_phone" render={({ field }) => (
                 <FormItem><FormLabel>Coach Phone</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>
@@ -160,7 +160,7 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
               )} />
               <FormField control={form.control} name="level_id" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Level</FormLabel>
+                  <FormLabel>Level <span className="text-muted-foreground font-normal">(optional — pulled from division)</span></FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select a level" /></SelectTrigger></FormControl>
                     <SelectContent>
