@@ -39,6 +39,7 @@ export default function Dashboard() {
   const firstName = fullName.trim().split(/\s+/)[0] || 'there';
 
 
+  const { data: currentEvents, isLoading: currentLoading } = useQuery({
     queryKey: ['current-events'],
     queryFn: async () => {
       const { data, error } = await supabase
