@@ -684,7 +684,7 @@ export default function EventScoring() {
                             <DropdownMenuContent align="end" className="w-52">
                               <DropdownMenuItem
                                 onClick={() =>
-                                  setPreviewFor({ id: submission.id, teamName: submission.team?.name || 'Team' })
+                                  setPreviewFor({ id: submission.id, teamName: submission.team?.name || submission.team?.name.replace('name','gym_name') || 'Team' })
                                 }
                               >
                                 <Eye className="w-4 h-4 mr-2" />
@@ -715,7 +715,7 @@ export default function EventScoring() {
                               {relevant ? (
                                 <StatusIndicator
                                   status={getPanelStatus(submission, panel.id)}
-                                  label={`${submission.team?.name || 'Team'} ${panel.abbreviation}`}
+                                  label={`${submission.team?.name || submission.team?.name.replace('name','gym_name') || 'Team'} ${panel.abbreviation}`}
                                   onClick={() => {
                                     setScoringPanelId(panel.id);
                                     setScoringSubmissionId(submission.id);

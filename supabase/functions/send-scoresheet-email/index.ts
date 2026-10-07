@@ -238,7 +238,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
             ${responseBlock}
             
             <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0;"><strong>Team:</strong> ${team.name || "Team"}</p>
+              <p style="margin: 0;"><strong>Team:</strong> ${team.name || team.gym_name || "Team"}</p>
               <p style="margin: 8px 0 0 0;"><strong>Gym:</strong> ${team.gym_name || ""}</p>
               <p style="margin: 8px 0 0 0;"><strong>Division:</strong> ${division?.name || "N/A"}</p>
               <p style="margin: 8px 0 0 0;"><strong>Level:</strong> ${level?.name || "N/A"}</p>
@@ -357,7 +357,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     });
 
     const sheetData = buildScoresheet({
-      team_name: team.name || 'Team',
+      team_name: team.name || team.gym_name || 'Team',
       gym_name: team.gym_name,
       division_name: division?.name || null,
       level_name: level?.name || null,
@@ -398,12 +398,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
       binary += String.fromCharCode.apply(null, pdfBytes.subarray(i, i + CHUNK) as unknown as number[]);
     }
     const pdfBase64 = btoa(binary);
-    const safeName = `${team.name || 'Team'} - ${event?.name || 'Event'}`.replace(/[^\w\s-]/g, '').trim() || 'scoresheet';
+    const safeName = `${team.name || team.gym_name || 'Team'} - ${event?.name || 'Event'}`.replace(/[^\w\s-]/g, '').trim() || 'scoresheet';
 
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "CheerMatch <noreply@cheermatch.com>",
       to: [coachProfile.email],
-      subject: accuscoreReq ? `AccuScore Response - ${team.name || "Team"} | ${event?.name || "Event"}` : `Score Sheet - ${team.name || "Team"} | ${event?.name || "Event"}`,
+      subject: accuscoreReq ? `AccuScore Response - ${team.name || team.gym_name || "Team"} | ${event?.name || "Event"}` : `Score Sheet - ${team.name || team.gym_name || "Team"} | ${event?.name || "Event"}`,
       html: emailHtml,
       attachments: [{
         filename: `${safeName}.pdf`,

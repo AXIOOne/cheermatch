@@ -16,7 +16,7 @@ import { CoachSelect, type CoachOption } from './CoachSelect';
 import { DivisionSelect } from './DivisionSelect';
 
 const schema = z.object({
-  name: z.string().trim().min(1, 'Team name is required').max(120),
+  name: z.string().trim().max(120),
   division_id: z.string().min(1, 'Division is required'),
   athletes_male: z.coerce.number().int().min(0).max(500),
   athletes_female: z.coerce.number().int().min(0).max(500),
@@ -118,7 +118,7 @@ export function AddTeamDialog({ open, onOpenChange, eventId, onSaved }: AddTeamD
               </div>
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Team Name</FormLabel>
+                  <FormLabel>Team Name <span className="text-muted-foreground font-normal">(optional — leave blank if this event doesn't use team names)</span></FormLabel>
                   <FormControl><Input {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>

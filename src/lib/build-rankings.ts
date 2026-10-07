@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { buildScoresheet, type RawField, type ScoreType } from '@/lib/build-scoresheet';
 import { pickDivisionTemplateId } from '@/lib/scoring';
+import { formatTeamLabel, disambiguateLabels } from '@/lib/utils';
 
 const sb = supabase as any;
 
@@ -20,6 +21,7 @@ export interface RankingRow {
   deductions: number;
   perfection: number;
   rank: number;
+  display_label?: string;
 }
 
 export interface RankingSection {
@@ -256,7 +258,7 @@ export function buildRankingRows(ctx: EventScoringData): RankingRow[] {
     if (!fields.length) continue;
 
     const data = buildScoresheet({
-      team_name: sub.team?.name || 'Team',
+      team_name: (sub.team?.name || '').trim(),
       gym_name: sub.team?.gym_name,
       division_name: sub.team?.division?.name,
       level_name: sub.team?.level?.name,
@@ -282,7 +284,7 @@ export function buildRankingRows(ctx: EventScoringData): RankingRow[] {
     rows.push({
       submission_id: sub.id,
       team_id: sub.team?.id,
-      team_name: sub.team?.name || 'Team',
+      team_name: (sub.team?.name || '').trim(),
       gym_name: sub.team?.gym_name ?? null,
       division_id: sub.team?.division?.id ?? null,
       division_name: sub.team?.division?.name || 'No Division',
@@ -300,13 +302,23 @@ export function buildRankingRows(ctx: EventScoringData): RankingRow[] {
 }
 
 export function displayTeamName(row: RankingRow): string {
-  return row.gym_name ? `${row.gym_name}: ${row.team_name}` : row.team_name;
+  return row.display_label ?? formatTeamLabel(row.team_name, row.gym_name);
+}
+
+function labelSection(rows: RankingRow[], mode: RankingMode): RankingRow[] {
+  disambiguateLabels(
+    rows,
+    (r) => formatTeamLabel(r.team_name, r.gym_name),
+    (r) => (mode === 'division' ? r.level_name : r.division_name),
+    (r, l) => { r.display_label = l; },
+  );
+  return rows;
 }
 
 /** Group ranked rows into report sections. */
 export function buildRankingSections(rows: RankingRow[], mode: RankingMode): RankingSection[] {
   if (mode === 'overall') {
-    return [{ key: 'overall', title: 'Overall Standings', rows: applyRanks(rows) }];
+    return [{ key: 'overall', title: 'Overall Standings', rows: labelSection(applyRanks(rows.map((r) => ({ ...r }))), mode) }];
   }
 
   const groups = new Map<string, { title: string; rows: RankingRow[] }>();
@@ -319,6 +331,6 @@ export function buildRankingSections(rows: RankingRow[], mode: RankingMode): Ran
   }
 
   return Array.from(groups.entries())
-    .map(([key, g]) => ({ key, title: g.title, rows: applyRanks(g.rows) }))
+    .map(([key, g]) => ({ key, title: g.title, rows: labelSection(applyRanks(g.rows.map((r) => ({ ...r }))), mode) }))
     .sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }));
 }

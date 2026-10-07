@@ -119,7 +119,6 @@ export function BulkImportTeamsDialog({ open, onOpenChange, eventId }: Props) {
       const male = Number(raw.athletes_male ?? 0);
       const female = Number(raw.athletes_female ?? 0);
 
-      if (!teamName) errors.push('team_name required');
       if (!gymName) errors.push('gym_name required');
       if (!division) errors.push('division required');
       else if (!divMap.has(division.toLowerCase())) errors.push(`unknown division "${division}"`);

@@ -14,7 +14,7 @@ import { Loader2 } from 'lucide-react';
 import { useEventDivisions } from '@/hooks/useEventDivisions';
 
 const schema = z.object({
-  name: z.string().trim().min(1, 'Team name is required').max(120),
+  name: z.string().trim().max(120),
   division_id: z.string().min(1, 'Division is required'),
   athletes_female: z.coerce.number().int().min(0, 'Must be 0 or greater').max(500),
   athletes_male: z.coerce.number().int().min(0, 'Must be 0 or greater').max(500),
@@ -101,7 +101,7 @@ export function EditTeamDialog({ open, onOpenChange, team, onSaved }: EditTeamDi
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Team Name</FormLabel>
+                  <FormLabel>Team Name <span className="text-muted-foreground font-normal">(optional — leave blank if this event doesn't use team names)</span></FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>

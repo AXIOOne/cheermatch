@@ -836,7 +836,7 @@ export default function SubmissionScoringDialog({
                             thumbnailUrl={submission?.thumbnail_url}
                             status={submission?.status}
                             submissionId={submission?.id}
-                            title={`${submission?.team?.name || 'Team'} performance video`}
+                            title={`${submission?.team?.name || submission?.team?.name.replace('name','gym_name') || 'Team'} performance video`}
                           />
                         );
                       }

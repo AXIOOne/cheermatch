@@ -152,7 +152,7 @@ export async function generateSubmissionScoresheetBytes(
 
   const team = submission.team;
   const data = buildScoresheet({
-    team_name: team?.name || 'Team',
+    team_name: team?.name || team?.gym_name || 'Team',
     gym_name: team?.gym_name,
     division_name: team?.division?.name,
     level_name: team?.level?.name,
