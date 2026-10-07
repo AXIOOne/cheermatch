@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,9 +31,7 @@ type SubmissionStatus = Database['public']['Enums']['submission_status'];
 
 const sb = supabase as any;
 
-export default function SubmissionDetail() {
-  const { submissionId } = useParams<{ submissionId: string }>();
-  const navigate = useNavigate();
+export function SubmissionDetailContent({ submissionId, onClose }: { submissionId: string; onClose?: () => void }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin, user } = useAuth();
@@ -206,9 +206,11 @@ export default function SubmissionDetail() {
     return (
       <div className="p-8">
         <p className="text-muted-foreground">Submission not found.</p>
-        <Button variant="ghost" onClick={() => navigate('/admin/submissions')} className="mt-4">
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
-        </Button>
+        {onClose && (
+          <Button variant="ghost" onClick={onClose} className="mt-4">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
+          </Button>
+        )}
       </div>
     );
   }
@@ -216,9 +218,11 @@ export default function SubmissionDetail() {
   return (
     <div className="p-8 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/admin/submissions')}>
-          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
-        </Button>
+        {onClose && (
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Submissions
+          </Button>
+        )}
         <div className="flex items-center gap-2 flex-wrap">
           <Button
             size="sm"
@@ -514,7 +518,7 @@ export default function SubmissionDetail() {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         submissions={[{ id: submissionId!, teamName: submission.team?.name || 'this submission' }]}
-        onDeleted={() => navigate('/admin/submissions')}
+        onDeleted={() => onClose?.()}
       />
 
       <ReplaceVideoDialog
@@ -527,7 +531,18 @@ export default function SubmissionDetail() {
           queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
         }}
       />
-
+ 
     </div>
+  );
+}
+
+export default function SubmissionDetail() {
+  const { submissionId } = useParams<{ submissionId: string }>();
+  const navigate = useNavigate();
+  return (
+    <SubmissionDetailContent
+      submissionId={submissionId!}
+      onClose={() => navigate('/admin/submissions')}
+    />
   );
 }
