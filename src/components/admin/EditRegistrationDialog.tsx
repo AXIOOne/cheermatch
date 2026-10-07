@@ -102,7 +102,7 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
       const { error } = await sb
         .from('teams')
         .update({
-          name: data.name || null,
+          name: (data.name || '').trim(),
           ...coachFields,
           coach_phone: data.coach_phone || null,
           division_id: data.division_id,
