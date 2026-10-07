@@ -106,7 +106,7 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
           ...coachFields,
           coach_phone: data.coach_phone || null,
           division_id: data.division_id,
-          level_id: data.level_id,
+          level_id: data.level_id || null,
           athletes_male: data.athletes_male,
           athletes_female: data.athletes_female,
         })
@@ -140,7 +140,7 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
                 <Input value={coach?.organization_name || team?.gym_name || ''} readOnly placeholder="Select a coach" />
               </div>
               <FormField control={form.control} name="name" render={({ field }) => (
-                <FormItem><FormLabel>Team Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem><FormLabel>Team Name <span className="text-muted-foreground font-normal">(optional)</span></FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />
               <FormField control={form.control} name="coach_phone" render={({ field }) => (
                 <FormItem><FormLabel>Coach Phone</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>
@@ -160,7 +160,7 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
               )} />
               <FormField control={form.control} name="level_id" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Level</FormLabel>
+                  <FormLabel>Level <span className="text-muted-foreground font-normal">(optional — pulled from division)</span></FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Select a level" /></SelectTrigger></FormControl>
                     <SelectContent>
