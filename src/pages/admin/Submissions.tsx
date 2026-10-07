@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -90,7 +89,6 @@ export default function Submissions() {
   const [deleteTargets, setDeleteTargets] = useState<{ id: string; teamName: string }[]>([]);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const { isAdmin } = useAuth();
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<{ id: string; teamName: string } | null>(null);
