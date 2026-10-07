@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -531,7 +531,18 @@ export function SubmissionDetailContent({ submissionId, onClose }: { submissionI
           queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
         }}
       />
-
+ 
     </div>
+  );
+}
+
+export default function SubmissionDetail() {
+  const { submissionId } = useParams<{ submissionId: string }>();
+  const navigate = useNavigate();
+  return (
+    <SubmissionDetailContent
+      submissionId={submissionId!}
+      onClose={() => navigate('/admin/submissions')}
+    />
   );
 }
