@@ -1,3 +1,4 @@
+import { formatTeamLabel, disambiguateLabels } from '@/lib/utils';
 import {
   fetchEventScoringData,
   buildRankingRows,
@@ -26,6 +27,7 @@ export interface AverageTeamRow {
   team_name: string;
   gym_name: string | null;
   perfection: number;
+  display_label?: string;
   cells: Record<string, AverageCell>;
 }
 
@@ -181,6 +183,7 @@ export async function fetchEventAverages(eventId: string): Promise<AverageSectio
 
     // First place at the bottom: ascending by score.
     rows.sort((a, b) => a.perfection - b.perfection);
+    disambiguateLabels(rows, (r) => formatTeamLabel(r.team_name, r.gym_name), () => null, (r, l) => { r.display_label = l; });
 
     sections.push({
       key,
@@ -208,5 +211,5 @@ export function formatAverageCell(cell: AverageCell | undefined): string {
 }
 
 export function averagesTeamName(row: AverageTeamRow): string {
-  return row.gym_name ? `${row.gym_name}: ${row.team_name}` : row.team_name;
+  return row.display_label ?? formatTeamLabel(row.team_name, row.gym_name);
 }

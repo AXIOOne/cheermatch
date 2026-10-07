@@ -403,7 +403,7 @@ export function SubmissionDetailContent({ submissionId, onClose }: { submissionI
             thumbnailUrl={submission.thumbnail_url}
             status={submission.status}
             submissionId={submission.id}
-            title={`${submission.team?.name || 'Team'} performance video`}
+            title={`${submission.team?.name || submission.team?.gym_name || 'Team'} performance video`}
           />
         </CardContent>
       </Card>

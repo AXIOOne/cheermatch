@@ -53,7 +53,7 @@ export function MultiAddTeamsDialog({ open, onOpenChange, eventId }: Props) {
       toast({ variant: 'destructive', title: 'Nothing to save', description: 'Fill in at least one row.' });
       return;
     }
-    const bad = filled.findIndex((r) => !r.coach || !r.name.trim() || !r.division_id);
+    const bad = filled.findIndex((r) => !r.coach || !r.division_id);
     if (bad >= 0) {
       toast({
         variant: 'destructive',
