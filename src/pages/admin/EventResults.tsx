@@ -162,10 +162,11 @@ export default function EventResults() {
       return;
     }
     if (mode === 'division') {
-      const lines: (string | number)[][] = [
-        ['Division', 'Rank', 'Team Name', 'Max', 'Raw Score', 'Deductions', '% Perf', 'Event Score'],
-      ];
+      const lines: (string | number)[][] = [];
       sections.forEach((section) => {
+        lines.push([]);
+        lines.push([section.title]);
+        lines.push(['Division', 'Rank', 'Team Name', 'Max', 'Raw Score', 'Deductions', '% Perf', 'Event Score']);
         section.rows.forEach((row) => {
           lines.push([
             row.division_name || section.title,
