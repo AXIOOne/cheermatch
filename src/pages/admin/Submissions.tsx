@@ -28,6 +28,7 @@ import { DeleteSubmissionDialog } from '@/components/admin/DeleteSubmissionDialo
 import { ReplaceVideoDialog } from '@/components/admin/ReplaceVideoDialog';
 import { useAuth } from '@/hooks/useAuth';
 import VideoPlayer from '@/components/video/VideoPlayer';
+import { SubmissionDetailContent } from '@/pages/admin/SubmissionDetail';
 import type { Database } from '@/integrations/supabase/types';
 
 type SubmissionStatus = Database['public']['Enums']['submission_status'];
@@ -77,6 +78,7 @@ function toLifecycle(s: SubmissionStatus): LifecycleStatus {
 
 export default function Submissions() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [eventFilter, setEventFilter] = useState<string>('all');
   const [tab, setTab] = useState<'current' | 'archived' | 'pending' | 'detached'>('current');
@@ -560,7 +562,7 @@ export default function Submissions() {
                     <TableRow
                       key={submission.id}
                       className={`group cursor-pointer text-sm hover:bg-muted/50 ${selectedIds.has(submission.id) ? 'bg-primary/5' : ''}`}
-                      onClick={() => navigate(`/admin/submissions/${submission.id}`)}
+                      onClick={() => setDetailId(submission.id)}
                     >
                       <TableCell className="w-10" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
@@ -806,6 +808,21 @@ export default function Submissions() {
           )}
         </CardContent>
       </Card>
+
+      {/* Submission detail pop-up (keeps queue filters intact) */}
+      <Dialog open={!!detailId} onOpenChange={(o) => !o && setDetailId(null)}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Submission details</DialogTitle>
+          </DialogHeader>
+          {detailId && (
+            <SubmissionDetailContent
+              submissionId={detailId}
+              onClose={() => setDetailId(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Bulk Email Dialog */}
       <BulkEmailDialog
