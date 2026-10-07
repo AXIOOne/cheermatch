@@ -36,6 +36,7 @@ export default function EventResults() {
   const [mode, setMode] = useState<ReportMode>('overall');
   const [groupFilter, setGroupFilter] = useState<string>('all');
   const [exporting, setExporting] = useState(false);
+  const [byDivisionPages, setByDivisionPages] = useState(true);
 
 
   const { data: event, isLoading: eventLoading } = useQuery({
@@ -111,7 +112,7 @@ export default function EventResults() {
         },
         {
           title: MODE_TITLES[mode],
-          pageBreakPerSection: mode !== 'overall',
+          pageBreakPerSection: mode !== 'overall' && byDivisionPages,
         }
       );
       const safe = `${event?.name || 'Event'} - ${MODE_TITLES[mode]}`.replace(/[^\w\s-]/g, '').trim();
@@ -145,10 +146,23 @@ export default function EventResults() {
             </h1>
             <p className="text-muted-foreground mt-1">Ranking Reports</p>
           </div>
-          <Button variant="outline" onClick={handleExport} disabled={exporting || !hasContent}>
-            {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-            Export PDF
-          </Button>
+          <div className="flex items-center gap-4">
+            {mode !== 'overall' && (
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={byDivisionPages}
+                  onChange={(e) => setByDivisionPages(e.target.checked)}
+                  className="h-4 w-4 rounded border-input accent-primary"
+                />
+                By division (separate pages)
+              </label>
+            )}
+            <Button variant="outline" onClick={handleExport} disabled={exporting || !hasContent}>
+              {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+              Export PDF
+            </Button>
+          </div>
         </div>
       </div>
 
