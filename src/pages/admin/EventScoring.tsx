@@ -662,7 +662,7 @@ export default function EventScoring() {
                             className="h-7 px-2.5 text-xs bg-success text-success-foreground hover:bg-success/90"
                             disabled={sendingScoreFor === submission.id || !overallStatus.allReviewed}
                             onClick={() =>
-                              setConfirmSendFor({ id: submission.id, teamName: submission.team?.name || 'this team' })
+                              setConfirmSendFor({ id: submission.id, teamName: submission.team?.name || submission.team?.gym_name || 'this team' })
                             }
                           >
                             {sendingScoreFor === submission.id ? (
