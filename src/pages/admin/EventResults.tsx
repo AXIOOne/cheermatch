@@ -161,6 +161,27 @@ export default function EventResults() {
       downloadCsv(`${safe}.csv`, lines);
       return;
     }
+    if (mode === 'division') {
+      const lines: (string | number)[][] = [
+        ['Division', 'Rank', 'Team Name', 'Max', 'Raw Score', 'Deductions', '% Perf', 'Event Score'],
+      ];
+      sections.forEach((section) => {
+        section.rows.forEach((row) => {
+          lines.push([
+            row.division_name || section.title,
+            row.rank,
+            displayTeamName(row),
+            row.max.toFixed(2),
+            row.raw_score.toFixed(2),
+            row.deductions.toFixed(2),
+            row.perfection.toFixed(2),
+            row.perfection.toFixed(4),
+          ]);
+        });
+      });
+      downloadCsv(`${safe}.csv`, lines);
+      return;
+    }
     const lines: (string | number)[][] = [];
     sections.forEach((section) => {
       if (mode !== 'overall') lines.push([section.title]);
