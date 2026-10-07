@@ -614,8 +614,10 @@ export default function EventScoring() {
                       </TableCell>
                       <TableCell className="py-1.5 px-3">
                         <p className="font-medium text-sm leading-tight">
-                          {submission.team?.name || 'Unknown Team'}
-                          <span className="font-normal text-muted-foreground"> · {submission.team?.gym_name || '—'}</span>
+                          {submission.team?.name || submission.team?.gym_name || 'Unknown Team'}
+                          {submission.team?.name && (
+                            <span className="font-normal text-muted-foreground"> · {submission.team?.gym_name || '—'}</span>
+                          )}
                         </p>
                       </TableCell>
                       <TableCell className="py-1.5 px-3 text-sm">
