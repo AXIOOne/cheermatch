@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { Calendar, Activity, Plus, Loader2, LogIn } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAuth } from '@/hooks/useAuth';
 
 function initialsOf(name?: string | null, email?: string | null) {
   const src = (name || email || '?').trim();
@@ -16,6 +17,28 @@ function initialsOf(name?: string | null, email?: string | null) {
 }
 
 export default function Dashboard() {
+  const { user } = useAuth();
+
+  const { data: myProfile } = useQuery({
+    queryKey: ['dashboard-profile', user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('user_id', user!.id)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  const fullName =
+    myProfile?.full_name ||
+    (user?.user_metadata?.full_name as string | undefined) ||
+    '';
+  const firstName = fullName.trim().split(/\s+/)[0] || 'there';
+
+
   const { data: currentEvents, isLoading: currentLoading } = useQuery({
     queryKey: ['current-events'],
     queryFn: async () => {
@@ -106,7 +129,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">Welcome to CheerMatch Admin</p>
+          <p className="text-muted-foreground mt-1">Hi {firstName}! Welcome to Varsity Virtual.</p>
         </div>
         <Button asChild>
           <Link to="/admin/events">
