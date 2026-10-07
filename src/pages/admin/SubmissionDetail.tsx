@@ -29,9 +29,7 @@ type SubmissionStatus = Database['public']['Enums']['submission_status'];
 
 const sb = supabase as any;
 
-export default function SubmissionDetail() {
-  const { submissionId } = useParams<{ submissionId: string }>();
-  const navigate = useNavigate();
+export function SubmissionDetailContent({ submissionId, onClose }: { submissionId: string; onClose?: () => void }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { isAdmin, user } = useAuth();
