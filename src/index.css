@@ -55,9 +55,12 @@
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 0 0% 15%;
     --sidebar-ring: 206 63% 63%;
-    --sidebar-header: 0 0% 82%;
-    --sidebar-header-foreground: 0 0% 15%;
-    --sidebar-header-border: 0 0% 70%;
+    --sidebar-header: 206 63% 63%;
+    --sidebar-header-foreground: 0 0% 100%;
+    --sidebar-header-border: 206 63% 45%;
+    --sidebar-header-surface: 0 0% 100%;
+    --sidebar-header-surface-foreground: 206 63% 63%;
+    --sidebar-header-band: 0 0% 100%;
   }
 
   .dark {
@@ -97,9 +100,12 @@
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 0 0% 15%;
     --sidebar-ring: 206 63% 68%;
-    --sidebar-header: 0 0% 82%;
-    --sidebar-header-foreground: 0 0% 15%;
-    --sidebar-header-border: 0 0% 70%;
+    --sidebar-header: 206 63% 68%;
+    --sidebar-header-foreground: 0 0% 100%;
+    --sidebar-header-border: 206 63% 45%;
+    --sidebar-header-surface: 0 0% 100%;
+    --sidebar-header-surface-foreground: 206 63% 63%;
+    --sidebar-header-band: 0 0% 100%;
   }
 }
 
@@ -130,5 +136,13 @@
 
   .shadow-champion {
     box-shadow: 0 4px 20px -4px hsl(206 63% 63% / 0.25);
+  }
+
+  /* Brand banner at the top of the portal side menu: blue field with two angled light streaks. */
+  .sidebar-header-brand {
+    background-color: hsl(var(--sidebar-header));
+    background-image:
+      linear-gradient(115deg, transparent 0 16%, hsl(var(--sidebar-header-band) / 0.18) 16% 30%, transparent 30% 100%),
+      linear-gradient(115deg, transparent 0 60%, hsl(var(--sidebar-header-band) / 0.26) 60% 72%, transparent 72% 100%);
   }
 }

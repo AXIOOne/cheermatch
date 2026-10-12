@@ -84,18 +84,20 @@ export function JudgeSidebar() {
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarRail />
 
-      <SidebarHeader>
-        <div className={cn('flex items-center', collapsed ? 'justify-center p-2' : 'gap-3 px-2 py-3')}>
-          <img
-            src={logoSrc}
-            alt="Portal"
-            className={cn('object-contain', collapsed ? 'h-7 w-7' : 'h-8 max-w-full')}
-          />
-          {!collapsed && (
-            <span className="text-sm font-semibold text-sidebar-foreground truncate">
-              v2.0
-            </span>
-          )}
+      <SidebarHeader className="sidebar-header-brand border-b border-sidebar-header-border">
+        <div className={cn('flex items-center', collapsed ? 'justify-center' : 'justify-start')}>
+          <div className="flex items-center gap-2 bg-sidebar-header-surface px-2 py-1.5">
+            <img
+              src={logoSrc}
+              alt="Portal"
+              className={cn('object-contain shrink-0', collapsed ? 'h-6 w-6' : 'h-7 max-w-full')}
+            />
+            {!collapsed && (
+              <span className="font-display text-sidebar-header-surface-foreground text-lg font-extrabold italic uppercase tracking-[0.18em] leading-none">
+                VIRTUAL
+              </span>
+            )}
+          </div>
         </div>
       </SidebarHeader>
 
