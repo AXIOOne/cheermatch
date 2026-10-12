@@ -30,7 +30,6 @@ import {
   Play,
   ClipboardList,
   HelpCircle,
-  PanelLeftClose,
 } from 'lucide-react';
 
 interface NavItemProps {

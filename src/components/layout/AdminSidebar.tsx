@@ -32,7 +32,6 @@ import {
   Video,
   MessageSquare,
   HelpCircle,
-  PanelLeftClose,
 } from 'lucide-react';
 
 interface NavItemProps {
