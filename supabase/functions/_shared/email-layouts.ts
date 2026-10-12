@@ -4,7 +4,9 @@
 
 export const BRAND_BLUE = '#6ea8dd';
 export const BRAND_BLACK = '#000000';
-export const EMAIL_LOGO = 'https://qzckpzwhkevqhwywlrkf.supabase.co/storage/v1/object/public/email-assets/logo-white.png';
+// Absolute public URL from varsity-email-logo.png.asset.json: email clients
+// cannot resolve the host-relative asset URLs used inside the portal.
+export const EMAIL_LOGO = 'https://score.cheermatch.com/__l5e/assets-v1/120218a2-c600-4f66-9d69-8772faff2f69/varsity-email-logo.png';
 
 export const esc = (s: unknown) =>
   String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
@@ -16,9 +18,9 @@ function shell(opts: { subtitle?: string; body: string; footer: string }) {
 <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Roboto,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;"><tr><td align="center">
 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1);">
-<tr><td style="background-color:${BRAND_BLACK};padding:28px 32px;text-align:center;border-bottom:4px solid ${BRAND_BLUE};">
+<tr><td style="background-color:#ffffff;padding:28px 32px;text-align:center;border-bottom:4px solid ${BRAND_BLUE};">
 <img src="${EMAIL_LOGO}" alt="Varsity Virtual" width="160" style="display:block;margin:0 auto;max-width:160px;height:auto;" />
-${opts.subtitle ? `<p style="margin:12px 0 0;color:#ffffff;font-size:15px;opacity:0.9;">${opts.subtitle}</p>` : ''}
+${opts.subtitle ? `<p style="margin:12px 0 0;color:${BRAND_BLACK};font-size:15px;">${opts.subtitle}</p>` : ''}
 </td></tr>
 <tr><td style="padding:36px 32px;color:#3f3f46;font-size:16px;line-height:1.6;">${opts.body}</td></tr>
 <tr><td style="background-color:#fafafa;padding:24px 32px;text-align:center;"><p style="margin:0;color:#a1a1aa;font-size:12px;">${opts.footer}<br>© ${year()} CheerMatch. All rights reserved.</p></td></tr>
