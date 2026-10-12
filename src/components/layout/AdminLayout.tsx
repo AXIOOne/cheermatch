@@ -3,8 +3,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { AdminSidebar } from './AdminSidebar';
 import { JudgeMessagesMenu } from '@/components/judge/JudgeMessagesMenu';
 import { Loader2 } from 'lucide-react';
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { Separator } from '@/components/ui/separator';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { HeaderSidebarControls } from '@/components/layout/HeaderSidebarControls';
 
 export function AdminLayout() {
   const { user, loading, rolesLoaded, isAdmin, isJudge, isGymCoach } = useAuth();
@@ -40,8 +40,7 @@ export function AdminLayout() {
         <AdminSidebar />
         <SidebarInset>
           <header className="flex h-12 items-center gap-2 border-b px-4">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="h-4" />
+            <HeaderSidebarControls />
             <span className="text-sm font-medium text-muted-foreground">Admin Portal</span>
             <div className="ml-auto flex items-center">
               <JudgeMessagesMenu />

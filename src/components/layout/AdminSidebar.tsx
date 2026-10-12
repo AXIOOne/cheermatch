@@ -22,6 +22,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
 
@@ -87,8 +88,8 @@ export function AdminSidebar() {
       <SidebarRail />
 
       <SidebarHeader className="sidebar-header-brand h-12 shrink-0 border-b border-sidebar-header-border px-2 py-0">
-        <div className={cn('flex h-full items-center', collapsed ? 'justify-center' : 'justify-start')}>
-          <div className="flex items-center gap-2">
+        <div className="flex h-full items-center justify-between">
+          <div className="flex min-w-0 items-center gap-2">
             <img
               src={logoSrc}
               alt="Portal"
@@ -100,6 +101,9 @@ export function AdminSidebar() {
               </span>
             )}
           </div>
+          {!collapsed && (
+            <SidebarTrigger className="h-7 w-7 shrink-0 text-sidebar-header-foreground hover:bg-sidebar-header-border/30 hover:text-sidebar-header-foreground" />
+          )}
         </div>
       </SidebarHeader>
 

@@ -55,9 +55,9 @@
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 0 0% 15%;
     --sidebar-ring: 206 63% 63%;
-    --sidebar-header: 0 0% 87%;
-    --sidebar-header-foreground: 0 0% 12%;
-    --sidebar-header-border: 0 0% 70%;
+    --sidebar-header: 0 0% 90%;
+    --sidebar-header-foreground: 0 0% 10%;
+    --sidebar-header-border: 0 0% 66%;
     --sidebar-header-band: 0 0% 100%;
   }
 
@@ -98,9 +98,9 @@
     --sidebar-accent-foreground: 0 0% 95%;
     --sidebar-border: 0 0% 15%;
     --sidebar-ring: 206 63% 68%;
-    --sidebar-header: 0 0% 87%;
-    --sidebar-header-foreground: 0 0% 12%;
-    --sidebar-header-border: 0 0% 70%;
+    --sidebar-header: 0 0% 90%;
+    --sidebar-header-foreground: 0 0% 10%;
+    --sidebar-header-border: 0 0% 66%;
     --sidebar-header-band: 0 0% 100%;
   }
 }
@@ -134,11 +134,8 @@
     box-shadow: 0 4px 20px -4px hsl(206 63% 63% / 0.25);
   }
 
-  /* Brand banner at the top of the portal side menu: gray field with two angled light streaks. */
+  /* Brand banner at the top of the portal side menu: flat gray field with a divider underneath. */
   .sidebar-header-brand {
     background-color: hsl(var(--sidebar-header));
-    background-image:
-      linear-gradient(115deg, transparent 0 58%, hsl(var(--sidebar-header-band) / 0.5) 58% 68%, transparent 68% 100%),
-      linear-gradient(115deg, transparent 0 76%, hsl(var(--sidebar-header-band) / 0.7) 76% 86%, transparent 86% 100%);
   }
 }
