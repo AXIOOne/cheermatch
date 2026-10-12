@@ -30,7 +30,7 @@ const DISCIPLINES: { label: string; href: string; external?: boolean }[] = [
     external: true,
   },
   {
-    label: 'UDA School Dance',
+    label: 'UCA School Cheer',
     href: 'https://www.varsity.com/uca/school/competitions/rules-scoring/',
     external: true,
   },
