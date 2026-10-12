@@ -523,7 +523,7 @@ export function EmailTemplateManager({ open, onOpenChange, defaultTab = 'all' }:
               <DialogTitle>{builtInPreview?.name}</DialogTitle>
               <DialogDescription>Subject: {builtInPreview?.subject} — preview with sample data (built-in, not editable)</DialogDescription>
             </DialogHeader>
-            {builtInPreview && <iframe title="Email preview" srcDoc={builtInPreview.html} className="w-full flex-1 min-h-[60vh] border rounded-lg" sandbox="" />}
+            {builtInPreview && <iframe title="Email preview" srcDoc={builtInPreview.render()} className="w-full flex-1 min-h-[60vh] border rounded-lg" sandbox="" />}
           </DialogContent>
         </Dialog>
       </DialogContent>

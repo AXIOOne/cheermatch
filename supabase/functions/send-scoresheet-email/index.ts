@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'https://esm.sh/resend@4.0.0'
 import { buildScoresheet, type RawField, type ScoreType } from '../_shared/build-scoresheet.ts'
 import { buildScoresheetPdf } from '../_shared/scoresheet-pdf.ts'
+import { scoresheetEmailHtml, scoresheetEmailSubject } from '../_shared/email-layouts.ts'
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -168,99 +169,36 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
     const tz = (event as any)?.time_zone || "America/Chicago";
     const cutoffText = cutoff ? new Date(cutoff).toLocaleString("en-US", { timeZone: tz, dateStyle: "full", timeStyle: "short", timeZoneName: "short" } as any) : null;
-    const accuscoreBlock = !accuscoreReq && accuscoreOn && accuscoreUrl ? `
-      <div style="background:#eff6ff;border:1px solid #bfdbfe;padding:16px;border-radius:8px;margin:20px 0;">
-        <p style="margin:0 0 12px 0;"><strong>Need a score reviewed?</strong> Submit one or more AccuScore requests. After the cutoff, scores are final.</p>
-        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;"><tr>
-          <td style="vertical-align:middle;padding-right:12px;"><a href="${accuscoreUrl}" style="display:inline-block;background:#6ea8dd;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Open AccuScore Request</a></td>
-          <td style="vertical-align:middle;font-size:13px;color:#334155;"><strong>Requests accepted until:</strong><br/>${cutoffText ? esc(cutoffText) : "No cutoff set"}</td>
-        </tr></table>
-      </div>` : "";
     const decisionLabel: Record<string, string> = { honored: "Honored", denied: "Denied", duplicate: "Duplicate" };
-    const responseBlock = accuscoreReq ? `
-      <div style="background:#f5f5f5;padding:16px;border-radius:8px;margin:20px 0;">
-        <p style="margin:0;"><strong>AccuScore request:</strong> ${esc(accuscoreReq.form?.name || "Score review")}</p>
-        <p style="margin:8px 0 0 0;"><strong>Decision:</strong> ${esc(decisionLabel[accuscoreReq.status] || accuscoreReq.status)}</p>
-        <p style="margin:8px 0 0 0;white-space:pre-wrap;"><strong>Response:</strong><br/>${esc(accuscoreReq.admin_response || "")}</p>
-      </div>
-      <p>Your current scoresheet is attached.</p>` : "";
-
     // Calculate overall average
     const avgScore = submittedScores.reduce((sum: number, s: any) => sum + (s.total_score || 0), 0) / submittedScores.length;
 
-    // Build score breakdown HTML
-    const scoreBreakdownHtml = submittedScores.map((score: any) => {
-      const panel = Array.isArray(score.panel) ? score.panel[0] : score.panel;
-      const panelName = panel?.name || "Judge";
-      const details = score.score_details?.map((d: any) => {
-        const field = Array.isArray(d.field) ? d.field[0] : d.field;
-        const section = field?.section ? (Array.isArray(field.section) ? field.section[0] : field.section) : null;
-        const label = section?.name ? `${section.name} — ${field?.name || "Field"}` : (field?.name || "Field");
-        return `<tr><td style="padding: 4px 8px; border-bottom: 1px solid #eee;">${label}</td><td style="padding: 4px 8px; border-bottom: 1px solid #eee; text-align: right;">${d.points} / ${field?.max_points || 0}</td></tr>`;
-      }).join("") || "";
+    const emailHtml = scoresheetEmailHtml({
+      eventName: event?.name || "Event",
+      coachName: coachProfile.full_name,
+      teamName: team.name || team.gym_name || "Team",
+      gymName: team.gym_name,
+      divisionName: division?.name,
+      levelName: level?.name,
+      averageScore: avgScore,
+      accuscore: accuscoreOn && accuscoreUrl ? { url: accuscoreUrl, cutoffText } : null,
+      response: accuscoreReq ? { formName: accuscoreReq.form?.name || "Score review", decision: decisionLabel[accuscoreReq.status] || accuscoreReq.status, response: accuscoreReq.admin_response || "" } : null,
+      panels: submittedScores.map((score: any) => {
+        const panel = Array.isArray(score.panel) ? score.panel[0] : score.panel;
+        return {
+          panelName: panel?.name || "Judge",
+          total: score.total_score ?? null,
+          deductions: score.deductions,
+          comments: score.comments,
+          rows: (score.score_details || []).map((d: any) => {
+            const field = Array.isArray(d.field) ? d.field[0] : d.field;
+            const section = field?.section ? (Array.isArray(field.section) ? field.section[0] : field.section) : null;
+            return { label: section?.name ? `${section.name} — ${field?.name || "Field"}` : (field?.name || "Field"), points: d.points, max: field?.max_points || 0 };
+          }),
+        };
+      }),
+    });
 
-      return `
-        <div style="margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
-          <div style="background: #f5f5f5; padding: 12px 16px; font-weight: bold;">
-            ${panelName} - Score: ${score.total_score?.toFixed(2) || "N/A"}
-          </div>
-          <table style="width: 100%; border-collapse: collapse;">
-            ${details}
-          </table>
-          ${score.deductions ? `<div style="padding: 8px 16px; color: #dc2626;">Deductions: -${score.deductions}</div>` : ""}
-          ${score.comments ? `<div style="padding: 8px 16px; font-style: italic; color: #666;">Comments: ${score.comments}</div>` : ""}
-        </div>
-      `;
-    }).join("");
-
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 30px; text-align: center; border-radius: 8px 8px 0 0; }
-          .content { background: white; padding: 30px; border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px; }
-          .highlight { background: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center; }
-          .score-big { font-size: 48px; font-weight: bold; color: #6366f1; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1 style="margin: 0;">Score Sheet</h1>
-            <p style="margin: 10px 0 0 0; opacity: 0.9;">${event?.name || "Event"}</p>
-          </div>
-          <div class="content">
-            <p>Dear ${coachProfile.full_name || "Coach"},</p>
-            <p>${accuscoreReq ? "We have reviewed your AccuScore request." : "Here are the official scores for your team's performance:"}</p>
-            ${responseBlock}
-            
-            <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0;"><strong>Team:</strong> ${team.name || team.gym_name || "Team"}</p>
-              <p style="margin: 8px 0 0 0;"><strong>Gym:</strong> ${team.gym_name || ""}</p>
-              <p style="margin: 8px 0 0 0;"><strong>Division:</strong> ${division?.name || "N/A"}</p>
-              <p style="margin: 8px 0 0 0;"><strong>Level:</strong> ${level?.name || "N/A"}</p>
-            </div>
-
-            <div class="highlight">
-              <p style="margin: 0; color: #666;">Average Score</p>
-              <div class="score-big">${avgScore.toFixed(2)}</div>
-            </div>
-
-            ${accuscoreBlock}
-            <h2>Score Breakdown</h2>
-            ${scoreBreakdownHtml}
-
-            <p style="margin-top: 30px; color: #666; font-size: 14px;">
-              If you have any questions about your scores, please contact the event organizers.
-            </p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
 
     // Build PDF scoresheet
     const fieldMap = new Map<string, RawField>();
@@ -403,7 +341,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "CheerMatch <noreply@cheermatch.com>",
       to: [coachProfile.email],
-      subject: accuscoreReq ? `AccuScore Response - ${team.name || team.gym_name || "Team"} | ${event?.name || "Event"}` : `Score Sheet - ${team.name || team.gym_name || "Team"} | ${event?.name || "Event"}`,
+      subject: scoresheetEmailSubject(team.name || team.gym_name || "Team", event?.name || "Event", !!accuscoreReq),
       html: emailHtml,
       attachments: [{
         filename: `${safeName}.pdf`,
