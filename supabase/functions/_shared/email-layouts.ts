@@ -101,25 +101,25 @@ export function scoresheetEmailHtml(p: {
 <td style="vertical-align:middle;padding-right:12px;"><a href="${p.accuscore.url}" style="display:inline-block;background:${BRAND_BLUE};color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Open AccuScore Request</a></td>
 <td style="vertical-align:middle;font-size:13px;color:#334155;"><strong>Requests accepted until:</strong><br/>${p.accuscore.cutoffText ? esc(p.accuscore.cutoffText) : 'No cutoff set'}</td>
 </tr></table></div>` : '';
-  const breakdown = p.panels.map((s) => `
+  const breakdown = p.response ? p.panels.map((s) => `
 <div style="margin-bottom:20px;border:1px solid #ddd;border-radius:8px;overflow:hidden;">
 <div style="background:#f5f5f5;padding:12px 16px;font-weight:bold;border-left:4px solid ${BRAND_BLUE};">${s.panelName} - Score: ${s.total != null ? s.total.toFixed(2) : 'N/A'}</div>
 <table style="width:100%;border-collapse:collapse;font-size:14px;">${s.rows.map((r) => `<tr><td style="padding:4px 8px;border-bottom:1px solid #eee;">${r.label}</td><td style="padding:4px 8px;border-bottom:1px solid #eee;text-align:right;">${r.points} / ${r.max}</td></tr>`).join('')}</table>
 ${s.deductions ? `<div style="padding:8px 16px;color:#dc2626;">Deductions: -${s.deductions}</div>` : ''}
 ${s.comments ? `<div style="padding:8px 16px;font-style:italic;color:#666;">Comments: ${s.comments}</div>` : ''}
-</div>`).join('');
+</div>`).join('') : '';
   return shell({
     subtitle: `${p.response ? 'AccuScore Response' : 'Score Sheet'} · ${esc(p.eventName)}`,
     body: `<p>Dear ${esc(p.coachName || 'Coach')},</p>
-<p>${p.response ? 'We have reviewed your AccuScore request.' : "Here are the official scores for your team's performance:"}</p>
+<p>${p.response ? 'We have reviewed your AccuScore request.' : "Your team's official PDF scoresheet is attached to this email."}</p>
 ${responseBlock}
 <div style="background:#f5f5f5;padding:16px;border-radius:8px;margin:20px 0;font-size:15px;">
 <p style="margin:0;"><strong>Team:</strong> ${esc(p.teamName)}</p><p style="margin:8px 0 0;"><strong>Gym:</strong> ${esc(p.gymName || '')}</p>
 <p style="margin:8px 0 0;"><strong>Division:</strong> ${esc(p.divisionName || 'N/A')}</p><p style="margin:8px 0 0;"><strong>Level:</strong> ${esc(p.levelName || 'N/A')}</p></div>
-<div style="background:#f0f9ff;padding:20px;border-radius:8px;margin:20px 0;text-align:center;"><p style="margin:0;color:#666;">Average Score</p><div style="font-size:48px;font-weight:bold;color:${BRAND_BLUE};">${p.averageScore.toFixed(2)}</div></div>
+${p.response ? `<div style="background:#f0f9ff;padding:20px;border-radius:8px;margin:20px 0;text-align:center;"><p style="margin:0;color:#666;">Average Score</p><div style="font-size:48px;font-weight:bold;color:${BRAND_BLUE};">${p.averageScore.toFixed(2)}</div></div>` : `<div style="background:#f0f9ff;padding:20px;border-radius:8px;margin:20px 0;text-align:center;"><p style="margin:0;font-size:20px;font-weight:bold;color:${BRAND_BLUE};">Your PDF Scoresheet</p><p style="margin:8px 0 0;">Please download the PDF scoresheet attached to this email to view your scores and judges’ feedback.</p></div>`}
 ${accuscoreBlock}
-<h2 style="color:#18181b;font-size:20px;">Score Breakdown</h2>${breakdown}
-<p style="margin-top:30px;color:#666;font-size:14px;">If you have any questions about your scores, please contact the event organizers.</p>`,
+${p.response ? `<h2 style="color:#18181b;font-size:20px;">Score Breakdown</h2>${breakdown}
+<p style="margin-top:30px;color:#666;font-size:14px;">If you have any questions about your scores, please contact the event organizers.</p>` : ''}`,
     footer: 'A PDF copy of this scoresheet is attached.',
   });
 }
