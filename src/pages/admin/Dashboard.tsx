@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
-import { Calendar, Activity, Plus, Loader2, LogIn } from 'lucide-react';
+import { Calendar, Activity, Plus, Loader2, LogIn, Zap } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
@@ -146,7 +146,7 @@ export default function Dashboard() {
             <CardTitle className="text-sm font-bold text-foreground">
               Current Events
             </CardTitle>
-            <Activity className="w-5 h-5 text-primary" />
+            <Zap className="w-5 h-5 text-primary" />
           </CardHeader>
           <CardContent className="flex flex-col flex-1 min-h-0">
             <div className="text-3xl font-bold">
