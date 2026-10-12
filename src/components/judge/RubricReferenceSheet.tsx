@@ -57,7 +57,9 @@ export function RubricReferenceSheet(_props: Props) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        {DISCIPLINES.map((d) => (
+        {[...DISCIPLINES]
+          .sort((a, b) => a.label.localeCompare(b.label))
+          .map((d) => (
           <DropdownMenuItem
             key={d.label}
             onSelect={() => {
