@@ -78,7 +78,7 @@ export function EmailTemplateManager({ open, onOpenChange, defaultTab = 'all' }:
       if (error) throw error;
       return data as EmailTemplate[];
     },
-    enabled: open && activeTab !== 'welcome',
+    enabled: open,
   });
 
   const { data: welcomeTemplates, isLoading: welcomeLoading } = useQuery({
