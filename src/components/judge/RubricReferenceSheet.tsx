@@ -34,6 +34,11 @@ const DISCIPLINES: { label: string; href: string; external?: boolean }[] = [
     href: 'https://www.varsity.com/uca/school/competitions/rules-scoring/',
     external: true,
   },
+  {
+    label: 'UDA School Dance',
+    href: 'https://www.varsity.com/uda/school/competitions/divisions-rules-scoring/',
+    external: true,
+  },
 ];
 
 export function RubricReferenceSheet(_props: Props) {
