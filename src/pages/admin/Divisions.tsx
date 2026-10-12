@@ -18,7 +18,7 @@ const DISCIPLINES = [
   { value: 'allstar_cheer', label: 'All-Star Cheer' },
   { value: 'allstar_dance', label: 'All-Star Dance' },
   { value: 'nca_cheer', label: 'NCA Cheer' },
-  { value: 'nca_dance', label: 'NCA Dance' },
+  { value: 'nca_dance', label: 'NDA Dance' },
   { value: 'uca_cheer', label: 'UCA Cheer' },
   { value: 'uca_dance', label: 'UCA Dance' },
   { value: 'usa_cheer', label: 'USA Cheer' },
