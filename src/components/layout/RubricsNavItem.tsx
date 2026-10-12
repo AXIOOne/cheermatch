@@ -31,6 +31,11 @@ const DISCIPLINES: Discipline[] = [
     href: 'https://www.varsity.com/usa/school/competitions/rulesandscoring/',
     external: true,
   },
+  {
+    label: 'UDA School Dance',
+    href: 'https://www.varsity.com/uca/school/competitions/rules-scoring/',
+    external: true,
+  },
 ];
 
 interface Props {
