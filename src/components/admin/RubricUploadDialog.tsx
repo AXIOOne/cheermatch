@@ -20,7 +20,7 @@ export const RUBRIC_DISCIPLINES = [
   { value: 'nca_cheer', label: 'NCA Cheer' },
   { value: 'nca_dance', label: 'NDA Dance' },
   { value: 'uca_cheer', label: 'UCA Cheer' },
-  { value: 'uca_dance', label: 'UCA Dance' },
+  { value: 'uca_dance', label: 'UDA Dance' },
   { value: 'usa_cheer', label: 'USA Cheer' },
   { value: 'usa_dance', label: 'USA Dance' },
 ] as const;
