@@ -86,13 +86,13 @@ export function AdminSidebar() {
     <Sidebar collapsible="icon" variant="sidebar">
       <SidebarRail />
 
-      <SidebarHeader className="sidebar-header-brand border-b border-sidebar-header-border">
-        <div className={cn('flex items-center', collapsed ? 'justify-center' : 'justify-start')}>
+      <SidebarHeader className="sidebar-header-brand h-12 shrink-0 border-b border-sidebar-header-border px-2 py-0">
+        <div className={cn('flex h-full items-center', collapsed ? 'justify-center' : 'justify-start')}>
           <div className="flex items-center gap-2">
             <img
               src={logoSrc}
               alt="Portal"
-              className={cn('object-contain shrink-0', collapsed ? 'h-6 w-6' : 'h-7 max-w-full')}
+              className={cn('object-contain shrink-0', collapsed ? 'h-6 w-6' : 'h-9 max-w-full')}
             />
             {!collapsed && (
               <span className="font-display text-sidebar-header-foreground text-lg font-extrabold italic uppercase tracking-[0.18em] leading-none">
