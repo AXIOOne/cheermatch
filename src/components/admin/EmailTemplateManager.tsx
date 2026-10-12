@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Plus, Edit2, Trash2, Star, Eye, Copy, Mail, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
+import { BUILT_IN_EMAILS, type BuiltInEmail } from '@/lib/built-in-emails';
+import { Lock, List } from 'lucide-react';
 
 interface EmailTemplate {
   id: string;
@@ -28,7 +30,7 @@ interface EmailTemplate {
 interface EmailTemplateManagerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  defaultTab?: 'review_link' | 'welcome';
+  defaultTab?: 'all' | 'review_link' | 'welcome';
 }
 
 const REVIEW_VARIABLES = [
@@ -48,10 +50,11 @@ const WELCOME_VARIABLES = [
   { variable: '{{loginUrl}}', description: 'Login page URL' },
 ];
 
-export function EmailTemplateManager({ open, onOpenChange, defaultTab = 'review_link' }: EmailTemplateManagerProps) {
+export function EmailTemplateManager({ open, onOpenChange, defaultTab = 'all' }: EmailTemplateManagerProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState<'review_link' | 'welcome'>(defaultTab);
+  const [activeTab, setActiveTab] = useState<'all' | 'review_link' | 'welcome'>(defaultTab);
+  const [builtInPreview, setBuiltInPreview] = useState<BuiltInEmail | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
@@ -75,7 +78,7 @@ export function EmailTemplateManager({ open, onOpenChange, defaultTab = 'review_
       if (error) throw error;
       return data as EmailTemplate[];
     },
-    enabled: open,
+    enabled: open && activeTab !== 'welcome',
   });
 
   const { data: welcomeTemplates, isLoading: welcomeLoading } = useQuery({
@@ -224,6 +227,44 @@ export function EmailTemplateManager({ open, onOpenChange, defaultTab = 'review_
       .replace(/\{\{eventName\}\}/g, 'National Championship 2026')
       .replace(/\{\{reviewUrl\}\}/g, '#');
   };
+
+  const renderAllEmails = () => (
+    <div className="py-4 space-y-2">
+      <p className="text-sm text-muted-foreground">Every email the portal sends. Built-in emails are locked (their layout lives in the system) but can be previewed. Editable templates can be changed on their tabs.</p>
+      {BUILT_IN_EMAILS.map((e) => (
+        <Card key={e.key}><CardContent className="p-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="font-medium">{e.name}</h4>
+              <Badge variant="outline" className="gap-1"><Lock className="w-3 h-3" />Built-in</Badge>
+              <Badge variant="secondary">{e.audience}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1"><strong>Sent when:</strong> {e.trigger}</p>
+            <p className="text-xs text-muted-foreground truncate"><strong>Subject:</strong> {e.subject}</p>
+            {e.overridableBy && <p className="text-xs text-muted-foreground">Default layout — can be replaced by a template on the {e.overridableBy === 'welcome' ? 'Welcome' : 'Review Link'} tab.</p>}
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setBuiltInPreview(e)}><Eye className="w-4 h-4 mr-1" />Preview</Button>
+        </CardContent></Card>
+      ))}
+      {[...(reviewTemplates || []).map((t) => ({ t, tab: 'review_link' as const })), ...(welcomeTemplates || []).map((t) => ({ t, tab: 'welcome' as const }))].map(({ t, tab }) => (
+        <Card key={t.id}><CardContent className="p-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="font-medium">{t.name}</h4>
+              <Badge variant="outline" className="gap-1"><Edit2 className="w-3 h-3" />Editable</Badge>
+              <Badge variant="secondary">{tab === 'welcome' ? 'Welcome' : 'Review Link'}</Badge>
+              {t.is_default && <Badge variant="secondary" className="gap-1"><Star className="w-3 h-3" />Default</Badge>}
+            </div>
+            <p className="text-xs text-muted-foreground truncate"><strong>Subject:</strong> {t.subject}</p>
+          </div>
+          <div className="flex gap-1">
+            <Button variant="outline" size="sm" onClick={() => setPreviewTemplate(t)}><Eye className="w-4 h-4 mr-1" />Preview</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setActiveTab(tab); startEditing(t); }}><Edit2 className="w-4 h-4" /></Button>
+          </div>
+        </CardContent></Card>
+      ))}
+    </div>
+  );
 
   const renderTemplateList = () => (
     <div className="py-4 space-y-4">
@@ -430,7 +471,11 @@ export function EmailTemplateManager({ open, onOpenChange, defaultTab = 'review_
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as any); resetForm(); }} className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="all" className="flex items-center gap-2">
+              <List className="w-4 h-4" />
+              All Emails
+            </TabsTrigger>
             <TabsTrigger value="review_link" className="flex items-center gap-2">
               <Mail className="w-4 h-4" />
               Review Link Emails
@@ -442,6 +487,9 @@ export function EmailTemplateManager({ open, onOpenChange, defaultTab = 'review_
           </TabsList>
 
           <div className="flex-1 overflow-y-auto mt-4">
+            <TabsContent value="all" className="mt-0">
+              {renderAllEmails()}
+            </TabsContent>
             <TabsContent value="review_link" className="mt-0">
               {isCreating ? renderEditor() : renderTemplateList()}
             </TabsContent>
@@ -466,6 +514,16 @@ export function EmailTemplateManager({ open, onOpenChange, defaultTab = 'review_
                 dangerouslySetInnerHTML={{ __html: renderPreview(previewTemplate.body_html, previewTemplate.template_type) }}
               />
             )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!builtInPreview} onOpenChange={() => setBuiltInPreview(null)}>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle>{builtInPreview?.name}</DialogTitle>
+              <DialogDescription>Subject: {builtInPreview?.subject} — preview with sample data (built-in, not editable)</DialogDescription>
+            </DialogHeader>
+            {builtInPreview && <iframe title="Email preview" srcDoc={builtInPreview.html} className="w-full flex-1 min-h-[60vh] border rounded-lg" sandbox="" />}
           </DialogContent>
         </Dialog>
       </DialogContent>
