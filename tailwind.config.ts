@@ -72,8 +72,6 @@ export default {
           header: "hsl(var(--sidebar-header))",
           "header-foreground": "hsl(var(--sidebar-header-foreground))",
           "header-border": "hsl(var(--sidebar-header-border))",
-          "header-surface": "hsl(var(--sidebar-header-surface))",
-          "header-surface-foreground": "hsl(var(--sidebar-header-surface-foreground))",
         },
       },
       borderRadius: {

@@ -86,14 +86,14 @@ export function JudgeSidebar() {
 
       <SidebarHeader className="sidebar-header-brand border-b border-sidebar-header-border">
         <div className={cn('flex items-center', collapsed ? 'justify-center' : 'justify-start')}>
-          <div className="flex items-center gap-2 bg-sidebar-header-surface px-2 py-1.5">
+          <div className="flex items-center gap-2">
             <img
               src={logoSrc}
               alt="Portal"
               className={cn('object-contain shrink-0', collapsed ? 'h-6 w-6' : 'h-7 max-w-full')}
             />
             {!collapsed && (
-              <span className="font-display text-sidebar-header-surface-foreground text-lg font-extrabold italic uppercase tracking-[0.18em] leading-none">
+              <span className="font-display text-sidebar-header-foreground text-lg font-extrabold italic uppercase tracking-[0.18em] leading-none">
                 VIRTUAL
               </span>
             )}
