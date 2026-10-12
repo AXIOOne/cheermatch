@@ -1,5 +1,6 @@
 // POST /functions/v1/forgotPassword
 // Body: { email } → emails a 6-digit reset code
+import { resetCodeEmailHtml, resetCodeEmailSubject } from "../_shared/email-layouts.ts";
 import { handleOptions, ok, fail, serviceClient, parseBody } from "../_shared/legacy.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -35,11 +36,8 @@ Deno.serve(async (req) => {
         body: JSON.stringify({
           from: FROM,
           to: [profile.email],
-          subject: "Your Cheermatch password reset code",
-          html: `<p>Hi ${profile.full_name ?? ""},</p>
-                 <p>Your password reset code is:</p>
-                 <h2 style="letter-spacing:6px">${code}</h2>
-                 <p>This code expires in 1 hour. If you didn't request this, ignore this email.</p>`,
+          subject: resetCodeEmailSubject,
+          html: resetCodeEmailHtml({ fullName: profile.full_name, code }),
         }),
       }).catch(() => {});
     }
