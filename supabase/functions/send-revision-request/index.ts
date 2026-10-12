@@ -1,6 +1,7 @@
 // POST /functions/v1/send-revision-request
 // Admin-only. Emails a coach that their submission needs revision.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { revisionEmailHtml, revisionEmailSubject } from '../_shared/email-layouts.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,16 +58,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const html = `
-      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#0f172a">
-        <h2>Revision requested for ${team?.name ?? 'your team'}</h2>
-        <p>Hello${team?.coach_name ? ' ' + team.coach_name : ''},</p>
-        <p>An administrator has reviewed your submission for <strong>${event?.name ?? 'your event'}</strong>
-        and requested a revision.</p>
-        ${notes ? `<blockquote style="background:#f1f5f9;border-left:4px solid #6ea8dd;padding:12px 16px;margin:16px 0;border-radius:6px"><strong>Reviewer notes:</strong><br>${notes.replace(/\n/g, '<br>')}</blockquote>` : ''}
-        <p>Please open the Cheermatch Mobile Capture App, find the team, and submit a new video.</p>
-        <p style="color:#64748b;font-size:12px;margin-top:32px">— Cheermatch</p>
-      </div>`
+    const html = revisionEmailHtml({ teamName: team?.name || team?.gym_name, coachName: team?.coach_name, eventName: event?.name, notes })
 
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -74,7 +66,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: 'Cheermatch <noreply@cheermatch.com>',
         to: [coachEmail],
-        subject: `Revision requested: ${team?.name ?? 'your submission'}`,
+        subject: revisionEmailSubject(team?.name || team?.gym_name),
         html,
       }),
     })
