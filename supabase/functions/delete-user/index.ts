@@ -69,6 +69,9 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Hand events this user created over to the deleting admin (created_by is required)
+    await supabaseAdmin.from('events').update({ created_by: requestingUser.id }).eq('created_by', userId)
+
     // Delete user roles first (cascade should handle this, but being explicit)
     await supabaseAdmin
       .from('user_roles')
