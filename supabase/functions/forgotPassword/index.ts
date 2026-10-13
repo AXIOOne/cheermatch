@@ -1,6 +1,6 @@
 // POST /functions/v1/forgotPassword
 // Body: { email } → emails a 6-digit reset code
-import { resetCodeEmailHtml, resetCodeEmailSubject } from "../_shared/email-layouts.ts";
+import { resetCodeEmailHtml, resetCodeEmailSubject, resolveEmailSubject, EMAIL_SUBJECTS_SETTINGS_KEY } from "../_shared/email-layouts.ts";
 import { handleOptions, ok, fail, serviceClient, parseBody } from "../_shared/legacy.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -30,13 +30,21 @@ Deno.serve(async (req) => {
     });
 
     if (RESEND_API_KEY) {
+      const { data: subjRow } = await sb
+        .from("platform_settings").select("value").eq("key", EMAIL_SUBJECTS_SETTINGS_KEY).maybeSingle();
+      const subject = resolveEmailSubject(
+        (subjRow?.value ?? null) as Record<string, string> | null,
+        "reset",
+        resetCodeEmailSubject,
+        { fullName: profile.full_name },
+      );
       await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
         body: JSON.stringify({
           from: FROM,
           to: [profile.email],
-          subject: resetCodeEmailSubject,
+          subject,
           html: resetCodeEmailHtml({ fullName: profile.full_name, code }),
         }),
       }).catch(() => {});

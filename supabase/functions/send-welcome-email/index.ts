@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { welcomeEmailHtml, welcomeEmailSubject, coachWelcomeEmailHtml, coachWelcomeEmailSubject } from '../_shared/email-layouts.ts'
+import { welcomeEmailHtml, welcomeEmailSubject, coachWelcomeEmailHtml, coachWelcomeEmailSubject, resolveEmailSubject, EMAIL_SUBJECTS_SETTINGS_KEY } from '../_shared/email-layouts.ts'
 import { Resend } from 'https://esm.sh/resend@4.0.0'
 
 const corsHeaders = {
@@ -93,7 +93,18 @@ Deno.serve(async (req) => {
     // Gym coaches get their own dedicated email; the standard welcome layout
     // (and any custom welcome template) is for admins, portal admins, judges.
     const isCoach = role === 'gym_coach'
-    const emailSubject = customSubject || (isCoach ? coachWelcomeEmailSubject : welcomeEmailSubject)
+
+    // Admin-editable subject overrides (platform_settings: email_subjects)
+    const { data: subjRow } = await supabaseAdmin
+      .from('platform_settings').select('value').eq('key', EMAIL_SUBJECTS_SETTINGS_KEY).maybeSingle()
+    const subjectOverrides = (subjRow?.value ?? null) as Record<string, string> | null
+
+    const emailSubject = customSubject || resolveEmailSubject(
+      subjectOverrides,
+      isCoach ? 'coach_welcome' : 'welcome',
+      isCoach ? coachWelcomeEmailSubject : welcomeEmailSubject,
+      { fullName, email },
+    )
 
     const emailHtml = customBodyHtml || (isCoach
       ? coachWelcomeEmailHtml({ fullName, email, password, loginUrl })

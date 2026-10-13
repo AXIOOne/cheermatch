@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'https://esm.sh/resend@4.0.0'
 import { buildScoresheet, type RawField, type ScoreType } from '../_shared/build-scoresheet.ts'
 import { buildScoresheetPdf } from '../_shared/scoresheet-pdf.ts'
-import { scoresheetEmailHtml, scoresheetEmailSubject } from '../_shared/email-layouts.ts'
+import { scoresheetEmailHtml, scoresheetEmailSubject, resolveEmailSubject, EMAIL_SUBJECTS_SETTINGS_KEY } from '../_shared/email-layouts.ts'
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -338,10 +338,26 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const pdfBase64 = btoa(binary);
     const safeName = `${team.name || team.gym_name || 'Team'} - ${event?.name || 'Event'}`.replace(/[^\w\s-]/g, '').trim() || 'scoresheet';
 
+    const { data: subjRow } = await supabase
+      .from('platform_settings').select('value').eq('key', EMAIL_SUBJECTS_SETTINGS_KEY).maybeSingle();
+    const emailSubject = resolveEmailSubject(
+      (subjRow?.value ?? null) as Record<string, string> | null,
+      accuscoreReq ? 'accuscore_response' : 'scoresheet',
+      scoresheetEmailSubject(team.name || team.gym_name || "Team", event?.name || "Event", !!accuscoreReq),
+      {
+        teamName: team.name || team.gym_name || "Team",
+        gymName: team.gym_name,
+        eventName: event?.name || "Event",
+        coachName: coachProfile.full_name,
+        divisionName: division?.name,
+        levelName: level?.name,
+      },
+    );
+
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "CheerMatch <noreply@cheermatch.com>",
       to: [coachProfile.email],
-      subject: scoresheetEmailSubject(team.name || team.gym_name || "Team", event?.name || "Event", !!accuscoreReq),
+      subject: emailSubject,
       html: emailHtml,
       attachments: [{
         filename: `${safeName}.pdf`,

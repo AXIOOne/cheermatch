@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { reviewEmailHtml, reviewEmailSubject } from '../_shared/email-layouts.ts'
+import { reviewEmailHtml, reviewEmailSubject, resolveEmailSubject, EMAIL_SUBJECTS_SETTINGS_KEY } from '../_shared/email-layouts.ts'
 import { Resend } from 'https://esm.sh/resend@4.0.0'
 
 const corsHeaders = {
@@ -93,8 +93,15 @@ Deno.serve(async (req) => {
 
     console.log(`Sending review email to ${coachEmail} for team ${teamName}`)
 
-    // Use custom subject if provided, otherwise use default
-    const emailSubject = customSubject || reviewEmailSubject(teamName, eventName)
+    // Use custom subject if provided, otherwise the admin-editable override or default
+    const { data: subjRow } = await supabaseAdmin
+      .from('platform_settings').select('value').eq('key', EMAIL_SUBJECTS_SETTINGS_KEY).maybeSingle()
+    const emailSubject = customSubject || resolveEmailSubject(
+      (subjRow?.value ?? null) as Record<string, string> | null,
+      'review_link',
+      reviewEmailSubject(teamName, eventName),
+      { coachName, teamName, gymName, eventName },
+    )
 
     const emailHtml = customBodyHtml || reviewEmailHtml({ coachName, teamName, gymName, eventName, reviewUrl })
 

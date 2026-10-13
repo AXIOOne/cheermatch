@@ -13,6 +13,28 @@ export const esc = (s: unknown) =>
 
 const year = () => new Date().getFullYear();
 
+// ---- Editable subject lines ---------------------------------------------
+// Admins can override any built-in subject in the portal. Overrides live in
+// platform_settings under the key 'email_subjects' as { [emailKey]: subject }.
+// Subjects support {{variable}} placeholders, filled in at send time.
+export type EmailSubjectOverrides = Record<string, string> | null | undefined;
+
+export function applySubjectVars(subject: string, vars: Record<string, string | null | undefined>): string {
+  return subject.replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) => (vars[k] != null && vars[k] !== '' ? String(vars[k]) : m));
+}
+
+export function resolveEmailSubject(
+  overrides: EmailSubjectOverrides,
+  key: string,
+  fallback: string,
+  vars: Record<string, string | null | undefined>,
+): string {
+  const custom = overrides && typeof overrides[key] === 'string' && overrides[key].trim() ? overrides[key] : null;
+  return applySubjectVars(custom ?? fallback, vars);
+}
+
+export const EMAIL_SUBJECTS_SETTINGS_KEY = 'email_subjects';
+
 function shell(opts: { subtitle?: string; body: string; footer: string }) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Roboto,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">

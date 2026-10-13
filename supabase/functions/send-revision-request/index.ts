@@ -1,7 +1,7 @@
 // POST /functions/v1/send-revision-request
 // Admin-only. Emails a coach that their submission needs revision.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { revisionEmailHtml, revisionEmailSubject } from '../_shared/email-layouts.ts'
+import { revisionEmailHtml, revisionEmailSubject, resolveEmailSubject, EMAIL_SUBJECTS_SETTINGS_KEY } from '../_shared/email-layouts.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -60,13 +60,22 @@ Deno.serve(async (req) => {
 
     const html = revisionEmailHtml({ teamName: team?.name || team?.gym_name, coachName: team?.coach_name, eventName: event?.name, notes })
 
+    const { data: subjRow } = await admin
+      .from('platform_settings').select('value').eq('key', EMAIL_SUBJECTS_SETTINGS_KEY).maybeSingle()
+    const emailSubject = resolveEmailSubject(
+      (subjRow?.value ?? null) as Record<string, string> | null,
+      'revision',
+      revisionEmailSubject(team?.name || team?.gym_name),
+      { teamName: team?.name || team?.gym_name, coachName: team?.coach_name, eventName: event?.name },
+    )
+
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         from: 'Cheermatch <noreply@cheermatch.com>',
         to: [coachEmail],
-        subject: revisionEmailSubject(team?.name || team?.gym_name),
+        subject: emailSubject,
         html,
       }),
     })
