@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const email = String(body.email ?? '').trim().toLowerCase()
     const fullName = body.fullName ? String(body.fullName) : null
+    const eventId = body.eventId ? String(body.eventId) : null
     const loginUrl = String(body.loginUrl ?? `${new URL(req.url).origin}/m/login`)
     if (!email || !email.includes('@')) {
       return new Response(JSON.stringify({ error: 'Valid email required' }), {
@@ -90,13 +91,28 @@ Deno.serve(async (req) => {
       .from('user_roles')
       .upsert({ user_id: userId!, role: 'gym_coach' }, { onConflict: 'user_id,role' })
 
+    // Resolve gym / organization name
+    let gymName: string | null = null
+    const { data: prof } = await supabaseAdmin.from('profiles').select('organization_name, organizations(name)').eq('user_id', userId!).maybeSingle()
+    gymName = (prof as any)?.organizations?.name ?? (prof as any)?.organization_name ?? null
+    if (!gymName) {
+      let q = supabaseAdmin.from('teams').select('gym_name').ilike('coach_email', email).not('gym_name', 'is', null).limit(1)
+      if (eventId) q = q.eq('event_id', eventId)
+      const { data: t } = await q
+      gymName = t?.[0]?.gym_name ?? null
+    }
+
     // Send welcome email
     const { data: emailRes, error: emailErr } = await supabaseAdmin.functions.invoke('send-welcome-email', {
-      body: { email, fullName: fullName ?? undefined, password, role: 'gym_coach', loginUrl },
+      body: { email, fullName: fullName ?? undefined, password, role: 'gym_coach', loginUrl, gymName },
       headers: { Authorization: authHeader },
     })
     if (emailErr) throw new Error(emailErr.message)
     if (emailRes?.error) throw new Error(emailRes.error)
+
+    if (eventId) {
+      await supabaseAdmin.from('coach_invite_sends').insert({ event_id: eventId, coach_email: email, sent_by: requestingUser.id })
+    }
 
     return new Response(JSON.stringify({ success: true, user_id: userId }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
