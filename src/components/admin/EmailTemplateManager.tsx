@@ -55,6 +55,8 @@ export function EmailTemplateManager({ open, onOpenChange, defaultTab = 'all' }:
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'all' | 'review_link' | 'welcome'>(defaultTab);
   const [builtInPreview, setBuiltInPreview] = useState<BuiltInEmail | null>(null);
+  const [editingSubject, setEditingSubject] = useState<BuiltInEmail | null>(null);
+  const [subjectInput, setSubjectInput] = useState('');
   const [editingTemplate, setEditingTemplate] = useState<EmailTemplate | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [previewTemplate, setPreviewTemplate] = useState<EmailTemplate | null>(null);
@@ -64,6 +66,35 @@ export function EmailTemplateManager({ open, onOpenChange, defaultTab = 'all' }:
   const [subject, setSubject] = useState('');
   const [bodyHtml, setBodyHtml] = useState('');
   const [description, setDescription] = useState('');
+
+  // Admin-editable subject overrides for built-in emails (platform_settings: email_subjects)
+  const { data: subjectOverrides } = useQuery({
+    queryKey: ['email-subject-overrides'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('platform_settings').select('value').eq('key', 'email_subjects').maybeSingle();
+      if (error) throw error;
+      return (data?.value ?? {}) as Record<string, string>;
+    },
+  });
+
+  const saveSubject = useMutation({
+    mutationFn: async ({ key, subject }: { key: string; subject: string | null }) => {
+      const next = { ...(subjectOverrides ?? {}) };
+      if (subject && subject.trim()) next[key] = subject.trim();
+      else delete next[key];
+      const { error } = await supabase
+        .from('platform_settings')
+        .upsert({ key: 'email_subjects', value: next }, { onConflict: 'key' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email-subject-overrides'] });
+      setEditingSubject(null);
+      toast({ title: 'Subject line updated' });
+    },
+    onError: (e: Error) => toast({ title: 'Could not save subject', description: e.message, variant: 'destructive' }),
+  });
 
   const { data: reviewTemplates, isLoading: reviewLoading } = useQuery({
     queryKey: ['email-templates', 'review_link'],
@@ -240,10 +271,13 @@ export function EmailTemplateManager({ open, onOpenChange, defaultTab = 'all' }:
               <Badge variant="secondary">{e.audience}</Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-1"><strong>Sent when:</strong> {e.trigger}</p>
-            <p className="text-xs text-muted-foreground truncate"><strong>Subject:</strong> {e.subject}</p>
+            <p className="text-xs text-muted-foreground truncate"><strong>Subject:</strong> {subjectOverrides?.[e.key] ?? e.subject}{subjectOverrides?.[e.key] && <Badge variant="secondary" className="ml-1">Custom</Badge>}</p>
             {e.overridableBy && <p className="text-xs text-muted-foreground">Default layout — can be replaced by a template on the {e.overridableBy === 'welcome' ? 'Welcome' : 'Review Link'} tab.</p>}
           </div>
-          <Button variant="outline" size="sm" onClick={() => setBuiltInPreview(e)}><Eye className="w-4 h-4 mr-1" />Preview</Button>
+          <div className="flex gap-1 shrink-0">
+            <Button variant="ghost" size="icon" title="Edit subject line" onClick={() => { setEditingSubject(e); setSubjectInput(subjectOverrides?.[e.key] ?? e.subject); }}><Edit2 className="w-4 h-4" /></Button>
+            <Button variant="outline" size="sm" onClick={() => setBuiltInPreview(e)}><Eye className="w-4 h-4 mr-1" />Preview</Button>
+          </div>
         </CardContent></Card>
       ))}
       {[...(reviewTemplates || []).map((t) => ({ t, tab: 'review_link' as const })), ...(welcomeTemplates || []).map((t) => ({ t, tab: 'welcome' as const }))].map(({ t, tab }) => (
