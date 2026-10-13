@@ -9,7 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, CheckCircle2, KeyRound, Loader2, UserPlus } from 'lucide-react';
+import { AlertCircle, CheckCircle2, KeyRound, Loader2, Mail, Send, UserPlus } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { format } from 'date-fns';
 
 interface Props { eventId: string; }
 
@@ -35,6 +37,45 @@ export function CoachAccountsPanel({ eventId }: Props) {
     },
     enabled: !!eventId,
   });
+
+  const { data: sends } = useQuery({
+    queryKey: ['coach-invite-sends', eventId],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from('coach_invite_sends').select('coach_email, sent_at').eq('event_id', eventId).order('sent_at', { ascending: false });
+      if (error) throw error;
+      const m: Record<string, string> = {};
+      for (const r of data ?? []) { const k = r.coach_email.toLowerCase(); if (!m[k]) m[k] = r.sent_at; }
+      return m;
+    },
+    enabled: !!eventId,
+  });
+
+  const [inviteTargets, setInviteTargets] = useState<Row[] | null>(null);
+  const [inviteProgress, setInviteProgress] = useState<{ done: number; total: number } | null>(null);
+
+  const sendInvites = async (targets: Row[]) => {
+    setInviteTargets(null);
+    setInviteProgress({ done: 0, total: targets.length });
+    const failed: string[] = [];
+    for (let i = 0; i < targets.length; i++) {
+      const r = targets[i];
+      try {
+        const { data, error } = await supabase.functions.invoke('invite-coach', {
+          body: { email: r.coach_email, fullName: r.coach_name, eventId, loginUrl: `${window.location.origin}/m/login` },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+      } catch (e: any) {
+        failed.push(`${r.coach_email}: ${e.message ?? 'failed'}`);
+      }
+      setInviteProgress({ done: i + 1, total: targets.length });
+    }
+    setInviteProgress(null);
+    queryClient.invalidateQueries({ queryKey: ['coach-invite-sends', eventId] });
+    queryClient.invalidateQueries({ queryKey: ['coach-account-status', eventId] });
+    if (failed.length) toast({ variant: 'destructive', title: `${failed.length} of ${targets.length} failed`, description: failed.slice(0, 3).join('\n') });
+    else toast({ title: 'Welcome emails sent', description: `${targets.length} coach${targets.length === 1 ? '' : 'es'} emailed.` });
+  };
 
   const [highlightedEmail, setHighlightedEmail] = useState<string | null>(null);
 
@@ -92,6 +133,13 @@ export function CoachAccountsPanel({ eventId }: Props) {
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center justify-between text-lg">
           <span>Coach accounts</span>
+          <div className="flex items-center gap-2">
+          {total > 0 && (
+            <Button size="sm" disabled={!!inviteProgress} onClick={() => setInviteTargets(rows ?? [])}>
+              {inviteProgress ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Send className="w-3 h-3 mr-2" />}
+              {inviteProgress ? `Sending ${inviteProgress.done}/${inviteProgress.total}` : 'Send welcome email to all'}
+            </Button>
+          )}
           {total > 0 && (
             missing > 0 ? (
               <Badge variant="destructive" className="gap-1">
@@ -103,6 +151,7 @@ export function CoachAccountsPanel({ eventId }: Props) {
               </Badge>
             )
           )}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -117,6 +166,7 @@ export function CoachAccountsPanel({ eventId }: Props) {
                 <TableHead>Coach</TableHead>
                 <TableHead>Teams</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Welcome email</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -146,7 +196,13 @@ export function CoachAccountsPanel({ eventId }: Props) {
                         <Badge variant="outline">Missing coach role</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-xs text-muted-foreground">
+                      {sends?.[r.coach_email.toLowerCase()] ? `Sent ${format(new Date(sends[r.coach_email.toLowerCase()]), 'MMM d, h:mm a')}` : 'Not sent'}
+                    </TableCell>
+                    <TableCell className="text-right space-x-2 whitespace-nowrap">
+                      <Button size="sm" variant="outline" disabled={!!inviteProgress} onClick={() => setInviteTargets([r])}>
+                        <Mail className="w-3 h-3 mr-2" /> Send welcome
+                      </Button>
                       <Button
                         size="sm"
                         variant={ok ? 'outline' : 'default'}
@@ -163,6 +219,23 @@ export function CoachAccountsPanel({ eventId }: Props) {
           </Table>
         )}
       </CardContent>
+
+      <AlertDialog open={!!inviteTargets} onOpenChange={(o) => { if (!o) setInviteTargets(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {inviteTargets?.length === 1 ? `Send welcome email to ${inviteTargets[0].coach_email}?` : `Send welcome email to ${inviteTargets?.length ?? 0} coaches?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Each coach gets a new temporary password in the email, and their account is created if it doesn't exist yet. Any password they used before will stop working.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => inviteTargets && sendInvites(inviteTargets)}>Send</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={!!target} onOpenChange={(o) => { if (!o) { setTarget(null); setPassword(''); } }}>
         <DialogContent>
