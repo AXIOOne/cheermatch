@@ -551,6 +551,36 @@ export function EmailTemplateManager({ open, onOpenChange, defaultTab = 'all' }:
           </DialogContent>
         </Dialog>
 
+        <Dialog open={!!editingSubject} onOpenChange={(o) => !o && setEditingSubject(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit subject — {editingSubject?.name}</DialogTitle>
+              <DialogDescription>This subject line is used every time this email is sent.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <Input value={subjectInput} onChange={(ev) => setSubjectInput(ev.target.value)} placeholder="Subject line" />
+              {editingSubject && editingSubject.subjectVars.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Placeholders filled in when the email is sent: {editingSubject.subjectVars.map((v) => `{{${v}}}`).join('  ')}
+                </p>
+              )}
+              <div className="flex items-center justify-between gap-2">
+                {editingSubject && subjectOverrides?.[editingSubject.key] ? (
+                  <Button variant="ghost" size="sm" onClick={() => saveSubject.mutate({ key: editingSubject.key, subject: null })} disabled={saveSubject.isPending}>
+                    Reset to default
+                  </Button>
+                ) : <span />}
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setEditingSubject(null)}>Cancel</Button>
+                  <Button size="sm" onClick={() => editingSubject && saveSubject.mutate({ key: editingSubject.key, subject: subjectInput })} disabled={saveSubject.isPending || !subjectInput.trim()}>
+                    {saveSubject.isPending && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}Save
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         <Dialog open={!!builtInPreview} onOpenChange={() => setBuiltInPreview(null)}>
           <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
             <DialogHeader>
