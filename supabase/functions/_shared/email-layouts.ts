@@ -47,6 +47,19 @@ ${button(p.loginUrl, 'Log In Now')}${fallbackLink(p.loginUrl)}`,
 }
 export const welcomeEmailSubject = 'Welcome to CheerMatch - Your Account Details';
 
+export function coachWelcomeEmailHtml(p: { fullName?: string | null; email: string; password: string; loginUrl: string }) {
+  return shell({
+    body: `${heading(`Welcome${p.fullName ? ` ${p.fullName}` : ''}!`)}
+<p style="margin:0 0 16px;">Your CheerMatch <strong>Gym Coach</strong> account has been created. Use it to record and submit your team's performance videos with the CheerMatch Mobile Capture app.</p>
+<p style="margin:0 0 24px;">Here are your login credentials:</p>
+<div style="background:#f4f4f5;border-radius:8px;padding:20px;margin-bottom:24px;font-size:14px;"><p style="margin:0 0 12px;"><strong>Email:</strong> ${p.email}</p><p style="margin:0;"><strong>Password:</strong> ${p.password}</p></div>
+<p style="margin:0 0 32px;color:#ef4444;font-size:14px;">⚠️ For security, please change your password after your first login.</p>
+${button(p.loginUrl, 'Open Coach Login')}${fallbackLink(p.loginUrl)}`,
+    footer: 'This is an automated message. Please do not reply to this email.',
+  });
+}
+export const coachWelcomeEmailSubject = 'Your CheerMatch Coach Account';
+
 export function reviewEmailHtml(p: { coachName?: string | null; teamName: string; gymName?: string | null; eventName: string; reviewUrl: string }) {
   return shell({
     body: `${heading(`Hello${p.coachName ? ` ${p.coachName}` : ''},`)}
