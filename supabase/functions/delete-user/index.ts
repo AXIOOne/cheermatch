@@ -72,6 +72,18 @@ Deno.serve(async (req) => {
     // Hand events this user created over to the deleting admin (created_by is required)
     await supabaseAdmin.from('events').update({ created_by: requestingUser.id }).eq('created_by', userId)
 
+    // Delete the user from auth
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+
+    if (deleteError) {
+      console.error('Error deleting user:', deleteError)
+      return new Response(JSON.stringify({ error: deleteError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Clean up anything not removed by cascade
     // Delete user roles first (cascade should handle this, but being explicit)
     await supabaseAdmin
       .from('user_roles')
@@ -83,17 +95,6 @@ Deno.serve(async (req) => {
       .from('profiles')
       .delete()
       .eq('user_id', userId)
-
-    // Delete the user from auth
-    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
-
-    if (deleteError) {
-      console.error('Error deleting user:', deleteError)
-      return new Response(JSON.stringify({ error: deleteError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
 
     console.log(`User ${userId} deleted successfully by admin ${requestingUser.id}`)
 
