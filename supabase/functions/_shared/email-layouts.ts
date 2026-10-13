@@ -82,7 +82,6 @@ export function coachWelcomeEmailHtml(p: { fullName?: string | null; email: stri
 <p style="margin:0 0 16px;">Welcome to Varsity Virtual! Your <strong>Gym Coach</strong> account${p.gymName ? ` for <strong>${esc(p.gymName)}</strong>` : ''} is ready. You'll use it to record and submit your team's performance videos with the Varsity Virtual Compete capture app.</p>
 <p style="margin:0 0 12px;"><strong>Your login credentials</strong></p>
 <div style="${box}"><p style="margin:0 0 12px;"><strong>Username:</strong> ${esc(p.email)}</p><p style="margin:0;"><strong>Password:</strong> ${esc(p.password)}</p></div>
-<p style="margin:0 0 28px;color:#ef4444;font-size:14px;">For security, please change your password after your first login.</p>
 <p style="margin:0 0 12px;"><strong>1. Download the iOS Capture App</strong></p>
 <p style="margin:0 0 16px;">Install Varsity Virtual Compete on your iPhone or iPad and sign in with the credentials above.</p>
 ${button(IOS_CAPTURE_APP_URL, 'Download on the App Store')}${fallbackLink(IOS_CAPTURE_APP_URL)}
