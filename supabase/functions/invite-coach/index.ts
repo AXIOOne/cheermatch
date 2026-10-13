@@ -62,7 +62,8 @@ Deno.serve(async (req) => {
       .ilike('email', email)
       .maybeSingle()
 
-    const password = generatePassword()
+    const { data: stdPw } = await supabaseAdmin.from('admin_settings').select('value').eq('key', 'coach_default_password').maybeSingle()
+    const password = (stdPw?.value && stdPw.value.length >= 8) ? stdPw.value : generatePassword()
     let userId = existingProfile?.user_id as string | undefined
 
     if (!userId) {

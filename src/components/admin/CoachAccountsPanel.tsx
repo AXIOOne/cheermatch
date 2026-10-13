@@ -227,7 +227,7 @@ export function CoachAccountsPanel({ eventId }: Props) {
               {inviteTargets?.length === 1 ? `Send welcome email to ${inviteTargets[0].coach_email}?` : `Send welcome email to ${inviteTargets?.length ?? 0} coaches?`}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Each coach gets a new temporary password in the email, and their account is created if it doesn't exist yet. Any password they used before will stop working.
+              Each coach's password is set to the standard coach password from Settings (or a random one if none is set) and included in the email. Accounts are created if missing. Any password they used before will stop working.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -300,6 +300,7 @@ export default function Settings() {
         </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2">
+          <CoachPasswordSetting />
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
