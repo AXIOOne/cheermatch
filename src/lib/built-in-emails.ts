@@ -1,7 +1,8 @@
 // Catalog of built-in emails. Previews call the same layout builders the
 // sending functions use, so any code change shows up here automatically.
 import {
-  welcomeEmailHtml, welcomeEmailSubject, reviewEmailHtml, revisionEmailHtml, resetCodeEmailHtml,
+  welcomeEmailHtml, welcomeEmailSubject, coachWelcomeEmailHtml, coachWelcomeEmailSubject,
+  reviewEmailHtml, revisionEmailHtml, resetCodeEmailHtml,
   resetCodeEmailSubject, scoresheetEmailHtml, type ScoresheetPanel,
 } from '../../supabase/functions/_shared/email-layouts';
 
@@ -22,8 +23,10 @@ const panels: ScoresheetPanel[] = [
 const sheet = { eventName: 'National Championship 2026', coachName: 'John Smith', teamName: 'Elite Stars', gymName: 'Cheer Academy', divisionName: 'Senior Elite', levelName: 'Level 4', averageScore: 92.45, panels };
 
 export const BUILT_IN_EMAILS: BuiltInEmail[] = [
-  { key: 'welcome', name: 'Welcome / Account Invite', audience: 'Coaches, judges, admins', trigger: 'New user created, coach invited, or invite re-sent', subject: welcomeEmailSubject, overridableBy: 'welcome',
-    render: () => welcomeEmailHtml({ fullName: 'John Smith', email: 'john@example.com', password: 'TempPass123!', roleText: 'Gym Coach', loginUrl: '#' }) },
+  { key: 'welcome', name: 'Welcome / Account Invite', audience: 'Admins, portal admins, judges', trigger: 'New admin, portal admin, or judge user created, or invite re-sent', subject: welcomeEmailSubject, overridableBy: 'welcome',
+    render: () => welcomeEmailHtml({ fullName: 'John Smith', email: 'john@example.com', password: 'TempPass123!', roleText: 'Judge', loginUrl: '#' }) },
+  { key: 'coach_welcome', name: 'Coach Welcome / Invite', audience: 'Coaches', trigger: 'Coach account created or invited (Coach accounts panel, CSV import, registration)', subject: coachWelcomeEmailSubject,
+    render: () => coachWelcomeEmailHtml({ fullName: 'John Smith', email: 'john@example.com', password: 'TempPass123!', loginUrl: '#' }) },
   { key: 'review_link', name: 'Score Review Link', audience: 'Coaches', trigger: 'Admin sends a review link from Submissions', subject: 'Score Review Available: {{teamName}} - {{eventName}}', overridableBy: 'review_link',
     render: () => reviewEmailHtml({ coachName: 'John Smith', teamName: 'Elite Stars', gymName: 'Cheer Academy', eventName: 'National Championship 2026', reviewUrl: '#' }) },
   { key: 'scoresheet', name: 'Score Sheet', audience: 'Coaches', trigger: 'Admin sends the scoresheet from the Scoring Control Panel (AccuScore box shows only when AccuScore is on)', subject: 'Score Sheet - {{teamName}} | {{eventName}}',
