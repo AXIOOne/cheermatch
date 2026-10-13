@@ -222,6 +222,38 @@ export type Database = {
           },
         ]
       }
+      coach_invite_sends: {
+        Row: {
+          coach_email: string
+          event_id: string
+          id: string
+          sent_at: string
+          sent_by: string | null
+        }
+        Insert: {
+          coach_email: string
+          event_id: string
+          id?: string
+          sent_at?: string
+          sent_by?: string | null
+        }
+        Update: {
+          coach_email?: string
+          event_id?: string
+          id?: string
+          sent_at?: string
+          sent_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_invite_sends_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_categories: {
         Row: {
           created_at: string

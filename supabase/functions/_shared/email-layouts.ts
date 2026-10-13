@@ -69,18 +69,31 @@ ${button(p.loginUrl, 'Log In Now')}${fallbackLink(p.loginUrl)}`,
 }
 export const welcomeEmailSubject = 'Welcome to CheerMatch - Your Account Details';
 
-export function coachWelcomeEmailHtml(p: { fullName?: string | null; email: string; password: string; loginUrl: string }) {
+export const IOS_CAPTURE_APP_URL = 'https://apps.apple.com/kg/app/varsity-virtual-compete/id6800264562';
+// Set once the test-capture request page exists; empty shows "coming soon".
+export const TEST_CAPTURE_URL = '';
+export const SUPPORT_EMAIL = 'support@cheermatch.com';
+
+export function coachWelcomeEmailHtml(p: { fullName?: string | null; email: string; password: string; loginUrl: string; gymName?: string | null; testCaptureUrl?: string | null }) {
+  const testUrl = p.testCaptureUrl ?? TEST_CAPTURE_URL;
+  const box = 'background:#f4f4f5;border-radius:8px;padding:20px;margin-bottom:24px;font-size:14px;';
   return shell({
-    body: `${heading(`Welcome${p.fullName ? ` ${p.fullName}` : ''}!`)}
-<p style="margin:0 0 16px;">Your CheerMatch <strong>Gym Coach</strong> account has been created. Use it to record and submit your team's performance videos with the CheerMatch Mobile Capture app.</p>
-<p style="margin:0 0 24px;">Here are your login credentials:</p>
-<div style="background:#f4f4f5;border-radius:8px;padding:20px;margin-bottom:24px;font-size:14px;"><p style="margin:0 0 12px;"><strong>Email:</strong> ${p.email}</p><p style="margin:0;"><strong>Password:</strong> ${p.password}</p></div>
-<p style="margin:0 0 32px;color:#ef4444;font-size:14px;">⚠️ For security, please change your password after your first login.</p>
-${button(p.loginUrl, 'Open Coach Login')}${fallbackLink(p.loginUrl)}`,
+    body: `${heading(`Welcome${p.fullName ? ` ${esc(p.fullName)}` : ''}!`)}
+<p style="margin:0 0 16px;">Welcome to Varsity Virtual! Your <strong>Gym Coach</strong> account${p.gymName ? ` for <strong>${esc(p.gymName)}</strong>` : ''} is ready. You'll use it to record and submit your team's performance videos with the Varsity Virtual Compete capture app.</p>
+<p style="margin:0 0 12px;"><strong>Your login credentials</strong></p>
+<div style="${box}"><p style="margin:0 0 12px;"><strong>Username:</strong> ${esc(p.email)}</p><p style="margin:0;"><strong>Password:</strong> ${esc(p.password)}</p></div>
+<p style="margin:0 0 28px;color:#ef4444;font-size:14px;">For security, please change your password after your first login.</p>
+<p style="margin:0 0 12px;"><strong>1. Download the iOS Capture App</strong></p>
+<p style="margin:0 0 16px;">Install Varsity Virtual Compete on your iPhone or iPad and sign in with the credentials above.</p>
+${button(IOS_CAPTURE_APP_URL, 'Download on the App Store')}${fallbackLink(IOS_CAPTURE_APP_URL)}
+<p style="margin:28px 0 12px;"><strong>2. Request a TEST capture</strong></p>
+<p style="margin:0 0 16px;">Before competition day, request a test capture to practice recording and submitting, and watch the training video to learn how the app works.</p>
+${testUrl ? `${button(testUrl, 'Request a Test Capture')}${fallbackLink(testUrl)}` : `<div style="${box}color:#6b7280;">Test capture requests and the training video are coming soon. We'll share the link with you shortly.</div>`}
+<p style="margin:28px 0 0;">Questions or need assistance? Contact us at <a href="mailto:${SUPPORT_EMAIL}" style="color:${BRAND_BLUE};">${SUPPORT_EMAIL}</a>.</p>`,
     footer: 'This is an automated message. Please do not reply to this email.',
   });
 }
-export const coachWelcomeEmailSubject = 'Your CheerMatch Coach Account';
+export const coachWelcomeEmailSubject = 'Welcome to Varsity Virtual – Your Coach Account';
 
 export function reviewEmailHtml(p: { coachName?: string | null; teamName: string; gymName?: string | null; eventName: string; reviewUrl: string }) {
   return shell({

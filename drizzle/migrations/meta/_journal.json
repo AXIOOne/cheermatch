@@ -22,6 +22,20 @@
       "when": 1791242459765,
       "tag": "0002_accuscore_enabled_toggle",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791895527923,
+      "tag": "0003_migration",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791895602904,
+      "tag": "0004_migration",
+      "breakpoints": true
     }
   ]
 }

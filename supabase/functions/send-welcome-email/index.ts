@@ -16,6 +16,7 @@ interface SendWelcomeEmailRequest {
   loginUrl: string;
   customSubject?: string;
   customBodyHtml?: string;
+  gymName?: string | null;
 }
 
 const roleLabels: Record<string, string> = {
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { email, fullName, password, role, loginUrl, customSubject, customBodyHtml }: SendWelcomeEmailRequest = await req.json()
+    const { email, fullName, password, role, loginUrl, customSubject, customBodyHtml, gymName }: SendWelcomeEmailRequest = await req.json()
 
     if (!email || !password || !loginUrl) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -103,11 +104,11 @@ Deno.serve(async (req) => {
       subjectOverrides,
       isCoach ? 'coach_welcome' : 'welcome',
       isCoach ? coachWelcomeEmailSubject : welcomeEmailSubject,
-      { fullName, email },
+      { fullName, email, gymName: gymName ?? undefined },
     )
 
     const emailHtml = customBodyHtml || (isCoach
-      ? coachWelcomeEmailHtml({ fullName, email, password, loginUrl })
+      ? coachWelcomeEmailHtml({ fullName, email, password, loginUrl, gymName })
       : welcomeEmailHtml({ fullName, email, password, roleText, loginUrl }))
 
     const { data: emailData, error: emailError } = await resend.emails.send({
