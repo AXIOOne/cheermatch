@@ -85,8 +85,9 @@ export function coachWelcomeEmailHtml(p: { fullName?: string | null; email: stri
 <p style="margin:0 0 12px;"><strong>1. Download the iOS Capture App</strong></p>
 <p style="margin:0 0 16px;">Install Varsity Virtual Compete on your iPhone or iPad and sign in with the credentials above.</p>
 ${button(IOS_CAPTURE_APP_URL, 'Download on the App Store')}${fallbackLink(IOS_CAPTURE_APP_URL)}
-<p style="margin:28px 0 12px;"><strong>2. Request a TEST capture</strong></p>
-<p style="margin:0 0 16px;">Before competition day, request a test capture to practice recording and submitting, and watch the training video to learn how the app works.</p>
+<p style="margin:28px 0 12px;"><strong>2. Watch the training video &amp; request a TEST capture</strong></p>
+<p style="margin:0 0 16px;">Before competition day, watch the training video to learn how the capture app works, then request a test capture to practice recording and submitting a video.</p>
+<div style="${box}color:#3f3f46;"><strong>Note:</strong> Do both on the same page — the training video walks you through recording, and the test capture adds a practice team to your account so you can submit a real test video before your event.</div>
 ${testUrl ? `${button(testUrl, 'Request a Test Capture')}${fallbackLink(testUrl)}` : `<div style="${box}color:#6b7280;">Test capture requests and the training video are coming soon. We'll share the link with you shortly.</div>`}
 <p style="margin:28px 0 0;">Questions or need assistance? Contact us at <a href="mailto:${SUPPORT_EMAIL}" style="color:${BRAND_BLUE};">${SUPPORT_EMAIL}</a>.</p>`,
     footer: 'This is an automated message. Please do not reply to this email.',
