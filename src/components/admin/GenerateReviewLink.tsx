@@ -230,6 +230,46 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
     },
   });
 
+  // When opened and no link exists yet, create one silently (no email) so the
+  // admin always gets a copyable URL right away.
+  const autoCreateMutation = useMutation({
+    mutationFn: async () => {
+      const { data: result, error } = await supabase
+        .from('scoring_review_tokens')
+        .insert({
+          submission_id: submissionId,
+          coach_email: coachProfile?.email || '',
+          coach_name: coachProfile?.full_name || null,
+          created_by: user!.id,
+        })
+        .select('token')
+        .single();
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['existing-review-token', submissionId] });
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Error creating link', description: error.message });
+    },
+  });
+
+  const coachQuerySettled = !coachUserId || !!coachProfile;
+  useEffect(() => {
+    if (
+      isOpen &&
+      existingTokenFetched &&
+      !existingToken &&
+      coachQuerySettled &&
+      !autoCreateMutation.isPending &&
+      !autoCreateMutation.isSuccess &&
+      !autoCreateMutation.isError
+    ) {
+      autoCreateMutation.mutate();
+    }
+  }, [isOpen, existingTokenFetched, existingToken, coachQuerySettled, autoCreateMutation.isPending, autoCreateMutation.isSuccess, autoCreateMutation.isError]);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => open ? setIsOpen(true) : handleClose()}>
       {!hideTrigger && (
