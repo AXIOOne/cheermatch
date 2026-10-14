@@ -51,6 +51,25 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
     enabled: isOpen,
   });
 
+  // Look up an existing (non-expired) review link for this submission so it
+  // can be copied directly when the scoresheet email was undeliverable.
+  const { data: existingToken } = useQuery({
+    queryKey: ['existing-review-token', submissionId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('scoring_review_tokens')
+        .select('token, coach_email, coach_name, expires_at, created_at')
+        .eq('submission_id', submissionId)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isOpen,
+  });
+
   const form = useForm<GenerateLinkFormData>({
     resolver: zodResolver(generateLinkSchema),
     defaultValues: {
