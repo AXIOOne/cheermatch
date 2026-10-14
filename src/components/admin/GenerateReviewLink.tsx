@@ -26,10 +26,15 @@ interface GenerateReviewLinkProps {
   teamName: string;
   variant?: 'default' | 'outline';
   size?: 'default' | 'sm' | 'lg' | 'icon';
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }
 
-export function GenerateReviewLink({ submissionId, teamName, variant = 'outline', size = 'sm' }: GenerateReviewLinkProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function GenerateReviewLink({ submissionId, teamName, variant = 'outline', size = 'sm', open, onOpenChange, hideTrigger }: GenerateReviewLinkProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = open ?? internalOpen;
+  const setIsOpen = (o: boolean) => { setInternalOpen(o); onOpenChange?.(o); };
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
@@ -43,7 +48,7 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
     queryFn: async () => {
       const { data, error } = await supabase
         .from('video_submissions')
-        .select('event:events(name)')
+        .select('event:events(name, accuscore_enabled, accuscore_end_at)')
         .eq('id', submissionId)
         .single();
       if (error) throw error;
@@ -185,9 +190,16 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
   const existingLink = existingToken ? `${window.location.origin}/review/${existingToken.token}` : null;
   const existingExpired = existingToken ? new Date(existingToken.expires_at) <= new Date() : false;
 
+  const ev: any = (submissionData as any)?.event;
+  const cutoffAt: Date | null = ev?.accuscore_end_at ? new Date(ev.accuscore_end_at) : null;
+  const cutoffPassed = !!cutoffAt && cutoffAt <= new Date();
+
   const extendMutation = useMutation({
     mutationFn: async () => {
-      const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      // Never extend past the event's AccuScore cutoff.
+      let expiry = Date.now() + 30 * 24 * 60 * 60 * 1000;
+      if (cutoffAt) expiry = Math.min(expiry, cutoffAt.getTime());
+      const newExpiry = new Date(expiry).toISOString();
       const { error } = await supabase
         .from('scoring_review_tokens')
         .update({ expires_at: newExpiry })
@@ -195,7 +207,7 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
       if (error) throw error;
     },
     onSuccess: () => {
-      toast({ title: 'Link extended', description: 'The existing link now works for another 30 days.' });
+      toast({ title: 'Link extended', description: cutoffAt ? `The link works until the AccuScore cutoff (${cutoffAt.toLocaleString()}).` : 'The existing link now works for another 30 days.' });
       queryClient.invalidateQueries({ queryKey: ['existing-review-token', submissionId] });
     },
     onError: (error: any) => {
@@ -205,12 +217,14 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => open ? setIsOpen(true) : handleClose()}>
-      <DialogTrigger asChild>
-        <Button variant={variant} size={size}>
-          <Send className="w-4 h-4 mr-2" />
-          Send
-        </Button>
-      </DialogTrigger>
+      {!hideTrigger && (
+        <DialogTrigger asChild>
+          <Button variant={variant} size={size}>
+            <Send className="w-4 h-4 mr-2" />
+            Send
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Send Score Sheet to Coach for {teamName}</DialogTitle>
@@ -262,6 +276,11 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
+              {ev?.accuscore_enabled && cutoffAt && (
+                <span className={cutoffPassed ? 'block text-destructive font-medium mb-1' : 'block mb-1'}>
+                  AccuScore cutoff: {cutoffAt.toLocaleString()}{cutoffPassed ? ' — closed. Coaches can view scores but can no longer submit requests.' : ' — coaches can submit requests until then.'}
+                </span>
+              )}
               Originally sent to {existingToken!.coach_email} · {existingExpired ? 'expired' : 'expires'} {new Date(existingToken!.expires_at).toLocaleDateString()}.
             </p>
             <div className="flex justify-between gap-2 pt-2">
@@ -269,9 +288,9 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
                 Create a new link instead
               </Button>
               {existingExpired ? (
-                <Button onClick={() => extendMutation.mutate()} disabled={extendMutation.isPending}>
+                <Button onClick={() => extendMutation.mutate()} disabled={extendMutation.isPending || cutoffPassed} title={cutoffPassed ? 'AccuScore cutoff has passed' : undefined}>
                   {extendMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                  Extend link 30 days
+                  {cutoffAt ? 'Extend link to cutoff' : 'Extend link 30 days'}
                 </Button>
               ) : (
                 <Button onClick={handleClose}>
