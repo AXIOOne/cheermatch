@@ -109,6 +109,13 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'archived', label: 'Archived' },
 ];
 
+// Registered teams per event, read from the nested count returned by the events query
+const teamCount = (event: any): number => {
+  const t = event?.teams;
+  if (Array.isArray(t) && t.length > 0 && typeof t[0]?.count === 'number') return t[0].count;
+  return 0;
+};
+
 
 export default function Events() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -151,7 +158,7 @@ export default function Events() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select('*, teams(count)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
@@ -702,6 +709,7 @@ export default function Events() {
                   <TableRow>
                     <TableHead>Event Name</TableHead>
                     <TableHead>Dates</TableHead>
+                    <TableHead className="text-right">Teams</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -716,6 +724,9 @@ export default function Events() {
                       </TableCell>
                       <TableCell>
                         {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {teamCount(event)}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
