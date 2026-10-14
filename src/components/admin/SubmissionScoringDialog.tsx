@@ -993,11 +993,13 @@ export default function SubmissionScoringDialog({
                                         </Button>
                                       ) : (
                                         <Button
+                                          type="button"
                                           variant="ghost" size="sm"
-                                          className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                          title="Admin override this field's score (reason is logged)"
                                           onClick={() => setOverrideTarget({ field: f, currentPoints: Number(fieldScores[f.id]?.points || 0) })}
                                         >
-                                          <Ban className="w-3 h-3 mr-1" /> Admin Override Score
+                                          <Pencil className="w-3 h-3 mr-1" /> Override
                                         </Button>
                                       )
                                     )}
