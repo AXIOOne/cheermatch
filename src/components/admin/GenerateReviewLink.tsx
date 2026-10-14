@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
   const [copied, setCopied] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   // Fetch event name for email
@@ -58,9 +59,8 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
     queryFn: async () => {
       const { data, error } = await supabase
         .from('scoring_review_tokens')
-        .select('token, coach_email, coach_name, expires_at, created_at')
+        .select('id, token, coach_email, coach_name, expires_at, created_at')
         .eq('submission_id', submissionId)
-        .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -183,6 +183,25 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
   };
 
   const existingLink = existingToken ? `${window.location.origin}/review/${existingToken.token}` : null;
+  const existingExpired = existingToken ? new Date(existingToken.expires_at) <= new Date() : false;
+
+  const extendMutation = useMutation({
+    mutationFn: async () => {
+      const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { error } = await supabase
+        .from('scoring_review_tokens')
+        .update({ expires_at: newExpiry })
+        .eq('id', existingToken!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: 'Link extended', description: 'The existing link now works for another 30 days.' });
+      queryClient.invalidateQueries({ queryKey: ['existing-review-token', submissionId] });
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Error extending link', description: error.message });
+    },
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => open ? setIsOpen(true) : handleClose()}>
@@ -227,25 +246,38 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
           </div>
         ) : existingLink && !showNewForm ? (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              A review link already exists for this team. If the scoresheet email was undeliverable, copy this link and send it to the coach directly:
-            </p>
+            {existingExpired ? (
+              <p className="text-sm text-muted-foreground">
+                This team's review link expired on {new Date(existingToken!.expires_at).toLocaleDateString()}. Extend it to make it work again, then copy it and send it to the coach directly — no new email needed.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                A review link already exists for this team. If the scoresheet email was undeliverable, copy this link and send it to the coach directly:
+              </p>
+            )}
             <div className="flex gap-2">
               <Input value={existingLink} readOnly className="text-xs" />
-              <Button variant="outline" size="icon" onClick={() => handleCopy(existingLink)}>
+              <Button variant="outline" size="icon" onClick={() => handleCopy(existingLink)} disabled={existingExpired}>
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Originally sent to {existingToken!.coach_email} · expires {new Date(existingToken!.expires_at).toLocaleDateString()}.
+              Originally sent to {existingToken!.coach_email} · {existingExpired ? 'expired' : 'expires'} {new Date(existingToken!.expires_at).toLocaleDateString()}.
             </p>
             <div className="flex justify-between gap-2 pt-2">
               <Button type="button" variant="ghost" onClick={() => setShowNewForm(true)}>
                 Create a new link instead
               </Button>
-              <Button onClick={handleClose}>
-                Done
-              </Button>
+              {existingExpired ? (
+                <Button onClick={() => extendMutation.mutate()} disabled={extendMutation.isPending}>
+                  {extendMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                  Extend link 30 days
+                </Button>
+              ) : (
+                <Button onClick={handleClose}>
+                  Done
+                </Button>
+              )}
             </div>
           </div>
         ) : (
