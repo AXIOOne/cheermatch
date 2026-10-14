@@ -42,19 +42,34 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch event name for email
+  // Fetch event name for email (and the team's coach for link generation)
   const { data: submissionData } = useQuery({
     queryKey: ['submission-event', submissionId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('video_submissions')
-        .select('event:events(name, accuscore_enabled, accuscore_end_at)')
+        .select('event:events(name, accuscore_enabled, accuscore_end_at), team:teams(coach_user_id)')
         .eq('id', submissionId)
         .single();
       if (error) throw error;
       return data;
     },
     enabled: isOpen,
+  });
+
+  const coachUserId: string | undefined = (submissionData as any)?.team?.coach_user_id;
+  const { data: coachProfile } = useQuery({
+    queryKey: ['submission-coach-profile', coachUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('user_id', coachUserId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isOpen && !!coachUserId,
   });
 
   // Look up an existing (non-expired) review link for this submission so it
