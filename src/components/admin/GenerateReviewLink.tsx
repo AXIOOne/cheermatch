@@ -182,6 +182,25 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
   };
 
   const existingLink = existingToken ? `${window.location.origin}/review/${existingToken.token}` : null;
+  const existingExpired = existingToken ? new Date(existingToken.expires_at) <= new Date() : false;
+
+  const extendMutation = useMutation({
+    mutationFn: async () => {
+      const newExpiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { error } = await supabase
+        .from('scoring_review_tokens')
+        .update({ expires_at: newExpiry })
+        .eq('id', existingToken!.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: 'Link extended', description: 'The existing link now works for another 30 days.' });
+      queryClient.invalidateQueries({ queryKey: ['existing-review-token', submissionId] });
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Error extending link', description: error.message });
+    },
+  });
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => open ? setIsOpen(true) : handleClose()}>
