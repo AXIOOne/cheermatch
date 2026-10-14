@@ -725,8 +725,13 @@ export default function Events() {
                       <TableCell>
                         {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {teamCount(event)}
+                      <TableCell className="text-right">
+                        <Badge
+                          variant={teamCount(event) > 0 ? 'secondary' : 'outline'}
+                          className="tabular-nums justify-center min-w-[2.25rem]"
+                        >
+                          {teamCount(event)}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
