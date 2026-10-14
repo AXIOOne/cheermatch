@@ -27,8 +27,14 @@ export default function AccuScore() {
     },
   });
 
-  const open = (data || []).filter((e) => !CLOSED.includes(e.status));
-  const closed = (data || []).filter((e) => CLOSED.includes(e.status));
+  const isClosed = (e: any) => {
+    if (CLOSED.includes(e.status)) return true;
+    if (e.accuscore_enabled === false) return false;
+    const cutoff = e.accuscore_end_at ? new Date(e.accuscore_end_at) : null;
+    return !!cutoff && cutoff <= new Date();
+  };
+  const open = (data || []).filter((e) => !isClosed(e));
+  const closed = (data || []).filter((e) => isClosed(e));
 
   const List = ({ items, closedFolder }: { items: any[]; closedFolder?: boolean }) => (
     <Card>
