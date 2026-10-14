@@ -73,7 +73,7 @@ export default function ScoreReview() {
       const missing = form.fields.filter((f) => {
         if (!f.required || f.type === 'section') return false;
         const answer = answers[f.key];
-        if (f.type === 'skills') return filledSkillRows(answer).length === 0;
+        if (f.type === 'skills' || f.type === 'deductions') return filledSkillRows(answer).length === 0;
         return Array.isArray(answer) ? answer.length === 0 : !answer?.trim();
       });
       if (missing.length) problems.push(`${form.name}: ${missing.map((m) => m.label).join(', ')}`);
@@ -90,7 +90,7 @@ export default function ScoreReview() {
       const clean: Record<string, string | string[]> = {};
       form.fields.forEach((f) => {
         if (f.type === 'section') return;
-        const answer = f.type === 'skills' ? filledSkillRows(answers[f.key]) : answers[f.key];
+        const answer = (f.type === 'skills' || f.type === 'deductions') ? filledSkillRows(answers[f.key]) : answers[f.key];
         if (Array.isArray(answer) && answer.length) clean[f.key] = answer;
         else if (typeof answer === 'string' && answer) clean[f.key] = answer.trim().slice(0, 4000);
       });

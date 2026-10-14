@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 export interface AccuScoreField {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'time' | 'number' | 'select' | 'radio' | 'checkbox' | 'checkbox-group' | 'skills' | 'section';
+  type: 'text' | 'textarea' | 'time' | 'number' | 'select' | 'radio' | 'checkbox' | 'checkbox-group' | 'skills' | 'deductions' | 'section';
   required?: boolean;
   options?: string[];
   help?: string;
@@ -58,6 +58,44 @@ function SkillScripting({ value, onChange }: { value: string[]; onChange: (v: st
   );
 }
 
+export const DEDUCTION_CODES = ['AF', 'MAF', 'BB', 'BF', 'MBF'];
+
+function DeductionReview({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const rows = (value.length ? value : [formatSkillRow('', '')]).map((r) => {
+    const p = parseSkillRow(r);
+    return { code: p.skill, time: p.count };
+  });
+  const emit = (next: { code: string; time: string }[]) => onChange(next.map((r) => formatSkillRow(r.code, r.time)));
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2 pr-10">
+        <span className="flex-1 text-xs font-medium text-muted-foreground">Deduction</span>
+        <span className="w-32 text-xs font-medium text-muted-foreground">Time (mm:ss)</span>
+      </div>
+      {rows.map((r, i) => (
+        <div key={i} className="flex gap-2">
+          <div className="flex-1">
+            <Select value={r.code} onValueChange={(v) => emit(rows.map((x, j) => (j === i ? { ...x, code: v } : x)))}>
+              <SelectTrigger><SelectValue placeholder="Select deduction" /></SelectTrigger>
+              <SelectContent>{DEDUCTION_CODES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <Input className="w-32" placeholder="mm:ss" maxLength={10} value={r.time}
+            onChange={(e) => emit(rows.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)))} />
+          {rows.length > 1 ? (
+            <Button type="button" variant="ghost" size="icon" onClick={() => emit(rows.filter((_, j) => j !== i))}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          ) : <span className="w-10" />}
+        </div>
+      ))}
+      <Button type="button" variant="outline" size="sm" disabled={rows.length >= 50} onClick={() => emit([...rows, { code: '', time: '' }])}>
+        <Plus className="mr-1 h-4 w-4" /> Add deduction
+      </Button>
+    </div>
+  );
+}
+
 interface Props {
   fields: AccuScoreField[];
   answers: AccuScoreAnswers;
@@ -80,7 +118,9 @@ export function AccuScoreFormFields({ fields, answers, onChange }: Props) {
       ) : (
         <div key={f.key || i} className="space-y-1">
           <Label>{f.label}{f.required && <span className="text-destructive"> *</span>}</Label>
-          {f.type === 'skills' ? (
+          {f.type === 'deductions' ? (
+            <DeductionReview value={Array.isArray(answers[f.key]) ? answers[f.key] as string[] : []} onChange={(v) => onChange(f.key, v)} />
+          ) : f.type === 'skills' ? (
             <SkillScripting value={Array.isArray(answers[f.key]) ? answers[f.key] as string[] : []} onChange={(v) => onChange(f.key, v)} />
           ) : f.type === 'textarea' ? (
             <Textarea rows={4} value={typeof answers[f.key] === 'string' ? answers[f.key] : ''} onChange={(e) => onChange(f.key, e.target.value)} maxLength={4000} />
