@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -282,7 +282,7 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
       )}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Send Score Sheet to Coach for {teamName}</DialogTitle>
+          <DialogTitle>Coach review link for {teamName}</DialogTitle>
 
         </DialogHeader>
 
@@ -313,7 +313,9 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
               Done
             </Button>
           </div>
-        ) : existingLink && !showNewForm ? (
+        ) : (existingLink && !showNewForm) || !existingTokenFetched || autoCreateMutation.isPending ? (
+          <div className="space-y-4">
+            {existingLink && !showNewForm ? (
           <div className="space-y-4">
             {existingExpired ? (
               <p className="text-sm text-muted-foreground">
