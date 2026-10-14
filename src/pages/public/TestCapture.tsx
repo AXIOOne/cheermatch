@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Loader2, Smartphone, PlayCircle, Send } from "lucide-react";
+import logoBlack from "@/assets/portal-logo.png.asset.json";
 
 const APP_URL = "https://apps.apple.com/kg/app/varsity-virtual-compete/id6800264562";
 
@@ -59,6 +60,7 @@ export default function TestCapture() {
     <div className="min-h-screen bg-muted/40 font-body">
       <div className="mx-auto max-w-2xl px-4 py-10 space-y-6">
         <header className="text-center">
+          <img src={logoBlack.url} alt="Varsity Virtual" className="h-14 mx-auto mb-4" />
           <h1 className="font-heading text-3xl font-bold text-primary">Varsity Virtual Test Capture</h1>
           <p className="text-muted-foreground mt-2">Get ready for competition by running a practice capture.</p>
         </header>
