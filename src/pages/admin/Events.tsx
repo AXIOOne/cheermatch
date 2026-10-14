@@ -158,7 +158,7 @@ export default function Events() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('events')
-        .select('*')
+        .select('*, teams(count)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
