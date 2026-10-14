@@ -163,9 +163,12 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
     generateMutation.mutate(data);
   };
 
-  const handleCopy = async () => {
-    if (generatedLink) {
-      await navigator.clipboard.writeText(generatedLink);
+  const [showNewForm, setShowNewForm] = useState(false);
+
+  const handleCopy = async (text?: string) => {
+    const link = text ?? generatedLink;
+    if (link) {
+      await navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -175,8 +178,11 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
     setIsOpen(false);
     setGeneratedLink(null);
     setEmailSent(false);
+    setShowNewForm(false);
     form.reset();
   };
+
+  const existingLink = existingToken ? `${window.location.origin}/review/${existingToken.token}` : null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => open ? setIsOpen(true) : handleClose()}>
