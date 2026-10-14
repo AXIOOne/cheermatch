@@ -313,9 +313,7 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
               Done
             </Button>
           </div>
-        ) : (existingLink && !showNewForm) || !existingTokenFetched || autoCreateMutation.isPending ? (
-          <div className="space-y-4">
-            {existingLink && !showNewForm ? (
+        ) : existingLink && !showNewForm ? (
           <div className="space-y-4">
             {existingExpired ? (
               <p className="text-sm text-muted-foreground">
@@ -355,6 +353,11 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
                 </Button>
               )}
             </div>
+          </div>
+        ) : !existingTokenFetched || autoCreateMutation.isPending ? (
+          <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Preparing copyable link…
           </div>
         ) : (
           <Form {...form}>
