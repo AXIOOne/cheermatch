@@ -28,6 +28,8 @@ const templateSchema = z.object({
   discipline: z.string().min(1, 'Discipline is required'),
   is_default: z.boolean(),
   show_comments_on_scoresheet: z.boolean(),
+  difficulty_label: z.string().optional(),
+  execution_label: z.string().optional(),
 });
 
 type TemplateFormData = z.infer<typeof templateSchema>;
@@ -84,7 +86,7 @@ export default function ScoringTemplates() {
 
   const form = useForm<TemplateFormData>({
     resolver: zodResolver(templateSchema),
-    defaultValues: { name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false },
+    defaultValues: { name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false, difficulty_label: 'Difficulty', execution_label: 'Execution' },
   });
 
   // Panel slots defined on the template being edited drive the field builder chips.
@@ -256,6 +258,8 @@ export default function ScoringTemplates() {
           discipline: data.discipline,
           is_default: data.is_default,
           show_comments_on_scoresheet: data.show_comments_on_scoresheet,
+          difficulty_label: data.difficulty_label?.trim() || 'Difficulty',
+          execution_label: data.execution_label?.trim() || 'Execution',
         })
         .select().single();
       if (error) throw error;
@@ -280,6 +284,8 @@ export default function ScoringTemplates() {
         discipline: data.discipline,
         is_default: data.is_default,
         show_comments_on_scoresheet: data.show_comments_on_scoresheet,
+        difficulty_label: data.difficulty_label?.trim() || 'Difficulty',
+        execution_label: data.execution_label?.trim() || 'Execution',
       }).eq('id', id);
       if (tErr) throw tErr;
       // wipe and recreate sections+fields (cascade handles fields/options/panels)
@@ -434,7 +440,7 @@ export default function ScoringTemplates() {
 
   const handleNewTemplate = () => {
     setEditingTemplate(null);
-    form.reset({ name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false });
+    form.reset({ name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false, difficulty_label: 'Difficulty', execution_label: 'Execution' });
     setSections([]); setDeductions([]); setTemplatePanels([]);
     setIsDialogOpen(true);
   };
@@ -450,6 +456,8 @@ export default function ScoringTemplates() {
       discipline: tpl.discipline || templateDisciplines(tpl).find((d) => d !== 'unassigned') || 'allstar_cheer',
       is_default: tpl.is_default,
       show_comments_on_scoresheet: !!tpl.show_comments_on_scoresheet,
+      difficulty_label: tpl.difficulty_label || 'Difficulty',
+      execution_label: tpl.execution_label || 'Execution',
     });
     const loadedSections: ScoringSection[] = (tpl.sections || [])
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
@@ -588,6 +596,20 @@ export default function ScoringTemplates() {
                   </FormItem>
                 )} />
 
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField control={form.control} name="difficulty_label" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Scoresheet column 1 title</FormLabel>
+                      <FormControl><Input placeholder="Difficulty" maxLength={30} {...field} /></FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="execution_label" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Scoresheet column 2 title</FormLabel>
+                      <FormControl><Input placeholder="Execution" maxLength={30} {...field} /></FormControl>
+                    </FormItem>
+                  )} />
+                </div>
                 <FormField control={form.control} name="show_comments_on_scoresheet" render={({ field }) => (
                   <FormItem className="flex flex-row items-start gap-3 rounded-md border p-3">
                     <FormControl>

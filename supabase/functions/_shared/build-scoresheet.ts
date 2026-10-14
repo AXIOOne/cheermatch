@@ -83,6 +83,8 @@ export interface DeductionReport {
 }
 
 export interface ScoresheetData {
+  difficulty_label?: string | null;
+  execution_label?: string | null;
   team_name: string;
   gym_name?: string | null;
   division_name?: string | null;

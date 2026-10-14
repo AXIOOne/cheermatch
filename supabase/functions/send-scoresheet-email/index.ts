@@ -329,6 +329,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }),
     });
 
+    if (templateId) {
+      const { data: lbl } = await supabase.from('scoring_templates').select('difficulty_label, execution_label').eq('id', templateId).maybeSingle();
+      sheetData.difficulty_label = (lbl as any)?.difficulty_label;
+      sheetData.execution_label = (lbl as any)?.execution_label;
+    }
     const pdfBytes = await buildScoresheetPdf(sheetData);
     let binary = '';
     const CHUNK = 0x8000;
