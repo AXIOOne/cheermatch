@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -42,13 +42,13 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  // Fetch event name for email
+  // Fetch event name for email (and the team's coach for link generation)
   const { data: submissionData } = useQuery({
     queryKey: ['submission-event', submissionId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('video_submissions')
-        .select('event:events(name, accuscore_enabled, accuscore_end_at)')
+        .select('event:events(name, accuscore_enabled, accuscore_end_at), team:teams(coach_user_id)')
         .eq('id', submissionId)
         .single();
       if (error) throw error;
@@ -57,9 +57,24 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
     enabled: isOpen,
   });
 
+  const coachUserId: string | undefined = (submissionData as any)?.team?.coach_user_id;
+  const { data: coachProfile } = useQuery({
+    queryKey: ['submission-coach-profile', coachUserId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('email, full_name')
+        .eq('user_id', coachUserId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isOpen && !!coachUserId,
+  });
+
   // Look up an existing (non-expired) review link for this submission so it
   // can be copied directly when the scoresheet email was undeliverable.
-  const { data: existingToken } = useQuery({
+  const { data: existingToken, isFetched: existingTokenFetched } = useQuery({
     queryKey: ['existing-review-token', submissionId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -215,6 +230,46 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
     },
   });
 
+  // When opened and no link exists yet, create one silently (no email) so the
+  // admin always gets a copyable URL right away.
+  const autoCreateMutation = useMutation({
+    mutationFn: async () => {
+      const { data: result, error } = await supabase
+        .from('scoring_review_tokens')
+        .insert({
+          submission_id: submissionId,
+          coach_email: coachProfile?.email || '',
+          coach_name: coachProfile?.full_name || null,
+          created_by: user!.id,
+        })
+        .select('token')
+        .single();
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['existing-review-token', submissionId] });
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Error creating link', description: error.message });
+    },
+  });
+
+  const coachQuerySettled = !coachUserId || !!coachProfile;
+  useEffect(() => {
+    if (
+      isOpen &&
+      existingTokenFetched &&
+      !existingToken &&
+      coachQuerySettled &&
+      !autoCreateMutation.isPending &&
+      !autoCreateMutation.isSuccess &&
+      !autoCreateMutation.isError
+    ) {
+      autoCreateMutation.mutate();
+    }
+  }, [isOpen, existingTokenFetched, existingToken, coachQuerySettled, autoCreateMutation.isPending, autoCreateMutation.isSuccess, autoCreateMutation.isError]);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => open ? setIsOpen(true) : handleClose()}>
       {!hideTrigger && (
@@ -227,7 +282,7 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
       )}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Send Score Sheet to Coach for {teamName}</DialogTitle>
+          <DialogTitle>Coach review link for {teamName}</DialogTitle>
 
         </DialogHeader>
 
@@ -281,7 +336,7 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
                   AccuScore cutoff: {cutoffAt.toLocaleString()}{cutoffPassed ? ' — closed. Coaches can view scores but can no longer submit requests.' : ' — coaches can submit requests until then.'}
                 </span>
               )}
-              Originally sent to {existingToken!.coach_email} · {existingExpired ? 'expired' : 'expires'} {new Date(existingToken!.expires_at).toLocaleDateString()}.
+              {existingToken!.coach_email ? `Originally sent to ${existingToken!.coach_email} · ` : ''}{existingExpired ? 'expired' : 'expires'} {new Date(existingToken!.expires_at).toLocaleDateString()}.
             </p>
             <div className="flex justify-between gap-2 pt-2">
               <Button type="button" variant="ghost" onClick={() => setShowNewForm(true)}>
@@ -298,6 +353,11 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
                 </Button>
               )}
             </div>
+          </div>
+        ) : !existingTokenFetched || autoCreateMutation.isPending ? (
+          <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Preparing copyable link…
           </div>
         ) : (
           <Form {...form}>
