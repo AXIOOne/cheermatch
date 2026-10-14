@@ -336,7 +336,7 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
                   AccuScore cutoff: {cutoffAt.toLocaleString()}{cutoffPassed ? ' — closed. Coaches can view scores but can no longer submit requests.' : ' — coaches can submit requests until then.'}
                 </span>
               )}
-              Originally sent to {existingToken!.coach_email} · {existingExpired ? 'expired' : 'expires'} {new Date(existingToken!.expires_at).toLocaleDateString()}.
+              {existingToken!.coach_email ? `Originally sent to ${existingToken!.coach_email} · ` : ''}{existingExpired ? 'expired' : 'expires'} {new Date(existingToken!.expires_at).toLocaleDateString()}.
             </p>
             <div className="flex justify-between gap-2 pt-2">
               <Button type="button" variant="ghost" onClick={() => setShowNewForm(true)}>
