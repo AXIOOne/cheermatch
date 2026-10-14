@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,7 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
   const [copied, setCopied] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   // Fetch event name for email
