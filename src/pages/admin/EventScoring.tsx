@@ -18,7 +18,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader2, BarChart3, CheckCircle, Clock, Settings, Send, AlertCircle, ClipboardList, Eye, Download, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, Loader2, BarChart3, CheckCircle, Clock, Settings, Send, AlertCircle, ClipboardList, Eye, Download, MoreHorizontal, Link2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import AssignPanelsDialog from '@/components/admin/AssignPanelsDialog';
+import { GenerateReviewLink } from '@/components/admin/GenerateReviewLink';
 import SubmissionScoringDialog from '@/components/admin/SubmissionScoringDialog';
 import { downloadSubmissionScoresheet, generateSubmissionScoresheetBytes } from '@/lib/download-submission-scoresheet';
 import { downloadPdf } from '@/lib/scoresheet-pdf';
@@ -76,6 +77,7 @@ export default function EventScoring() {
   const [downloadingPdfFor, setDownloadingPdfFor] = useState<string | null>(null);
   const [scoringSubmissionId, setScoringSubmissionId] = useState<string | null>(null);
   const [scoringPanelId, setScoringPanelId] = useState<string | null>(null);
+  const [linkFor, setLinkFor] = useState<{ id: string; teamName: string } | null>(null);
   const [confirmSendFor, setConfirmSendFor] = useState<{ id: string; teamName: string } | null>(null);
   const [previewFor, setPreviewFor] = useState<{ id: string; teamName: string } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -703,6 +705,14 @@ export default function EventScoring() {
                                 )}
                                 Download PDF
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  setLinkFor({ id: submission.id, teamName: submission.team?.name || submission.team?.gym_name || 'Team' })
+                                }
+                              >
+                                <Link2 className="w-4 h-4 mr-2" />
+                                Get coach review link
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </div>
@@ -769,6 +779,17 @@ export default function EventScoring() {
       />
 
       {/* Confirm send score sheet */}
+      {linkFor && (
+        <GenerateReviewLink
+          key={linkFor.id}
+          submissionId={linkFor.id}
+          teamName={linkFor.teamName}
+          hideTrigger
+          open
+          onOpenChange={(o) => { if (!o) setLinkFor(null); }}
+        />
+      )}
+
       <AlertDialog open={!!confirmSendFor} onOpenChange={(open) => !open && setConfirmSendFor(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
