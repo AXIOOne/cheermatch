@@ -214,7 +214,7 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
             </p>
             <div className="flex gap-2">
               <Input value={generatedLink} readOnly className="text-xs" />
-              <Button variant="outline" size="icon" onClick={handleCopy}>
+              <Button variant="outline" size="icon" onClick={() => handleCopy()}>
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </Button>
             </div>
