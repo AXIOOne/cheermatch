@@ -74,7 +74,7 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
 
   // Look up an existing (non-expired) review link for this submission so it
   // can be copied directly when the scoresheet email was undeliverable.
-  const { data: existingToken } = useQuery({
+  const { data: existingToken, isFetched: existingTokenFetched } = useQuery({
     queryKey: ['existing-review-token', submissionId],
     queryFn: async () => {
       const { data, error } = await supabase
