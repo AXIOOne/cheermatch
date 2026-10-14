@@ -89,14 +89,16 @@ export async function generateSubmissionScoresheetBytes(
   }
 
 
+  let colLabels: { d?: string | null; e?: string | null } = {};
   const fieldMap = new Map<string, RawField>();
   if (templateId) {
     const { data: tpl } = await sb
       .from('scoring_templates')
-      .select('show_comments_on_scoresheet')
+      .select('show_comments_on_scoresheet, difficulty_label, execution_label')
       .eq('id', templateId)
       .maybeSingle();
     show_comments = !!tpl?.show_comments_on_scoresheet;
+    colLabels = { d: (tpl as any)?.difficulty_label, e: (tpl as any)?.execution_label };
 
     const { data: dts } = await sb
       .from('deduction_types')
@@ -186,6 +188,7 @@ export async function generateSubmissionScoresheetBytes(
     }),
   });
 
+  data.difficulty_label = colLabels.d; data.execution_label = colLabels.e;
   const bytes = await buildScoresheetPdf(data);
   const safeName = `${data.team_name} - ${data.event_name}`.replace(/[^\w\s-]/g, '').trim();
   return { bytes, fileName: `${safeName || 'scoresheet'}.pdf` };

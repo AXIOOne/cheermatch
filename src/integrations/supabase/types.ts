@@ -1778,8 +1778,10 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
+          difficulty_label: string
           discipline: string | null
           event_id: string | null
+          execution_label: string
           id: string
           is_default: boolean
           is_locked: boolean
@@ -1790,8 +1792,10 @@ export type Database = {
         Insert: {
           created_at?: string
           description?: string | null
+          difficulty_label?: string
           discipline?: string | null
           event_id?: string | null
+          execution_label?: string
           id?: string
           is_default?: boolean
           is_locked?: boolean
@@ -1802,8 +1806,10 @@ export type Database = {
         Update: {
           created_at?: string
           description?: string | null
+          difficulty_label?: string
           discipline?: string | null
           event_id?: string | null
+          execution_label?: string
           id?: string
           is_default?: boolean
           is_locked?: boolean

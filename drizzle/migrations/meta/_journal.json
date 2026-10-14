@@ -43,6 +43,13 @@
       "when": 1791895707358,
       "tag": "0005_admin_only_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792011475905,
+      "tag": "0006_template_column_labels",
+      "breakpoints": true
     }
   ]
 }

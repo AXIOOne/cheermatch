@@ -1,0 +1,1 @@
+ALTER TABLE public.scoring_templates ADD COLUMN IF NOT EXISTS difficulty_label text NOT NULL DEFAULT 'Difficulty', ADD COLUMN IF NOT EXISTS execution_label text NOT NULL DEFAULT 'Execution';

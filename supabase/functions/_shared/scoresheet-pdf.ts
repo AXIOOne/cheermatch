@@ -243,8 +243,8 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     const headers: Array<[string, number, number]> = [
       ['Judge Criteria', MARGIN, COLS.criteria],
       ['Max Value', MARGIN + COLS.criteria, COLS.max],
-      ['Difficulty', MARGIN + COLS.criteria + COLS.max, COLS.diff],
-      ['Execution', MARGIN + COLS.criteria + COLS.max + COLS.diff, COLS.exec],
+      [data.difficulty_label || 'Difficulty', MARGIN + COLS.criteria + COLS.max, COLS.diff],
+      [data.execution_label || 'Execution', MARGIN + COLS.criteria + COLS.max + COLS.diff, COLS.exec],
       ['Score', MARGIN + COLS.criteria + COLS.max + COLS.diff + COLS.exec, COLS.score],
     ];
     for (const [label, x, w] of headers) {
