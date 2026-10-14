@@ -51,6 +51,25 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
     enabled: isOpen,
   });
 
+  // Look up an existing (non-expired) review link for this submission so it
+  // can be copied directly when the scoresheet email was undeliverable.
+  const { data: existingToken } = useQuery({
+    queryKey: ['existing-review-token', submissionId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('scoring_review_tokens')
+        .select('token, coach_email, coach_name, expires_at, created_at')
+        .eq('submission_id', submissionId)
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: isOpen,
+  });
+
   const form = useForm<GenerateLinkFormData>({
     resolver: zodResolver(generateLinkSchema),
     defaultValues: {
@@ -144,9 +163,12 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
     generateMutation.mutate(data);
   };
 
-  const handleCopy = async () => {
-    if (generatedLink) {
-      await navigator.clipboard.writeText(generatedLink);
+  const [showNewForm, setShowNewForm] = useState(false);
+
+  const handleCopy = async (text?: string) => {
+    const link = text ?? generatedLink;
+    if (link) {
+      await navigator.clipboard.writeText(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
@@ -156,8 +178,11 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
     setIsOpen(false);
     setGeneratedLink(null);
     setEmailSent(false);
+    setShowNewForm(false);
     form.reset();
   };
+
+  const existingLink = existingToken ? `${window.location.origin}/review/${existingToken.token}` : null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => open ? setIsOpen(true) : handleClose()}>
@@ -189,7 +214,7 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
             </p>
             <div className="flex gap-2">
               <Input value={generatedLink} readOnly className="text-xs" />
-              <Button variant="outline" size="icon" onClick={handleCopy}>
+              <Button variant="outline" size="icon" onClick={() => handleCopy()}>
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </Button>
             </div>
@@ -199,6 +224,29 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
             <Button onClick={handleClose} className="w-full">
               Done
             </Button>
+          </div>
+        ) : existingLink && !showNewForm ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              A review link already exists for this team. If the scoresheet email was undeliverable, copy this link and send it to the coach directly:
+            </p>
+            <div className="flex gap-2">
+              <Input value={existingLink} readOnly className="text-xs" />
+              <Button variant="outline" size="icon" onClick={() => handleCopy(existingLink)}>
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Originally sent to {existingToken!.coach_email} · expires {new Date(existingToken!.expires_at).toLocaleDateString()}.
+            </p>
+            <div className="flex justify-between gap-2 pt-2">
+              <Button type="button" variant="ghost" onClick={() => setShowNewForm(true)}>
+                Create a new link instead
+              </Button>
+              <Button onClick={handleClose}>
+                Done
+              </Button>
+            </div>
           </div>
         ) : (
           <Form {...form}>
