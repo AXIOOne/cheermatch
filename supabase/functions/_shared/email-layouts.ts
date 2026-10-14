@@ -71,7 +71,7 @@ export const welcomeEmailSubject = 'Welcome to CheerMatch - Your Account Details
 
 export const IOS_CAPTURE_APP_URL = 'https://apps.apple.com/kg/app/varsity-virtual-compete/id6800264562';
 // Set once the test-capture request page exists; empty shows "coming soon".
-export const TEST_CAPTURE_URL = '';
+export const TEST_CAPTURE_URL = 'https://score.cheermatch.com/test-capture';
 export const SUPPORT_EMAIL = 'support@cheermatch.com';
 
 export function coachWelcomeEmailHtml(p: { fullName?: string | null; email: string; password: string; loginUrl: string; gymName?: string | null; testCaptureUrl?: string | null }) {

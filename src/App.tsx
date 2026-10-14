@@ -48,6 +48,7 @@ import JudgeHelp from "./pages/judge/Help";
 
 // Public review
 import ScoreReview from "./pages/review/ScoreReview";
+import TestCapture from "./pages/public/TestCapture";
 
 // Mobile coach app
 import { MobileAuthProvider } from "@/hooks/useMobileAuth";
@@ -123,6 +124,7 @@ const App = () => (
 
               {/* Public Review Route (no auth required) */}
               <Route path="/review/:token" element={<ScoreReview />} />
+              <Route path="/test-capture" element={<TestCapture />} />
 
               {/* Mobile Coach App */}
               <Route path="/m" element={<MobileLayout />}>
