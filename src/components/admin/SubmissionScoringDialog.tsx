@@ -22,7 +22,7 @@ import {
 import {
   Play, Pause, Volume2, VolumeX, Maximize2,
   Save, Send, Loader2, CheckCircle, AlertCircle,
-  SkipBack, SkipForward, User, Ban, RotateCcw, Info
+  SkipBack, SkipForward, User, Ban, RotateCcw, Info, Pencil
 } from 'lucide-react';
 import ScoreFieldOverrideDialog from '@/components/admin/ScoreFieldOverrideDialog';
 import VideoPlayer from '@/components/video/VideoPlayer';
