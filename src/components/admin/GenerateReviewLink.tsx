@@ -58,9 +58,8 @@ export function GenerateReviewLink({ submissionId, teamName, variant = 'outline'
     queryFn: async () => {
       const { data, error } = await supabase
         .from('scoring_review_tokens')
-        .select('token, coach_email, coach_name, expires_at, created_at')
+        .select('id, token, coach_email, coach_name, expires_at, created_at')
         .eq('submission_id', submissionId)
-        .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
