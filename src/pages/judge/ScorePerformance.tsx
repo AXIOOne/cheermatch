@@ -278,6 +278,17 @@ export default function ScorePerformance() {
     setInvalidFields(new Set());
   }, [visibleSections, submissionId]);
 
+  // Track the sticky header height so the Score Tracking drawer starts below it.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const measure = () => setHeaderHeight(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // For driver fields (difficulty_driver / execution_driver), derive field points from selected radio options
   const driverFieldsById = useMemo(() => {
     const map: Record<string, any> = {};
