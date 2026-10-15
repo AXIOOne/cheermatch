@@ -17,6 +17,8 @@ interface Props {
   currentSubmissionId: string;
   /** Rendered inside the side drawer: no card chrome, compact header. */
   embedded?: boolean;
+  /** Embedded only: shows a collapse control in the header row. */
+  onClose?: () => void;
 }
 
 /**
