@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useSidebar } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -61,7 +62,9 @@ export default function ScorePerformance() {
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
   const [trackingOpen, setTrackingOpen] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
-  const [headerHeight, setHeaderHeight] = useState(76);
+  const [drawerTop, setDrawerTop] = useState(124);
+  const { state: sidebarState, isMobile } = useSidebar();
+  const trackingLeft = isMobile ? 0 : sidebarState === 'collapsed' ? 48 : 256;
 
   const { data: submission, isLoading: submissionLoading } = useQuery({
     queryKey: ['submission', submissionId],
@@ -278,11 +281,15 @@ export default function ScorePerformance() {
     setInvalidFields(new Set());
   }, [visibleSections, submissionId]);
 
-  // Track the sticky header height so the Score Tracking drawer starts below it.
+  // Track the sticky header's bottom edge so the Score Tracking drawer starts
+  // below it (layout top bar + scoring header).
   useEffect(() => {
     const el = headerRef.current;
     if (!el) return;
-    const measure = () => setHeaderHeight(el.offsetHeight);
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      setDrawerTop(Math.round(rect.top + rect.height));
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -623,8 +630,8 @@ export default function ScorePerformance() {
               type="button"
               onClick={() => setTrackingOpen(true)}
               aria-label="Open score tracking"
-              className="fixed left-0 z-20 flex flex-col items-center gap-1.5 rounded-r-md border border-l-0 bg-background px-1.5 py-3 shadow-sm hover:bg-muted"
-              style={{ top: headerHeight + 16 }}
+              className="fixed z-20 flex flex-col items-center gap-1.5 rounded-r-md border border-l-0 bg-background px-1.5 py-3 shadow-sm hover:bg-muted"
+              style={{ top: drawerTop + 16, left: trackingLeft }}
             >
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
               <span
@@ -637,23 +644,13 @@ export default function ScorePerformance() {
           )}
           {trackingOpen && (
             <div
-              className="fixed left-0 bottom-0 z-20 flex w-[480px] max-w-[92vw] flex-col border-r border-t bg-background shadow-xl"
-              style={{ top: headerHeight }}
+              className="fixed bottom-0 z-20 flex w-[480px] max-w-[92vw] flex-col border-r bg-background shadow-xl"
+              style={{ top: drawerTop, left: trackingLeft }}
             >
-              <div className="flex items-center justify-between border-b px-3 py-2">
-                <p className="text-sm font-heading font-semibold">Score Tracking</p>
-                <button
-                  type="button"
-                  onClick={() => setTrackingOpen(false)}
-                  aria-label="Close score tracking"
-                  className="rounded p-1 hover:bg-muted"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-              </div>
               <div className="flex-1 overflow-y-auto p-4">
                 <ScoreTrackingTable
                   embedded
+                  onClose={() => setTrackingOpen(false)}
                   eventId={submission.event_id}
                   discipline={eventRow?.discipline}
                   panelId={assignedPanelId}

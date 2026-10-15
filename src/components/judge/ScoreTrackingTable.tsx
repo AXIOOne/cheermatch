@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ChevronRight, ChevronDown } from 'lucide-react';
+import { Loader2, ChevronRight, ChevronDown, ChevronLeft } from 'lucide-react';
 import { pickDivisionTemplateId, isFieldForPanel } from '@/lib/scoring';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +17,8 @@ interface Props {
   currentSubmissionId: string;
   /** Rendered inside the side drawer: no card chrome, compact header. */
   embedded?: boolean;
+  /** Embedded only: shows a collapse control in the header row. */
+  onClose?: () => void;
 }
 
 /**
@@ -24,7 +26,7 @@ interface Props {
  * this event, grouped by division, with one column per field in their panel.
  * Submitted = success color, draft = warning color.
  */
-export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmissionId, embedded = false }: Props) {
+export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmissionId, embedded = false, onClose }: Props) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -229,7 +231,19 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-heading font-semibold">Score Tracking</p>
-          {legend}
+          <div className="flex items-center gap-2">
+            {legend}
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close score tracking"
+                className="rounded p-1 hover:bg-muted"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
         {body}
       </div>
