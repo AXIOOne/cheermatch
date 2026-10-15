@@ -4,3 +4,4 @@
 - Use the `font-heading`/`font-body` Tailwind utilities for portal typography instead of inline font-family declarations. Why: the branding fonts (Zilla Slab headings, Roboto body) are defined once in tailwind.config.ts so every surface stays on-brand.
 - Built-in email HTML lives only in supabase/functions/_shared/email-layouts.ts (pure TS); edge functions and the admin Email Templates previews both import it. Why: previews always match what is actually sent.
 - Email logo assets use an absolute public URL derived from the pointer stored beside the shared email layouts. Why: email clients need absolute URLs and deployed edge functions must not import files outside their shared directory.
+- Judge scoring uses equal desktop columns with the current-team scores scrolling inside the video-defined row height; mobile stacks naturally. Why: wider scoring fields stay aligned with the video without content stretching the row.
