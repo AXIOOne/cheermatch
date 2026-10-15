@@ -82,7 +82,7 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
     const allPanels = assignments.some((a: any) => !a.panel_id && !a.section_id);
     const panelAbbrevs = new Set(assignments.map((a: any) => single(a.panel)?.abbreviation?.toUpperCase()).filter(Boolean));
     const sectionIds = new Set(assignments.map((a: any) => a.section_id).filter(Boolean));
-    const isSd = panelAbbrevs.has('SD') && !allPanels;
+    const isSd = panelAbbrevs.has('SD') && !allPanels && sectionIds.size === 0 && panelAbbrevs.size === 1;
     const tplMap = new Map(templates.map((t: any) => [t.id, t]));
 
     const columnsFor = (templateId: string | null) => {
