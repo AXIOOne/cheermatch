@@ -700,8 +700,8 @@ export default function ScorePerformance() {
         </Card>
 
         {/* Video (left) + scores (right column) */}
-        <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
-          <div ref={videoCardRef} className="lg:col-span-2">
+        <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
+          <div ref={videoCardRef} className="min-w-0">
             <Card>
             <CardContent className="p-0">
               <div className="aspect-video bg-black rounded-t-lg flex items-center justify-center">
@@ -732,7 +732,8 @@ export default function ScorePerformance() {
           </div>
 
           {/* Scores column */}
-          <div className="space-y-4 lg:col-span-1 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
+          <div className="relative min-w-0 lg:min-h-0" aria-label="Current team scoring">
+            <div className="space-y-4 lg:absolute lg:inset-0 lg:overflow-y-auto lg:pr-1">
 
             {visibleSections.length === 0 && !isSdAssigned ? (
               <Card>
@@ -945,6 +946,7 @@ export default function ScorePerformance() {
 
               </>
             )}
+            </div>
           </div>
         </div>
 
