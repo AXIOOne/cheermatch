@@ -15,6 +15,8 @@ interface Props {
   discipline?: string | null;
   panelId: string | null;
   currentSubmissionId: string;
+  /** Rendered inside the side drawer: no card chrome, compact header. */
+  embedded?: boolean;
 }
 
 /**
