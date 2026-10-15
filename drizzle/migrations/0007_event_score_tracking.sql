@@ -1,0 +1,1 @@
+ALTER TABLE public.events ADD COLUMN IF NOT EXISTS score_tracking_enabled boolean NOT NULL DEFAULT false;
