@@ -1,9 +1,9 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronRight, ChevronDown } from 'lucide-react';
 import { pickDivisionTemplateId, isFieldForPanel } from '@/lib/scoring';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +24,7 @@ interface Props {
  */
 export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmissionId }: Props) {
   const { user } = useAuth();
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const { data, isLoading } = useQuery({
     queryKey: ['score-tracking', eventId, user?.id, panelId],
@@ -142,6 +143,13 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
 
   if (sdOnly) return null;
 
+  const toggleGroup = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+
   return (
     <Card className="mt-6">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
@@ -151,51 +159,67 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
           <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-warning/25 border border-warning/50" /> Draft</span>
         </div>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-2">
         {isLoading ? (
           <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
         ) : groups.length === 0 ? (
           <p className="text-sm text-muted-foreground">No assigned teams in this event yet.</p>
-        ) : groups.map((g) => (
-          <div key={g.id}>
-            <h4 className="text-sm font-semibold mb-1.5">{g.name}</h4>
-            <div className="overflow-x-auto rounded-md border">
-              <table className="w-full text-xs">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="text-left font-medium px-2 py-1.5 sticky left-0 bg-muted/50 min-w-[160px]">Team</th>
-                    {g.columns.map((c: any) => (
-                      <th key={c.name} className="text-center font-medium px-2 py-1.5 whitespace-nowrap">{c.name}</th>
-                    ))}
-                    <th className="text-center font-semibold px-2 py-1.5">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {g.rows.map((r: any) => {
-                    const st = r.score?.status;
-                    const tone = st === 'submitted' || st === 'locked' ? 'bg-success/15' : st === 'in_progress' ? 'bg-warning/15' : '';
-                    const isCurrent = r.submissionId === currentSubmissionId;
-                    return (
-                      <tr key={r.submissionId} className={cn('border-t', isCurrent && 'ring-2 ring-inset ring-primary')}>
-                        <td className="px-2 py-1.5 sticky left-0 bg-card">
-                          <div className="font-medium">{r.teamName}</div>
-                          {r.gymName && <div className="text-muted-foreground">{r.gymName}</div>}
-                        </td>
-                        {g.columns.map((c: any) => {
-                          const v = cellValue(r.score, c.fieldIds);
-                          return <td key={c.name} className={cn('text-center px-2 py-1.5 tabular-nums', v != null && tone)}>{fmt(v)}</td>;
-                        })}
-                        <td className={cn('text-center px-2 py-1.5 font-semibold tabular-nums', r.score && tone)}>
-                          {r.score ? fmt(r.score.total_score) : '–'}
-                        </td>
+        ) : groups.map((g) => {
+          const isOpen = expanded.has(g.id);
+          const scoredCount = g.rows.filter((r: any) => r.score).length;
+          return (
+            <div key={g.id} className="rounded-md border">
+              <button
+                type="button"
+                onClick={() => toggleGroup(g.id)}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm font-semibold hover:bg-muted/50 rounded-md"
+              >
+                <span className="flex items-center gap-2">
+                  {isOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                  {g.name}
+                </span>
+                <span className="text-xs font-normal text-muted-foreground">{scoredCount}/{g.rows.length} scored</span>
+              </button>
+              {isOpen && (
+                <div className="overflow-x-auto border-t">
+                  <table className="w-full text-xs table-fixed">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="text-left font-medium px-2 py-1.5 sticky left-0 bg-muted/50 w-[160px]">Team</th>
+                        {g.columns.map((c: any) => (
+                          <th key={c.name} className="text-center font-medium px-2 py-1.5 w-[110px] whitespace-normal break-words">{c.name}</th>
+                        ))}
+                        <th className="text-center font-semibold px-2 py-1.5 w-[72px]">Total</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody>
+                      {g.rows.map((r: any) => {
+                        const st = r.score?.status;
+                        const tone = st === 'submitted' || st === 'locked' ? 'bg-success/15' : st === 'in_progress' ? 'bg-warning/15' : '';
+                        const isCurrent = r.submissionId === currentSubmissionId;
+                        return (
+                          <tr key={r.submissionId} className={cn('border-t', isCurrent && 'ring-2 ring-inset ring-primary')}>
+                            <td className="px-2 py-1.5 sticky left-0 bg-card w-[160px]">
+                              <div className="font-medium truncate">{r.teamName}</div>
+                              {r.gymName && <div className="text-muted-foreground truncate">{r.gymName}</div>}
+                            </td>
+                            {g.columns.map((c: any) => {
+                              const v = cellValue(r.score, c.fieldIds);
+                              return <td key={c.name} className={cn('text-center px-2 py-1.5 tabular-nums w-[110px]', v != null && tone)}>{fmt(v)}</td>;
+                            })}
+                            <td className={cn('text-center px-2 py-1.5 font-semibold tabular-nums w-[72px]', r.score && tone)}>
+                              {r.score ? fmt(r.score.total_score) : '–'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
   );
