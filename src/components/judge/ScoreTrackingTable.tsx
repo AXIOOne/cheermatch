@@ -76,6 +76,18 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
     },
   });
 
+  const sdOnly = useMemo(() => {
+    if (!data) return false;
+    const { assignments } = data;
+    if (!assignments.length) return false;
+    const allPanels = assignments.some((a: any) => !a.panel_id && !a.section_id);
+    if (allPanels) return false;
+    const panelAbbrevs = new Set(assignments.map((a: any) => single(a.panel)?.abbreviation?.toUpperCase()).filter(Boolean));
+    const sectionIds = new Set(assignments.map((a: any) => a.section_id).filter(Boolean));
+    // Pure deductions (SD) panel assignment: no score tracking table.
+    return panelAbbrevs.size === 1 && panelAbbrevs.has('SD') && sectionIds.size === 0;
+  }, [data]);
+
   const groups = useMemo(() => {
     if (!data) return [];
     const { assignments, visible, templates, scores } = data;
