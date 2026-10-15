@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Save, Send, Loader2, Play, RotateCcw, Flag } from 'lucide-react';
+import { ArrowLeft, Save, Send, Loader2, Play, RotateCcw, Flag, ChevronLeft, ChevronRight } from 'lucide-react';
 import { calculateStructuredDeductions, sortByDisplayOrder, fieldPanelAbbrevs, pickDivisionTemplateId } from '@/lib/scoring';
 import { ScoreTrackingTable } from '@/components/judge/ScoreTrackingTable';
 import { RubricReferenceSheet } from '@/components/judge/RubricReferenceSheet';
