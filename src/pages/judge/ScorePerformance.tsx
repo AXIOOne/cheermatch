@@ -280,11 +280,15 @@ export default function ScorePerformance() {
     setInvalidFields(new Set());
   }, [visibleSections, submissionId]);
 
-  // Track the sticky header height so the Score Tracking drawer starts below it.
+  // Track the sticky header's bottom edge so the Score Tracking drawer starts
+  // below it (layout top bar + scoring header).
   useEffect(() => {
     const el = headerRef.current;
     if (!el) return;
-    const measure = () => setHeaderHeight(el.offsetHeight);
+    const measure = () => {
+      const rect = el.getBoundingClientRect();
+      setDrawerTop(Math.round(rect.top + rect.height));
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
