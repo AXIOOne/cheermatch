@@ -28,7 +28,6 @@ import {
   LogOut,
   LayoutDashboard,
   Play,
-  ClipboardList,
   HelpCircle,
   Settings,
 } from 'lucide-react';
@@ -112,7 +111,6 @@ export function JudgeSidebar() {
             <SidebarMenu>
               <NavItem to="/judge" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
               <NavItem to="/judge/queue" icon={<Play className="w-5 h-5" />} label="Scoring Queue" />
-              <NavItem to="/judge/history" icon={<ClipboardList className="w-5 h-5" />} label="Score History" />
               <RubricsNavItem to="/judge/rubrics" />
               <NavItem to="/judge/help" icon={<HelpCircle className="w-5 h-5" />} label="Help" />
             </SidebarMenu>
