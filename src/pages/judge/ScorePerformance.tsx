@@ -630,13 +630,13 @@ export default function ScorePerformance() {
               type="button"
               onClick={() => setTrackingOpen(true)}
               aria-label="Open score tracking"
-              className="fixed z-20 flex flex-col items-center gap-1.5 rounded-r-md border border-l-0 bg-background px-1.5 py-3 shadow-sm hover:bg-muted"
-              style={{ top: drawerTop + 16, left: trackingLeft }}
+              className="fixed z-20 flex flex-col items-center gap-1.5 rounded-l-md border border-r-0 bg-background px-1.5 py-3 shadow-sm hover:bg-muted"
+              style={{ top: drawerTop + 16, right: 0 }}
             >
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <ChevronLeft className="h-4 w-4 text-muted-foreground" />
               <span
                 className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
-                style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                style={{ writingMode: 'vertical-rl' }}
               >
                 Score Tracking
               </span>
@@ -644,8 +644,8 @@ export default function ScorePerformance() {
           )}
           {trackingOpen && (
             <div
-              className="fixed bottom-0 z-20 flex w-[480px] max-w-[92vw] flex-col border-r bg-background shadow-xl"
-              style={{ top: drawerTop, left: trackingLeft }}
+              className="fixed bottom-0 z-20 flex w-[680px] max-w-[88vw] flex-col border-l bg-background shadow-xl"
+              style={{ top: drawerTop, right: 0 }}
             >
               <div className="flex-1 overflow-y-auto p-4">
                 <ScoreTrackingTable
