@@ -131,9 +131,21 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
         score,
       });
     });
+    const totalOf = (r: any) => (r.score && r.score.total_score != null ? Number(r.score.total_score) : null);
     return [...byDivision.values()]
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((g) => ({ ...g, rows: g.rows.sort((a: any, b: any) => a.teamName.localeCompare(b.teamName)) }));
+      .map((g) => ({
+        ...g,
+        // Highest total first; teams with no score yet sink to the bottom.
+        rows: g.rows.sort((a: any, b: any) => {
+          const ta = totalOf(a);
+          const tb = totalOf(b);
+          if (ta == null && tb == null) return a.teamName.localeCompare(b.teamName);
+          if (ta == null) return 1;
+          if (tb == null) return -1;
+          return tb - ta || a.teamName.localeCompare(b.teamName);
+        }),
+      }));
   }, [data, discipline]);
 
   const cellValue = (score: any, fieldIds: string[]) => {
