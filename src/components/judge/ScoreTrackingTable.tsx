@@ -221,7 +221,28 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
             </div>
           );
         })}
-      </CardContent>
+    </div>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-heading font-semibold">Score Tracking</p>
+          {legend}
+        </div>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <Card className="mt-6">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-base font-heading">Score Tracking</CardTitle>
+        {legend}
+      </CardHeader>
+      <CardContent className="space-y-2">{body}</CardContent>
     </Card>
   );
 }
