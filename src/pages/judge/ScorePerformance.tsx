@@ -59,6 +59,9 @@ export default function ScorePerformance() {
   const [flagDialogOpen, setFlagDialogOpen] = useState(false);
   const [flagReason, setFlagReason] = useState('');
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
+  const [trackingOpen, setTrackingOpen] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(76);
 
   const { data: submission, isLoading: submissionLoading } = useQuery({
     queryKey: ['submission', submissionId],
