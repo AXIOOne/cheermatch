@@ -61,7 +61,9 @@ export default function ScorePerformance() {
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
   const [trackingOpen, setTrackingOpen] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
-  const [headerHeight, setHeaderHeight] = useState(76);
+  const [drawerTop, setDrawerTop] = useState(124);
+  const { state: sidebarState, isMobile } = useSidebar();
+  const trackingLeft = isMobile ? 0 : sidebarState === 'collapsed' ? 48 : 256;
 
   const { data: submission, isLoading: submissionLoading } = useQuery({
     queryKey: ['submission', submissionId],
