@@ -155,8 +155,8 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base font-heading">Score Tracking</CardTitle>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-success/25 border border-success/50" /> Submitted</span>
-          <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-sm bg-warning/25 border border-warning/50" /> Draft</span>
+          <span className="flex items-center gap-1"><span className="tabular-nums font-semibold text-success">9.75</span> Submitted</span>
+          <span className="flex items-center gap-1"><span className="tabular-nums font-semibold text-warning">9.50</span> Draft</span>
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -195,7 +195,7 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
                     <tbody>
                       {g.rows.map((r: any) => {
                         const st = r.score?.status;
-                        const tone = st === 'submitted' || st === 'locked' ? 'bg-success/15' : st === 'in_progress' ? 'bg-warning/15' : '';
+                        const tone = st === 'submitted' || st === 'locked' ? 'text-success' : st === 'in_progress' ? 'text-warning' : '';
                         const isCurrent = r.submissionId === currentSubmissionId;
                         return (
                           <tr key={r.submissionId} className={cn('border-t', isCurrent && 'ring-2 ring-inset ring-primary')}>
