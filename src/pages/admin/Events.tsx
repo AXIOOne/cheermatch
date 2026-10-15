@@ -62,6 +62,7 @@ const eventSchema = z.object({
   discipline: z.enum(['allstar_cheer','allstar_dance','nca_cheer','nca_dance','uca_cheer','uca_dance','usa_cheer','usa_dance']),
   accuscore_end_at: z.string().optional(),
   accuscore_enabled: z.boolean().default(true),
+  score_tracking_enabled: z.boolean().default(false),
   status: z.enum(['draft', 'registration_open', 'registration_closed', 'open_for_capture', 'open_for_scoring', 'in_progress', 'completed', 'archived']),
   duration_of_capture: z.coerce.number().int().min(15, 'Must be at least 15 seconds').max(900, 'Must be 900 seconds or less'),
   screen_capture_cnt: z.coerce.number().int().min(1, 'At least 1 attempt').max(5, 'At most 5 attempts'),
@@ -140,6 +141,7 @@ export default function Events() {
       discipline: 'allstar_cheer',
       accuscore_end_at: '',
       accuscore_enabled: true,
+      score_tracking_enabled: false,
       status: 'registration_open',
       duration_of_capture: 150,
       screen_capture_cnt: 2,
@@ -214,6 +216,7 @@ export default function Events() {
         discipline: data.discipline,
         accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
         accuscore_enabled: data.accuscore_enabled,
+        score_tracking_enabled: data.score_tracking_enabled,
         status: data.status,
         duration_of_capture: data.duration_of_capture,
         screen_capture_cnt: data.screen_capture_cnt,
@@ -266,6 +269,7 @@ export default function Events() {
         discipline: data.discipline,
         accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
         accuscore_enabled: data.accuscore_enabled,
+        score_tracking_enabled: data.score_tracking_enabled,
         status: data.status,
         duration_of_capture: data.duration_of_capture,
         screen_capture_cnt: data.screen_capture_cnt,
@@ -341,6 +345,7 @@ export default function Events() {
         ? new Date(event.accuscore_end_at).toISOString().slice(0, 16)
         : '',
       accuscore_enabled: (event as any).accuscore_enabled ?? true,
+      score_tracking_enabled: (event as any).score_tracking_enabled ?? false,
       status: event.status,
       duration_of_capture: event.duration_of_capture ?? 150,
       screen_capture_cnt: event.screen_capture_cnt ?? 2,
@@ -493,6 +498,21 @@ export default function Events() {
                       )}
                     />
                   </div>
+                  <FormField
+                    control={form.control}
+                    name="score_tracking_enabled"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-md border p-3">
+                        <div>
+                          <FormLabel>Score tracking</FormLabel>
+                          <p className="text-xs text-muted-foreground">Show judges a table of their own scores for every assigned team at the bottom of the scoring screen.</p>
+                        </div>
+                        <FormControl>
+                          <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="accuscore_enabled"
