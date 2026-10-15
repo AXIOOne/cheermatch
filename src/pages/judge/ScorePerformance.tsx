@@ -938,14 +938,6 @@ export default function ScorePerformance() {
             />
           </CardContent>
         </Card>
-        {eventRow?.score_tracking_enabled && submission?.event_id && (
-          <ScoreTrackingTable
-            eventId={submission.event_id}
-            discipline={eventRow?.discipline}
-            panelId={assignedPanelId}
-            currentSubmissionId={submissionId!}
-          />
-        )}
       </div>
 
       <Dialog open={flagDialogOpen} onOpenChange={setFlagDialogOpen}>
