@@ -629,8 +629,8 @@ export default function ScorePerformance() {
               type="button"
               onClick={() => setTrackingOpen(true)}
               aria-label="Open score tracking"
-              className="fixed left-0 z-20 flex flex-col items-center gap-1.5 rounded-r-md border border-l-0 bg-background px-1.5 py-3 shadow-sm hover:bg-muted"
-              style={{ top: headerHeight + 16 }}
+              className="fixed z-20 flex flex-col items-center gap-1.5 rounded-r-md border border-l-0 bg-background px-1.5 py-3 shadow-sm hover:bg-muted"
+              style={{ top: drawerTop + 16, left: trackingLeft }}
             >
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
               <span
@@ -643,23 +643,13 @@ export default function ScorePerformance() {
           )}
           {trackingOpen && (
             <div
-              className="fixed left-0 bottom-0 z-20 flex w-[480px] max-w-[92vw] flex-col border-r border-t bg-background shadow-xl"
-              style={{ top: headerHeight }}
+              className="fixed bottom-0 z-20 flex w-[480px] max-w-[92vw] flex-col border-r bg-background shadow-xl"
+              style={{ top: drawerTop, left: trackingLeft }}
             >
-              <div className="flex items-center justify-between border-b px-3 py-2">
-                <p className="text-sm font-heading font-semibold">Score Tracking</p>
-                <button
-                  type="button"
-                  onClick={() => setTrackingOpen(false)}
-                  aria-label="Close score tracking"
-                  className="rounded p-1 hover:bg-muted"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-              </div>
               <div className="flex-1 overflow-y-auto p-4">
                 <ScoreTrackingTable
                   embedded
+                  onClose={() => setTrackingOpen(false)}
                   eventId={submission.event_id}
                   discipline={eventRow?.discipline}
                   panelId={assignedPanelId}
