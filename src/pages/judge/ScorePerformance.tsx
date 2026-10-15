@@ -644,12 +644,8 @@ export default function ScorePerformance() {
           )}
           {trackingOpen && (
             <div
-              className="fixed z-20 flex w-[800px] max-w-[92vw] flex-col overflow-hidden border-l bg-background shadow-xl"
-              style={
-                drawerBox
-                  ? { top: drawerBox.top, height: drawerBox.height, right: 0 }
-                  : { top: drawerTop, bottom: 0, right: 0 }
-              }
+              className="fixed z-20 flex w-[1100px] max-w-[96vw] flex-col overflow-hidden border-l bg-background shadow-xl"
+              style={{ top: drawerTop, bottom: 0, right: 0 }}
             >
               <div className="flex-1 overflow-y-auto p-4">
                 <ScoreTrackingTable
@@ -681,7 +677,7 @@ export default function ScorePerformance() {
 
         {/* Video (left) + scores (right column) */}
         <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
-          <div ref={videoCardRef} className="min-w-0">
+          <div className="min-w-0">
             <Card>
             <CardContent className="p-0">
               <div className="aspect-video bg-black rounded-t-lg flex items-center justify-center">
