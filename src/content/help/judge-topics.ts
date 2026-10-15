@@ -118,6 +118,42 @@ export const judgeTopics: HelpTopic[] = [
     ],
   },
   {
+    slug: 'judge-score-history',
+    title: 'Score History',
+    summary: 'Reviewing the scores you have already submitted.',
+    audience: 'judge',
+    keywords: ['history', 'submitted', 'past scores'],
+    blocks: [
+      { type: 'p', text: 'Score History in the sidebar lists every score you have submitted, with the event, team, division, and your panel slot.' },
+      {
+        type: 'bullets',
+        items: [
+          'Submitted scores are read-only — you cannot edit them here.',
+          'If a score needs correcting, ask the administrator to re-open the panel; it then reappears in your Scoring Queue with your entries preserved.',
+        ],
+      },
+    ],
+  },
+  {
+    slug: 'judge-settings',
+    title: 'Settings & Password',
+    summary: 'Updating your name, photo, and password.',
+    audience: 'judge',
+    keywords: ['settings', 'password', 'avatar', 'profile', 'photo'],
+    blocks: [
+      { type: 'p', text: 'Open Settings from the bottom of the sidebar, just above Log Out.' },
+      {
+        type: 'bullets',
+        items: [
+          'Profile — set your full name and upload a photo (PNG or JPG, up to 5MB). Your photo appears in the sidebar and on your scores.',
+          'Change Password — enter your current password, then your new one twice. New passwords must be at least 8 characters.',
+          'Your email address cannot be changed here — contact your administrator.',
+        ],
+      },
+      { type: 'callout', variant: 'tip', text: 'If you have forgotten your current password, sign out and use the password reset link on the sign-in page instead.' },
+    ],
+  },
+  {
     slug: 'judge-broadcast-messages',
     title: 'Broadcast Messages',
     summary: 'Announcements sent to you by the event administrator.',
