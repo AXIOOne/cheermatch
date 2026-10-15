@@ -729,6 +729,7 @@ export default function ScorePerformance() {
               </div>
             </CardContent>
           </Card>
+          </div>
 
           {/* Scores column */}
           <div className="space-y-4 lg:col-span-1 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
