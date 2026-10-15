@@ -140,6 +140,8 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
 
   const fmt = (n: number | null | undefined) => (n == null ? '–' : Number(n).toFixed(2).replace(/\.?0+$/, ''));
 
+  if (sdOnly) return null;
+
   return (
     <Card className="mt-6">
       <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
