@@ -231,7 +231,19 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-heading font-semibold">Score Tracking</p>
-          {legend}
+          <div className="flex items-center gap-2">
+            {legend}
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close score tracking"
+                className="rounded p-1 hover:bg-muted"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
         {body}
       </div>
