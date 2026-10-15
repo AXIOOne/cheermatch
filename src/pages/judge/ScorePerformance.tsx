@@ -15,7 +15,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Save, Send, Loader2, Play, RotateCcw, Flag } from 'lucide-react';
+import { ArrowLeft, Save, Send, Loader2, Play, RotateCcw, Flag, ChevronLeft, ChevronRight } from 'lucide-react';
 import { calculateStructuredDeductions, sortByDisplayOrder, fieldPanelAbbrevs, pickDivisionTemplateId } from '@/lib/scoring';
 import { ScoreTrackingTable } from '@/components/judge/ScoreTrackingTable';
 import { RubricReferenceSheet } from '@/components/judge/RubricReferenceSheet';
@@ -59,6 +59,9 @@ export default function ScorePerformance() {
   const [flagDialogOpen, setFlagDialogOpen] = useState(false);
   const [flagReason, setFlagReason] = useState('');
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
+  const [trackingOpen, setTrackingOpen] = useState(false);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(76);
 
   const { data: submission, isLoading: submissionLoading } = useQuery({
     queryKey: ['submission', submissionId],
@@ -274,6 +277,17 @@ export default function ScorePerformance() {
   useEffect(() => {
     setInvalidFields(new Set());
   }, [visibleSections, submissionId]);
+
+  // Track the sticky header height so the Score Tracking drawer starts below it.
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const measure = () => setHeaderHeight(el.offsetHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // For driver fields (difficulty_driver / execution_driver), derive field points from selected radio options
   const driverFieldsById = useMemo(() => {
@@ -540,7 +554,7 @@ export default function ScorePerformance() {
 
   return (
     <div className="min-h-screen bg-muted/30">
-      <div className="bg-background border-b sticky top-0 z-10">
+      <div ref={headerRef} className="bg-background border-b sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate('/judge/queue')}>
@@ -600,6 +614,56 @@ export default function ScorePerformance() {
           </div>
         </div>
       </div>
+
+      {/* Score Tracking: collapsible left drawer that overlays the scoring window */}
+      {eventRow?.score_tracking_enabled && submission?.event_id && !isSdAssigned && (
+        <>
+          {!trackingOpen && (
+            <button
+              type="button"
+              onClick={() => setTrackingOpen(true)}
+              aria-label="Open score tracking"
+              className="fixed left-0 z-20 flex flex-col items-center gap-1.5 rounded-r-md border border-l-0 bg-background px-1.5 py-3 shadow-sm hover:bg-muted"
+              style={{ top: headerHeight + 16 }}
+            >
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <span
+                className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground"
+                style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+              >
+                Score Tracking
+              </span>
+            </button>
+          )}
+          {trackingOpen && (
+            <div
+              className="fixed left-0 bottom-0 z-20 flex w-[480px] max-w-[92vw] flex-col border-r border-t bg-background shadow-xl"
+              style={{ top: headerHeight }}
+            >
+              <div className="flex items-center justify-between border-b px-3 py-2">
+                <p className="text-sm font-heading font-semibold">Score Tracking</p>
+                <button
+                  type="button"
+                  onClick={() => setTrackingOpen(false)}
+                  aria-label="Close score tracking"
+                  className="rounded p-1 hover:bg-muted"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                <ScoreTrackingTable
+                  embedded
+                  eventId={submission.event_id}
+                  discipline={eventRow?.discipline}
+                  panelId={assignedPanelId}
+                  currentSubmissionId={submissionId!}
+                />
+              </div>
+            </div>
+          )}
+        </>
+      )}
 
       <div className="container mx-auto px-4 py-6 space-y-6">
         {/* Team info band */}
@@ -874,14 +938,6 @@ export default function ScorePerformance() {
             />
           </CardContent>
         </Card>
-        {eventRow?.score_tracking_enabled && submission?.event_id && (
-          <ScoreTrackingTable
-            eventId={submission.event_id}
-            discipline={eventRow?.discipline}
-            panelId={assignedPanelId}
-            currentSubmissionId={submissionId!}
-          />
-        )}
       </div>
 
       <Dialog open={flagDialogOpen} onOpenChange={setFlagDialogOpen}>

@@ -15,6 +15,8 @@ interface Props {
   discipline?: string | null;
   panelId: string | null;
   currentSubmissionId: string;
+  /** Rendered inside the side drawer: no card chrome, compact header. */
+  embedded?: boolean;
 }
 
 /**
@@ -22,7 +24,7 @@ interface Props {
  * this event, grouped by division, with one column per field in their panel.
  * Submitted = success color, draft = warning color.
  */
-export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmissionId }: Props) {
+export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmissionId, embedded = false }: Props) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -150,21 +152,20 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
       return next;
     });
 
-  return (
-    <Card className="mt-6">
-      <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="text-base font-heading">Score Tracking</CardTitle>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><span className="tabular-nums font-semibold text-success">9.75</span> Submitted</span>
-          <span className="flex items-center gap-1"><span className="tabular-nums font-semibold text-warning">9.50</span> Draft</span>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {isLoading ? (
-          <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-        ) : groups.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No assigned teams in this event yet.</p>
-        ) : groups.map((g) => {
+  const legend = (
+    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      <span className="flex items-center gap-1"><span className="tabular-nums font-semibold text-success">9.75</span> Submitted</span>
+      <span className="flex items-center gap-1"><span className="tabular-nums font-semibold text-warning">9.50</span> Draft</span>
+    </div>
+  );
+
+  const body = (
+    <div className="space-y-2">
+      {isLoading ? (
+        <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+      ) : groups.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No assigned teams in this event yet.</p>
+      ) : groups.map((g) => {
           const isOpen = expanded.has(g.id);
           const scoredCount = g.rows.filter((r: any) => r.score).length;
           return (
@@ -220,7 +221,28 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
             </div>
           );
         })}
-      </CardContent>
+    </div>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-heading font-semibold">Score Tracking</p>
+          {legend}
+        </div>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <Card className="mt-6">
+      <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-base font-heading">Score Tracking</CardTitle>
+        {legend}
+      </CardHeader>
+      <CardContent className="space-y-2">{body}</CardContent>
     </Card>
   );
 }
