@@ -32,10 +32,12 @@ export default function JudgeDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('scores')
-        .select('id, status')
+        .select('id, status, submission:video_submissions!inner(team_id, archived_at)')
         .eq('judge_user_id', user!.id);
       if (error) throw error;
-      return data;
+      // Only count scores whose submission is still visible in the queue
+      // (skip deleted registrations and archived videos).
+      return (data || []).filter((s: any) => s.submission?.team_id && !s.submission?.archived_at);
     },
     enabled: !!user,
   });
