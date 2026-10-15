@@ -45,6 +45,7 @@ import ScorePerformance from "./pages/judge/ScorePerformance";
 import ScoreHistory from "./pages/judge/ScoreHistory";
 import JudgeRubrics from "./pages/judge/Rubrics";
 import JudgeHelp from "./pages/judge/Help";
+import JudgeSettings from "./pages/judge/Settings";
 
 // Public review
 import ScoreReview from "./pages/review/ScoreReview";
@@ -118,6 +119,7 @@ const App = () => (
                 <Route path="score/:submissionId" element={<ScorePerformance />} />
                 <Route path="history" element={<ScoreHistory />} />
                 <Route path="rubrics" element={<JudgeRubrics />} />
+                <Route path="settings" element={<JudgeSettings />} />
                 <Route path="help" element={<JudgeHelp />} />
                 <Route path="help/:topic" element={<JudgeHelp />} />
               </Route>

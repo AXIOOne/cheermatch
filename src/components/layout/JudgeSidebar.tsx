@@ -30,6 +30,7 @@ import {
   Play,
   ClipboardList,
   HelpCircle,
+  Settings,
 } from 'lucide-react';
 
 interface NavItemProps {
@@ -111,6 +112,7 @@ export function JudgeSidebar() {
             <SidebarMenu>
               <NavItem to="/judge" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
               <NavItem to="/judge/queue" icon={<Play className="w-5 h-5" />} label="Scoring Queue" />
+              <NavItem to="/judge/history" icon={<ClipboardList className="w-5 h-5" />} label="Score History" />
               <RubricsNavItem to="/judge/rubrics" />
               <NavItem to="/judge/help" icon={<HelpCircle className="w-5 h-5" />} label="Help" />
             </SidebarMenu>
@@ -136,6 +138,24 @@ export function JudgeSidebar() {
           )}
         </div>
         <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="Settings">
+              <NavLink
+                to="/judge/settings"
+                className={({ isActive }) =>
+                  cn(
+                    'flex items-center gap-2 rounded-md text-sm font-medium transition-colors px-2 py-1.5',
+                    isActive
+                      ? 'bg-sidebar-accent text-sidebar-primary'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                  )
+                }
+              >
+                <Settings className="w-4 h-4" />
+                <span>Settings</span>
+              </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild tooltip="Log Out">
               <Button

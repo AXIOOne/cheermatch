@@ -12,9 +12,10 @@ interface Props {
   audience: 'admin' | 'judge';
   basePath: string;
   showManualDownload?: boolean;
+  manualHref?: string;
 }
 
-export function HelpLayout({ audience, basePath, showManualDownload }: Props) {
+export function HelpLayout({ audience, basePath, showManualDownload, manualHref = '/docs/cheermatch-admin-manual.pdf' }: Props) {
   const { topic: slug } = useParams<{ topic: string }>();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
@@ -36,7 +37,7 @@ export function HelpLayout({ audience, basePath, showManualDownload }: Props) {
         </div>
         {showManualDownload && (
           <Button variant="outline" asChild>
-            <a href="/docs/cheermatch-admin-manual.pdf" download>
+            <a href={manualHref} download>
               <FileDown className="w-4 h-4 mr-2" />
               Download PDF manual
             </a>

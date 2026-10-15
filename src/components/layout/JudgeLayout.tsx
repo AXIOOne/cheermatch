@@ -40,10 +40,12 @@ export function JudgeLayout() {
         <JudgeSidebar />
         <SidebarInset>
           <JudgeBroadcastBanner />
-          <header className="flex h-12 items-center justify-end gap-2 px-4 border-b">
-            <HeaderSidebarControls className="mr-auto" />
+          <header className="flex h-12 items-center gap-2 border-b px-4">
+            <HeaderSidebarControls />
             <span className="text-sm font-medium text-muted-foreground">Judge Portal</span>
-            <JudgeMessagesMenu />
+            <div className="ml-auto flex items-center">
+              <JudgeMessagesMenu />
+            </div>
           </header>
           <main className="flex-1 overflow-auto p-4">
             <Outlet />
