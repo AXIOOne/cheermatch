@@ -62,9 +62,7 @@ export default function ScorePerformance() {
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
   const [trackingOpen, setTrackingOpen] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
-  const videoCardRef = useRef<HTMLDivElement>(null);
   const [drawerTop, setDrawerTop] = useState(124);
-  const [drawerBox, setDrawerBox] = useState<{ top: number; height: number } | null>(null);
   useSidebar();
 
   const { data: submission, isLoading: submissionLoading } = useQuery({
@@ -297,24 +295,6 @@ export default function ScorePerformance() {
     return () => ro.disconnect();
   }, []);
 
-  // While the Score Tracking drawer is open, keep its top/bottom edges aligned
-  // with the video card so it never spills over the header or comments.
-  useEffect(() => {
-    if (!trackingOpen) return;
-    const sync = () => {
-      const r = videoCardRef.current?.getBoundingClientRect();
-      if (r && r.height > 0) setDrawerBox({ top: Math.round(r.top), height: Math.round(r.height) });
-    };
-    sync();
-    const t = setTimeout(sync, 300);
-    window.addEventListener('scroll', sync, true);
-    window.addEventListener('resize', sync);
-    return () => {
-      window.removeEventListener('scroll', sync, true);
-      window.removeEventListener('resize', sync);
-      clearTimeout(t);
-    };
-  }, [trackingOpen]);
 
   // For driver fields (difficulty_driver / execution_driver), derive field points from selected radio options
   const driverFieldsById = useMemo(() => {
