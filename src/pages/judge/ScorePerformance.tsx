@@ -602,8 +602,20 @@ export default function ScorePerformance() {
       </div>
 
       <div className="container mx-auto px-4 py-6 space-y-6">
-        {/* Top row: large video + stacked team info */}
-        <div className="grid gap-6 lg:grid-cols-3">
+        {/* Team info band */}
+        <Card>
+          <CardContent className="py-4 flex flex-wrap gap-x-10 gap-y-3 text-sm">
+            <div><span className="text-muted-foreground">Team</span><p className="font-medium">{submission.team?.name}</p></div>
+            <div><span className="text-muted-foreground">Gym</span><p className="font-medium">{submission.team?.gym_name}</p></div>
+            <div><span className="text-muted-foreground">Event</span><p className="font-medium">{submission.event?.name}</p></div>
+            <div><span className="text-muted-foreground">Division</span><p className="font-medium">{submission.team?.division?.name}</p></div>
+            <div><span className="text-muted-foreground">Level</span><p className="font-medium">Level {submission.team?.level?.level_number}</p></div>
+            <div><span className="text-muted-foreground">Athletes</span><p className="font-medium">{(submission.team?.athletes_female ?? 0) + (submission.team?.athletes_male ?? 0)} <span className="text-muted-foreground font-normal">({submission.team?.athletes_female ?? 0}F / {submission.team?.athletes_male ?? 0}M)</span></p></div>
+          </CardContent>
+        </Card>
+
+        {/* Video (left) + scores (right column) */}
+        <div className="grid gap-6 lg:grid-cols-3 lg:items-start">
           <Card className="lg:col-span-2">
             <CardContent className="p-0">
               <div className="aspect-video bg-black rounded-t-lg flex items-center justify-center">
@@ -632,22 +644,8 @@ export default function ScorePerformance() {
             </CardContent>
           </Card>
 
-          <Card className="lg:col-span-1">
-            <CardHeader><CardTitle className="text-lg">Team Information</CardTitle></CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div><span className="text-muted-foreground">Team</span><p className="font-medium">{submission.team?.name}</p></div>
-              <div><span className="text-muted-foreground">Gym</span><p className="font-medium">{submission.team?.gym_name}</p></div>
-              <div><span className="text-muted-foreground">Event</span><p className="font-medium">{submission.event?.name}</p></div>
-              <div><span className="text-muted-foreground">Division</span><p className="font-medium">{submission.team?.division?.name}</p></div>
-              <div><span className="text-muted-foreground">Level</span><p className="font-medium">Level {submission.team?.level?.level_number}</p></div>
-              <div><span className="text-muted-foreground">Athletes</span><p className="font-medium">{(submission.team?.athletes_female ?? 0) + (submission.team?.athletes_male ?? 0)} <span className="text-muted-foreground font-normal">({submission.team?.athletes_female ?? 0}F / {submission.team?.athletes_male ?? 0}M)</span></p></div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Bottom row: scoring fields + comments side panel */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-4 lg:col-span-2">
+          {/* Scores column */}
+          <div className="space-y-4 lg:col-span-1 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1">
 
             {visibleSections.length === 0 && !isSdAssigned ? (
               <Card>
@@ -861,23 +859,21 @@ export default function ScorePerformance() {
               </>
             )}
           </div>
-
-          {/* Comments side panel */}
-          <div className="lg:col-span-1">
-            <Card className="lg:sticky lg:top-24">
-              <CardHeader className="pb-2"><CardTitle className="text-base">Judge Comments</CardTitle></CardHeader>
-              <CardContent>
-                <FormattedCommentField
-                  placeholder="Overall feedback..."
-                  value={comments}
-                  onChange={setComments}
-                  rows={14}
-                  disabled={isLocked}
-                />
-              </CardContent>
-            </Card>
-          </div>
         </div>
+
+        {/* Comments full width */}
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Judge Comments</CardTitle></CardHeader>
+          <CardContent>
+            <FormattedCommentField
+              placeholder="Overall feedback..."
+              value={comments}
+              onChange={setComments}
+              rows={6}
+              disabled={isLocked}
+            />
+          </CardContent>
+        </Card>
         {eventRow?.score_tracking_enabled && submission?.event_id && (
           <ScoreTrackingTable
             eventId={submission.event_id}
