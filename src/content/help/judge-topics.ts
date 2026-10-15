@@ -118,23 +118,6 @@ export const judgeTopics: HelpTopic[] = [
     ],
   },
   {
-    slug: 'judge-score-history',
-    title: 'Score History',
-    summary: 'Reviewing the scores you have already submitted.',
-    audience: 'judge',
-    keywords: ['history', 'submitted', 'past scores'],
-    blocks: [
-      { type: 'p', text: 'Score History in the sidebar lists every score you have submitted, with the event, team, division, and your panel slot.' },
-      {
-        type: 'bullets',
-        items: [
-          'Submitted scores are read-only — you cannot edit them here.',
-          'If a score needs correcting, ask the administrator to re-open the panel; it then reappears in your Scoring Queue with your entries preserved.',
-        ],
-      },
-    ],
-  },
-  {
     slug: 'judge-settings',
     title: 'Settings & Password',
     summary: 'Updating your name, photo, and password.',
