@@ -62,9 +62,7 @@ export default function ScorePerformance() {
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
   const [trackingOpen, setTrackingOpen] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
-  const videoCardRef = useRef<HTMLDivElement>(null);
   const [drawerTop, setDrawerTop] = useState(124);
-  const [drawerBox, setDrawerBox] = useState<{ top: number; height: number } | null>(null);
   useSidebar();
 
   const { data: submission, isLoading: submissionLoading } = useQuery({
@@ -297,24 +295,6 @@ export default function ScorePerformance() {
     return () => ro.disconnect();
   }, []);
 
-  // While the Score Tracking drawer is open, keep its top/bottom edges aligned
-  // with the video card so it never spills over the header or comments.
-  useEffect(() => {
-    if (!trackingOpen) return;
-    const sync = () => {
-      const r = videoCardRef.current?.getBoundingClientRect();
-      if (r && r.height > 0) setDrawerBox({ top: Math.round(r.top), height: Math.round(r.height) });
-    };
-    sync();
-    const t = setTimeout(sync, 300);
-    window.addEventListener('scroll', sync, true);
-    window.addEventListener('resize', sync);
-    return () => {
-      window.removeEventListener('scroll', sync, true);
-      window.removeEventListener('resize', sync);
-      clearTimeout(t);
-    };
-  }, [trackingOpen]);
 
   // For driver fields (difficulty_driver / execution_driver), derive field points from selected radio options
   const driverFieldsById = useMemo(() => {
@@ -664,12 +644,8 @@ export default function ScorePerformance() {
           )}
           {trackingOpen && (
             <div
-              className="fixed z-20 flex w-[800px] max-w-[92vw] flex-col overflow-hidden border-l bg-background shadow-xl"
-              style={
-                drawerBox
-                  ? { top: drawerBox.top, height: drawerBox.height, right: 0 }
-                  : { top: drawerTop, bottom: 0, right: 0 }
-              }
+              className="fixed z-20 flex w-[1100px] max-w-[96vw] flex-col overflow-hidden border-l bg-background shadow-xl"
+              style={{ top: drawerTop, bottom: 0, right: 0 }}
             >
               <div className="flex-1 overflow-y-auto p-4">
                 <ScoreTrackingTable
@@ -701,7 +677,7 @@ export default function ScorePerformance() {
 
         {/* Video (left) + scores (right column) */}
         <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
-          <div ref={videoCardRef} className="min-w-0">
+          <div className="min-w-0">
             <Card>
             <CardContent className="p-0">
               <div className="aspect-video bg-black rounded-t-lg flex items-center justify-center">
