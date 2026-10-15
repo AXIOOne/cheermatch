@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ArrowLeft, Save, Send, Loader2, Play, RotateCcw, Flag } from 'lucide-react';
 import { calculateStructuredDeductions, sortByDisplayOrder, fieldPanelAbbrevs, pickDivisionTemplateId } from '@/lib/scoring';
+import { ScoreTrackingTable } from '@/components/judge/ScoreTrackingTable';
 import { RubricReferenceSheet } from '@/components/judge/RubricReferenceSheet';
 import VideoPlayer from '@/components/video/VideoPlayer';
 
@@ -65,7 +66,7 @@ export default function ScorePerformance() {
       const { data, error } = await supabase.from('video_submissions').select(`
         *, team:teams(id, name, gym_name, athletes_female, athletes_male, division_id, level_id,
           division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)), level:levels(name, level_number)),
-        event:events(id, name, status, discipline, scoring_open_at, scoring_close_at)
+        event:events(id, name, status, discipline, scoring_open_at, scoring_close_at, score_tracking_enabled)
       `).eq('id', submissionId!).maybeSingle();
       if (error) throw error;
       return data;
@@ -500,6 +501,7 @@ export default function ScorePerformance() {
     onSuccess: (_, args) => {
       queryClient.invalidateQueries({ queryKey: ['existing-score'] });
       queryClient.invalidateQueries({ queryKey: ['judge-scores'] });
+      queryClient.invalidateQueries({ queryKey: ['score-tracking'] });
       queryClient.invalidateQueries({ queryKey: ['judge-existing-scores'] });
       if (args.status === 'submitted') {
         toast({ title: args.needsReview ? 'Score submitted & flagged for review' : 'Score submitted!' });
@@ -876,6 +878,14 @@ export default function ScorePerformance() {
             </Card>
           </div>
         </div>
+        {eventRow?.score_tracking_enabled && submission?.event_id && (
+          <ScoreTrackingTable
+            eventId={submission.event_id}
+            discipline={eventRow?.discipline}
+            panelId={assignedPanelId}
+            currentSubmissionId={submissionId!}
+          />
+        )}
       </div>
 
       <Dialog open={flagDialogOpen} onOpenChange={setFlagDialogOpen}>

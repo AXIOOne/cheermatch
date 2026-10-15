@@ -591,6 +591,7 @@ export type Database = {
           registration_open_at: string | null
           release_score_leaderboard: boolean
           sanctioned_event: boolean
+          score_tracking_enabled: boolean
           scoresheet_template_name: string | null
           scoring_close_at: string | null
           scoring_open_at: string | null
@@ -635,6 +636,7 @@ export type Database = {
           registration_open_at?: string | null
           release_score_leaderboard?: boolean
           sanctioned_event?: boolean
+          score_tracking_enabled?: boolean
           scoresheet_template_name?: string | null
           scoring_close_at?: string | null
           scoring_open_at?: string | null
@@ -679,6 +681,7 @@ export type Database = {
           registration_open_at?: string | null
           release_score_leaderboard?: boolean
           sanctioned_event?: boolean
+          score_tracking_enabled?: boolean
           scoresheet_template_name?: string | null
           scoring_close_at?: string | null
           scoring_open_at?: string | null

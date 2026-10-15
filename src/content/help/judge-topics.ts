@@ -68,6 +68,8 @@ export const judgeTopics: HelpTopic[] = [
       },
       { type: 'callout', variant: 'note', title: 'Automatic comments', text: 'Each technique issue you select on an execution driver adds a line to Comments & Feedback under that field’s name, in the form “technique issue: point value removed”. You can add your own notes around it.' },
       { type: 'p', text: 'You see points scored out of points available for your slot. Percentages are not shown per judge — the percentage is only calculated once the whole panel is combined.' },
+      { type: 'heading', text: 'Score Tracking' },
+      { type: 'p', text: 'When the event has Score Tracking turned on, a table at the bottom of the scoring screen lists every team assigned to you in that event, grouped by division, with a column for each field on your panel. Submitted scores show in green and drafts in yellow, so you can keep your scores consistent across the event. Only your own scores are shown.' },
       { type: 'callout', variant: 'warning', text: 'Submitting is final from your side. If you need to change a submitted score, ask the administrator to re-open the panel; your entries are preserved.' },
     ],
   },
