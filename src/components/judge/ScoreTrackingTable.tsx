@@ -24,6 +24,7 @@ interface Props {
  */
 export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmissionId }: Props) {
   const { user } = useAuth();
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const { data, isLoading } = useQuery({
     queryKey: ['score-tracking', eventId, user?.id, panelId],
