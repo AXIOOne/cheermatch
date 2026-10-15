@@ -187,10 +187,10 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
                 <div className="overflow-x-auto border-t">
                   <table className="w-full text-xs table-fixed">
                     <thead className="bg-muted/50">
-                      <tr>
-                        <th className="text-left font-medium px-2 py-1.5 sticky left-0 bg-muted/50 w-[160px]">Team</th>
+                        <tr>
+                        <th className="text-left font-medium px-2 py-1.5 sticky left-0 bg-muted/50 w-[150px]">Team</th>
                         {g.columns.map((c: any) => (
-                          <th key={c.name} className="text-center font-medium px-2 py-1.5 w-[110px] whitespace-normal break-words">{c.name}</th>
+                          <th key={c.name} className="text-center font-medium px-1.5 py-1.5 whitespace-normal break-words leading-tight">{c.name}</th>
                         ))}
                         <th className="text-center font-semibold px-2 py-1.5 w-[72px]">Total</th>
                       </tr>
@@ -202,13 +202,13 @@ export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmis
                         const isCurrent = r.submissionId === currentSubmissionId;
                         return (
                           <tr key={r.submissionId} className={cn('border-t', isCurrent && 'ring-2 ring-inset ring-primary')}>
-                            <td className="px-2 py-1.5 sticky left-0 bg-card w-[160px]">
+                            <td className="px-2 py-1.5 sticky left-0 bg-card w-[150px]">
                               <div className="font-medium truncate">{r.teamName}</div>
                               {r.gymName && <div className="text-muted-foreground truncate">{r.gymName}</div>}
                             </td>
                             {g.columns.map((c: any) => {
-                              const v = cellValue(r.score, c.fieldIds);
-                              return <td key={c.name} className={cn('text-center px-2 py-1.5 tabular-nums w-[110px]', v != null && tone)}>{fmt(v)}</td>;
+                               const v = cellValue(r.score, c.fieldIds);
+                               return <td key={c.name} className={cn('text-center px-1.5 py-1.5 tabular-nums', v != null && tone)}>{fmt(v)}</td>;
                             })}
                             <td className={cn('text-center px-2 py-1.5 font-semibold tabular-nums w-[72px]', r.score && tone)}>
                               {r.score ? fmt(r.score.total_score) : '–'}
