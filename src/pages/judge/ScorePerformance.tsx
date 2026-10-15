@@ -676,7 +676,7 @@ export default function ScorePerformance() {
         </Card>
 
         {/* Video (left) + scores (right column) */}
-        <div className="grid gap-6 lg:grid-cols-2 lg:items-stretch">
+        <div className="grid gap-6 lg:grid-cols-[11fr_9fr] lg:items-stretch">
           <div className="min-w-0">
             <Card>
             <CardContent className="p-0">
