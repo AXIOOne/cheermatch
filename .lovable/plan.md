@@ -1,39 +1,26 @@
-# Judge Portal: Design Parity Review + Gap Fixes
+# Judge Portal: Gap Fixes + Judge Manual PDF
 
-## Answers to your questions
+## Context (from the parity review)
 
-**Is the judge portal design kept up to date with admin?** Yes. The judge sidebar uses the exact same flat light-gray header band, logo + VIRTUAL wordmark, collapse toggle, and aligned divider as admin (the markup is identical in both files). Fonts, colors, the rubric links menu, and the broadcast/messages UI are all shared components, so design updates have carried over automatically.
+The judge portal's design already matches admin — identical sidebar header band, logo + VIRTUAL wordmark, collapse toggle, shared rubric links and broadcast/messages UI. The gaps are functional: Score History has no menu link, judges have no settings/profile page, the judge top bar is arranged differently than admin's, and judge Help has no downloadable manual.
 
-**What judges can do today:**
-- Dashboard: assigned events, in-progress and completed score counts, per-event "Score" buttons
-- Scoring Queue: their assigned performances, filterable by pending / draft / scored
-- Scoring screen: video player, score fields, deductions, Save Draft / Submit, rubric reference sheet
-- Score History: their submitted scores (exists, but see gap 1)
-- Rubrics: read-only browse/download
-- Help: 7 judge-specific articles
-- Broadcasts: banner + messages menu (same component admin uses)
+## Work items
 
-## Gaps found
+1. **Score History menu link** — add to the judge sidebar between Scoring Queue and Rubrics (clipboard icon). The page at /judge/history already exists.
 
-1. **Score History is unreachable** — the page exists at /judge/history but has no menu link.
-2. **No judge Settings/profile page** — judges can't change their own password, upload an avatar, or set notification preferences. (The shared /reset-password page exists but nothing in the judge portal points to it.)
-3. **Thinner Help** — 7 short topics vs admin's 11, and no downloadable manual like admin has.
-4. **Minor header inconsistency** — the judge top bar arranges the collapse control, "Judge Portal" label, and messages icon in a different order than admin's.
+2. **Judge Settings page** (`/judge/settings`) with two cards:
+   - Profile: full name + avatar upload (writes to the existing `profiles` row; avatar shown in the sidebar footer)
+   - Security: change password — current password + new password, via `supabase.auth.updateUser({ password, current_password })`
+   - Sidebar entry (Settings gear) above Log Out
 
-## Proposed work
+3. **Align the judge top bar with admin** — collapse control left, "Judge Portal" label, messages menu right, matching AdminLayout's arrangement.
 
-1. Add a **Score History** item to the judge menu (clipboard icon, between Scoring Queue and Rubrics).
-2. Add a **judge Settings page** (`/judge/settings`) with:
-   - Profile: full name + avatar upload (writes to the existing `profiles` row)
-   - Security: change password (current password + new password, using the signed-in password change flow)
-   - Menu entry in the judge sidebar footer area
-3. Align the judge top bar with admin's layout (collapse control left, label, messages right).
-4. Expand judge Help where gaps are obvious (Score History article, Settings/article for password change) — kept lightweight.
+4. **Judge Help additions** — two short articles: Score History, and Settings & Password.
 
-Not included (say the word if you want them): a downloadable judge manual PDF, notification preferences, or any change to scoring itself.
+5. **Downloadable Judge Manual PDF** — generate `public/docs/cheermatch-judge-manual.pdf` covering all judge help topics (cover page, table of contents, one section per topic), matching the style of the existing admin manual. Add a "Download PDF manual" button to the judge Help page header (the `showManualDownload` prop already exists on HelpLayout — extend it to accept the judge manual path).
 
 ## Technical notes
 
-- New files: `src/pages/judge/Settings.tsx`; edits to `JudgeSidebar.tsx`, `JudgeLayout.tsx`, `App.tsx`, `judge-topics.ts`.
-- Avatar upload reuses the existing storage pattern; password change calls `supabase.auth.updateUser({ password, current_password })`.
-- No database or backend changes needed.
+- New files: `src/pages/judge/Settings.tsx`, `public/docs/cheermatch-judge-manual.pdf` (generated with reportlab, visually QA'd page by page).
+- Edits: `JudgeSidebar.tsx`, `JudgeLayout.tsx`, `App.tsx` (route), `judge-topics.ts`, `HelpLayout.tsx` / `src/pages/judge/Help.tsx` (manual download button).
+- No database or backend changes.
