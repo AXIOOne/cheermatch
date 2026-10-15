@@ -1,12 +1,7 @@
 # Roadmap
 
-## In progress
-- Judge portal gap fixes (approved plan):
-  - Score History link in judge menu
-  - Judge Settings page (/judge/settings): profile name + avatar, change password
-  - Align judge top bar with admin
-  - Judge Help articles: Score History, Settings & Password
-  - Downloadable judge manual PDF + button on judge Help
+## Done
+- Judge portal gap fixes: Score History menu link, judge Settings page (profile + avatar + password change), judge top bar aligned with admin, two new judge Help articles, downloadable judge manual PDF with Help download button.
 
 ## Open / blocked
 - Training video link pending (admin_settings key training_video_url)
