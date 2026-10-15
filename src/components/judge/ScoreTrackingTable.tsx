@@ -24,7 +24,7 @@ interface Props {
  * this event, grouped by division, with one column per field in their panel.
  * Submitted = success color, draft = warning color.
  */
-export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmissionId }: Props) {
+export function ScoreTrackingTable({ eventId, discipline, panelId, currentSubmissionId, embedded = false }: Props) {
   const { user } = useAuth();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
