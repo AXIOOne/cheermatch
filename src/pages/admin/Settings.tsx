@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CoachPasswordSetting } from '@/components/admin/CoachPasswordSetting';
+import { TrainingVideoSetting } from '@/components/admin/TrainingVideoSetting';
 import { useNavigate, Link } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -302,6 +303,7 @@ export default function Settings() {
       ) : (
         <div className="grid gap-6 md:grid-cols-2">
           <CoachPasswordSetting />
+          <TrainingVideoSetting />
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
