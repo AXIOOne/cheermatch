@@ -431,7 +431,7 @@ export default function EventScoring() {
       in_progress: 'Draft saved by judge (not submitted) — click to preview',
       submitted: 'Complete — click to view/edit',
       needs_review: 'Needs review — click to view/edit',
-      reviewed: 'Reviewed — click to view/edit',
+      reviewed: 'Complete — click to view/edit',
     };
     return (
       <button

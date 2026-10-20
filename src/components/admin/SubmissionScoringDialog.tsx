@@ -553,6 +553,26 @@ export default function SubmissionScoringDialog({
     onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
 
+  const resolveFlagMutation = useMutation({
+    mutationFn: async () => {
+      if (!currentPanelScore) throw new Error('No score to resolve');
+      const { data: userData } = await supabase.auth.getUser();
+      const { error } = await sb.from('scores').update({
+        needs_review: false,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: userData.user?.id ?? null,
+      }).eq('id', currentPanelScore.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setNeedsReview(false);
+      queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
+      toast({ title: 'Flag resolved', description: 'This score is now complete.' });
+    },
+    onError: (e: any) => toast({ variant: 'destructive', title: 'Resolve failed', description: e.message }),
+  });
+
   // Re-open a submitted/locked panel score so the assigned judge can edit and resubmit
   const reopenMutation = useMutation({
     mutationFn: async () => {
@@ -674,7 +694,7 @@ export default function SubmissionScoringDialog({
     submitted: 'Submitted',
     needs_review: 'Needs Review',
     locked: 'Locked',
-    reviewed: 'Reviewed',
+    reviewed: 'Complete',
   };
 
   // One summary row per panel: status, assigned judge, and running score.
@@ -907,6 +927,11 @@ export default function SubmissionScoringDialog({
                             <p className="text-muted-foreground mt-1">No reason provided.</p>
                           )}
                         </div>
+                        <Button type="button" size="sm" className="ml-auto shrink-0"
+                          onClick={() => resolveFlagMutation.mutate()} disabled={resolveFlagMutation.isPending}>
+                          {resolveFlagMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle className="w-4 h-4 mr-2" />}
+                          Resolve Flag
+                        </Button>
                       </div>
                     )}
                     <div className="space-y-4 max-h-[340px] overflow-y-auto pr-2">
