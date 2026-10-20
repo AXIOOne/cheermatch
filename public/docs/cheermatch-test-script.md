@@ -111,6 +111,7 @@
 | I7 | Ranking reports | Event > Reports: generate Overall, By Level, and per-Division rankings. | Rankings ordered by % Perfection to 4 decimals; ties handled; PDFs open cleanly. |  |  |
 | I8 | Scoresheet email | Trigger scoresheet distribution once all panels submit. | Email sent with correct branding/logo and the right scoresheet attached. |  |  |
 | I9 | Mark as Reviewed saves first | In the score review dialog, change a field score, then click the top **Mark as Reviewed** without pressing Save. | The edit is written and the total recalculated, and the score is stamped reviewed (same result as the bottom **Save & Mark as Reviewed**). |  |  |
+| I10 | Unsaved-changes guard | Change a score, comment or deduction, then close the dialog (X, backdrop or Escape) without saving. Repeat, choosing **Keep editing**, then **Discard changes**. Also close a dialog you never edited, and one you just saved. | An unsaved-changes warning appears; **Keep editing** returns to the dialog with edits intact; **Discard changes** closes and re-opening shows the saved values. Closing an unedited or freshly saved dialog closes with no warning. |  |  |
 
 ## J. Communication
 
