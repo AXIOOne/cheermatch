@@ -1,0 +1,2 @@
+ALTER TABLE public.scoring_templates ADD COLUMN show_score_type_tags boolean NOT NULL DEFAULT true;
+COMMENT ON COLUMN public.scoring_templates.show_score_type_tags IS 'Show the Diff/Exec score-type tag beside each field in the template editor field list';

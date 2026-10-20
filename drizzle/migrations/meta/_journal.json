@@ -57,6 +57,13 @@
       "when": 1792028038269,
       "tag": "0007_event_score_tracking",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792457208131,
+      "tag": "0008_add_show_score_type_tags",
+      "breakpoints": true
     }
   ]
 }
