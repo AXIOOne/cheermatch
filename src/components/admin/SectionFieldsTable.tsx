@@ -8,9 +8,10 @@ interface Props {
   fields: ScoringField[];
   onChange: (fields: ScoringField[]) => void;
   availablePanels?: string[];
+  showTags?: boolean;
 }
 
-export default function SectionFieldsTable({ fields, onChange, availablePanels }: Props) {
+export default function SectionFieldsTable({ fields, onChange, availablePanels, showTags = true }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
 
@@ -60,9 +61,11 @@ export default function SectionFieldsTable({ fields, onChange, availablePanels }
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{f.name || <span className="text-muted-foreground italic">Unnamed</span>}</p>
-                      <Badge variant={f.score_type === 'execution' ? 'default' : 'secondary'} className="text-[10px] uppercase">
-                        {f.score_type === 'execution' ? 'Exec' : 'Diff'}
-                      </Badge>
+                      {showTags && (
+                        <Badge variant={f.score_type === 'execution' ? 'default' : 'secondary'} className="text-[10px] uppercase">
+                          {f.score_type === 'execution' ? 'Exec' : 'Diff'}
+                        </Badge>
+                      )}
                     </div>
                     {f.description && <p className="text-xs text-muted-foreground">{f.description}</p>}
                   </td>
