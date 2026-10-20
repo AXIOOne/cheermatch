@@ -69,6 +69,13 @@ export default function SubmissionScoringDialog({
   const [duration, setDuration] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [reopenConfirmOpen, setReopenConfirmOpen] = useState(false);
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
+  const [dirty, setDirty] = useState(false);
+
+  // A fresh open (or a different submission) starts with nothing edited.
+  useEffect(() => {
+    if (open) { setDirty(false); setDiscardConfirmOpen(false); }
+  }, [open, submissionId]);
 
   useEffect(() => { if (open && initialPanelId) setSelectedPanelId(initialPanelId); }, [open, initialPanelId]);
   useEffect(() => {
@@ -255,6 +262,7 @@ export default function SubmissionScoringDialog({
       setDeductionWarnings(loadedWarn);
       setComments(panelScore.comments || '');
       setNeedsReview(Boolean(panelScore.needs_review));
+      setDirty(false);
     } else {
       const init: Record<string, FieldScore> = {};
       allVisibleFields.forEach((f: any) => {
@@ -271,6 +279,7 @@ export default function SubmissionScoringDialog({
       setDeductionWarnings(initWarn);
       setComments('');
       setNeedsReview(false);
+      setDirty(false);
     }
   }, [selectedPanelId, allScores, template, visibleSections]);
 
@@ -359,10 +368,14 @@ export default function SubmissionScoringDialog({
     });
   }, [skillSelections, driverFieldsById]);
 
-  const updateFieldScore = (fieldId: string, points: number) =>
+  const updateFieldScore = (fieldId: string, points: number) => {
+    setDirty(true);
     setFieldScores(prev => ({ ...prev, [fieldId]: { ...prev[fieldId], field_id: fieldId, points, notes: prev[fieldId]?.notes || '' } }));
-  const updateFieldNotes = (fieldId: string, notes: string) =>
+  };
+  const updateFieldNotes = (fieldId: string, notes: string) => {
+    setDirty(true);
     setFieldScores(prev => ({ ...prev, [fieldId]: { ...prev[fieldId], field_id: fieldId, points: prev[fieldId]?.points || 0, notes } }));
+  };
 
   const calculateRawScore = () => {
     let total = 0;
@@ -527,6 +540,7 @@ export default function SubmissionScoringDialog({
       }
     },
     onSuccess: (_, args) => {
+      setDirty(false);
       queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
       queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
       toast({ title: args.markReviewed ? 'Score saved & marked reviewed' : 'Score saved' });
@@ -566,6 +580,7 @@ export default function SubmissionScoringDialog({
     },
     onSuccess: () => {
       setNeedsReview(false);
+      setDirty(false);
       queryClient.invalidateQueries({ queryKey: ['submission-all-scores', submissionId] });
       queryClient.invalidateQueries({ queryKey: ['event-submissions-scoring', eventId] });
       toast({ title: 'Flag resolved', description: 'This score is now complete.' });
@@ -713,7 +728,10 @@ export default function SubmissionScoringDialog({
   if (!submissionId) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(next) => {
+      if (!next && dirty && !isSaving) { setDiscardConfirmOpen(true); return; }
+      onOpenChange(next);
+    }}>
       <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0 space-y-2">
           <DialogTitle className="flex items-center gap-3 flex-wrap pr-8">
@@ -1077,12 +1095,15 @@ export default function SubmissionScoringDialog({
                                             <p className="text-xs font-medium mb-2">{sk.name}</p>
                                             <RadioGroup
                                               value={selected || '__none__'}
-                                              onValueChange={(val) => setSkillSelections(prev => {
-                                                const next = { ...prev };
-                                                if (val === '__none__') delete next[sk.id];
-                                                else next[sk.id] = val;
-                                                return next;
-                                              })}
+                                              onValueChange={(val) => {
+                                                setDirty(true);
+                                                setSkillSelections(prev => {
+                                                  const next = { ...prev };
+                                                  if (val === '__none__') delete next[sk.id];
+                                                  else next[sk.id] = val;
+                                                  return next;
+                                                });
+                                              }}
                                               disabled={isCurrentPanelLocked}
                                               className="flex flex-wrap gap-3"
                                             >
@@ -1166,14 +1187,14 @@ export default function SubmissionScoringDialog({
                                     <span className="text-[10px] uppercase text-muted-foreground">Count</span>
                                     <Input type="number" min={0} step={1}
                                       value={deductionCounts[dt.id] || 0}
-                                      onChange={(e) => setDeductionCounts(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
+                                      onChange={(e) => { setDirty(true); setDeductionCounts(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) })); }}
                                       className="w-16" disabled={isCurrentPanelLocked} />
                                   </div>
                                   <div className="flex flex-col items-center">
                                     <span className="text-[10px] uppercase text-muted-foreground">Warnings</span>
                                     <Input type="number" min={0} step={1}
                                       value={deductionWarnings[dt.id] || 0}
-                                      onChange={(e) => setDeductionWarnings(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) }))}
+                                      onChange={(e) => { setDirty(true); setDeductionWarnings(prev => ({ ...prev, [dt.id]: Math.max(0, parseInt(e.target.value || '0', 10) || 0) })); }}
                                       className="w-16" disabled={isCurrentPanelLocked} />
                                   </div>
                                 </div>
@@ -1209,7 +1230,7 @@ export default function SubmissionScoringDialog({
                 <div>
                   <label className="text-sm font-medium">Feedback & Comments</label>
                   <FormattedCommentField placeholder="Overall feedback for the team..."
-                    value={comments} onChange={setComments} rows={3}
+                    value={comments} onChange={(v) => { setDirty(true); setComments(v); }} rows={3}
                     disabled={isCurrentPanelLocked} className="mt-1" toolbarClassName="mt-1" />
                 </div>
 
@@ -1220,7 +1241,7 @@ export default function SubmissionScoringDialog({
                       <p className="text-xs text-muted-foreground">Mark as needing review.</p>
                     </div>
                     <Switch id="needs-review-switch" checked={needsReview}
-                      onCheckedChange={setNeedsReview} disabled={isCurrentPanelLocked} />
+                      onCheckedChange={(v) => { setDirty(true); setNeedsReview(v); }} disabled={isCurrentPanelLocked} />
                   </div>
                   <div className="flex gap-2">
                     {isCurrentPanelLocked ? (
@@ -1295,6 +1316,25 @@ export default function SubmissionScoringDialog({
             >
               {reopenMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Re-open for Scoring
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog open={discardConfirmOpen} onOpenChange={setDiscardConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard unsaved changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You've changed this score but haven't saved it. Closing now will throw those changes away.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => { e.preventDefault(); setDiscardConfirmOpen(false); setDirty(false); onOpenChange(false); }}
+            >
+              Discard changes
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
