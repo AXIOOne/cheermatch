@@ -762,10 +762,10 @@ export default function SubmissionScoringDialog({
                     type="button"
                     variant="default"
                     size="sm"
-                    onClick={() => reviewMutation.mutate(true)}
-                    disabled={reviewMutation.isPending}
+                    onClick={() => saveMutation.mutate({ markReviewed: true })}
+                    disabled={saveMutation.isPending || reviewMutation.isPending}
                   >
-                    {reviewMutation.isPending ? (
+                    {saveMutation.isPending ? (
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     ) : (
                       <CheckCircle className="w-4 h-4 mr-2" />
