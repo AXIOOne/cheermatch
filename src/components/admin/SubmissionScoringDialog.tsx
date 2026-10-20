@@ -937,7 +937,7 @@ export default function SubmissionScoringDialog({
                                   <div className="min-w-0 flex-1">
                                     <p className="text-sm font-medium flex items-center gap-2">
                                       {f.name}
-                                      {f.score_type && (
+                                      {template?.show_score_type_tags !== false && f.score_type && (
                                         <Badge
                                           variant="outline"
                                           className={`text-[10px] px-1.5 py-0 font-normal ${f.score_type === 'difficulty' ? 'border-primary/50 text-primary' : 'border-amber-500/50 text-amber-600 dark:text-amber-400'}`}

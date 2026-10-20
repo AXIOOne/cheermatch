@@ -734,7 +734,7 @@ export default function ScorePerformance() {
                             <div>
                               <p className="font-medium text-sm flex items-center gap-2">
                                 {f.name}
-                                {f.score_type && (
+                                {template?.show_score_type_tags !== false && f.score_type && (
                                   <Badge
                                     variant="outline"
                                     className={`text-[10px] px-1.5 py-0 font-normal ${f.score_type === 'difficulty' ? 'border-primary/50 text-primary' : 'border-amber-500/50 text-amber-600 dark:text-amber-400'}`}
