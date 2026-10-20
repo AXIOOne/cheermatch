@@ -1790,6 +1790,7 @@ export type Database = {
           is_locked: boolean
           name: string
           show_comments_on_scoresheet: boolean
+          show_score_type_tags: boolean
           updated_at: string
         }
         Insert: {
@@ -1804,6 +1805,7 @@ export type Database = {
           is_locked?: boolean
           name: string
           show_comments_on_scoresheet?: boolean
+          show_score_type_tags?: boolean
           updated_at?: string
         }
         Update: {
@@ -1818,6 +1820,7 @@ export type Database = {
           is_locked?: boolean
           name?: string
           show_comments_on_scoresheet?: boolean
+          show_score_type_tags?: boolean
           updated_at?: string
         }
         Relationships: [

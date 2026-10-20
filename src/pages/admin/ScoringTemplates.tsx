@@ -30,6 +30,7 @@ const templateSchema = z.object({
   show_comments_on_scoresheet: z.boolean(),
   difficulty_label: z.string().optional(),
   execution_label: z.string().optional(),
+  show_score_type_tags: z.boolean(),
 });
 
 type TemplateFormData = z.infer<typeof templateSchema>;
@@ -86,7 +87,7 @@ export default function ScoringTemplates() {
 
   const form = useForm<TemplateFormData>({
     resolver: zodResolver(templateSchema),
-    defaultValues: { name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false, difficulty_label: 'Difficulty', execution_label: 'Execution' },
+    defaultValues: { name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false, difficulty_label: 'Difficulty', execution_label: 'Execution', show_score_type_tags: true },
   });
 
   // Panel slots defined on the template being edited drive the field builder chips.
@@ -260,6 +261,7 @@ export default function ScoringTemplates() {
           show_comments_on_scoresheet: data.show_comments_on_scoresheet,
           difficulty_label: data.difficulty_label?.trim() || 'Difficulty',
           execution_label: data.execution_label?.trim() || 'Execution',
+          show_score_type_tags: data.show_score_type_tags,
         })
         .select().single();
       if (error) throw error;
@@ -286,6 +288,7 @@ export default function ScoringTemplates() {
         show_comments_on_scoresheet: data.show_comments_on_scoresheet,
         difficulty_label: data.difficulty_label?.trim() || 'Difficulty',
         execution_label: data.execution_label?.trim() || 'Execution',
+        show_score_type_tags: data.show_score_type_tags,
       }).eq('id', id);
       if (tErr) throw tErr;
       // wipe and recreate sections+fields (cascade handles fields/options/panels)
@@ -440,7 +443,7 @@ export default function ScoringTemplates() {
 
   const handleNewTemplate = () => {
     setEditingTemplate(null);
-    form.reset({ name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false, difficulty_label: 'Difficulty', execution_label: 'Execution' });
+    form.reset({ name: '', description: '', discipline: 'allstar_cheer', is_default: false, show_comments_on_scoresheet: false, difficulty_label: 'Difficulty', execution_label: 'Execution', show_score_type_tags: true });
     setSections([]); setDeductions([]); setTemplatePanels([]);
     setIsDialogOpen(true);
   };
@@ -458,6 +461,7 @@ export default function ScoringTemplates() {
       show_comments_on_scoresheet: !!tpl.show_comments_on_scoresheet,
       difficulty_label: tpl.difficulty_label || 'Difficulty',
       execution_label: tpl.execution_label || 'Execution',
+      show_score_type_tags: tpl.show_score_type_tags !== false,
     });
     const loadedSections: ScoringSection[] = (tpl.sections || [])
       .sort((a: any, b: any) => (a.display_order ?? 0) - (b.display_order ?? 0))
@@ -610,6 +614,24 @@ export default function ScoringTemplates() {
                     </FormItem>
                   )} />
                 </div>
+                <FormField control={form.control} name="show_score_type_tags" render={({ field }) => (
+                  <FormItem className="flex flex-row items-start gap-3 rounded-md border p-3">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 accent-primary"
+                        checked={!!field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="cursor-pointer">Show Diff/Exec tags beside fields</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        When enabled, each field in the editor shows a small Diff or Exec tag. The Score Type drop-down still decides which scoresheet column the field lands in.
+                      </p>
+                    </div>
+                  </FormItem>
+                )} />
                 <FormField control={form.control} name="show_comments_on_scoresheet" render={({ field }) => (
                   <FormItem className="flex flex-row items-start gap-3 rounded-md border p-3">
                     <FormControl>
@@ -644,6 +666,7 @@ export default function ScoringTemplates() {
                         onSectionsChange={setSections}
                         onDeductionsChange={setDeductions}
                         availablePanels={availablePanels}
+                        showTags={form.watch('show_score_type_tags')}
                       />
                     </div>
                   </TabsContent>

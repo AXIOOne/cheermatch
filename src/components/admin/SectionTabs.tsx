@@ -23,6 +23,7 @@ interface SectionTabsProps {
   onSectionsChange: (sections: ScoringSection[]) => void;
   onDeductionsChange: (deductions: DeductionType[]) => void;
   availablePanels?: string[];
+  showTags?: boolean;
 }
 
 function generateTempId() {
@@ -49,6 +50,7 @@ export default function SectionTabs({
   onSectionsChange,
   onDeductionsChange,
   availablePanels,
+  showTags = true,
 }: SectionTabsProps) {
   const addSection = () => {
     onSectionsChange([
@@ -171,6 +173,7 @@ export default function SectionTabs({
                 fields={section.fields}
                 onChange={(fields) => updateSection(index, { fields })}
                 availablePanels={availablePanels}
+                showTags={showTags}
               />
             </TabsContent>
           ))}
