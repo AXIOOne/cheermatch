@@ -110,6 +110,7 @@
 | I6 | Scoresheet PDF | Download a scoresheet PDF for a fully scored team and a partially scored team. | All template criteria rows always shown; unscored rows blank/greyed with max points; difficulty + execution for the same criterion share one row with a combined total. |  |  |
 | I7 | Ranking reports | Event > Reports: generate Overall, By Level, and per-Division rankings. | Rankings ordered by % Perfection to 4 decimals; ties handled; PDFs open cleanly. |  |  |
 | I8 | Scoresheet email | Trigger scoresheet distribution once all panels submit. | Email sent with correct branding/logo and the right scoresheet attached. |  |  |
+| I9 | Mark as Reviewed saves first | In the score review dialog, change a field score, then click the top **Mark as Reviewed** without pressing Save. | The edit is written and the total recalculated, and the score is stamped reviewed (same result as the bottom **Save & Mark as Reviewed**). |  |  |
 
 ## J. Communication
 
