@@ -20,6 +20,11 @@ const DISCIPLINES: { label: string; href: string; external?: boolean }[] = [
     external: true,
   },
   {
+    label: 'All-Star Dance',
+    href: 'https://www.unitedscoringpartners.com/united-states-dance/',
+    external: true,
+  },
+  {
     label: 'NCA School Cheer',
     href: 'https://www.varsity.com/nca/school/competitions/rules-scoring/',
     external: true,
