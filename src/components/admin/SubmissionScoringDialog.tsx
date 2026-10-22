@@ -837,7 +837,11 @@ export default function SubmissionScoringDialog({
                 </span>
                 {score && (
                   <span className="block text-[10px] opacity-80 font-mono">
-                    {panelRaw.toFixed(2)} / {panelMax.toFixed(2)}
+                    {(panel.abbreviation || '').toUpperCase() === 'SD'
+                      ? `Deductions: ${(selectedPanelId === panel.id
+                          ? calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts)
+                          : Number(score.deductions || 0)).toFixed(2)}`
+                      : `${panelRaw.toFixed(2)} / ${panelMax.toFixed(2)}`}
                   </span>
                 )}
                 {status === 'in_progress' && (
@@ -1168,8 +1172,8 @@ export default function SubmissionScoringDialog({
                         <div className="flex items-center justify-between">
                           <label className="text-sm font-medium text-destructive">Deductions</label>
                           <div className="text-right space-y-0.5">
-                            <p className="text-sm text-muted-foreground">Total Points</p>
-                            <p className="text-3xl font-bold text-primary">{calculateRawScore().toFixed(2)} / {calculateTotalMax().toFixed(2)}</p>
+                            <p className="text-sm text-muted-foreground">Total Deductions</p>
+                            <p className="text-3xl font-bold text-destructive">{calculateStructuredDeductions((template.deduction_types || []) as any[], deductionCounts).toFixed(2)}</p>
                           </div>
                         </div>
 

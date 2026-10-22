@@ -904,10 +904,10 @@ export default function ScorePerformance() {
                 <Card className="border-2 border-primary">
                   <CardContent className="py-4 space-y-2">
                     {isSdAssigned && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Deductions</span>
-                        <span className="font-medium text-destructive">
-                          -{calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts).toFixed(2)}
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-lg">Total Deductions</span>
+                        <span className="text-3xl font-bold text-destructive">
+                          {calculateStructuredDeductions((template?.deduction_types || []) as any[], deductionCounts).toFixed(2)}
                         </span>
                       </div>
                     )}
