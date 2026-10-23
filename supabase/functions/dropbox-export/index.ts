@@ -87,6 +87,8 @@ Deno.serve(async (req) => {
       u.searchParams.set("token_access_type", "offline");
       u.searchParams.set("redirect_uri", redirectUri);
       u.searchParams.set("state", "dropbox");
+      // Asking only for personal scopes gives a single-person token even when the app also has team scopes.
+      u.searchParams.set("scope", "account_info.read files.content.write");
       return ok("ok", { url: u.toString() });
     }
 
@@ -98,7 +100,8 @@ Deno.serve(async (req) => {
       const admin = await teamAdmin(tok.access_token);
       const acct = await dbx(tok.access_token, "users/get_current_account", null, admin?.id);
       if (!acct.ok && !admin) {
-        return fail("This Dropbox sign-in is for a whole Business team. Add the team_info.read permission to the Dropbox app (or remove its team permissions), then connect again.");
+        console.error("dropbox connect: account lookup failed", acct.status, acct.text.slice(0, 500));
+        return fail(`Dropbox would not share the account details [${acct.status}]: ${acct.text.slice(0, 200)}`);
       }
       await sb.from("dropbox_connection").upsert({
         id: true,
