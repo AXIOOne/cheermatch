@@ -62,7 +62,13 @@ export function DropboxSetting() {
     setBusy(true);
     try {
       const { url } = await dropboxCall({ action: 'auth_url', redirect_uri: dropboxRedirectUri() });
-      window.location.href = url;
+      // Dropbox refuses to load inside embedded frames (e.g. the editor preview), so open it in a new tab there.
+      if (window.self !== window.top) {
+        window.open(url, '_blank', 'noopener');
+        setBusy(false);
+      } else {
+        window.location.href = url;
+      }
     } catch (e) {
       toast({ title: 'Could not start Dropbox sign-in', description: (e as Error).message, variant: 'destructive' });
       setBusy(false);
