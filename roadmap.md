@@ -1,5 +1,8 @@
 # Roadmap
 
+## Current
+- Compact registered teams table with capture-started gray, awaiting-approval yellow, and approved green rows; verify status rules and live table.
+
 ## Done
 - Judge portal gap fixes: judge Settings page (profile + avatar + password change), judge top bar aligned with admin, judge Help articles, downloadable judge manual PDF with Help download button.
 
