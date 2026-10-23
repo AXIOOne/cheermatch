@@ -18,6 +18,30 @@ import { EditRegistrationDialog } from '@/components/admin/EditRegistrationDialo
 import { BulkImportTeamsDialog } from '@/components/admin/BulkImportTeamsDialog';
 import { CoachAccountsPanel } from '@/components/admin/CoachAccountsPanel';
 
+const videoStatusLabel: Record<string, string> = {
+  pending: 'Pending',
+  uploaded: 'Uploaded',
+  processing: 'Processing',
+  ready: 'Ready for Review',
+  imported: 'Imported',
+  approved: 'Approved',
+  denied: 'Denied',
+  assigned: 'Assigned to Judges',
+  complete: 'Scored',
+  revision_requested: 'Revision Requested',
+  failed: 'Failed',
+};
+
+const videoStatusClass: Record<string, string> = {
+  ready: 'bg-blue-100 text-blue-700',
+  imported: 'bg-muted text-muted-foreground',
+  approved: 'bg-green-100 text-green-700',
+  complete: 'bg-green-100 text-green-700',
+  denied: 'bg-destructive/10 text-destructive',
+  failed: 'bg-destructive/10 text-destructive',
+  revision_requested: 'bg-amber-100 text-amber-700',
+};
+
 export default function EventRegistrations() {
   const { eventId } = useParams<{ eventId: string }>();
   const [searchQuery, setSearchQuery] = useState('');
@@ -59,15 +83,16 @@ export default function EventRegistrations() {
   });
 
   // Video submissions for this event, so the delete confirmation can warn when a submission is kept
+  // and the table can show each team's video status
   const { data: eventSubmissions } = useQuery({
     queryKey: ['event-teams-submissions', eventId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('video_submissions')
-        .select('id, team_id')
+        .select('id, team_id, status, created_at, archived_at')
         .eq('event_id', eventId!);
       if (error) throw error;
-      return data as Array<{ id: string; team_id: string | null }>;
+      return data as Array<{ id: string; team_id: string | null; status: string; created_at: string; archived_at: string | null }>;
     },
     enabled: !!eventId,
   });
@@ -76,6 +101,17 @@ export default function EventRegistrations() {
     const map = new Map<string, number>();
     (eventSubmissions ?? []).forEach((s) => {
       if (s.team_id) map.set(s.team_id, (map.get(s.team_id) ?? 0) + 1);
+    });
+    return map;
+  }, [eventSubmissions]);
+
+  // Latest non-archived submission per team, for the Video column
+  const videoStatusByTeam = useMemo(() => {
+    const map = new Map<string, { status: string; created_at: string }>();
+    (eventSubmissions ?? []).forEach((s) => {
+      if (!s.team_id || s.archived_at) return;
+      const current = map.get(s.team_id);
+      if (!current || s.created_at > current.created_at) map.set(s.team_id, s);
     });
     return map;
   }, [eventSubmissions]);
@@ -173,6 +209,7 @@ export default function EventRegistrations() {
                   <TableHead>Gym</TableHead>
                   <TableHead>Division</TableHead>
                   <TableHead>Level</TableHead>
+                  <TableHead>Video</TableHead>
                   <TableHead className="text-right">Athletes</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -203,6 +240,19 @@ export default function EventRegistrations() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="secondary">{team.level?.name || '—'}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const submission = videoStatusByTeam.get(team.id);
+                        if (!submission) return <span className="text-muted-foreground">—</span>;
+                        const label = videoStatusLabel[submission.status] ?? submission.status;
+                        const cls = videoStatusClass[submission.status] ?? 'bg-muted text-muted-foreground';
+                        return (
+                          <Badge variant="outline" className={`${cls} border-0 font-medium`}>
+                            {label}
+                          </Badge>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-right">{(team.athletes_female || 0) + (team.athletes_male || 0)} <span className="text-muted-foreground">({team.athletes_female || 0}F / {team.athletes_male || 0}M)</span></TableCell>
                     <TableCell className="text-right">
