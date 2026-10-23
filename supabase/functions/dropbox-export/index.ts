@@ -24,16 +24,26 @@ async function tokenRequest(params: Record<string, string>) {
   return JSON.parse(text);
 }
 
-async function dbx(token: string, path: string, body: unknown) {
+async function dbx(token: string, path: string, body: unknown, member?: string | null) {
+  const headers: Record<string, string> = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+  // Team-wide (Dropbox Business) tokens must say which member's Dropbox to act on.
+  if (member) headers["Dropbox-API-Select-User"] = member;
   const res = await fetch(`https://api.dropboxapi.com/2/${path}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    headers,
     body: body === null ? undefined : JSON.stringify(body),
   });
   const text = await res.text();
   let json: any = null;
   try { json = JSON.parse(text); } catch { /* not json */ }
   return { ok: res.ok, status: res.status, json, text };
+}
+
+// Returns the signed-in admin's team member id when the token belongs to a whole Dropbox Business team, else null.
+async function teamAdmin(token: string): Promise<{ id: string; email: string | null } | null> {
+  const r = await dbx(token, "team/token/get_authenticated_admin", null);
+  const p = r.ok ? r.json?.admin_profile : null;
+  return p?.team_member_id ? { id: p.team_member_id, email: p.email ?? null } : null;
 }
 
 Deno.serve(async (req) => {
@@ -85,15 +95,19 @@ Deno.serve(async (req) => {
       if (!code || !redirectUri) return fail("Missing code");
       const tok = await tokenRequest({ grant_type: "authorization_code", code, redirect_uri: redirectUri });
       if (!tok.refresh_token) return fail("Dropbox did not return a long-lived token.");
-      const acct = await dbx(tok.access_token, "users/get_current_account", null);
+      const admin = await teamAdmin(tok.access_token);
+      const acct = await dbx(tok.access_token, "users/get_current_account", null, admin?.id);
+      if (!acct.ok && !admin) {
+        return fail("This Dropbox sign-in is for a whole Business team. Add the team_info.read permission to the Dropbox app (or remove its team permissions), then connect again.");
+      }
       await sb.from("dropbox_connection").upsert({
         id: true,
         refresh_token: tok.refresh_token,
-        account_email: acct.json?.email ?? null,
+        account_email: acct.json?.email ?? admin?.email ?? null,
         base_folder: conn?.base_folder ?? "/CheerMatch Videos",
         connected_at: new Date().toISOString(),
       });
-      return ok("Connected", { account_email: acct.json?.email ?? null });
+      return ok("Connected", { account_email: acct.json?.email ?? admin?.email ?? null });
     }
 
     if (action === "disconnect") {
@@ -113,6 +127,7 @@ Deno.serve(async (req) => {
     const submissionId = String(body.submission_id ?? "");
     if (!UUID_RE.test(submissionId)) return fail("A valid submission_id is required");
     const { access_token } = await tokenRequest({ grant_type: "refresh_token", refresh_token: conn.refresh_token });
+    const member = (await teamAdmin(access_token))?.id ?? null;
 
     const save = async (row: Record<string, unknown>) => {
       await sb.from("dropbox_exports").upsert({ submission_id: submissionId, updated_at: new Date().toISOString(), ...row });
@@ -152,9 +167,11 @@ Deno.serve(async (req) => {
       const path = `${dropboxFolder(conn.base_folder, eventName)}/${dropboxFileName({
         event: eventName, gym: s.team?.gym_name, team: s.team?.name, division: s.team?.division?.name, ext,
       })}`;
-      const r = await dbx(access_token, "files/save_url", { path, url });
+      const r = await dbx(access_token, "files/save_url", { path, url }, member);
       if (!r.ok) {
-        const msg = r.text.includes("conflict") ? "A file with this name already exists in Dropbox." : `Dropbox error [${r.status}]: ${r.text.slice(0, 300)}`;
+        const msg = r.text.includes("conflict") ? "A file with this name already exists in Dropbox."
+          : r.text.includes("entire Dropbox Business team") ? "Dropbox sees this as a whole Business team sign-in. Add the team_info.read permission to the Dropbox app, then Disconnect and Connect Dropbox again in Settings."
+          : `Dropbox error [${r.status}]: ${r.text.slice(0, 300)}`;
         await save({ event_id: s.event_id, dropbox_path: path, status: "failed", error: msg, job_id: null });
         return fail(msg);
       }
@@ -166,7 +183,7 @@ Deno.serve(async (req) => {
     if (action === "check") {
       const { data: row } = await sb.from("dropbox_exports").select("*").eq("submission_id", submissionId).maybeSingle();
       if (!row?.job_id || row.status !== "transferring") return ok("ok", { status: row?.status ?? "queued" });
-      const r = await dbx(access_token, "files/save_url/check_job_status", { async_job_id: row.job_id });
+      const r = await dbx(access_token, "files/save_url/check_job_status", { async_job_id: row.job_id }, member);
       const tag = r.json?.[".tag"];
       if (tag === "complete") { await save({ status: "completed", error: null }); return ok("ok", { status: "completed" }); }
       if (tag === "failed" || !r.ok) {
