@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { DropboxExportDialog } from '@/components/admin/DropboxExportDialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -86,6 +87,7 @@ export default function EventScoring() {
   const [previewLoading, setPreviewLoading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [dropboxOpen, setDropboxOpen] = useState(false);
 
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ['event', eventId],
@@ -460,6 +462,18 @@ export default function EventScoring() {
             </h1>
             <p className="text-muted-foreground mt-1">Scoring Control Panel</p>
           </div>
+          <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setDropboxOpen(true)}>
+            <CloudUpload className="w-4 h-4 mr-2" />
+            Export to Dropbox
+          </Button>
+          <DropboxExportDialog
+            open={dropboxOpen}
+            onOpenChange={setDropboxOpen}
+            eventId={eventId!}
+            eventName={event?.name ?? 'Event'}
+            submissions={(submissions ?? []) as any}
+          />
           <Dialog open={isPanelsDialogOpen} onOpenChange={setIsPanelsDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
