@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Loader2, BarChart3, CheckCircle, Clock, Settings, Send, AlertCircle, ClipboardList, Eye, Download, MoreHorizontal, Link2 } from 'lucide-react';
+import { ArrowLeft, Loader2, BarChart3, CheckCircle, Clock, Settings, Send, AlertCircle, ClipboardList, Eye, Download, MoreHorizontal, Link2, CloudUpload } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -494,6 +494,7 @@ export default function EventScoring() {
               />
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </div>
 
