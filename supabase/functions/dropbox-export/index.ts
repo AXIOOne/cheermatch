@@ -31,7 +31,7 @@ async function dbx(token: string, path: string, body: unknown, member?: string |
   const res = await fetch(`https://api.dropboxapi.com/2/${path}`, {
     method: "POST",
     headers,
-    body: body === null ? undefined : JSON.stringify(body),
+    body: JSON.stringify(body),
   });
   const text = await res.text();
   let json: any = null;
@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
       const acct = await dbx(tok.access_token, "users/get_current_account", null, admin?.id);
       if (!acct.ok && !admin) {
         console.error("dropbox connect: account lookup failed", acct.status, acct.text.slice(0, 500));
-        return fail(`Dropbox would not share the account details [${acct.status}]: ${acct.text.slice(0, 200)}`);
+        // The account email is only a label; don't block connecting over it.
       }
       await sb.from("dropbox_connection").upsert({
         id: true,
