@@ -45,6 +45,9 @@
     --success-foreground: 0 0% 98%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 9%;
+    --registration-capture: var(--muted);
+    --registration-awaiting: 48 96% 89%;
+    --registration-approved: 142 55% 91%;
 
     /* Sidebar - Black */
     --sidebar-background: 0 0% 0%;
@@ -62,6 +65,9 @@
   }
 
   .dark {
+    --registration-capture: var(--muted);
+    --registration-awaiting: 48 40% 19%;
+    --registration-approved: 142 30% 18%;
     --background: 0 0% 6%;
     --foreground: 0 0% 95%;
 
@@ -122,6 +128,15 @@
 }
 
 @layer utilities {
+  .registration-row[data-video-stage="capture-started"] {
+    background-color: hsl(var(--registration-capture));
+  }
+  .registration-row[data-video-stage="awaiting-approval"] {
+    background-color: hsl(var(--registration-awaiting));
+  }
+  .registration-row[data-video-stage="approved"] {
+    background-color: hsl(var(--registration-approved));
+  }
   .gradient-champion {
     background: linear-gradient(135deg, hsl(206 63% 63%) 0%, hsl(206 63% 50%) 100%);
   }

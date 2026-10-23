@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -17,8 +16,11 @@ import { MultiAddTeamsDialog } from '@/components/admin/MultiAddTeamsDialog';
 import { EditRegistrationDialog } from '@/components/admin/EditRegistrationDialog';
 import { BulkImportTeamsDialog } from '@/components/admin/BulkImportTeamsDialog';
 import { CoachAccountsPanel } from '@/components/admin/CoachAccountsPanel';
+import { registrationVideoProgress } from '@/lib/registration-video-progress';
 
 const videoStatusLabel: Record<string, string> = {
+  not_started: 'Not started',
+  capture_started: 'Capture started',
   pending: 'Pending',
   uploaded: 'Uploaded',
   processing: 'Processing',
@@ -30,16 +32,6 @@ const videoStatusLabel: Record<string, string> = {
   complete: 'Scored',
   revision_requested: 'Revision Requested',
   failed: 'Failed',
-};
-
-const videoStatusClass: Record<string, string> = {
-  ready: 'bg-blue-100 text-blue-700',
-  imported: 'bg-muted text-muted-foreground',
-  approved: 'bg-green-100 text-green-700',
-  complete: 'bg-green-100 text-green-700',
-  denied: 'bg-destructive/10 text-destructive',
-  failed: 'bg-destructive/10 text-destructive',
-  revision_requested: 'bg-amber-100 text-amber-700',
 };
 
 export default function EventRegistrations() {
@@ -84,17 +76,35 @@ export default function EventRegistrations() {
 
   // Video submissions for this event, so the delete confirmation can warn when a submission is kept
   // and the table can show each team's video status
-  const { data: eventSubmissions } = useQuery({
+  const { data: eventSubmissions, isLoading: submissionsLoading, isError: submissionsError } = useQuery({
     queryKey: ['event-teams-submissions', eventId],
     queryFn: async () => {
+      if (!eventId) return [];
       const { data, error } = await supabase
         .from('video_submissions')
-        .select('id, team_id, status, created_at, archived_at')
-        .eq('event_id', eventId!);
+        .select('id, team_id, status, created_at, archived_at, video_url, brightcove_video_id')
+        .eq('event_id', eventId);
       if (error) throw error;
-      return data as Array<{ id: string; team_id: string | null; status: string; created_at: string; archived_at: string | null }>;
+      return data;
     },
     enabled: !!eventId,
+    refetchInterval: 15000,
+  });
+
+  const { data: captureAttempts, isLoading: attemptsLoading, isError: attemptsError } = useQuery({
+    queryKey: ['event-registration-capture-attempts', eventId],
+    queryFn: async () => {
+      if (!eventId) return [];
+      const { data, error } = await supabase
+        .from('capture_attempts')
+        .select('team_id, voided_at')
+        .eq('event_id', eventId)
+        .is('voided_at', null);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!eventId,
+    refetchInterval: 15000,
   });
 
   const submissionCountByTeam = useMemo(() => {
@@ -105,16 +115,9 @@ export default function EventRegistrations() {
     return map;
   }, [eventSubmissions]);
 
-  // Latest non-archived submission per team, for the Video column
-  const videoStatusByTeam = useMemo(() => {
-    const map = new Map<string, { status: string; created_at: string }>();
-    (eventSubmissions ?? []).forEach((s) => {
-      if (!s.team_id || s.archived_at) return;
-      const current = map.get(s.team_id);
-      if (!current || s.created_at > current.created_at) map.set(s.team_id, s);
-    });
-    return map;
-  }, [eventSubmissions]);
+  const videoStatusByTeam = useMemo(() => new Map((teams ?? []).map(team => [
+    team.id, registrationVideoProgress(team.id, eventSubmissions ?? [], captureAttempts ?? []),
+  ])), [teams, eventSubmissions, captureAttempts]);
 
   const deleteMutation = useMutation({
     mutationFn: async (teamId: string) => {
@@ -140,23 +143,24 @@ export default function EventRegistrations() {
     );
   }, [teams, searchQuery]);
 
-  const isLoading = eventLoading || teamsLoading;
+  const isLoading = eventLoading || teamsLoading || submissionsLoading || attemptsLoading;
+  const videoStatusUnavailable = submissionsError || attemptsError;
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8 font-body">
       <div className="mb-6">
         <Link to="/admin/events" className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-sm mb-4">
           <ArrowLeft className="w-4 h-4" />
           Back to Events
         </Link>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-3xl font-heading font-bold text-foreground break-words">
               {eventLoading ? 'Loading...' : event?.name}
             </h1>
             <p className="text-muted-foreground mt-1">Team Registrations</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => setImportOpen(true)}>
               <Upload className="w-4 h-4 mr-2" />
               Import CSV
@@ -174,51 +178,49 @@ export default function EventRegistrations() {
       </div>
 
 
-      {/* Search */}
-      <Card className="mb-4">
-        <CardContent className="p-4">
+      <section aria-labelledby="registered-teams-heading" className="mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <h2 id="registered-teams-heading" className="font-heading text-xl flex items-center gap-2">
+            <Users className="w-5 h-5 text-primary" />
+            Registered Teams ({teams?.length || 0})
+          </h2>
           <div className="relative w-full sm:w-[300px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search by team or gym name..."
+              aria-label="Search registered teams"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
             />
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Registered Teams ({teams?.length || 0})
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
+        </div>
+        {videoStatusUnavailable && <p role="alert" className="mb-3 text-sm text-destructive">Video status could not be loaded. Please refresh to try again.</p>}
+        <div className="rounded-md border overflow-hidden">
           {isLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
           ) : filteredTeams.length > 0 ? (
-            <Table>
-              <TableHeader>
+            <Table aria-label="Registered teams" className="min-w-[860px] [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:h-9">
+              <TableHeader className="bg-muted text-xs">
                 <TableRow>
+                  <TableHead className="w-10">#</TableHead>
                   <TableHead>Team Name</TableHead>
                   <TableHead>Gym</TableHead>
                   <TableHead>Division</TableHead>
                   <TableHead>Level</TableHead>
-                  <TableHead>Video</TableHead>
+                  <TableHead>Video Status</TableHead>
                   <TableHead className="text-right">Athletes</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTeams.map((team) => (
-                  <TableRow key={team.id}>
+                {filteredTeams.map((team, index) => (
+                  <TableRow key={team.id} className="registration-row" data-video-stage={videoStatusUnavailable ? undefined : videoStatusByTeam.get(team.id)?.stage}>
+                    <TableCell className="tabular-nums text-muted-foreground">{index + 1}</TableCell>
                     <TableCell className="font-medium">
-                      <div>{team.name}</div>
+                      <div>{team.name || team.gym_name}</div>
                       {team.coach_name && (
                         team.coach_email ? (
                           <a
@@ -235,40 +237,35 @@ export default function EventRegistrations() {
                       )}
                     </TableCell>
                     <TableCell>{team.gym_name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{team.division?.name || '—'}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{team.level?.name || '—'}</Badge>
-                    </TableCell>
+                    <TableCell>{team.division?.name || '—'}</TableCell>
+                    <TableCell className="whitespace-nowrap">{team.level?.name || '—'}</TableCell>
                     <TableCell>
                       {(() => {
-                        const submission = videoStatusByTeam.get(team.id);
-                        if (!submission) return <span className="text-muted-foreground">—</span>;
-                        const label = videoStatusLabel[submission.status] ?? submission.status;
-                        const cls = videoStatusClass[submission.status] ?? 'bg-muted text-muted-foreground';
+                        const progress = videoStatusByTeam.get(team.id);
+                        if (videoStatusUnavailable || !progress) return <span className="text-muted-foreground">Unavailable</span>;
+                        const label = videoStatusLabel[progress.status] ?? progress.status;
                         return (
-                          <Badge variant="outline" className={`${cls} border-0 font-medium`}>
+                          <Badge variant="outline" className="bg-background/60 border-border/60 font-medium whitespace-nowrap">
                             {label}
                           </Badge>
                         );
                       })()}
                     </TableCell>
-                    <TableCell className="text-right">{(team.athletes_female || 0) + (team.athletes_male || 0)} <span className="text-muted-foreground">({team.athletes_female || 0}F / {team.athletes_male || 0}M)</span></TableCell>
+                    <TableCell className="text-right tabular-nums whitespace-nowrap">{(team.athletes_female || 0) + (team.athletes_male || 0)} <span className="text-xs text-muted-foreground">({team.athletes_female || 0}F / {team.athletes_male || 0}M)</span></TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => setEditTeam(team)}>
-                          <Pencil className="w-4 h-4 mr-1" />
-                          Edit
+                        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Edit ${team.name || team.gym_name}`} title="Edit registration" onClick={() => setEditTeam(team)}>
+                          <Pencil className="w-4 h-4" />
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
-                          className="text-muted-foreground/60 hover:text-destructive"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground/60 hover:text-destructive"
+                          aria-label={`Delete ${team.name || team.gym_name}`}
+                          title="Delete registration"
                           onClick={() => setDeleteTeam(team)}
                         >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Delete
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </TableCell>
@@ -286,8 +283,8 @@ export default function EventRegistrations() {
               </p>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </section>
 
       {eventId && <CoachAccountsPanel eventId={eventId} />}
 
