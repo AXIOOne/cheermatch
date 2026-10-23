@@ -64,6 +64,13 @@
       "when": 1792457208131,
       "tag": "0008_add_show_score_type_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792764629599,
+      "tag": "0009_dropbox_exports",
+      "breakpoints": true
     }
   ]
 }
