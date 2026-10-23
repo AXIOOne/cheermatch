@@ -486,6 +486,68 @@ export type Database = {
           },
         ]
       }
+      dropbox_connection: {
+        Row: {
+          account_email: string | null
+          base_folder: string
+          connected_at: string
+          id: boolean
+          refresh_token: string
+        }
+        Insert: {
+          account_email?: string | null
+          base_folder?: string
+          connected_at?: string
+          id?: boolean
+          refresh_token: string
+        }
+        Update: {
+          account_email?: string | null
+          base_folder?: string
+          connected_at?: string
+          id?: boolean
+          refresh_token?: string
+        }
+        Relationships: []
+      }
+      dropbox_exports: {
+        Row: {
+          dropbox_path: string | null
+          error: string | null
+          event_id: string
+          job_id: string | null
+          status: string
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          dropbox_path?: string | null
+          error?: string | null
+          event_id: string
+          job_id?: string | null
+          status?: string
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          dropbox_path?: string | null
+          error?: string | null
+          event_id?: string
+          job_id?: string | null
+          status?: string
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dropbox_exports_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: true
+            referencedRelation: "video_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_templates: {
         Row: {
           body_html: string
