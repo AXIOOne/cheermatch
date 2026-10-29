@@ -101,7 +101,7 @@ export const judgeTopics: HelpTopic[] = [
           'Teams are sorted by total, highest first; teams you have not scored yet are at the bottom.',
           'Green numbers are submitted scores, amber numbers are drafts, grey dashes are not scored yet.',
           'You only ever see your own scores.',
-          'Close the drawer with the arrow at the top right or the Escape key.',
+          'Close the drawer with the arrow at the top right.',
         ],
       },
       { type: 'callout', variant: 'tip', text: 'Use Score Tracking before you submit to make sure similar performances get similar scores across a division.' },
