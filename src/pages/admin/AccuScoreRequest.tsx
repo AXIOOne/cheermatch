@@ -21,7 +21,23 @@ const STATUS: Record<string, { label: string; variant: 'default' | 'secondary' |
   duplicate: { label: 'Duplicate', variant: 'outline' },
 };
 
-const displayAnswer = (answer: unknown) => Array.isArray(answer) ? answer.join(', ') : String(answer);
+const displayItem = (item: unknown): string => {
+  if (item === true) return 'Yes';
+  if (item === false) return 'No';
+  if (item && typeof item === 'object') {
+    const o = item as Record<string, unknown>;
+    if (o.skill !== undefined) return o.count ? `${o.skill} (${o.count})` : String(o.skill);
+    if (o.deduction !== undefined) return o.time ? `${o.deduction} at ${o.time}` : String(o.deduction);
+    return Object.values(o).filter((v) => v !== null && v !== '').map(String).join(' · ');
+  }
+  return String(item ?? '');
+};
+const displayAnswer = (answer: unknown) => {
+  if (!Array.isArray(answer)) return displayItem(answer);
+  const parts = answer.map(displayItem);
+  return answer.some((a) => a && typeof a === 'object') ? parts.join('\n') : parts.join(', ');
+};
+const humanizeKey = (k: string) => k.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 
 export default function AccuScoreRequest() {
   const { eventId, requestId } = useParams<{ eventId: string; requestId: string }>();
@@ -125,7 +141,7 @@ export default function AccuScoreRequest() {
           </div>
         ))}
         {extraKeys.map((k) => (
-          <div key={k}><p className="text-xs text-muted-foreground">{k}</p><p className="text-sm whitespace-pre-wrap">{displayAnswer(request.answers[k])}</p></div>
+          <div key={k}><p className="text-xs text-muted-foreground">{humanizeKey(k)}</p><p className="text-sm whitespace-pre-wrap">{displayAnswer(request.answers[k])}</p></div>
         ))}
       </CardContent></Card>
 
