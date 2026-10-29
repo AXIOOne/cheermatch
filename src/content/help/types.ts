@@ -5,7 +5,11 @@ export type HelpBlock =
   | { type: 'bullets'; items: string[] }
   | { type: 'table'; head: string[]; rows: string[][] }
   | { type: 'callout'; variant: 'note' | 'warning' | 'tip'; title?: string; text: string }
-  | { type: 'link'; label: string; to: string; external?: boolean };
+  | { type: 'link'; label: string; to: string; external?: boolean }
+  /** Screenshot served from /public/help. Click to enlarge. */
+  | { type: 'image'; src: string; alt: string; caption?: string }
+  /** Short screen recording (mp4) served from /public/help. */
+  | { type: 'video'; src: string; poster?: string; caption?: string };
 
 export interface HelpTopic {
   slug: string;

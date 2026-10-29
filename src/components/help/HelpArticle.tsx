@@ -1,6 +1,8 @@
-import { Info, AlertTriangle, Lightbulb } from 'lucide-react';
+import { useState } from 'react';
+import { Info, AlertTriangle, Lightbulb, Maximize2, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import type { HelpTopic } from '@/content/help';
 
 const calloutStyles = {
@@ -10,6 +12,7 @@ const calloutStyles = {
 } as const;
 
 export function HelpArticle({ topic }: { topic: HelpTopic }) {
+  const [zoom, setZoom] = useState<{ src: string; alt: string } | null>(null);
   return (
     <article className="max-w-3xl">
       <h1 className="text-3xl font-bold text-foreground">{topic.title}</h1>
@@ -83,11 +86,55 @@ export function HelpArticle({ topic }: { topic: HelpTopic }) {
                 </div>
               );
             }
+            case 'image':
+              return (
+                <figure key={i} className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setZoom({ src: block.src, alt: block.alt })}
+                    className="group relative block w-full overflow-hidden rounded-md border bg-muted shadow-sm"
+                    aria-label={`Enlarge screenshot: ${block.alt}`}
+                  >
+                    <img src={block.src} alt={block.alt} loading="lazy" className="w-full h-auto" />
+                    <span className="absolute right-2 top-2 rounded-md bg-background/90 p-1.5 opacity-0 shadow transition-opacity group-hover:opacity-100">
+                      <Maximize2 className="w-4 h-4 text-foreground" />
+                    </span>
+                  </button>
+                  {block.caption && <figcaption className="text-xs text-muted-foreground">{block.caption}</figcaption>}
+                </figure>
+              );
+            case 'video':
+              return (
+                <figure key={i} className="space-y-2">
+                  <div className="overflow-hidden rounded-md border bg-muted shadow-sm">
+                    <video
+                      src={block.src}
+                      poster={block.poster}
+                      controls
+                      playsInline
+                      muted
+                      preload="none"
+                      className="w-full h-auto"
+                    />
+                  </div>
+                  <figcaption className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <PlayCircle className="w-3.5 h-3.5" />
+                    {block.caption || 'Screen recording'}
+                  </figcaption>
+                </figure>
+              );
             default:
               return null;
           }
         })}
       </div>
+
+      <Dialog open={!!zoom} onOpenChange={(o) => !o && setZoom(null)}>
+        <DialogContent className="max-w-[96vw] w-[1280px] p-2">
+          <DialogTitle className="sr-only">{zoom?.alt || 'Screenshot'}</DialogTitle>
+          {zoom && <img src={zoom.src} alt={zoom.alt} className="w-full h-auto rounded" />}
+        </DialogContent>
+      </Dialog>
     </article>
   );
 }
