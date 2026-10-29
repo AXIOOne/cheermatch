@@ -79,7 +79,7 @@ export function HelpLayout({ audience, basePath, showManualDownload, manualHref 
 
         <Card>
           <CardContent className="p-6">
-            {active ? <HelpArticle topic={active} /> : null}
+            {active ? <HelpArticle key={active.slug} topic={active} /> : null}
           </CardContent>
         </Card>
       </div>

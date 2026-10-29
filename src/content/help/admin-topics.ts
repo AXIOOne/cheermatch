@@ -1,18 +1,28 @@
 import type { HelpTopic } from './types';
 
+const A = '/help/admin';
+
 export const adminTopics: HelpTopic[] = [
   {
     slug: 'accuscore',
     title: 'AccuScore Review Requests',
     summary: 'How coaches request score reviews and how admins respond.',
     audience: 'admin',
-    keywords: ['accuscore', 'review', 'appeal', 'coach', 'honored', 'denied', 'duplicate', 'cutoff'],
+    keywords: ['accuscore', 'review', 'appeal', 'coach', 'honored', 'denied', 'duplicate', 'cutoff', 'forms'],
     blocks: [
-      { type: 'p', text: 'Every scoresheet email includes an AccuScore link for that team. The link opens a form with the gym, team, division and level already filled in. Coaches can submit requests until the event\'s AccuScore cutoff; after that, scores are final.' },
+      { type: 'p', text: 'Every scoresheet email includes an AccuScore link for that team. The link opens a form with the gym, team, division and level already filled in. Coaches can submit requests from when the scoresheet is emailed until the event’s AccuScore cutoff; after that, scores are final.' },
+      { type: 'video', src: `${A}/admin-accuscore.mp4`, poster: `${A}/admin-accuscore-poster.webp`, caption: 'Walkthrough: open an event’s AccuScore queue and review a coach’s request (20 sec).' },
       { type: 'heading', text: 'Event setup' },
       { type: 'steps', items: ['Open the event in Events and set the AccuScore Review Cutoff.', 'Under "AccuScore forms available to coaches", tick the forms coaches can use. New events start with every form turned on.'] },
+      { type: 'heading', text: 'The AccuScore page' },
+      { type: 'image', src: `${A}/accuscore.webp`, alt: 'AccuScore page with open event tiles', caption: 'Open events show a pulsing green light and their cutoff. A tile turns red only when requests are waiting. Events move to Closed after the cutoff.' },
+      { type: 'image', src: `${A}/accuscore-event.webp`, alt: 'AccuScore queue for one event with New and Completed tabs' },
       { type: 'heading', text: 'Responding to a request' },
-      { type: 'steps', items: ['Go to AccuScore in the sidebar and open the event. Completed and Archived events are in the Closed tab.', 'Open a request from the New tab.', 'Use Open Scoring to change scores in the same score submission window as the Scoring Control Panel.', 'Choose Honored, Denied or Duplicate, write a response, then click Send Response.', 'The coach is emailed your decision with an updated scoresheet, and the request moves to Completed.'] },
+      { type: 'steps', items: ['Go to Events → AccuScore and open the event.', 'Open a request from the New tab. It opens as a full page.', 'Read the coach’s answers, including scripted skills and deductions with times.', 'Use Open Scoring to change scores in the same score submission window as the Scoring Control Panel.', 'Choose Honored, Denied or Duplicate, write a response, then click Send Response.', 'The coach is emailed your decision with an updated scoresheet, and the request moves to Completed.'] },
+      { type: 'image', src: `${A}/accuscore-request.webp`, alt: 'AccuScore request page showing the coach’s answers and Open Scoring' },
+      { type: 'heading', text: 'Forms' },
+      { type: 'p', text: 'The Forms tab on the AccuScore page holds the Building, Deductions, Overall and Tumbling forms. Each form has sections and questions (text, choice, checkboxes, skill scripting and deduction review with mm:ss times). Use the coach-view preview to see the form as a coach will, and send a test submission to check it end to end.' },
+      { type: 'image', src: `${A}/accuscore-forms.webp`, alt: 'AccuScore Forms tab listing the review forms' },
     ],
   },
   {
@@ -49,15 +59,17 @@ export const adminTopics: HelpTopic[] = [
         ],
       },
       { type: 'heading', text: 'Navigation' },
+      { type: 'image', src: `${A}/dashboard.webp`, alt: 'Admin dashboard with current and upcoming events', caption: 'The admin dashboard.' },
       {
         type: 'bullets',
         items: [
           'Dashboard — current and upcoming events, recent logins, who is online.',
-          'Events — event list plus per-event Registrations, Scoring, Results, Participants and Reports.',
-          'Rubrics — links to the published rubric for each discipline.',
-          'Submissions — every video submission across all events, including the Archived tab.',
-          'Judge Broadcast — send messages to judges assigned to an event.',
-          'Settings — general settings, branding, scoring templates, divisions & levels, organizations, user roles.',
+          'Events → Events — the event list plus each event’s Registrations, Scoring, Results, Participants and Reports.',
+          'Events → AccuScore — coach score review requests, by event.',
+          'Scoring Rubrics — links to the published rubric for each discipline.',
+          'Submissions — every video submission across all events.',
+          'Judge Broadcast — send messages to judges.',
+          'Settings → General, Scoring Templates, Divisions & Levels, Organizations, User Roles.',
           'Help — this documentation.',
         ],
       },
@@ -82,6 +94,8 @@ export const adminTopics: HelpTopic[] = [
           'Save. The event starts in Registration Open.',
         ],
       },
+      { type: 'image', src: `${A}/new-event.webp`, alt: 'New Event form' },
+      { type: 'p', text: 'Event settings also include Score Tracking (off by default; lets judges compare their own scores across the event), the AccuScore review cutoff, and which AccuScore forms coaches can use.' },
       { type: 'heading', text: 'Field reference' },
       {
         type: 'table',
@@ -130,43 +144,58 @@ export const adminTopics: HelpTopic[] = [
     keywords: ['registration', 'teams', 'csv', 'import', 'coach', 'gym', 'organization'],
     blocks: [
       { type: 'p', text: 'Open an event and choose Registrations. Every team competing must exist here before it can be captured, judged or ranked.' },
-      { type: 'heading', text: 'Adding a team manually' },
+      { type: 'video', src: `${A}/admin-registrations.mp4`, poster: `${A}/admin-registrations-poster.webp`, caption: 'Walkthrough: search teams, open Add Multiple, and scroll to Coach accounts (17 sec).' },
+      { type: 'image', src: `${A}/regs.webp`, alt: 'Registered teams table with coloured rows and a Video Status column', caption: 'The registered teams table. Row colour shows video progress at a glance.' },
+      { type: 'heading', text: 'Row colours' },
+      {
+        type: 'table',
+        head: ['Row colour', 'Meaning'],
+        rows: [
+          ['White', 'No capture started yet.'],
+          ['Grey', 'The coach has started capturing, but nothing has been submitted.'],
+          ['Yellow', 'A video has come in and is waiting for approval.'],
+          ['Green', 'The video is approved (or already assigned or scored).'],
+        ],
+      },
+      { type: 'heading', text: 'Adding teams' },
       {
         type: 'steps',
         items: [
-          'Click Add Registration.',
-          'Select the coach. The gym is filled in automatically from the coach’s assigned organization.',
-          'Enter the team name, division and level.',
-          'Enter athlete counts (female / male) — these appear on the registration table and participant reports.',
-          'Save. The team immediately becomes visible to the coach in the mobile app once the event is Open for Capture.',
+          'Click Add Registration for one team, or Add Multiple to enter several teams on one screen.',
+          'Pick the coach from the searchable list. The gym fills in from the coach’s organization.',
+          'Pick the division from the searchable list. Team name and level are optional; the gym name is used when the team name is blank.',
+          'Enter athlete counts (female / male) if you have them.',
+          'Save. The team shows up for the coach in the capture app once the event is Open for Capture.',
         ],
       },
+      { type: 'image', src: `${A}/add-multiple.webp`, alt: 'Add Multiple registrations dialog' },
       { type: 'heading', text: 'CSV import' },
       { type: 'p', text: 'Use Import CSV for bulk registration. The importer creates anything that is missing rather than failing the row.' },
       {
         type: 'table',
         head: ['Column', 'Notes'],
         rows: [
-          ['team_name', 'Required. Must be unique within the event.'],
+          ['team_name', 'Optional. Defaults to the gym name.'],
           ['gym_name', 'Required. Matched to an existing organization by name; created as a new organization if it does not exist.'],
           ['division', 'Matched by name against the event discipline’s divisions.'],
-          ['level', 'Matched by name against the configured levels.'],
+          ['level', 'Optional. Matched by name against the configured levels.'],
           ['coach_name', 'Used for the coach account display name.'],
           ['coach_email', 'Required for coach access. An account is created if none exists and assigned to the gym’s organization.'],
           ['athletes_female / athletes_male', 'Optional numeric counts.'],
         ],
       },
+      { type: 'heading', text: 'Coach accounts and welcome emails' },
+      { type: 'p', text: 'Below the table, Coach accounts lists every coach on the event, their number of teams, account status and whether the welcome email has been sent.' },
+      { type: 'image', src: `${A}/coach-accounts.webp`, alt: 'Coach accounts panel with Send welcome email to all, Send welcome and Set password', caption: 'Send to one coach, or use Send welcome email to all.' },
       {
         type: 'bullets',
         items: [
-          'Organizations that appear in gym_name but do not exist are created automatically.',
-          'Coach accounts that do not exist are created and linked to that organization, with credentials synced so the mobile app login works.',
-          'Rows are validated before import; you get a preview with any problems highlighted so you can fix the file and retry.',
+          'The welcome email includes the gym name, the coach’s username and password, the iOS capture app link, the TEST capture link, the training video and support@cheermatch.com.',
+          'The password is the Standard Coach Password from Settings → General, or a random one if that is blank.',
+          'Set password changes a single coach’s password.',
         ],
       },
-      { type: 'heading', text: 'Coach accounts panel' },
-      { type: 'p', text: 'Below the registration table, the Coach Accounts panel lists every coach attached to the event and whether they have a working account. From here you can create a missing account, resend the invite, or reset a password if a coach cannot sign in to the capture app.' },
-      { type: 'callout', variant: 'tip', text: 'If a coach reports that they cannot see their teams, check three things: the event status is Open for Capture, the team’s coach is the right account, and the coach account exists in this panel.' },
+      { type: 'callout', variant: 'tip', text: 'If a coach cannot see their teams, check three things: the event is Open for Capture, the team has the right coach, and the coach account is Active here.' },
     ],
   },
 
@@ -178,6 +207,8 @@ export const adminTopics: HelpTopic[] = [
     keywords: ['submissions', 'video', 'archive', 'delete', 'brightcove', 'revision', 'review link'],
     blocks: [
       { type: 'p', text: 'The Submissions area lists every performance video across all events. Open an event’s Scoring page for the event-only view, or use the global Submissions page to work across events.' },
+      { type: 'image', src: `${A}/submissions.webp`, alt: 'Submissions page with Current, Awaiting video, Archived and Registration deleted tabs', caption: 'Tabs: Current, Awaiting video, Archived and Registration deleted. Lists are sorted by division.' },
+      { type: 'callout', variant: 'note', title: 'Approving videos', text: 'A finished upload is Ready for Review, not approved automatically. Open it and approve it before it reaches the judges’ queues.' },
       { type: 'heading', text: 'Lifecycle' },
       {
         type: 'table',
@@ -221,6 +252,8 @@ export const adminTopics: HelpTopic[] = [
     keywords: ['scoring', 'panel', 'judge', 'draft', 'override', 're-open', 'deductions'],
     blocks: [
       { type: 'p', text: 'Open an event and choose Scoring. This is the control room: one row per team, one column per panel slot, showing exactly where every score stands.' },
+      { type: 'video', src: `${A}/admin-scoring.mp4`, poster: `${A}/admin-scoring-poster.webp`, caption: 'Walkthrough: open a judge’s score, switch panels, then open Export to Dropbox (27 sec).' },
+      { type: 'image', src: `${A}/scoring.webp`, alt: 'Scoring Control Panel with summary tiles, status legend and a grid of panel squares', caption: 'Click any coloured square to open that judge’s scoresheet.' },
       { type: 'heading', text: 'Assigning judges' },
       {
         type: 'bullets',
@@ -231,28 +264,37 @@ export const adminTopics: HelpTopic[] = [
           'A judge assigned to two slots for the same team scores each slot separately — they appear as two cards in the judge’s queue.',
         ],
       },
-      { type: 'heading', text: 'Panel status indicators' },
+      { type: 'image', src: `${A}/assign-panels.webp`, alt: 'Assign Panels dialog with Assignments and Panel Definitions tabs' },
+      { type: 'heading', text: 'Panel status colours' },
       {
         type: 'table',
-        head: ['Indicator', 'Meaning'],
+        head: ['Colour', 'Meaning'],
         rows: [
-          ['Pending', 'Assigned but not started.'],
-          ['Draft saved', 'Judge saved partial work; the score is not final. Admins can preview the draft.'],
-          ['Submitted', 'Judge finalised the score; it counts toward results.'],
-          ['Overridden', 'An admin zeroed one or more fields with a recorded reason.'],
+          ['Green', 'Complete — the judge submitted.'],
+          ['Green with tick', 'Reviewed — an administrator marked it reviewed.'],
+          ['Orange', 'Needs Review — the judge used Submit & Flag.'],
+          ['Blue', 'Draft saved, not submitted yet.'],
+          ['Red', 'Not started.'],
         ],
       },
-      { type: 'heading', text: 'Admin actions on a submission' },
+      { type: 'heading', text: 'The score submission window' },
+      { type: 'image', src: `${A}/score-dialog.webp`, alt: 'Score submission window with panel tiles, video and score fields', caption: 'Panel tiles across the top let you switch between judges without closing the window.' },
       {
         type: 'bullets',
         items: [
-          'Preview draft — see what a judge has entered so far without changing it.',
-          'Override a field to zero — requires a reason, which is stored with the score for audit.',
-          'Re-open for scoring — returns the panel to the judge’s queue as a draft with their entries preserved, so they can correct and re-submit.',
+          'You can enter any value from 0 up to a field’s maximum. Minimum limits only apply to judges.',
+          'Override sets a field to a value with a recorded reason, kept with the score for audit.',
+          'Mark as Reviewed saves any changes first, then marks the panel reviewed.',
+          'Resolve Flag clears a judge’s flag and marks the panel Complete.',
+          'Re-open for Scoring sends the panel back to the judge’s queue as a draft with their entries kept.',
+          'If you try to close the window with unsaved changes, you are asked to Keep editing or Discard changes.',
         ],
       },
       { type: 'heading', text: 'Deductions' },
-      { type: 'p', text: 'Deductions are a separate panel assignment (SD). The judge holding that slot sees only the deductions catalogue, and their total is subtracted from the converted percentage score. Other judges do not see deduction controls.' },
+      { type: 'p', text: 'Deductions are a separate panel (SD). Its tile shows Total Deductions instead of points, and the total updates as counts are entered. The total is subtracted from the converted 100-point score.' },
+      { type: 'image', src: `${A}/score-dialog-sd.webp`, alt: 'SD panel in the score submission window showing deduction counts and Total Deductions' },
+      { type: 'heading', text: 'Coach review link' },
+      { type: 'p', text: 'The menu (…) on each team row has Get coach review link, which shows a copyable link first. Sending a fresh email is behind Create a new link instead. Links can be extended up to the AccuScore cutoff.' },
       { type: 'callout', variant: 'note', text: 'Individual judge percentages are intentionally hidden. Each judge sees points scored out of points available; percentage only applies once the whole panel is combined.' },
     ],
   },
@@ -275,6 +317,9 @@ export const adminTopics: HelpTopic[] = [
         ],
       },
       { type: 'callout', variant: 'note', text: 'Deductions are always removed after conversion, so a 0.15 deduction removes 0.15 from the 100-point scale — not from the raw points.' },
+      { type: 'heading', text: 'Standings' },
+      { type: 'p', text: 'Open an event and choose Results. Switch between Overall, By Level, By Division and Averages. Export CSV and Export PDF download exactly what is on screen.' },
+      { type: 'image', src: `${A}/results-division.webp`, alt: 'Event results by division with Export CSV and Export PDF buttons' },
       { type: 'heading', text: 'Publishing' },
       {
         type: 'bullets',
@@ -286,7 +331,7 @@ export const adminTopics: HelpTopic[] = [
         ],
       },
       { type: 'heading', text: 'Scoresheet distribution' },
-      { type: 'p', text: 'Once all judge panels for a submission have submitted, the score breakdown can be emailed to the coach automatically, and the same breakdown is available on the coach review link.' },
+      { type: 'p', text: 'Use the Send button on a team’s row in the Scoring Control Panel to email the scoresheet. The email includes the AccuScore review link and the AccuScore cutoff time. The Send dialog also shows the coach’s review link and when it expires, with an option to extend it without sending a new email.' },
     ],
   },
 
@@ -329,7 +374,9 @@ export const adminTopics: HelpTopic[] = [
     audience: 'admin',
     keywords: ['template', 'scoresheet', 'field', 'difficulty driver', 'execution driver', 'panels', 'lock'],
     blocks: [
-      { type: 'p', text: 'Settings → Scoring Templates. Templates are grouped by discipline and define both the scoresheet and the panel slots used for judge assignment.' },
+      { type: 'p', text: 'Settings → Scoring Templates. Templates are grouped by discipline and define both the scoresheet and the panel slots used for judge assignment. Each row shows the template’s total points, with buttons to duplicate, lock, edit or delete it.' },
+      { type: 'image', src: `${A}/templates.webp`, alt: 'Scoring Templates list grouped by discipline', caption: 'Use the discipline tabs to filter. Click a template name to expand its sections.' },
+      { type: 'p', text: 'Each field also has a Score Type (Difficulty or Execution), which decides which column it prints in on the PDF scoresheet. Column labels can be renamed per template. Fields can carry a minimum and maximum; the minimum only restricts judges, administrators can enter any value from 0 to the maximum.' },
       { type: 'heading', text: 'Structure' },
       {
         type: 'bullets',
@@ -381,6 +428,7 @@ export const adminTopics: HelpTopic[] = [
       { type: 'heading', text: 'Organizations' },
       { type: 'p', text: 'Settings → Organizations holds every gym or program. Users are assigned to an organization, and a team registration inherits its gym from the assigned coach’s organization, so gym names stay consistent across events and reports.' },
       { type: 'heading', text: 'Users and roles' },
+      { type: 'image', src: `${A}/roles.webp`, alt: 'User Roles page listing users with Edit, Add Role and Reset Password actions', caption: 'Settings → User Roles. Filter by role or organization.' },
       {
         type: 'steps',
         items: [
@@ -411,6 +459,7 @@ export const adminTopics: HelpTopic[] = [
     keywords: ['broadcast', 'message', 'judges', 'announcement', 'notification'],
     blocks: [
       { type: 'p', text: 'Judge Broadcast sends an announcement to every judge assigned to a chosen event — for example a schedule change, a rules clarification, or a break announcement.' },
+      { type: 'image', src: `${A}/broadcast.webp`, alt: 'Judge Broadcast page with audience, priority and message fields' },
       { type: 'heading', text: 'Sending a message' },
       {
         type: 'steps',
@@ -466,6 +515,81 @@ export const adminTopics: HelpTopic[] = [
       },
       { type: 'heading', text: 'For developers' },
       { type: 'p', text: 'The portal exposes a REST API for mobile clients. Authentication is two layers: the public project API key header, plus a session bearer token returned by the login endpoint. The full endpoint reference is maintained as a separate document for the mobile team.' },
+    ],
+  },
+
+  {
+    slug: 'dropbox-export',
+    title: 'Export Videos to Dropbox',
+    summary: 'Sending every video from an event to a Dropbox folder with clear file names.',
+    audience: 'admin',
+    keywords: ['dropbox', 'export', 'videos', 'download', 'folder', 'naming'],
+    blocks: [
+      { type: 'heading', text: 'Connect Dropbox (once)' },
+      {
+        type: 'steps',
+        items: [
+          'Go to Settings → General and find the Dropbox Video Export card.',
+          'Click Connect Dropbox and sign in with the Dropbox account that should receive the videos.',
+          'Optionally change the base folder (default /CheerMatch Videos). Each event gets its own subfolder.',
+        ],
+      },
+      { type: 'image', src: `${A}/settings.webp`, alt: 'Settings page showing the Dropbox Video Export card as Connected', caption: 'The card shows Connected and the account email once set up.' },
+      { type: 'heading', text: 'Export an event' },
+      {
+        type: 'steps',
+        items: [
+          'Open the event’s Scoring Control Panel and click Export to Dropbox.',
+          'Check the file names and click Export all videos.',
+          'Keep the window open until the progress bar finishes. Each video shows Not sent, Transferring, In Dropbox or Failed.',
+          'Use Retry failed for any that did not go through.',
+        ],
+      },
+      { type: 'image', src: `${A}/dropbox-dialog.webp`, alt: 'Export Videos to Dropbox window with a list of file names and statuses' },
+      { type: 'heading', text: 'File names' },
+      { type: 'p', text: 'Files are saved as /{base folder}/{Event}/{Event} - {Gym} - {Team} - {Division}.mp4. The team name is left out when it is the same as the gym name.' },
+      {
+        type: 'bullets',
+        items: [
+          'Videos go straight from the video host to Dropbox, so large files never pass through your computer.',
+          'Running the export again only sends videos that are not in Dropbox yet.',
+          'A file that already exists in Dropbox is marked Failed rather than overwritten.',
+          'If you close the window early, some videos may stay on Transferring. Open it again and export the remaining videos.',
+        ],
+      },
+    ],
+  },
+
+  {
+    slug: 'settings-emails',
+    title: 'Settings, Email Templates & Test Capture',
+    summary: 'Coach password, training video, email templates and the public test capture page.',
+    audience: 'admin',
+    keywords: ['settings', 'email', 'templates', 'password', 'training video', 'test capture', 'welcome'],
+    blocks: [
+      { type: 'image', src: `${A}/settings.webp`, alt: 'Settings → General page', caption: 'Settings → General.' },
+      {
+        type: 'table',
+        head: ['Card', 'What it does'],
+        rows: [
+          ['Standard Coach Password', 'Used in every coach welcome email (minimum 8 characters). Leave blank to give each coach a random password. Only administrators can see it.'],
+          ['Coach Training Video', 'YouTube or Vimeo link shown on the Test Capture page and in welcome emails.'],
+          ['Dropbox Video Export', 'Connect a Dropbox account for event video exports. See Export Videos to Dropbox.'],
+          ['Email Templates', 'Preview every email the portal sends and edit the ones that can be edited.'],
+        ],
+      },
+      { type: 'heading', text: 'Email templates' },
+      { type: 'image', src: `${A}/settings-emails-card.webp`, alt: 'Email Templates card on the Settings page' },
+      {
+        type: 'bullets',
+        items: [
+          'The All Emails tab lists every email. Built-in emails are preview only.',
+          'Editable emails (such as the review link and welcome emails) have a preview that updates as you type.',
+          'All emails use the Varsity logo.',
+        ],
+      },
+      { type: 'heading', text: 'Test capture page' },
+      { type: 'p', text: 'Coaches can practise recording at score.cheermatch.com/test-capture without logging in. They enter their coach ID, and a “TEST – {gym name}” team is created under CheerMatch TEST Event 2026 (only once per gym). The training video plays on the same page.' },
     ],
   },
 ];
