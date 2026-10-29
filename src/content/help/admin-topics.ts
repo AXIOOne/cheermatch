@@ -517,4 +517,79 @@ export const adminTopics: HelpTopic[] = [
       { type: 'p', text: 'The portal exposes a REST API for mobile clients. Authentication is two layers: the public project API key header, plus a session bearer token returned by the login endpoint. The full endpoint reference is maintained as a separate document for the mobile team.' },
     ],
   },
+
+  {
+    slug: 'dropbox-export',
+    title: 'Export Videos to Dropbox',
+    summary: 'Sending every video from an event to a Dropbox folder with clear file names.',
+    audience: 'admin',
+    keywords: ['dropbox', 'export', 'videos', 'download', 'folder', 'naming'],
+    blocks: [
+      { type: 'heading', text: 'Connect Dropbox (once)' },
+      {
+        type: 'steps',
+        items: [
+          'Go to Settings → General and find the Dropbox Video Export card.',
+          'Click Connect Dropbox and sign in with the Dropbox account that should receive the videos.',
+          'Optionally change the base folder (default /CheerMatch Videos). Each event gets its own subfolder.',
+        ],
+      },
+      { type: 'image', src: `${A}/settings.webp`, alt: 'Settings page showing the Dropbox Video Export card as Connected', caption: 'The card shows Connected and the account email once set up.' },
+      { type: 'heading', text: 'Export an event' },
+      {
+        type: 'steps',
+        items: [
+          'Open the event’s Scoring Control Panel and click Export to Dropbox.',
+          'Check the file names and click Export all videos.',
+          'Keep the window open until the progress bar finishes. Each video shows Not sent, Transferring, In Dropbox or Failed.',
+          'Use Retry failed for any that did not go through.',
+        ],
+      },
+      { type: 'image', src: `${A}/dropbox-dialog.webp`, alt: 'Export Videos to Dropbox window with a list of file names and statuses' },
+      { type: 'heading', text: 'File names' },
+      { type: 'p', text: 'Files are saved as /{base folder}/{Event}/{Event} - {Gym} - {Team} - {Division}.mp4. The team name is left out when it is the same as the gym name.' },
+      {
+        type: 'bullets',
+        items: [
+          'Videos go straight from the video host to Dropbox, so large files never pass through your computer.',
+          'Running the export again only sends videos that are not in Dropbox yet.',
+          'A file that already exists in Dropbox is marked Failed rather than overwritten.',
+          'If you close the window early, some videos may stay on Transferring. Open it again and export the remaining videos.',
+        ],
+      },
+    ],
+  },
+
+  {
+    slug: 'settings-emails',
+    title: 'Settings, Email Templates & Test Capture',
+    summary: 'Coach password, training video, email templates and the public test capture page.',
+    audience: 'admin',
+    keywords: ['settings', 'email', 'templates', 'password', 'training video', 'test capture', 'welcome'],
+    blocks: [
+      { type: 'image', src: `${A}/settings.webp`, alt: 'Settings → General page', caption: 'Settings → General.' },
+      {
+        type: 'table',
+        head: ['Card', 'What it does'],
+        rows: [
+          ['Standard Coach Password', 'Used in every coach welcome email (minimum 8 characters). Leave blank to give each coach a random password. Only administrators can see it.'],
+          ['Coach Training Video', 'YouTube or Vimeo link shown on the Test Capture page and in welcome emails.'],
+          ['Dropbox Video Export', 'Connect a Dropbox account for event video exports. See Export Videos to Dropbox.'],
+          ['Email Templates', 'Preview every email the portal sends and edit the ones that can be edited.'],
+        ],
+      },
+      { type: 'heading', text: 'Email templates' },
+      { type: 'image', src: `${A}/settings-emails-card.webp`, alt: 'Email Templates card on the Settings page' },
+      {
+        type: 'bullets',
+        items: [
+          'The All Emails tab lists every email. Built-in emails are preview only.',
+          'Editable emails (such as the review link and welcome emails) have a preview that updates as you type.',
+          'All emails use the Varsity logo.',
+        ],
+      },
+      { type: 'heading', text: 'Test capture page' },
+      { type: 'p', text: 'Coaches can practise recording at score.cheermatch.com/test-capture without logging in. They enter their coach ID, and a “TEST – {gym name}” team is created under CheerMatch TEST Event 2026 (only once per gym). The training video plays on the same page.' },
+    ],
+  },
 ];
