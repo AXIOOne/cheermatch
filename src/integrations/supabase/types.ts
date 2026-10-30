@@ -668,6 +668,7 @@ export type Database = {
           submission_open_at: string | null
           time_zone: string
           updated_at: string
+          verbal_critiques_enabled: boolean
         }
         Insert: {
           accuscore_enabled?: boolean
@@ -713,6 +714,7 @@ export type Database = {
           submission_open_at?: string | null
           time_zone?: string
           updated_at?: string
+          verbal_critiques_enabled?: boolean
         }
         Update: {
           accuscore_enabled?: boolean
@@ -758,6 +760,7 @@ export type Database = {
           submission_open_at?: string | null
           time_zone?: string
           updated_at?: string
+          verbal_critiques_enabled?: boolean
         }
         Relationships: []
       }
@@ -2200,6 +2203,57 @@ export type Database = {
         }
         Relationships: []
       }
+      verbal_critiques: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          id: string
+          judge_user_id: string
+          mime_type: string | null
+          score_id: string
+          storage_path: string
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          judge_user_id: string
+          mime_type?: string | null
+          score_id: string
+          storage_path: string
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          id?: string
+          judge_user_id?: string
+          mime_type?: string | null
+          score_id?: string
+          storage_path?: string
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verbal_critiques_score_id_fkey"
+            columns: ["score_id"]
+            isOneToOne: true
+            referencedRelation: "scores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verbal_critiques_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "video_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       video_submissions: {
         Row: {
           archived_at: string | null
@@ -2336,6 +2390,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]
       }
+      get_verbal_critiques: { Args: { review_token: string }; Returns: Json }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
