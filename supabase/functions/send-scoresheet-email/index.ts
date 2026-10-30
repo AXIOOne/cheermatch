@@ -74,7 +74,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)),
           level:levels(name)
         ),
-        event:events(id, name, discipline, accuscore_end_at, accuscore_enabled, time_zone),
+        event:events(id, name, discipline, accuscore_end_at, accuscore_enabled, time_zone, verbal_critiques_enabled),
         scores:scores(
           id,
           total_score,
@@ -150,7 +150,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
       .select("id, form:accuscore_forms!inner(is_active)", { count: "exact", head: true })
       .eq("event_id", (event as any)?.id).eq("form.is_active", true);
     const accuscoreOn = (event as any)?.accuscore_enabled !== false && (enabledFormCount || 0) > 0;
-    if (accuscoreOn || accuscoreReq) {
+    const { count: critiqueCount } = (event as any)?.verbal_critiques_enabled
+      ? await supabase.from("verbal_critiques").select("id", { count: "exact", head: true })
+          .eq("submission_id", submissionId).in("score_id", submittedScores.map((s: any) => s.id))
+      : { count: 0 };
+    if (accuscoreOn || accuscoreReq || (critiqueCount || 0) > 0) {
       const { data: existing } = await supabase.from("scoring_review_tokens")
         .select("id, token").eq("submission_id", submissionId).eq("coach_email", coachProfile.email)
         .order("created_at", { ascending: false }).limit(1).maybeSingle();
@@ -181,6 +185,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       divisionName: division?.name,
       levelName: level?.name,
       averageScore: avgScore,
+      critiquesUrl: (critiqueCount || 0) > 0 ? accuscoreUrl : null,
       accuscore: accuscoreOn && accuscoreUrl ? { url: accuscoreUrl, cutoffText } : null,
       response: accuscoreReq ? { formName: accuscoreReq.form?.name || "Score review", decision: decisionLabel[accuscoreReq.status] || accuscoreReq.status, response: accuscoreReq.admin_response || "" } : null,
       panels: submittedScores.map((score: any) => {

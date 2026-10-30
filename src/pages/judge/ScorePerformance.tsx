@@ -21,6 +21,7 @@ import { calculateStructuredDeductions, sortByDisplayOrder, fieldPanelAbbrevs, p
 import { ScoreTrackingTable } from '@/components/judge/ScoreTrackingTable';
 import { RubricReferenceSheet } from '@/components/judge/RubricReferenceSheet';
 import VideoPlayer from '@/components/video/VideoPlayer';
+import VerbalCritiqueRecorder, { type VerbalCritiqueHandle } from '@/components/judge/VerbalCritiqueRecorder';
 
 interface FieldScore { field_id: string; points: number; notes: string; }
 const sb = supabase as any;
@@ -62,6 +63,7 @@ export default function ScorePerformance() {
   const [invalidFields, setInvalidFields] = useState<Set<string>>(new Set());
   const [trackingOpen, setTrackingOpen] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
+  const critiqueRef = useRef<VerbalCritiqueHandle>(null);
   const [drawerTop, setDrawerTop] = useState(124);
   useSidebar();
 
@@ -71,7 +73,7 @@ export default function ScorePerformance() {
       const { data, error } = await supabase.from('video_submissions').select(`
         *, team:teams(id, name, gym_name, athletes_female, athletes_male, division_id, level_id,
           division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)), level:levels(name, level_number)),
-        event:events(id, name, status, discipline, scoring_open_at, scoring_close_at, score_tracking_enabled)
+        event:events(id, name, status, discipline, scoring_open_at, scoring_close_at, score_tracking_enabled, verbal_critiques_enabled)
       `).eq('id', submissionId!).maybeSingle();
       if (error) throw error;
       return data;
@@ -452,6 +454,7 @@ export default function ScorePerformance() {
         ? { needs_review: needsReview, review_reason: needsReview ? reviewReason : null, reviewed_at: null, reviewed_by: null }
         : {};
 
+      let savedScoreId: string | null = existingScore?.id ?? null;
       if (existingScore) {
         const { error } = await sb.from('scores').update({
           total_score: totalScore, deductions: dedTotal, comments, status,
@@ -494,6 +497,7 @@ export default function ScorePerformance() {
           ...reviewFields,
         }]).select().single();
         if (error) throw error;
+        savedScoreId = newScore.id;
         const rows = detailRows(newScore.id);
         if (rows.length) {
           const { error: dErr } = await sb.from('score_details').insert(rows);
@@ -517,6 +521,9 @@ export default function ScorePerformance() {
           const { error: sErr } = await sb.from('score_skill_selections').insert(skSel);
           if (sErr) throw sErr;
         }
+      }
+      if (savedScoreId && eventRow?.verbal_critiques_enabled) {
+        await critiqueRef.current?.persist(savedScoreId, submissionId!);
       }
     },
     onSuccess: (_, args) => {
@@ -939,6 +946,9 @@ export default function ScorePerformance() {
             />
           </CardContent>
         </Card>
+        {eventRow?.verbal_critiques_enabled && (
+          <VerbalCritiqueRecorder ref={critiqueRef} scoreId={existingScore?.id ?? null} disabled={isLocked} />
+        )}
       </div>
 
       <Dialog open={flagDialogOpen} onOpenChange={setFlagDialogOpen}>
