@@ -1237,6 +1237,7 @@ export default function SubmissionScoringDialog({
                     value={comments} onChange={(v) => { setDirty(true); setComments(v); }} rows={3}
                     disabled={isCurrentPanelLocked} className="mt-1" toolbarClassName="mt-1" />
                 </div>
+                <VerbalCritiquePlayer scoreId={allScores?.find((s: any) => resolveScorePanelId(s) === selectedPanelId)?.id} />
 
                 <div className="flex flex-col md:flex-row md:items-center gap-3">
                   <div className="flex items-center justify-between gap-4 p-3 rounded-lg border bg-warning/5 border-warning/30 flex-1">
