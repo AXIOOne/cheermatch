@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import VerbalCritiquePlayer from '@/components/admin/VerbalCritiquePlayer';
+import VerbalCritiqueRecorder, { type VerbalCritiqueHandle } from '@/components/judge/VerbalCritiqueRecorder';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -88,7 +89,7 @@ export default function SubmissionScoringDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('video_submissions')
-        .select(`*, team:teams(id, name, gym_name, athletes_female, athletes_male, division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)), level:levels(name, level_number)), event:events(id, name, discipline)`)
+        .select(`*, team:teams(id, name, gym_name, athletes_female, athletes_male, division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)), level:levels(name, level_number)), event:events(id, name, discipline, verbal_critiques_enabled)`)
         .eq('id', submissionId!).maybeSingle();
       if (error) throw error;
       return data;
@@ -413,6 +414,7 @@ export default function SubmissionScoringDialog({
   const skipTime = (s: number) => { if (videoRef.current) videoRef.current.currentTime = Math.max(0, Math.min(duration, currentTime + s)); };
   const formatTime = (s: number) => `${Math.floor(s/60)}:${Math.floor(s%60).toString().padStart(2,'0')}`;
 
+  const critiqueRef = useRef<VerbalCritiqueHandle>(null);
   const saveMutation = useMutation({
     mutationFn: async (args: { markReviewed: boolean }) => {
       if (!selectedPanelId || !template) throw new Error('Missing required data');
@@ -439,6 +441,7 @@ export default function SubmissionScoringDialog({
         ? { reviewed_at: new Date().toISOString(), reviewed_by: adminUserId }
         : {};
 
+      let savedScoreId: string | null = currentPanelScore?.id ?? null;
       if (currentPanelScore) {
         const { error } = await sb.from('scores').update({
           total_score: totalScore, deductions: deductionsTotal, comments,
@@ -487,6 +490,7 @@ export default function SubmissionScoringDialog({
           ...reviewFields,
         }]).select().single();
         if (error) throw error;
+        savedScoreId = newScore.id;
         const rows = detailRows(newScore.id);
         if (rows.length) {
           const { error: dErr } = await sb.from('score_details').insert(rows);
@@ -538,6 +542,10 @@ export default function SubmissionScoringDialog({
           const perfection = maxTotal > 0 ? Math.max(0, (raw / maxTotal) * 100 - deductionsTotal) : 0;
           await sb.from('scores').update({ total_score: perfection }).eq('id', targetScoreId);
         }
+      }
+      if (savedScoreId && critiqueRef.current && submissionId) {
+        await critiqueRef.current.persist(savedScoreId, submissionId);
+        queryClient.invalidateQueries({ queryKey: ['verbal-critique', savedScoreId] });
       }
     },
     onSuccess: (_, args) => {
@@ -1238,7 +1246,13 @@ export default function SubmissionScoringDialog({
                     value={comments} onChange={(v) => { setDirty(true); setComments(v); }} rows={3}
                     disabled={isCurrentPanelLocked} className="mt-1" toolbarClassName="mt-1" />
                 </div>
-                <VerbalCritiquePlayer scoreId={allScores?.find((s: any) => resolveScorePanelId(s) === selectedPanelId)?.id} />
+                {(submission as any)?.event?.verbal_critiques_enabled ? (
+                  <VerbalCritiqueRecorder ref={critiqueRef}
+                    key={`${selectedPanelId}-${currentPanelScore?.id ?? 'new'}`}
+                    scoreId={currentPanelScore?.id ?? null} disabled={isCurrentPanelLocked} />
+                ) : (
+                  <VerbalCritiquePlayer scoreId={allScores?.find((s: any) => resolveScorePanelId(s) === selectedPanelId)?.id} />
+                )}
 
                 <div className="flex flex-col md:flex-row md:items-center gap-3">
                   <div className="flex items-center justify-between gap-4 p-3 rounded-lg border bg-warning/5 border-warning/30 flex-1">
