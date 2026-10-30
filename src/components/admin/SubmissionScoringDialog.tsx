@@ -543,6 +543,13 @@ export default function SubmissionScoringDialog({
           await sb.from('scores').update({ total_score: perfection }).eq('id', targetScoreId);
         }
       }
+      // Admin scores always override the panel judge: drop any other score
+      // (e.g. a judge's draft) for this team + panel so only one stands.
+      if (savedScoreId && submissionId) {
+        const { error: cleanErr } = await sb.from('scores').delete()
+          .eq('submission_id', submissionId).eq('panel_id', selectedPanelId).neq('id', savedScoreId);
+        if (cleanErr) throw cleanErr;
+      }
       if (savedScoreId && critiqueRef.current && submissionId) {
         await critiqueRef.current.persist(savedScoreId, submissionId);
         queryClient.invalidateQueries({ queryKey: ['verbal-critique', savedScoreId] });
