@@ -134,6 +134,7 @@ export function scoresheetEmailHtml(p: {
   eventName: string; coachName?: string | null; teamName: string; gymName?: string | null; divisionName?: string | null; levelName?: string | null;
   averageScore: number; panels: ScoresheetPanel[];
   accuscore?: { url: string; cutoffText: string | null } | null;
+  critiquesUrl?: string | null;
   response?: { formName: string; decision: string; response: string } | null;
 }) {
   const responseBlock = p.response ? `
@@ -166,6 +167,7 @@ ${responseBlock}
 <p style="margin:8px 0 0;"><strong>Division:</strong> ${esc(p.divisionName || 'N/A')}</p><p style="margin:8px 0 0;"><strong>Level:</strong> ${esc(p.levelName || 'N/A')}</p></div>
 ${p.response ? `<div style="background:#f0f9ff;padding:20px;border-radius:8px;margin:20px 0;text-align:center;"><p style="margin:0;color:#666;">Average Score</p><div style="font-size:48px;font-weight:bold;color:${BRAND_BLUE};">${p.averageScore.toFixed(2)}</div></div>` : `<div style="background:#f0f9ff;padding:20px;border-radius:8px;margin:20px 0;text-align:center;"><p style="margin:0;font-size:20px;font-weight:bold;color:${BRAND_BLUE};">Your PDF Scoresheet</p><p style="margin:8px 0 0;">Please download the PDF scoresheet attached to this email to view your scores and judges’ feedback.</p></div>`}
 ${accuscoreBlock}
+${p.critiquesUrl ? `<p style="margin:16px 0;"><a href="${p.critiquesUrl}" style="display:inline-block;background:${BRAND_BLUE};color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold;">Listen to Judge Audio Critiques</a></p>` : ''}
 ${p.response ? `<h2 style="color:#18181b;font-size:20px;">Score Breakdown</h2>${breakdown}
 <p style="margin-top:30px;color:#666;font-size:14px;">If you have any questions about your scores, please contact the event organizers.</p>` : ''}`,
     footer: 'A PDF copy of this scoresheet is attached.',
