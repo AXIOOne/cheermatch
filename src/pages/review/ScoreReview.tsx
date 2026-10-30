@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertCircle, CheckCircle, Lock } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, Lock, Mic } from 'lucide-react';
 import logoBlack from '@/assets/portal-logo.png.asset.json';
 import { format } from 'date-fns';
 import { AccuScoreFormFields, filledSkillRows, type AccuScoreField } from '@/components/accuscore/AccuScoreFormFields';
@@ -42,6 +42,20 @@ export default function ScoreReview() {
   const [answersByForm, setAnswersByForm] = useState<Record<string, Record<string, string | string[]>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [justSubmitted, setJustSubmitted] = useState<string[]>([]);
+  const [critiques, setCritiques] = useState<{ panel_name: string; url: string; duration_seconds: number | null }[]>([]);
+
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      const { data } = await (supabase as any).rpc('get_verbal_critiques', { review_token: token });
+      const list = (data || []) as { panel_name: string; storage_path: string; duration_seconds: number | null }[];
+      const out = await Promise.all(list.map(async (c) => {
+        const { data: s } = await supabase.storage.from('verbal-critiques').createSignedUrl(c.storage_path, 3600);
+        return s?.signedUrl ? { panel_name: c.panel_name, url: s.signedUrl, duration_seconds: c.duration_seconds } : null;
+      }));
+      setCritiques(out.filter(Boolean) as any);
+    })();
+  }, [token]);
 
   const load = async () => {
     if (!token) return;
@@ -145,6 +159,20 @@ export default function ScoreReview() {
             ))}
           </CardContent>
         </Card>
+
+        {critiques.length > 0 && (
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Mic className="w-5 h-5" /> Judge Audio Critiques</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              {critiques.map((c, i) => (
+                <div key={i}>
+                  <p className="text-sm font-medium mb-1">{c.panel_name} Critique{c.duration_seconds ? ` · ${Math.floor(c.duration_seconds / 60)}:${String(c.duration_seconds % 60).padStart(2, '0')}` : ''}</p>
+                  <audio controls src={c.url} className="w-full h-10" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         {!ctx.is_open ? (
           <Card><CardContent className="pt-8 pb-8 text-center">
