@@ -78,6 +78,13 @@
       "when": 1793326251522,
       "tag": "0010_verbal_critiques",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793388681194,
+      "tag": "0011_judge_panel_score_status",
+      "breakpoints": true
     }
   ]
 }

@@ -2399,6 +2399,15 @@ export type Database = {
         Returns: boolean
       }
       hash_password: { Args: { _password: string }; Returns: string }
+      judge_panel_score_status: {
+        Args: never
+        Returns: {
+          judge_user_id: string
+          panel_id: string
+          status: Database["public"]["Enums"]["score_status"]
+          submission_id: string
+        }[]
+      }
       legacy_session_lookup: {
         Args: { _token: string }
         Returns: {
