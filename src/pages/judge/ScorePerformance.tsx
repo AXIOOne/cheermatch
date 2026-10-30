@@ -540,8 +540,19 @@ export default function ScorePerformance() {
     onSettled: () => setIsSaving(false),
   });
 
+  // Detect a panel already completed by someone else (e.g. an admin in the Scoring Control Panel).
+  const { data: scoredByOther } = useQuery({
+    queryKey: ['panel-scored-by-other', submissionId, assignedPanelId, user?.id],
+    enabled: !!submissionId && !!assignedPanelId && !!user,
+    queryFn: async () => {
+      const { data } = await (supabase as any).rpc('judge_panel_score_status');
+      return ((data || []) as any[]).some((r) => r.submission_id === submissionId && r.panel_id === assignedPanelId
+        && r.judge_user_id !== user!.id && (r.status === 'submitted' || r.status === 'locked'));
+    },
+  });
+
   const isLoading = submissionLoading || templateLoading;
-  const isLocked = existingScore?.status === 'locked' || existingScore?.status === 'submitted' || !eventOpenForScoring;
+  const isLocked = existingScore?.status === 'locked' || existingScore?.status === 'submitted' || !eventOpenForScoring || (!existingScore && !!scoredByOther);
 
   useEffect(() => {
     if (existingScore && (existingScore.status === 'submitted' || existingScore.status === 'locked')) {
@@ -621,6 +632,7 @@ export default function ScorePerformance() {
                 )}
               </>
             )}
+            {!existingScore && scoredByOther && <span className="px-3 py-1 bg-muted rounded-full text-sm font-medium">Already scored by an admin</span>}
             {existingScore?.status === 'locked' && <span className="px-3 py-1 bg-muted rounded-full text-sm font-medium">Score Locked</span>}
             {!eventOpenForScoring && existingScore?.status !== 'locked' && (
               <span className="px-3 py-1 bg-warning/10 text-warning rounded-full text-sm font-medium">Event not open for scoring</span>

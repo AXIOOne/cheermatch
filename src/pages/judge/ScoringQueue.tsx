@@ -215,29 +215,33 @@ export default function ScoringQueue() {
     });
   }, [submissions, templatePanelCoverage, openAssignments]);
 
-  // Existing scores by this judge
+  // Scores for this judge's assigned events — includes scores an admin
+  // entered for a panel from the Scoring Control Panel, so the queue stays in sync.
   const { data: existingScores } = useQuery({
     queryKey: ['judge-existing-scores', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('scores')
-        .select('submission_id, status, panel_id')
-        .eq('judge_user_id', user!.id);
+      const { data, error } = await (supabase as any).rpc('judge_panel_score_status');
       if (error) throw error;
-      return data;
+      return (data || []) as { submission_id: string; panel_id: string | null; status: string; judge_user_id: string }[];
     },
     enabled: !!user,
+    refetchOnWindowFocus: true,
   });
 
   // A judge can hold more than one panel assignment for the same team
   // (e.g. Building Difficulty + Building Execution). Each panel is scored
   // separately, so each gets its own score row and its own queue entry.
   const getScoreStatus = (submissionId: string, panelId: string | null) => {
-    const rows = (existingScores || []).filter((s: any) => s.submission_id === submissionId);
-    const match = panelId
-      ? rows.find((s: any) => s.panel_id === panelId)
-      : rows.find((s: any) => !s.panel_id) || rows[0];
-    return match?.status || null;
+    const rows = (existingScores || []).filter((s) => s.submission_id === submissionId);
+    const own = rows.filter((s) => s.judge_user_id === user?.id);
+    const ownMatch = panelId
+      ? own.find((s) => s.panel_id === panelId)
+      : own.find((s) => !s.panel_id) || own[0];
+    if (ownMatch?.status === 'submitted' || ownMatch?.status === 'locked') return ownMatch.status;
+    // Someone else (e.g. an admin) already completed this panel for the team.
+    const done = panelId && rows.find((s) => s.panel_id === panelId && (s.status === 'submitted' || s.status === 'locked'));
+    if (done) return done.status;
+    return ownMatch?.status || null;
   };
 
   const uniqueEvents = [...new Map(assignments?.map((a: any) => [a.event_id, a.event]) || [])];
