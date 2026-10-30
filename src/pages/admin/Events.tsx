@@ -515,6 +515,21 @@ export default function Events() {
                   />
                   <FormField
                     control={form.control}
+                    name="verbal_critiques_enabled"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-md border p-3">
+                        <div>
+                          <FormLabel>Verbal judge critiques</FormLabel>
+                          <p className="text-xs text-muted-foreground">Let each judge record an audio critique per team. Coaches listen from their scoresheet link.</p>
+                        </div>
+                        <FormControl>
+                          <Switch checked={!!field.value} onCheckedChange={field.onChange} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
                     name="accuscore_enabled"
                     render={({ field }) => (
                       <FormItem className="flex items-center justify-between rounded-md border p-3">

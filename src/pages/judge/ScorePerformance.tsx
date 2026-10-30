@@ -21,6 +21,7 @@ import { calculateStructuredDeductions, sortByDisplayOrder, fieldPanelAbbrevs, p
 import { ScoreTrackingTable } from '@/components/judge/ScoreTrackingTable';
 import { RubricReferenceSheet } from '@/components/judge/RubricReferenceSheet';
 import VideoPlayer from '@/components/video/VideoPlayer';
+import VerbalCritiqueRecorder, { type VerbalCritiqueHandle } from '@/components/judge/VerbalCritiqueRecorder';
 
 interface FieldScore { field_id: string; points: number; notes: string; }
 const sb = supabase as any;
@@ -945,6 +946,9 @@ export default function ScorePerformance() {
             />
           </CardContent>
         </Card>
+        {eventRow?.verbal_critiques_enabled && (
+          <VerbalCritiqueRecorder ref={critiqueRef} scoreId={existingScore?.id ?? null} disabled={isLocked} />
+        )}
       </div>
 
       <Dialog open={flagDialogOpen} onOpenChange={setFlagDialogOpen}>
