@@ -74,7 +74,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
           division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)),
           level:levels(name)
         ),
-        event:events(id, name, discipline, accuscore_end_at, accuscore_enabled, time_zone),
+        event:events(id, name, discipline, accuscore_end_at, accuscore_enabled, time_zone, verbal_critiques_enabled),
         scores:scores(
           id,
           total_score,
