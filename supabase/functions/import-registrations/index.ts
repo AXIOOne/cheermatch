@@ -9,7 +9,7 @@ type Row = {
   team_name: string
   gym_name: string
   division_id: string
-  level_id: string
+  level_id: string | null
   athletes_male: number
   athletes_female: number
   coach_name: string | null
@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
         name: (r.team_name || '').trim(),
         gym_name: r.gym_name,
         division_id: r.division_id,
-        level_id: r.level_id,
+        level_id: r.level_id || null,
         athletes_male: r.athletes_male,
         athletes_female: r.athletes_female,
         coach_name: r.coach_name,

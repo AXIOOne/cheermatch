@@ -36,7 +36,7 @@ type ParsedRow = {
   orgAction?: 'existing' | 'create';
   coachAction?: 'create' | 'reset';
   payload?: {
-    team_name: string; gym_name: string; division_id: string; level_id: string;
+    team_name: string; gym_name: string; division_id: string; level_id: string | null;
     athletes_male: number; athletes_female: number;
     coach_name: string | null; coach_email: string; coach_phone: string | null;
     coach_password: string;
@@ -101,6 +101,7 @@ export function BulkImportTeamsDialog({ open, onOpenChange, eventId }: Props) {
 
   const validate = (parsed: CsvRow[]): ParsedRow[] => {
     const divMap = new Map((divisions ?? []).map(d => [d.name.toLowerCase(), d.id]));
+    const divLevelMap = new Map((divisions ?? []).map(d => [d.name.toLowerCase(), d.level_id ?? null]));
     const lvlMap = new Map((levels ?? []).map(l => [l.name.toLowerCase(), l.id]));
     const existing = new Set((existingTeams ?? []).map(t => t.name.toLowerCase()));
     const orgSet = new Set((existingOrgs ?? []).map(o => o.name.trim().toLowerCase()));
@@ -122,8 +123,8 @@ export function BulkImportTeamsDialog({ open, onOpenChange, eventId }: Props) {
       if (!gymName) errors.push('gym_name required');
       if (!division) errors.push('division required');
       else if (!divMap.has(division.toLowerCase())) errors.push(`unknown division "${division}"`);
-      if (!level) errors.push('level required');
-      else if (!lvlMap.has(level.toLowerCase())) errors.push(`unknown level "${level}"`);
+      // Level is optional: blank falls back to the division's own level (or none).
+      if (level && !lvlMap.has(level.toLowerCase())) errors.push(`unknown level "${level}"`);
       if (!coachEmail) errors.push('coach_email required');
       if (!coachPassword) errors.push('coach_password required');
       else if (coachPassword.length < 8) errors.push('coach_password must be at least 8 characters');
@@ -149,7 +150,9 @@ export function BulkImportTeamsDialog({ open, onOpenChange, eventId }: Props) {
         team_name: teamName,
         gym_name: gymName,
         division_id: divMap.get(division.toLowerCase())!,
-        level_id: lvlMap.get(level.toLowerCase())!,
+        level_id: level
+          ? lvlMap.get(level.toLowerCase())!
+          : divLevelMap.get(division.toLowerCase()) ?? null,
         athletes_male: Number.isFinite(male) ? male : 0,
         athletes_female: Number.isFinite(female) ? female : 0,
         coach_name: (raw.coach_name || '').trim() || null,
@@ -219,7 +222,7 @@ export function BulkImportTeamsDialog({ open, onOpenChange, eventId }: Props) {
         <DialogHeader>
           <DialogTitle>Bulk import teams</DialogTitle>
           <DialogDescription>
-            Upload a CSV with columns: {SAMPLE_HEADERS.join(', ')}. Missing gyms are created as organizations, and coach
+            Upload a CSV with columns: {SAMPLE_HEADERS.join(', ')}. Team name and level are optional. Missing gyms are created as organizations, and coach
             accounts are created (or their password reset) using the password in the file.
           </DialogDescription>
         </DialogHeader>
