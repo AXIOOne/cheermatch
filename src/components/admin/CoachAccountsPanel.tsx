@@ -79,6 +79,14 @@ export function CoachAccountsPanel({ eventId }: Props) {
 
   const [highlightedEmail, setHighlightedEmail] = useState<string | null>(null);
 
+  // Sends run one-by-one from this page; warn before leaving mid-send so the batch isn't cut off.
+  useEffect(() => {
+    if (!inviteProgress) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [inviteProgress]);
+
   useEffect(() => {
     const applyHash = () => {
       const hash = window.location.hash;
@@ -126,6 +134,7 @@ export function CoachAccountsPanel({ eventId }: Props) {
   });
 
   const total = rows?.length ?? 0;
+  const unsent = (rows ?? []).filter(r => !sends?.[r.coach_email.toLowerCase()]);
   const missing = (rows ?? []).filter(r => !r.user_exists || !r.has_gym_coach_role).length;
 
   return (
@@ -134,6 +143,11 @@ export function CoachAccountsPanel({ eventId }: Props) {
         <CardTitle className="flex items-center justify-between text-lg">
           <span>Coach accounts</span>
           <div className="flex items-center gap-2">
+          {total > 0 && unsent.length > 0 && unsent.length < total && !inviteProgress && (
+            <Button size="sm" variant="outline" onClick={() => setInviteTargets(unsent)}>
+              <Send className="w-3 h-3 mr-2" /> Send to {unsent.length} not yet emailed
+            </Button>
+          )}
           {total > 0 && (
             <Button size="sm" disabled={!!inviteProgress} onClick={() => setInviteTargets(rows ?? [])}>
               {inviteProgress ? <Loader2 className="w-3 h-3 mr-2 animate-spin" /> : <Send className="w-3 h-3 mr-2" />}
