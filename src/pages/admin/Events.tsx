@@ -20,7 +20,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Plus, Calendar, Loader2, Pencil, Trash2, Search, BarChart3, Users, Trophy, ChevronLeft, ChevronRight } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const DISCIPLINES = [
@@ -759,7 +759,7 @@ export default function Events() {
                         </Link>
                       </TableCell>
                       <TableCell>
-                        {format(new Date(event.start_date), 'MMM d')} - {format(new Date(event.end_date), 'MMM d, yyyy')}
+                        {format(parseISO(event.start_date), 'MMM d')} - {format(parseISO(event.end_date), 'MMM d, yyyy')}
                       </TableCell>
                       <TableCell className="text-right">
                         <Badge
