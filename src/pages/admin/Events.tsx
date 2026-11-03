@@ -75,9 +75,8 @@ const eventSchema = z.object({
   scoring_close_at: z.string().optional(),
 });
 
-const toIso = (v?: string) => (v && v.trim() ? new Date(v).toISOString() : null);
-const fromIso = (v?: string | null) =>
-  v ? new Date(v).toISOString().slice(0, 16) : '';
+const toIso = localInputToIso;
+const fromIso = isoToLocalInput;
 
 type EventFormData = z.infer<typeof eventSchema>;
 
@@ -345,9 +344,7 @@ export default function Events() {
       end_date: event.end_date,
       time_zone: event.time_zone || 'America/New_York',
       discipline: event.discipline || 'allstar_cheer',
-      accuscore_end_at: event.accuscore_end_at
-        ? new Date(event.accuscore_end_at).toISOString().slice(0, 16)
-        : '',
+      accuscore_end_at: fromIso(event.accuscore_end_at),
       accuscore_enabled: (event as any).accuscore_enabled ?? true,
       score_tracking_enabled: (event as any).score_tracking_enabled ?? false,
       verbal_critiques_enabled: (event as any).verbal_critiques_enabled ?? false,
