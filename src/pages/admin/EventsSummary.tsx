@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Loader2, Calendar, Users, BarChart3, Clock, CheckCircle, FileText } from 'lucide-react';
-import { format, isAfter, isBefore, addDays } from 'date-fns';
+import { format, isAfter, isBefore, addDays, parseISO } from 'date-fns';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 
 const STATUS_COLORS: Record<string, string> = {
@@ -84,7 +84,7 @@ export default function EventsSummary() {
 
   const upcomingDeadlines = events
     ?.filter(e => {
-      const startDate = new Date(e.start_date);
+      const startDate = parseISO(e.start_date);
       return isAfter(startDate, today) && isBefore(startDate, thirtyDaysOut);
     })
     .slice(0, 5) || [];
@@ -255,7 +255,7 @@ export default function EventsSummary() {
                           {event.name}
                         </Link>
                         <div className="flex gap-4 mt-1 text-sm text-muted-foreground">
-                          <span>Starts: {format(new Date(event.start_date), 'MMM d, yyyy')}</span>
+                          <span>Starts: {format(parseISO(event.start_date), 'MMM d, yyyy')}</span>
                           {event.time_zone && <span>{event.time_zone}</span>}
                         </div>
                       </div>
