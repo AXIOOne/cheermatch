@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { localInputToIso, isoToLocalInput } from "@/lib/datetime-local";
+import { localInputToIso, isoToLocalInput, timeZoneAbbr } from "@/lib/datetime-local";
 import { Switch } from '@/components/ui/switch';
 import { EventAccuScoreForms } from '@/components/admin/EventAccuScoreForms';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -76,8 +76,6 @@ const eventSchema = z.object({
   scoring_close_at: z.string().optional(),
 });
 
-const toIso = localInputToIso;
-const fromIso = isoToLocalInput;
 
 type EventFormData = z.infer<typeof eventSchema>;
 
@@ -216,19 +214,19 @@ export default function Events() {
         end_date: data.end_date,
         time_zone: data.time_zone,
         discipline: data.discipline,
-        accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
+        accuscore_end_at: localInputToIso(data.accuscore_end_at, data.time_zone),
         accuscore_enabled: data.accuscore_enabled,
         score_tracking_enabled: data.score_tracking_enabled,
         verbal_critiques_enabled: data.verbal_critiques_enabled,
         status: data.status,
         duration_of_capture: data.duration_of_capture,
         screen_capture_cnt: data.screen_capture_cnt,
-        registration_open_at: toIso(data.registration_open_at),
-        registration_close_at: toIso(data.registration_close_at),
-        submission_open_at: toIso(data.submission_open_at),
-        submission_close_at: toIso(data.submission_close_at),
-        scoring_open_at: toIso(data.scoring_open_at),
-        scoring_close_at: toIso(data.scoring_close_at),
+        registration_open_at: localInputToIso(data.registration_open_at, data.time_zone),
+        registration_close_at: localInputToIso(data.registration_close_at, data.time_zone),
+        submission_open_at: localInputToIso(data.submission_open_at, data.time_zone),
+        submission_close_at: localInputToIso(data.submission_close_at, data.time_zone),
+        scoring_open_at: localInputToIso(data.scoring_open_at, data.time_zone),
+        scoring_close_at: localInputToIso(data.scoring_close_at, data.time_zone),
         created_by: user!.id,
       } as any]).select('id').single();
       if (error) throw error;
@@ -270,19 +268,19 @@ export default function Events() {
         end_date: data.end_date,
         time_zone: data.time_zone,
         discipline: data.discipline,
-        accuscore_end_at: data.accuscore_end_at ? new Date(data.accuscore_end_at).toISOString() : null,
+        accuscore_end_at: localInputToIso(data.accuscore_end_at, data.time_zone),
         accuscore_enabled: data.accuscore_enabled,
         score_tracking_enabled: data.score_tracking_enabled,
         verbal_critiques_enabled: data.verbal_critiques_enabled,
         status: data.status,
         duration_of_capture: data.duration_of_capture,
         screen_capture_cnt: data.screen_capture_cnt,
-        registration_open_at: toIso(data.registration_open_at),
-        registration_close_at: toIso(data.registration_close_at),
-        submission_open_at: toIso(data.submission_open_at),
-        submission_close_at: toIso(data.submission_close_at),
-        scoring_open_at: toIso(data.scoring_open_at),
-        scoring_close_at: toIso(data.scoring_close_at),
+        registration_open_at: localInputToIso(data.registration_open_at, data.time_zone),
+        registration_close_at: localInputToIso(data.registration_close_at, data.time_zone),
+        submission_open_at: localInputToIso(data.submission_open_at, data.time_zone),
+        submission_close_at: localInputToIso(data.submission_close_at, data.time_zone),
+        scoring_open_at: localInputToIso(data.scoring_open_at, data.time_zone),
+        scoring_close_at: localInputToIso(data.scoring_close_at, data.time_zone),
       } as any).eq('id', id);
       if (error) throw error;
 
@@ -345,19 +343,19 @@ export default function Events() {
       end_date: event.end_date,
       time_zone: event.time_zone || 'America/New_York',
       discipline: event.discipline || 'allstar_cheer',
-      accuscore_end_at: fromIso(event.accuscore_end_at),
+      accuscore_end_at: isoToLocalInput(event.accuscore_end_at, event.time_zone || 'America/New_York'),
       accuscore_enabled: (event as any).accuscore_enabled ?? true,
       score_tracking_enabled: (event as any).score_tracking_enabled ?? false,
       verbal_critiques_enabled: (event as any).verbal_critiques_enabled ?? false,
       status: event.status,
       duration_of_capture: event.duration_of_capture ?? 150,
       screen_capture_cnt: event.screen_capture_cnt ?? 2,
-      registration_open_at: fromIso(event.registration_open_at),
-      registration_close_at: fromIso(event.registration_close_at),
-      submission_open_at: fromIso(event.submission_open_at),
-      submission_close_at: fromIso(event.submission_close_at),
-      scoring_open_at: fromIso(event.scoring_open_at),
-      scoring_close_at: fromIso(event.scoring_close_at),
+      registration_open_at: isoToLocalInput(event.registration_open_at, event.time_zone || 'America/New_York'),
+      registration_close_at: isoToLocalInput(event.registration_close_at, event.time_zone || 'America/New_York'),
+      submission_open_at: isoToLocalInput(event.submission_open_at, event.time_zone || 'America/New_York'),
+      submission_close_at: isoToLocalInput(event.submission_close_at, event.time_zone || 'America/New_York'),
+      scoring_open_at: isoToLocalInput(event.scoring_open_at, event.time_zone || 'America/New_York'),
+      scoring_close_at: isoToLocalInput(event.scoring_close_at, event.time_zone || 'America/New_York'),
     });
     setIsDialogOpen(true);
   };
@@ -552,7 +550,7 @@ export default function Events() {
                     name="accuscore_end_at"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>AccuScore Review Cutoff</FormLabel>
+                        <FormLabel>AccuScore Review Cutoff ({timeZoneAbbr(form.watch('time_zone'))})</FormLabel>
                         <FormControl>
                           <Input type="datetime-local" {...field} />
                         </FormControl>
@@ -611,7 +609,7 @@ export default function Events() {
                     <div>
                       <h3 className="text-sm font-semibold">Lifecycle Windows</h3>
                       <p className="text-xs text-muted-foreground">
-                        Optional. When set, these gate the registration / submission / scoring phases independently of Status.
+                        Optional. Times are in the event's time zone. When set, these gate the registration / submission / scoring phases independently of Status.
                       </p>
                     </div>
                     {([
@@ -625,7 +623,7 @@ export default function Events() {
                           name={openKey as any}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>{label} opens</FormLabel>
+                              <FormLabel>{label} opens ({timeZoneAbbr(form.watch('time_zone'))})</FormLabel>
                               <FormControl><Input type="datetime-local" {...field} /></FormControl>
                               <FormMessage />
                             </FormItem>
@@ -636,7 +634,7 @@ export default function Events() {
                           name={closeKey as any}
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>{label} closes</FormLabel>
+                              <FormLabel>{label} closes ({timeZoneAbbr(form.watch('time_zone'))})</FormLabel>
                               <FormControl><Input type="datetime-local" {...field} /></FormControl>
                               <FormMessage />
                             </FormItem>
