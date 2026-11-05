@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { CoachSelect, useCoaches, type CoachOption } from './CoachSelect';
+import { DivisionSelect } from './DivisionSelect';
 import { useEventDivisions } from '@/hooks/useEventDivisions';
 
 const schema = z.object({
@@ -149,12 +150,7 @@ export function EditRegistrationDialog({ open, onOpenChange, team, onSaved }: Ed
               <FormField control={form.control} name="division_id" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Division</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select a division" /></SelectTrigger></FormControl>
-                    <SelectContent className="max-w-[90vw]">
-                      {divisions?.map((d) => (<SelectItem key={d.id} value={d.id} className="whitespace-normal">{d.name}{d.level_name ? ` — ${d.level_name}` : ''}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
+                  <DivisionSelect value={field.value} onChange={field.onChange} divisions={divisions} />
                   <FormMessage />
                 </FormItem>
               )} />
