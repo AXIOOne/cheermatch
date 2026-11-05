@@ -75,9 +75,9 @@ export function OrganizationCombobox({
               {items.map((item) => (
                 <CommandItem
                   key={item.id}
-                  value={item.id}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? (allowNone ? 'none' : '') : currentValue);
+                  value={`${item.name} ${item.id}`}
+                  onSelect={() => {
+                    onChange(item.id === value ? (allowNone ? 'none' : '') : item.id);
                     setOpen(false);
                   }}
                 >
