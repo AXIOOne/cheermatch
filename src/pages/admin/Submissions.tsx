@@ -911,7 +911,7 @@ export default function Submissions() {
       <Dialog open={!!videoModalSubmission} onOpenChange={(o) => { if (!o) setVideoModalSubmission(null); }}>
         <DialogContent className="max-w-4xl w-[calc(100%-2rem)]">
           <DialogHeader>
-            <DialogTitle>{videoModalSubmission?.team?.name ?? 'Registration deleted'} — Performance Video</DialogTitle>
+            <DialogTitle>{(videoModalSubmission?.team ? (videoModalSubmission.team.name?.trim() || videoModalSubmission.team.gym_name) : 'Registration deleted')} — Performance Video</DialogTitle>
           </DialogHeader>
           {videoModalSubmission && (
             <VideoPlayer
