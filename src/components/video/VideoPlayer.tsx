@@ -24,11 +24,9 @@ export default function VideoPlayer({
 }: VideoPlayerProps) {
   const deg = (((rotation ?? 0) % 360) + 360) % 360;
   const quarter = deg === 90 || deg === 270;
-  // A sideways turn in a 16:9 box: swap the element's box to 9:16 of the height, then rotate.
+  // Sideways turn: rotate the full 16:9 box and shrink by 9/16 so the now-portrait video fits the height.
   const rotStyle: React.CSSProperties | undefined = deg
-    ? quarter
-      ? { position: 'absolute', top: '50%', left: '50%', width: '56.25%', height: '177.78%', transform: `translate(-50%, -50%) rotate(${deg}deg)` }
-      : { transform: `rotate(${deg}deg)` }
+    ? { transform: quarter ? `rotate(${deg}deg) scale(0.5625)` : `rotate(${deg}deg)` }
     : undefined;
   const [retryKey, setRetryKey] = useState(0);
   const [forcePlay, setForcePlay] = useState(false);
