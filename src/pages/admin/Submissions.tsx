@@ -329,9 +329,11 @@ export default function Submissions() {
 
 
 
-  const archivedCount = submissions?.filter((s) => !!s.archived_at).length || 0;
-  const detachedCount = submissions?.filter((s) => !s.archived_at && !s.team).length || 0;
-  const currentCount = submissions?.filter((s) => !s.archived_at && !!s.team).length || 0;
+  const inEvent = (submissions ?? []).filter((s) => eventFilter === 'all' || s.event.id === eventFilter);
+  const archivedCount = inEvent.filter((s) => !!s.archived_at).length;
+  const detachedCount = inEvent.filter((s) => !s.archived_at && !s.team).length;
+  const currentCount = inEvent.filter((s) => !s.archived_at && !!s.team).length;
+  const pendingCount = pendingCaptures.filter((p) => eventFilter === 'all' || p.eventId === eventFilter).length;
 
   const switchTab = (value: string) => {
     setTab(value === 'archived' ? 'archived' : value === 'pending' ? 'pending' : value === 'detached' ? 'detached' : 'current');
@@ -396,7 +398,7 @@ export default function Submissions() {
       <Tabs value={tab} onValueChange={switchTab} className="mb-6 overflow-x-auto">
         <TabsList>
           <TabsTrigger value="current">Current ({currentCount})</TabsTrigger>
-          <TabsTrigger value="pending">Awaiting video ({pendingCaptures.length})</TabsTrigger>
+          <TabsTrigger value="pending">Awaiting video ({pendingCount})</TabsTrigger>
           <TabsTrigger value="archived">Archived ({archivedCount})</TabsTrigger>
           <TabsTrigger value="detached">Registration deleted ({detachedCount})</TabsTrigger>
         </TabsList>
