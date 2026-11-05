@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Loader2, RefreshCw, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,8 @@ interface VideoPlayerProps {
   title?: string;
   /** When provided, the player asks the host for the real processing state. */
   submissionId?: string | null;
+  /** Display rotation in degrees (0, 90, 180, 270) set by an admin. */
+  rotation?: number | null;
 }
 
 export default function VideoPlayer({
@@ -18,7 +20,16 @@ export default function VideoPlayer({
   status,
   title = "Performance Video",
   submissionId,
+  rotation,
 }: VideoPlayerProps) {
+  const deg = (((rotation ?? 0) % 360) + 360) % 360;
+  const quarter = deg === 90 || deg === 270;
+  // A sideways turn in a 16:9 box: swap the element's box to 9:16 of the height, then rotate.
+  const rotStyle: React.CSSProperties | undefined = deg
+    ? quarter
+      ? { position: 'absolute', top: '50%', left: '50%', width: '56.25%', height: '177.78%', transform: `translate(-50%, -50%) rotate(${deg}deg)` }
+      : { transform: `rotate(${deg}deg)` }
+    : undefined;
   const [retryKey, setRetryKey] = useState(0);
   const [forcePlay, setForcePlay] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -78,8 +89,9 @@ export default function VideoPlayer({
 
   if (isEmbed) {
     return (
-      <div key={retryKey} className="aspect-video bg-black rounded-lg overflow-hidden">
+      <div key={retryKey} className="relative aspect-video bg-black rounded-lg overflow-hidden">
         <iframe
+          style={rotStyle}
           src={url}
           title={title}
           className="w-full h-full"
@@ -91,8 +103,9 @@ export default function VideoPlayer({
   }
 
   return (
-    <div className="aspect-video bg-black rounded-lg overflow-hidden">
+    <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
       <video
+        style={rotStyle}
         src={url}
         controls
         playsInline
