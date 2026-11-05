@@ -2278,6 +2278,7 @@ export type Database = {
           team_id: string | null
           thumbnail_url: string | null
           updated_at: string
+          video_rotation: number
           video_url: string | null
         }
         Insert: {
@@ -2303,6 +2304,7 @@ export type Database = {
           team_id?: string | null
           thumbnail_url?: string | null
           updated_at?: string
+          video_rotation?: number
           video_url?: string | null
         }
         Update: {
@@ -2328,6 +2330,7 @@ export type Database = {
           team_id?: string | null
           thumbnail_url?: string | null
           updated_at?: string
+          video_rotation?: number
           video_url?: string | null
         }
         Relationships: [
