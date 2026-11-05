@@ -128,7 +128,8 @@ ${p.videoUrl ? `<p style="margin:24px 0 8px;">Here is a copy of the video you su
     footer: 'This is an automated message. Please do not reply to this email.',
   });
 }
-export const approvedEmailSubject = (teamName?: string | null) => `Video approved: ${teamName ?? 'your submission'}`;
+export const approvedEmailSubject = (teamName?: string | null, divisionName?: string | null) =>
+  `Video approved: ${teamName ?? 'your submission'}${divisionName ? ` (${divisionName})` : ''}`;
 
 export function resetCodeEmailHtml(p: { fullName?: string | null; code: string }) {
   return shell({

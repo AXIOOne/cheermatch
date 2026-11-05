@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
 
     const { data: sub, error: sErr } = await admin
       .from('video_submissions')
-      .select('id, brightcove_video_id, video_url, team:teams!inner(name, gym_name, coach_email, coach_name), event:events!inner(name)')
+      .select('id, brightcove_video_id, video_url, team:teams!inner(name, gym_name, coach_email, coach_name, division:divisions(name)), event:events!inner(name)')
       .eq('id', submissionId)
       .maybeSingle()
     if (sErr) throw new Error(sErr.message)
@@ -65,8 +65,8 @@ Deno.serve(async (req) => {
     const emailSubject = resolveEmailSubject(
       (subjRow?.value ?? null) as Record<string, string> | null,
       'approved',
-      approvedEmailSubject(team?.name || team?.gym_name),
-      { teamName: team?.name || team?.gym_name, coachName: team?.coach_name, eventName: event?.name },
+      approvedEmailSubject(team?.name || team?.gym_name, team?.division?.name),
+      { teamName: team?.name || team?.gym_name, coachName: team?.coach_name, eventName: event?.name, divisionName: team?.division?.name },
     )
 
     const resp = await fetch('https://api.resend.com/emails', {
