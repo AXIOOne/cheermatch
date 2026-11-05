@@ -7,11 +7,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { useEventDivisions } from '@/hooks/useEventDivisions';
+import { DivisionSelect } from './DivisionSelect';
 
 const schema = z.object({
   name: z.string().trim().max(120),
@@ -115,21 +114,7 @@ export function EditTeamDialog({ open, onOpenChange, team, onSaved }: EditTeamDi
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Division</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a division" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className="max-w-[90vw]">
-                      {divisions?.map((d) => (
-                        <SelectItem key={d.id} value={d.id} className="whitespace-normal">
-                          {d.name}
-                          {d.level_name ? ` — ${d.level_name}` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <DivisionSelect value={field.value} onChange={field.onChange} divisions={divisions} />
                   <FormMessage />
                 </FormItem>
               )}
