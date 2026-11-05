@@ -239,7 +239,7 @@ export function SubmissionDetailContent({ submissionId, onClose }: { submissionI
           <Button size="sm" variant="outline" onClick={async () => {
             const next = (((submission.video_rotation ?? 0) + 90) % 360);
             const { error } = await sb.from('video_submissions').update({ video_rotation: next }).eq('id', submissionId!);
-            if (error) { toast.error(error.message); return; }
+            if (error) { toast({ title: 'Could not rotate', description: error.message, variant: 'destructive' }); return; }
             queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] });
             queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
           }}>

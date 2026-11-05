@@ -122,6 +122,7 @@ export default function Submissions() {
         .select(`
           id,
           video_url,
+          video_rotation,
           brightcove_video_id,
           thumbnail_url,
           status,
