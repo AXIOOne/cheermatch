@@ -2,6 +2,7 @@
 // Admin-only. Emails a coach that their submission was approved.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { approvedEmailHtml, approvedEmailSubject, resolveEmailSubject, EMAIL_SUBJECTS_SETTINGS_KEY } from '../_shared/email-layouts.ts'
+import { coachVideoUrl } from '../_shared/video-link.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,7 +40,7 @@ Deno.serve(async (req) => {
 
     const { data: sub, error: sErr } = await admin
       .from('video_submissions')
-      .select('id, team:teams!inner(name, gym_name, coach_email, coach_name), event:events!inner(name)')
+      .select('id, brightcove_video_id, video_url, team:teams!inner(name, gym_name, coach_email, coach_name), event:events!inner(name)')
       .eq('id', submissionId)
       .maybeSingle()
     if (sErr) throw new Error(sErr.message)
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const html = approvedEmailHtml({ teamName: team?.name || team?.gym_name, coachName: team?.coach_name, eventName: event?.name })
+    const html = approvedEmailHtml({ teamName: team?.name || team?.gym_name, coachName: team?.coach_name, eventName: event?.name, videoUrl: ((sub as any)?.brightcove_video_id || (sub as any)?.video_url) ? await coachVideoUrl(submissionId) : null })
 
     const { data: subjRow } = await admin
       .from('platform_settings').select('value').eq('key', EMAIL_SUBJECTS_SETTINGS_KEY).maybeSingle()

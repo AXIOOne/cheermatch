@@ -36,7 +36,7 @@ export const BUILT_IN_EMAILS: BuiltInEmail[] = [
   { key: 'accuscore_response', name: 'AccuScore Response', audience: 'Coaches', trigger: 'Admin sends a decision on an AccuScore request', subject: 'AccuScore Response - {{teamName}} | {{eventName}}', subjectVars: ['teamName', 'gymName', 'eventName', 'coachName', 'divisionName', 'levelName'],
     render: () => scoresheetEmailHtml({ ...sheet, response: { formName: 'Building Review', decision: 'Honored', response: 'After review, the stunt difficulty score has been adjusted.' } }) },
   { key: 'approved', name: 'Video Approved', audience: 'Coaches', trigger: 'Admin approves a video submission', subject: 'Video approved: {{teamName}}', subjectVars: ['teamName', 'coachName', 'eventName'],
-    render: () => approvedEmailHtml({ teamName: 'Elite Stars', coachName: 'John Smith', eventName: 'National Championship 2026' }) },
+    render: () => approvedEmailHtml({ teamName: 'Elite Stars', coachName: 'John Smith', eventName: 'National Championship 2026', videoUrl: 'https://score.cheermatch.com' }) },
   { key: 'revision', name: 'Revision Requested', audience: 'Coaches', trigger: 'Admin requests a new video for a submission', subject: 'Revision requested: {{teamName}}', subjectVars: ['teamName', 'coachName', 'eventName'],
     render: () => revisionEmailHtml({ teamName: 'Elite Stars', coachName: 'John Smith', eventName: 'National Championship 2026', notes: 'The video cuts off before the end of the routine.' }) },
   { key: 'reset', name: 'Password Reset Code', audience: 'Mobile app users', trigger: 'User taps "Forgot password" in the mobile app', subject: resetCodeEmailSubject, subjectVars: ['fullName'],

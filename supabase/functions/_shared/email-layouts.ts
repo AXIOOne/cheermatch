@@ -118,12 +118,13 @@ ${p.notes ? `<blockquote style="background:#f1f5f9;border-left:4px solid ${BRAND
 }
 export const revisionEmailSubject = (teamName?: string | null) => `Revision requested: ${teamName ?? 'your submission'}`;
 
-export function approvedEmailHtml(p: { teamName?: string | null; coachName?: string | null; eventName?: string | null }) {
+export function approvedEmailHtml(p: { teamName?: string | null; coachName?: string | null; eventName?: string | null; videoUrl?: string | null }) {
   return shell({
     body: `${heading(`Video approved for ${esc(p.teamName ?? 'your team')}`)}
 <p>Hello${p.coachName ? ' ' + esc(p.coachName) : ''},</p>
 <p>Great news! Your video submission for <strong>${esc(p.teamName ?? 'your team')}</strong> in <strong>${esc(p.eventName ?? 'your event')}</strong> has been reviewed and approved.</p>
-<p>No further action is needed. Your routine will now move on to judging.</p>`,
+<p>No further action is needed. Your routine will now move on to judging.</p>
+${p.videoUrl ? `<p style="margin:24px 0 8px;">Here is a copy of the video you submitted:</p>${button(p.videoUrl, 'Watch / Download Video')}${fallbackLink(p.videoUrl)}` : ''}`,
     footer: 'This is an automated message. Please do not reply to this email.',
   });
 }
