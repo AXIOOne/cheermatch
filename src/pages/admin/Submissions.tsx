@@ -363,7 +363,7 @@ export default function Submissions() {
 
   const selectedSubmissions = selectedRows.map(s => ({
     id: s.id,
-    teamName: s.team?.name ?? 'Registration deleted',
+    teamName: (s.team ? (s.team.name?.trim() || s.team.gym_name) : 'Registration deleted'),
     gymName: s.team?.gym_name ?? '',
     eventId: s.event.id,
     eventName: s.event.name,
@@ -499,7 +499,7 @@ export default function Submissions() {
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => openDelete(selectedRows.map(s => ({ id: s.id, teamName: s.team?.name ?? 'Registration deleted' })))}
+                        onClick={() => openDelete(selectedRows.map(s => ({ id: s.id, teamName: (s.team ? (s.team.name?.trim() || s.team.gym_name) : 'Registration deleted') })))}
                       >
                         <Trash2 className="w-4 h-4 mr-2" />
                         Delete permanently
@@ -572,7 +572,7 @@ export default function Submissions() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground align-top">
                         <div className="flex flex-col gap-1.5">
-                          <p className="text-sm font-semibold text-muted-foreground leading-tight whitespace-nowrap">{submission.team?.name ?? 'Registration deleted'}</p>
+                          <p className="text-sm font-semibold text-muted-foreground leading-tight whitespace-nowrap">{(submission.team ? (submission.team.name?.trim() || submission.team.gym_name) : 'Registration deleted')}</p>
                           <button
                             type="button"
                             onClick={(e) => {
@@ -635,7 +635,7 @@ export default function Submissions() {
                           {!isArchivedTab && (
                             <GenerateReviewLink
                               submissionId={submission.id}
-                              teamName={submission.team?.name ?? 'Registration deleted'}
+                              teamName={(submission.team ? (submission.team.name?.trim() || submission.team.gym_name) : 'Registration deleted')}
                               variant="default"
                               size="sm"
                             />
@@ -675,7 +675,7 @@ export default function Submissions() {
                                 size="icon"
                                 className="h-8 w-8 rounded-none text-muted-foreground hover:text-primary"
                                 title="Replace video"
-                                onClick={() => setReplaceTarget({ id: submission.id, teamName: submission.team?.name ?? 'Registration deleted' })}
+                                onClick={() => setReplaceTarget({ id: submission.id, teamName: (submission.team ? (submission.team.name?.trim() || submission.team.gym_name) : 'Registration deleted') })}
                               >
                                 <Upload className="w-4 h-4" />
                               </Button>
@@ -730,7 +730,7 @@ export default function Submissions() {
                                   size="icon"
                                   className="h-8 w-8 text-muted-foreground/50 hover:text-destructive opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                                   title="Delete permanently"
-                                  onClick={() => openDelete([{ id: submission.id, teamName: submission.team?.name ?? 'Registration deleted' }])}
+                                  onClick={() => openDelete([{ id: submission.id, teamName: (submission.team ? (submission.team.name?.trim() || submission.team.gym_name) : 'Registration deleted') }])}
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
@@ -911,7 +911,7 @@ export default function Submissions() {
       <Dialog open={!!videoModalSubmission} onOpenChange={(o) => { if (!o) setVideoModalSubmission(null); }}>
         <DialogContent className="max-w-4xl w-[calc(100%-2rem)]">
           <DialogHeader>
-            <DialogTitle>{videoModalSubmission?.team?.name ?? 'Registration deleted'} — Performance Video</DialogTitle>
+            <DialogTitle>{(videoModalSubmission?.team ? (videoModalSubmission.team.name?.trim() || videoModalSubmission.team.gym_name) : 'Registration deleted')} — Performance Video</DialogTitle>
           </DialogHeader>
           {videoModalSubmission && (
             <VideoPlayer
@@ -919,7 +919,7 @@ export default function Submissions() {
               thumbnailUrl={videoModalSubmission.thumbnail_url}
               status={videoModalSubmission.status}
               submissionId={videoModalSubmission.id}
-              title={`${videoModalSubmission.team?.name ?? 'Registration deleted'} performance video`}
+              title={`${(videoModalSubmission.team ? (videoModalSubmission.team.name?.trim() || videoModalSubmission.team.gym_name) : 'Registration deleted')} performance video`}
             />
           )}
         </DialogContent>
