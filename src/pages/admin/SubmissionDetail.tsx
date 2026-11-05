@@ -14,7 +14,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, Video, Archive, ArchiveRestore, Trash2, Download, Upload, Clapperboard } from 'lucide-react';
+import { ArrowLeft, Loader2, Users, Calendar, Award, Check, X, Pencil, RotateCcw, RotateCw, Video, Archive, ArchiveRestore, Trash2, Download, Upload, Clapperboard } from 'lucide-react';
 import { downloadSubmissionVideo, VideoPreparingError } from '@/lib/download-submission-video';
 import { useVideoPrep } from '@/hooks/useVideoPrep';
 import { format } from 'date-fns';
@@ -68,7 +68,7 @@ export function SubmissionDetailContent({ submissionId, onClose }: { submissionI
       const { data, error } = await sb
         .from('video_submissions')
         .select(`
-          id, video_url, thumbnail_url, brightcove_video_id, status, submitted_at, created_at, duration_seconds,
+          id, video_url, video_rotation, thumbnail_url, brightcove_video_id, status, submitted_at, created_at, duration_seconds,
           review_notes, reviewed_at, archived_at, status_before_archive,
           event_id,
           team:teams(id, name, gym_name, athletes_female, athletes_male, division_id,
@@ -235,6 +235,15 @@ export function SubmissionDetailContent({ submissionId, onClose }: { submissionI
               ? <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               : <Download className={`w-4 h-4 mr-2 ${prepState === 'ready' ? 'text-primary' : ''}`} />}
             {prepState === 'preparing' ? 'Preparing download…' : prepState === 'ready' ? 'Download ready' : 'Download video'}
+          </Button>
+          <Button size="sm" variant="outline" onClick={async () => {
+            const next = (((submission.video_rotation ?? 0) + 90) % 360);
+            const { error } = await sb.from('video_submissions').update({ video_rotation: next }).eq('id', submissionId!);
+            if (error) { toast.error(error.message); return; }
+            queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] });
+            queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+          }}>
+            <RotateCw className="w-4 h-4 mr-2" /> Rotate video{submission.video_rotation ? ` (${submission.video_rotation}°)` : ''}
           </Button>
           {!isArchived && (
             <Button size="sm" variant="outline" onClick={() => setReplaceOpen(true)}>
@@ -403,6 +412,7 @@ export function SubmissionDetailContent({ submissionId, onClose }: { submissionI
             thumbnailUrl={submission.thumbnail_url}
             status={submission.status}
             submissionId={submission.id}
+            rotation={submission.video_rotation}
             title={`${submission.team?.name || submission.team?.gym_name || 'Team'} performance video`}
           />
         </CardContent>

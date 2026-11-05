@@ -919,6 +919,7 @@ export default function Submissions() {
               thumbnailUrl={videoModalSubmission.thumbnail_url}
               status={videoModalSubmission.status}
               submissionId={videoModalSubmission.id}
+              rotation={(videoModalSubmission as { video_rotation?: number }).video_rotation}
               title={`${(videoModalSubmission.team ? (videoModalSubmission.team.name?.trim() || videoModalSubmission.team.gym_name) : 'Registration deleted')} performance video`}
             />
           )}
