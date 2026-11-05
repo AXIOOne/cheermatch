@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { CoachSelect, useCoaches, type CoachOption } from './CoachSelect';
+import { DivisionSelect } from './DivisionSelect';
 import { useEventDivisions } from '@/hooks/useEventDivisions';
 
 const schema = z.object({
