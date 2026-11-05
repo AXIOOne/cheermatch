@@ -85,6 +85,13 @@
       "when": 1793388681194,
       "tag": "0011_judge_panel_score_status",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793891645552,
+      "tag": "0012_video_rotation",
+      "breakpoints": true
     }
   ]
 }

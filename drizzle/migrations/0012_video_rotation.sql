@@ -1,0 +1,1 @@
+ALTER TABLE public.video_submissions ADD COLUMN IF NOT EXISTS video_rotation integer NOT NULL DEFAULT 0;

@@ -894,6 +894,7 @@ export default function SubmissionScoringDialog({
                             thumbnailUrl={submission?.thumbnail_url}
                             status={submission?.status}
                             submissionId={submission?.id}
+                            rotation={submission?.video_rotation}
                             title={`${submission?.team?.name || submission?.team?.gym_name || 'Team'} performance video`}
                           />
                         );
@@ -902,6 +903,7 @@ export default function SubmissionScoringDialog({
                         <>
                           <div className="aspect-video bg-black rounded-t-lg relative">
                             <video ref={videoRef} src={url} className="w-full h-full rounded-t-lg"
+                              style={submission?.video_rotation ? { transform: `rotate(${submission.video_rotation}deg)${submission.video_rotation % 180 ? ' scale(0.5625)' : ''}` } : undefined}
                               onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)}
                               onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
                               onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)} />
