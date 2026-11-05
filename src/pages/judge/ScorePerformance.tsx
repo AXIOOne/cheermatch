@@ -702,7 +702,7 @@ export default function ScorePerformance() {
               <div className="aspect-video bg-black rounded-t-lg flex items-center justify-center">
                 {submission.video_url ? (
                   <div className="w-full h-full" ref={playerWrapRef}>
-                    <VideoPlayer key={replayKey} url={submission.video_url} thumbnailUrl={submission.thumbnail_url} status={submission.status} submissionId={submission.id} rotation={submission.video_rotation} />
+                    <VideoPlayer key={replayKey} url={submission.video_url} thumbnailUrl={submission.thumbnail_url} status={submission.status} submissionId={submission.id} />
                   </div>
                 ) : (
                   <div className="text-white/50 text-center">
