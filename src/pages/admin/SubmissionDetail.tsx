@@ -53,11 +53,18 @@ export function SubmissionDetailContent({ submissionId, onClose }: { submissionI
         .update({ status })
         .eq('id', submissionId!);
       if (error) throw error;
+      if (status === 'approved' && submission?.status !== 'approved') {
+        const { data, error: mailErr } = await supabase.functions.invoke('send-approval-email', { body: { submissionId } });
+        return { emailed: !mailErr && (data as any)?.emailed === true, mailError: mailErr?.message ?? (data as any)?.error };
+      }
+      return null;
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['admin-submission-detail', submissionId] });
       queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
-      toast({ title: 'Status updated' });
+      if (res?.emailed) toast({ title: 'Video approved', description: 'The coach has been emailed.' });
+      else if (res) toast({ title: 'Video approved', description: `Coach email not sent${res.mailError ? `: ${res.mailError}` : ''}.` });
+      else toast({ title: 'Status updated' });
     },
     onError: (e: any) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });

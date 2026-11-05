@@ -118,6 +118,17 @@ ${p.notes ? `<blockquote style="background:#f1f5f9;border-left:4px solid ${BRAND
 }
 export const revisionEmailSubject = (teamName?: string | null) => `Revision requested: ${teamName ?? 'your submission'}`;
 
+export function approvedEmailHtml(p: { teamName?: string | null; coachName?: string | null; eventName?: string | null }) {
+  return shell({
+    body: `${heading(`Video approved for ${esc(p.teamName ?? 'your team')}`)}
+<p>Hello${p.coachName ? ' ' + esc(p.coachName) : ''},</p>
+<p>Great news! Your video submission for <strong>${esc(p.teamName ?? 'your team')}</strong> in <strong>${esc(p.eventName ?? 'your event')}</strong> has been reviewed and approved.</p>
+<p>No further action is needed. Your routine will now move on to judging.</p>`,
+    footer: 'This is an automated message. Please do not reply to this email.',
+  });
+}
+export const approvedEmailSubject = (teamName?: string | null) => `Video approved: ${teamName ?? 'your submission'}`;
+
 export function resetCodeEmailHtml(p: { fullName?: string | null; code: string }) {
   return shell({
     body: `<p>Hi ${esc(p.fullName ?? '')},</p><p>Your password reset code is:</p>
