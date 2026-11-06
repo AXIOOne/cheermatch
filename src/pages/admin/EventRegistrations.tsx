@@ -10,7 +10,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Search, Loader2, Users, Plus, Pencil, Upload, Trash2 } from 'lucide-react';
+import { ArrowLeft, Search, Loader2, Users, Plus, Pencil, Upload, Trash2, RotateCcw } from 'lucide-react';
+import { ResetCaptureAttemptsDialog, type ResetCaptureTarget } from '@/components/admin/ResetCaptureAttemptsDialog';
 import { AddTeamDialog } from '@/components/admin/AddTeamDialog';
 import { MultiAddTeamsDialog } from '@/components/admin/MultiAddTeamsDialog';
 import { EditRegistrationDialog } from '@/components/admin/EditRegistrationDialog';
@@ -42,6 +43,7 @@ export default function EventRegistrations() {
   const [importOpen, setImportOpen] = useState(false);
   const [editTeam, setEditTeam] = useState<any>(null);
   const [deleteTeam, setDeleteTeam] = useState<any>(null);
+  const [resetCapture, setResetCapture] = useState<ResetCaptureTarget | null>(null);
   const queryClient = useQueryClient();
 
   const { data: event, isLoading: eventLoading } = useQuery({
@@ -254,6 +256,23 @@ export default function EventRegistrations() {
                     <TableCell className="text-right tabular-nums whitespace-nowrap">{(team.athletes_female || 0) + (team.athletes_male || 0)} <span className="text-xs text-muted-foreground">({team.athletes_female || 0}F / {team.athletes_male || 0}M)</span></TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {!videoStatusUnavailable && videoStatusByTeam.get(team.id)?.status === 'capture_started' && !eventSubmissions?.some((s: any) => s.team_id === team.id && !s.archived_at) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            aria-label={`Reset capture attempts for ${team.name || team.gym_name}`}
+                            title="Reset capture attempts"
+                            onClick={() => setResetCapture({
+                              eventId: eventId!,
+                              teamId: team.id,
+                              teamName: team.name || team.gym_name,
+                              count: (captureAttempts ?? []).filter((a) => a.team_id === team.id).length,
+                            })}
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`Edit ${team.name || team.gym_name}`} title="Edit registration" onClick={() => setEditTeam(team)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -304,6 +323,8 @@ export default function EventRegistrations() {
           team={editTeam}
         />
       )}
+
+      <ResetCaptureAttemptsDialog target={resetCapture} onClose={() => setResetCapture(null)} />
 
       <AlertDialog open={!!deleteTeam} onOpenChange={(o) => !o && setDeleteTeam(null)}>
         <AlertDialogContent>

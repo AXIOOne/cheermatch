@@ -26,6 +26,7 @@ import { BulkEmailDialog } from '@/components/admin/BulkEmailDialog';
 import { DeleteSubmissionDialog } from '@/components/admin/DeleteSubmissionDialog';
 import { ReplaceVideoDialog } from '@/components/admin/ReplaceVideoDialog';
 import { useAuth } from '@/hooks/useAuth';
+import { ResetCaptureAttemptsDialog, type ResetCaptureTarget } from '@/components/admin/ResetCaptureAttemptsDialog';
 import VideoPlayer from '@/components/video/VideoPlayer';
 import { SubmissionDetailContent } from '@/pages/admin/SubmissionDetail';
 import type { Database } from '@/integrations/supabase/types';
@@ -94,6 +95,7 @@ export default function Submissions() {
   const [replaceTarget, setReplaceTarget] = useState<{ id: string; teamName: string } | null>(null);
   const [videoModalSubmission, setVideoModalSubmission] = useState<SubmissionWithDetails | null>(null);
   const [manualUpload, setManualUpload] = useState<{ eventId: string | null; teamId: string | null } | null>(null);
+  const [resetCapture, setResetCapture] = useState<ResetCaptureTarget | null>(null);
 
   const videoPrep = useVideoPrep();
 
@@ -783,14 +785,24 @@ export default function Submissions() {
                     </TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">
                       {isAdmin ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setManualUpload({ eventId: p.eventId, teamId: p.teamId })}
-                        >
-                          <Upload className="w-3.5 h-3.5 mr-1.5" />
-                          Upload for team
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setResetCapture({ eventId: p.eventId, teamId: p.teamId, teamName: p.teamName?.trim() || p.gymName, count: p.count })}
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
+                            Reset attempts
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setManualUpload({ eventId: p.eventId, teamId: p.teamId })}
+                          >
+                            <Upload className="w-3.5 h-3.5 mr-1.5" />
+                            Upload for team
+                          </Button>
+                        </div>
                       ) : (
                         'Awaiting coach selection'
                       )}
@@ -877,6 +889,8 @@ export default function Submissions() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ResetCaptureAttemptsDialog target={resetCapture} onClose={() => setResetCapture(null)} />
 
       {/* Permanent delete */}
       <ReplaceVideoDialog
