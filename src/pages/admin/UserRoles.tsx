@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus, AlertTriangle, Pencil, KeyRound, Search, X } from 'lucide-react';
+import { Plus, Loader2, Trash2, Shield, UserPlus, UserRoundPlus, AlertTriangle, Pencil, KeyRound, Search, X, Mail } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { OrganizationCombobox } from '@/components/organization/OrganizationCombobox';
 import { EditUserDialog } from '@/components/admin/EditUserDialog';
@@ -304,6 +304,22 @@ export default function UserRoles() {
     },
   });
 
+
+  const resendLoginMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.functions.invoke('resend-user-invite', {
+        body: { userId, loginUrl: `${window.location.origin}/auth` },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => {
+      toast({ title: 'Login email sent', description: 'Their password was reset and new login details were emailed.' });
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: 'Failed to resend login email', description: error.message });
+    },
+  });
 
   const handleAddRole = (data: AddRoleFormData) => {
     addRoleMutation.mutate(data);
@@ -751,6 +767,23 @@ export default function UserRoles() {
                             <KeyRound className="w-4 h-4 mr-1" />
                           )}
                           Reset Password
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={resendLoginMutation.isPending && resendLoginMutation.variables === user.user_id}
+                          onClick={() => {
+                            if (confirm(`Resend login instructions to ${user.email}?\n\nThis will reset their password to a new temporary password and email it to them. Their current password will stop working.`)) {
+                              resendLoginMutation.mutate(user.user_id);
+                            }
+                          }}
+                        >
+                          {resendLoginMutation.isPending && resendLoginMutation.variables === user.user_id ? (
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                          ) : (
+                            <Mail className="w-4 h-4 mr-1" />
+                          )}
+                          Resend Login
                         </Button>
                         <Button
                           variant="ghost"
