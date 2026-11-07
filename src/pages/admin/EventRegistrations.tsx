@@ -10,7 +10,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, Search, Loader2, Users, Plus, Pencil, Upload, Trash2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ArrowDown, ArrowUp, ArrowUpDown, Search, Loader2, Users, Plus, Pencil, Upload, Trash2, RotateCcw } from 'lucide-react';
+import { sortRegistrations, type RegistrationSortDir, type RegistrationSortKey } from '@/lib/registration-sort';
 import { ResetCaptureAttemptsDialog, type ResetCaptureTarget } from '@/components/admin/ResetCaptureAttemptsDialog';
 import { AddTeamDialog } from '@/components/admin/AddTeamDialog';
 import { MultiAddTeamsDialog } from '@/components/admin/MultiAddTeamsDialog';
@@ -38,6 +39,18 @@ const videoStatusLabel: Record<string, string> = {
 export default function EventRegistrations() {
   const { eventId } = useParams<{ eventId: string }>();
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortKey, setSortKey] = useState<RegistrationSortKey | null>(null);
+  const [sortDir, setSortDir] = useState<RegistrationSortDir>('asc');
+
+  const toggleSort = (key: RegistrationSortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
+
   const [addOpen, setAddOpen] = useState(false);
   const [multiOpen, setMultiOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -136,14 +149,15 @@ export default function EventRegistrations() {
 
   const filteredTeams = useMemo(() => {
     if (!teams) return [];
-    if (!searchQuery) return teams;
     
     const query = searchQuery.toLowerCase();
-    return teams.filter(team => 
-      team.name.toLowerCase().includes(query) ||
-      team.gym_name.toLowerCase().includes(query)
+    const matches = teams.filter(team =>
+      (team.name ?? '').toLowerCase().includes(query) ||
+      (team.gym_name ?? '').toLowerCase().includes(query)
     );
-  }, [teams, searchQuery]);
+    if (!sortKey) return matches;
+    return sortRegistrations(matches, sortKey, sortDir, (team) => videoStatusByTeam.get(team.id)?.stage);
+  }, [teams, searchQuery, sortKey, sortDir, videoStatusByTeam]);
 
   const isLoading = eventLoading || teamsLoading || submissionsLoading || attemptsLoading;
   const videoStatusUnavailable = submissionsError || attemptsError;
@@ -210,9 +224,9 @@ export default function EventRegistrations() {
                   <TableHead className="w-10">#</TableHead>
                   <TableHead>Team Name</TableHead>
                   <TableHead>Gym</TableHead>
-                  <TableHead>Division</TableHead>
+                  <SortableTableHead label="Division" active={sortKey === 'division'} dir={sortDir} onSort={() => toggleSort('division')} />
                   <TableHead>Level</TableHead>
-                  <TableHead>Video Status</TableHead>
+                  <SortableTableHead label="Video Status" active={sortKey === 'status'} dir={sortDir} onSort={() => toggleSort('status')} />
                   <TableHead className="text-right">Athletes</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -349,5 +363,35 @@ export default function EventRegistrations() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function SortableTableHead({
+  label,
+  active,
+  dir,
+  onSort,
+}: {
+  label: string;
+  active: boolean;
+  dir: RegistrationSortDir;
+  onSort: () => void;
+}) {
+  return (
+    <TableHead aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button
+        type="button"
+        onClick={onSort}
+        title={`Sort by ${label}`}
+        className="flex w-full cursor-pointer items-center gap-1 text-left font-medium hover:text-foreground"
+      >
+        {label}
+        {active ? (
+          dir === 'asc' ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />
+        ) : (
+          <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />
+        )}
+      </button>
+    </TableHead>
   );
 }
