@@ -92,6 +92,13 @@
       "when": 1793891645552,
       "tag": "0012_video_rotation",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794181686174,
+      "tag": "0013_monitoring_score_provenance_email_receipts_coach_performance",
+      "breakpoints": true
     }
   ]
 }

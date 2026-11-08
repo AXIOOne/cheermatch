@@ -20,6 +20,8 @@ export type StoredAttempt = {
   blob: Blob | null;
   durationSec: number;
   complete: boolean;
+  /** Only server-reserved attempts can be removed when the portal voids them. */
+  serverReserved?: boolean;
 };
 
 export function attemptKey(eventId: string, teamId: string) {
@@ -108,6 +110,7 @@ export async function reserveAttempt(key: string, seq?: number): Promise<StoredA
     blob: null,
     durationSec: 0,
     complete: false,
+    serverReserved: seq !== undefined,
   };
   try {
     await tx("readwrite", (s) => s.put(record));
@@ -156,13 +159,13 @@ export async function clearAttempts(key: string): Promise<void> {
   }
 }
 
-/** Remove device records that are no longer active in the portal ledger. */
+/** Never erase offline/legacy footage merely because the server has no row. */
 export async function reconcileAttempts(key: string, activeSeqs: number[]): Promise<void> {
   try {
     const active = new Set(activeSeqs);
     const all = await listAttempts(key);
     for (const attempt of all) {
-      if (!active.has(attempt.seq)) {
+      if (attempt.serverReserved === true && !active.has(attempt.seq)) {
         await tx("readwrite", (store) => store.delete(attempt.id));
         await deleteCachedVideo(attempt.id);
       }

@@ -34,19 +34,24 @@ export function ScoreInput({
   onError,
 }: ScoreInputProps) {
   const [text, setText] = React.useState<string>(() => formatValue(value, step));
-  const [editing, setEditing] = React.useState(false);
+  const editing = React.useRef(false);
   const [hasError, setHasError] = React.useState(false);
+  const errorCallback = React.useRef(onError);
+  errorCallback.current = onError;
 
   // Keep the displayed text in sync when the value changes externally.
-  // When not editing, clear any stale error state.
+  // Only an external value change resets the field, not blur or callback identity.
   React.useEffect(() => {
-    if (!editing) {
+    if (!editing.current) {
       setText(formatValue(value, step));
       setHasError(false);
-      onError?.(false);
+      errorCallback.current?.(false);
     }
-    if (disabled) setEditing(false);
-  }, [value, step, disabled, editing, onError]);
+  }, [value, step]);
+
+  React.useEffect(() => {
+    if (disabled) editing.current = false;
+  }, [disabled]);
 
   const clamp = (v: number) => Math.min(max, Math.max(min, v));
 
@@ -65,7 +70,7 @@ export function ScoreInput({
   };
 
   const commit = () => {
-    setEditing(false);
+    editing.current = false;
     const parsed = parseFloat(text);
     if (isNaN(parsed)) {
       setHasError(false);
@@ -110,7 +115,7 @@ export function ScoreInput({
       e.preventDefault();
       commit();
     } else if (e.key === 'Escape') {
-      setEditing(false);
+      editing.current = false;
       setHasError(false);
       onError?.(false);
       setText(formatValue(value, step));
@@ -150,7 +155,7 @@ export function ScoreInput({
         value={text}
         disabled={disabled}
         aria-label="Score value"
-        onFocus={() => setEditing(true)}
+        onFocus={() => { editing.current = true; }}
         onChange={(e) => {
           // Allow digits, one decimal point, and a leading minus
           const next = e.target.value;

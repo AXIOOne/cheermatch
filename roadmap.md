@@ -1,5 +1,12 @@
 # Roadmap
 
+## Monitoring review
+- [x] Verify all 12 findings: 8 confirmed, 3 stale, 1 intentional whole-panel admin override.
+- [x] Fix scoring input loops/validation and comment line breaks; browser regressions and tests passed.
+- [x] Fix email receipts, admin provenance for judge lockout, coach performance display, offline footage retention, and manual-upload retry eligibility.
+- [x] Validate changes: 33 tests passed, preview builds clean, signed-in scoring dialog opens with live video and no page errors.
+- Live email delivery and coach review with real scores remain unexercised: no existing submitted scores or review tokens; no production scores/emails were created for testing.
+
 ## Done
 - Compact registered teams table with gray capture-started, yellow awaiting-approval, and green approved rows; status tests passed and live gray/green rows, search, edit, and narrow-screen layout verified.
 - Judge portal gap fixes: judge Settings page (profile + avatar + password change), judge top bar aligned with admin, judge Help articles, downloadable judge manual PDF with Help download button.

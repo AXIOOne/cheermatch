@@ -12,6 +12,8 @@ import { Loader2, AlertCircle, CheckCircle, Lock, Mic } from 'lucide-react';
 import logoBlack from '@/assets/portal-logo.png.asset.json';
 import { format } from 'date-fns';
 import { AccuScoreFormFields, filledSkillRows, type AccuScoreField } from '@/components/accuscore/AccuScoreFormFields';
+import VideoPlayer from '@/components/video/VideoPlayer';
+import { FormattedCommentPreview } from '@/components/ui/formatted-comment-field';
 
 export type { AccuScoreField };
 
@@ -32,11 +34,20 @@ interface Ctx {
 
 const STATUS_LABEL: Record<string, string> = { new: 'Under review', honored: 'Honored', denied: 'Denied', duplicate: 'Duplicate' };
 
+interface Performance {
+  video_url: string | null;
+  thumbnail_url: string | null;
+  status: string;
+  scores: { score_id: string; panel_name: string; total_score: number | null; deductions: number | null;
+    comments: string | null; fields: { name: string; section_name: string; points: number; max_points: number }[] }[];
+}
+
 export default function ScoreReview() {
   const { token } = useParams<{ token: string }>();
   const { toast } = useToast();
   const [ctx, setCtx] = useState<Ctx | null>(null);
   const [loading, setLoading] = useState(true);
+  const [performance, setPerformance] = useState<Performance | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [answersByForm, setAnswersByForm] = useState<Record<string, Record<string, string | string[]>>>({});
@@ -65,6 +76,8 @@ export default function ScoreReview() {
     else {
       setCtx(data as Ctx);
       if ((data as Ctx).forms.length === 1) setSelected([(data as Ctx).forms[0].id]);
+      const { data: performanceData } = await supabase.rpc('get_coach_performance', { review_token: token });
+      setPerformance(performanceData as unknown as Performance | null);
     }
     setLoading(false);
   };
@@ -159,6 +172,35 @@ export default function ScoreReview() {
             ))}
           </CardContent>
         </Card>
+
+        {performance && (
+          <>
+            <section className="space-y-3">
+              <h2 className="text-xl font-heading font-semibold">Performance Video</h2>
+              <VideoPlayer url={performance.video_url} thumbnailUrl={performance.thumbnail_url} status={performance.status} />
+            </section>
+            <section className="space-y-4">
+              <h2 className="text-xl font-heading font-semibold">Scores</h2>
+              {performance.scores.length === 0 && <p className="text-sm text-muted-foreground">No submitted scores available yet.</p>}
+              {performance.scores.map(score => (
+                <div key={score.score_id} className="border-b pb-4 space-y-3">
+                  <div className="flex justify-between gap-3 font-semibold">
+                    <span>{score.panel_name}</span>
+                    <span>{score.total_score == null ? '—' : `${Number(score.total_score).toFixed(2)}%`}</span>
+                  </div>
+                  <p className="text-sm">Deductions: {Number(score.deductions || 0).toFixed(2)}</p>
+                  {score.fields.map((field, index) => (
+                    <div key={index} className="flex justify-between gap-4 text-sm">
+                      <span>{field.section_name} — {field.name}</span>
+                      <span className="shrink-0 tabular-nums">{Number(field.points).toFixed(2)} / {Number(field.max_points).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  {score.comments && <FormattedCommentPreview value={score.comments} />}
+                </div>
+              ))}
+            </section>
+          </>
+        )}
 
         {critiques.length > 0 && (
           <Card>

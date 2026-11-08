@@ -145,7 +145,9 @@ export default function Submissions() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as unknown as SubmissionWithDetails[];
+      // An interrupted admin upload leaves a retryable pending placeholder,
+      // not a submitted video. The upload function reuses it on retry.
+      return (data || []).filter(s => s.status !== 'pending' || s.brightcove_video_id || s.video_url) as unknown as SubmissionWithDetails[];
     },
   });
 

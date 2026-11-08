@@ -1348,6 +1348,7 @@ export type Database = {
       }
       scores: {
         Row: {
+          admin_saved_by: string | null
           comments: string | null
           created_at: string
           deductions: number | null
@@ -1366,6 +1367,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          admin_saved_by?: string | null
           comments?: string | null
           created_at?: string
           deductions?: number | null
@@ -1384,6 +1386,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          admin_saved_by?: string | null
           comments?: string | null
           created_at?: string
           deductions?: number | null
@@ -1421,6 +1424,32 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "scoring_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scoresheet_email_receipts: {
+        Row: {
+          email_id: string
+          sent_at: string
+          submission_id: string
+        }
+        Insert: {
+          email_id: string
+          sent_at?: string
+          submission_id: string
+        }
+        Update: {
+          email_id?: string
+          sent_at?: string
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scoresheet_email_receipts_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: true
+            referencedRelation: "video_submissions"
             referencedColumns: ["id"]
           },
         ]
@@ -2370,6 +2399,7 @@ export type Database = {
       }
       generate_short_uuid: { Args: never; Returns: string }
       get_accuscore_context: { Args: { review_token: string }; Returns: Json }
+      get_coach_performance: { Args: { review_token: string }; Returns: Json }
       get_review_by_token: {
         Args: { review_token: string }
         Returns: {

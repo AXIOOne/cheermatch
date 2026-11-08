@@ -19,6 +19,11 @@ function markersToHtml(text: string) {
     .replace(/\r?\n/g, '<br>');
 }
 
+export function FormattedCommentPreview({ value }: { value: string }) {
+  return <div className="text-sm text-muted-foreground whitespace-pre-wrap"
+    dangerouslySetInnerHTML={{ __html: markersToHtml(value) }} />;
+}
+
 function nodeToMarkers(node: Node): string {
   if (node.nodeType === Node.TEXT_NODE) return node.textContent || '';
   if (!(node instanceof HTMLElement)) return '';
@@ -26,16 +31,27 @@ function nodeToMarkers(node: Node): string {
   const tag = node.tagName.toLowerCase();
   if (tag === 'br') return '\n';
 
-  let content = Array.from(node.childNodes).map(nodeToMarkers).join('');
+  let content = childrenToMarkers(node);
   if (tag === 'strong' || tag === 'b') content = `**${content}**`;
   if (tag === 'em' || tag === 'i') content = `*${content}*`;
   if (tag === 'u') content = `__${content}__`;
-  if ((tag === 'div' || tag === 'p') && node.nextSibling && !content.endsWith('\n')) content += '\n';
+  return content;
+}
+
+function childrenToMarkers(parent: Node): string {
+  let content = '';
+  let previousWasBlock = false;
+  for (const node of Array.from(parent.childNodes)) {
+    const isBlock = node instanceof HTMLElement && /^(DIV|P)$/.test(node.tagName);
+    if ((isBlock || previousWasBlock) && content && !content.endsWith('\n')) content += '\n';
+    content += nodeToMarkers(node);
+    previousWasBlock = isBlock;
+  }
   return content;
 }
 
 function editorToMarkers(editor: HTMLElement) {
-  return Array.from(editor.childNodes).map(nodeToMarkers).join('').replace(/\u00a0/g, ' ');
+  return childrenToMarkers(editor).replace(/\u00a0/g, ' ');
 }
 
 interface FormattedCommentFieldProps {

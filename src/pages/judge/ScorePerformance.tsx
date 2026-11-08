@@ -547,7 +547,7 @@ export default function ScorePerformance() {
     queryFn: async () => {
       const { data } = await (supabase as any).rpc('judge_panel_score_status');
       return ((data || []) as any[]).some((r) => r.submission_id === submissionId && r.panel_id === assignedPanelId
-        && r.judge_user_id !== user!.id && (r.status === 'submitted' || r.status === 'locked'));
+        && r.judge_user_id !== user?.id && (r.status === 'submitted' || r.status === 'locked'));
     },
   });
 

@@ -83,7 +83,7 @@ export default function MobileTeamDetail() {
         }
         const localBySeq = new Map(stored.map((s) => [s.seq, s]));
         const seqs = (serverOk
-          ? serverSeqs
+          ? Array.from(new Set([...serverSeqs, ...stored.filter(s => s.serverReserved !== true).map(s => s.seq)]))
           : Array.from(new Set([...serverSeqs, ...stored.map((s) => s.seq)]))
         ).sort((a, b) => a - b);
         setAttemptCount(seqs.length);

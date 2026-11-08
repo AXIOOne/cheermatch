@@ -382,6 +382,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     console.log("Score sheet email sent:", emailData);
 
+    if (!emailData?.id) throw new Error("Email service did not return a send receipt");
+    const { error: receiptError } = await supabase.from('scoresheet_email_receipts').upsert({
+      submission_id: submissionId,
+      email_id: emailData.id,
+      sent_at: new Date().toISOString(),
+    });
+    if (receiptError) console.error("Scoresheet sent but receipt could not be saved:", receiptError.message);
+
     return new Response(JSON.stringify({ success: true, emailId: emailData?.id }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },

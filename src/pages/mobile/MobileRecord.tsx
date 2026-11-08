@@ -211,7 +211,7 @@ export default function MobileRecord() {
       // When the portal answers it is authoritative: admins can void/reset attempts,
       // so local-only takes must not be counted back in.
       const seqs = (serverOk
-        ? serverSeqs
+        ? Array.from(new Set([...serverSeqs, ...stored.filter(s => s.serverReserved !== true).map(s => s.seq)]))
         : Array.from(new Set([...serverSeqs, ...stored.map((s) => s.seq)]))
       ).sort((a, b) => a - b);
       if (serverOk) {
@@ -456,7 +456,7 @@ export default function MobileRecord() {
         return;
       }
     } catch {
-      toast.message("Offline — this attempt will sync when you reconnect");
+      toast.message("Offline — this take will be saved on this device");
     }
 
     const reserved = await reserveAttempt(storageKey, serverSeq);

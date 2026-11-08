@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { hasSubmissionVideo } from '@/lib/submission-video';
 
 interface ReplaceVideoDialogProps {
   open: boolean;
@@ -100,12 +101,12 @@ export function ReplaceVideoDialog({
 
       const { data: submissions, error: subError } = await supabase
         .from('video_submissions')
-        .select('team_id')
+        .select('team_id, brightcove_video_id, video_url')
         .eq('event_id', eventId)
         .is('archived_at', null);
       if (subError) throw subError;
 
-      const submittedTeamIds = new Set(submissions?.map((s) => s.team_id) ?? []);
+      const submittedTeamIds = new Set(submissions?.filter(hasSubmissionVideo).map((s) => s.team_id) ?? []);
       return teams?.filter((t) => !submittedTeamIds.has(t.id)) ?? [];
     },
   });
