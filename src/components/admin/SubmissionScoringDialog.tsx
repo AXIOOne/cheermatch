@@ -29,6 +29,7 @@ import {
 import ScoreFieldOverrideDialog from '@/components/admin/ScoreFieldOverrideDialog';
 import VideoPlayer from '@/components/video/VideoPlayer';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { assignmentsForTeam, panelAssignmentTitle } from '@/lib/submission-panel-assignments';
 
 interface JudgePanel {
   id: string;
@@ -89,7 +90,7 @@ export default function SubmissionScoringDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('video_submissions')
-        .select(`*, team:teams(id, name, gym_name, athletes_female, athletes_male, division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)), level:levels(name, level_number)), event:events(id, name, discipline, verbal_critiques_enabled)`)
+        .select(`*, team:teams(id, name, gym_name, division_id, level_id, athletes_female, athletes_male, division:divisions(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)), level:levels(name, level_number)), event:events(id, name, discipline, verbal_critiques_enabled)`)
         .eq('id', submissionId!).maybeSingle();
       if (error) throw error;
       return data;
@@ -113,6 +114,7 @@ export default function SubmissionScoringDialog({
           )
         ),
         deduction_types:deduction_types(*)
+        ,panels:scoring_template_panels(*)
       `;
       let templateId = divisionTemplateId;
       if (!templateId && submissionId) {
@@ -207,19 +209,27 @@ export default function SubmissionScoringDialog({
   // Resolve each score's effective panel. Falls back to the judge's assignment's
   // panel_id when the score row itself is missing one (older rows from before
   // section assignments were panel-linked).
+  const teamAssignments = useMemo(() => assignmentsForTeam(
+    judgeAssignments || [], submission?.team,
+  ), [judgeAssignments, submission?.team]);
+
   const judgePanelByUser = useMemo(() => {
     const map: Record<string, string> = {};
-    (judgeAssignments || []).forEach((a: any) => {
+    teamAssignments.forEach((a: any) => {
       if (a.judge_user_id && a.panel_id) map[a.judge_user_id] = a.panel_id;
     });
     return map;
-  }, [judgeAssignments]);
+  }, [teamAssignments]);
 
   const resolveScorePanelId = (s: any): string | null =>
     s?.panel_id ?? judgePanelByUser[s?.judge_user_id] ?? null;
 
   const currentPanelScore = allScores?.find((s: any) => resolveScorePanelId(s) === selectedPanelId);
-  const assignedJudge = judgeAssignments?.find((ja: any) => ja.panel_id === selectedPanelId);
+  const assignedJudge = teamAssignments.find((ja: any) => ja.panel_id === selectedPanelId);
+  const selectedPanel = panels.find(p => p.id === selectedPanelId);
+  const selectedPanelTitle = selectedPanel
+    ? panelAssignmentTitle(selectedPanel, teamAssignments, template?.sections || [], template?.panels || [])
+    : 'Panel';
   const selectedPanelAbbrev = panels.find(p => p.id === selectedPanelId)?.abbreviation || null;
   const isSdPanel = (selectedPanelAbbrev || '').toUpperCase() === 'SD';
 
@@ -731,14 +741,15 @@ export default function SubmissionScoringDialog({
   // One summary row per panel: status, assigned judge, and running score.
   const panelSummaries = panels.map((panel) => {
     const panelAbbr = (panel.abbreviation || '').toUpperCase();
-    const judge: any = judgeAssignments?.find((ja: any) => ja.panel_id === panel.id);
+    const judge: any = teamAssignments.find((ja: any) => ja.panel_id === panel.id);
+    const title = panelAssignmentTitle(panel, teamAssignments, template?.sections || [], template?.panels || []);
     const score: any = allScores?.find((s: any) => resolveScorePanelId(s) === panel.id);
     const panelMax = (template?.sections || []).reduce((sum: number, sec: any) => {
       const fields = (sec.fields || []).filter((f: any) => isFieldForPanel(f, panelAbbr));
       return sum + fields.reduce((a: number, f: any) => a + Number(f.max_points || 0), 0);
     }, 0);
     const panelRaw = (score?.details || []).reduce((a: number, d: any) => a + Number(d.points || 0), 0);
-    return { panel, status: getPanelStatus(panel.id), judge, score, panelRaw, panelMax };
+    return { panel, title, status: getPanelStatus(panel.id), judge, score, panelRaw, panelMax };
   });
 
   if (!submissionId) return null;
@@ -760,7 +771,7 @@ export default function SubmissionScoringDialog({
             {selectedPanelId && (
               <Badge variant="secondary" className="font-normal gap-1">
                 <User className="w-3 h-3" />
-                {panels.find(p => p.id === selectedPanelId)?.abbreviation || 'Panel'}:{' '}
+                {selectedPanel?.abbreviation || 'Panel'} — {selectedPanelTitle}:{' '}
                 {assignedJudge?.judge?.full_name || assignedJudge?.judge?.email || 'Unassigned'}
               </Badge>
             )}
@@ -833,12 +844,13 @@ export default function SubmissionScoringDialog({
           </DialogTitle>
           {/* Panel assignments — toggle, status, and assigned judge, always at the top */}
           <div className="flex flex-wrap items-stretch gap-2 pr-8">
-            {panelSummaries.map(({ panel, status, judge, score, panelRaw, panelMax }) => (
-              <button
+            {panelSummaries.map(({ panel, title, status, judge, score, panelRaw, panelMax }) => (
+              <Button
                 key={panel.id}
                 type="button"
+                variant="ghost"
                 onClick={() => setSelectedPanelId(panel.id)}
-                className={`px-3 py-1.5 rounded-lg border text-left transition-all ${
+                className={`h-auto block whitespace-normal px-3 py-1.5 rounded-lg border text-left transition-all ${
                   selectedPanelId === panel.id
                     ? 'ring-2 ring-primary ring-offset-1 border-primary'
                     : 'border-transparent'
@@ -848,7 +860,10 @@ export default function SubmissionScoringDialog({
                   {status === 'reviewed' && <CheckCircle className="w-3.5 h-3.5" />}
                   {panel.abbreviation}
                 </span>
-                <span className="block text-[11px] leading-tight opacity-90 max-w-[150px] truncate">
+                <span className="block text-xs leading-tight max-w-[220px]" title={title}>
+                  {title}
+                </span>
+                <span className="block text-[11px] leading-tight opacity-90 max-w-[220px]">
                   {judge?.judge?.full_name || judge?.judge?.email || 'Unassigned'}
                 </span>
                 {score && (
@@ -863,7 +878,7 @@ export default function SubmissionScoringDialog({
                 {status === 'in_progress' && (
                   <span className="block text-[10px] font-medium uppercase tracking-wide opacity-90">Draft</span>
                 )}
-              </button>
+              </Button>
             ))}
           </div>
         </DialogHeader>

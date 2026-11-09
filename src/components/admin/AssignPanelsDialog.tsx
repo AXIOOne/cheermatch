@@ -325,6 +325,8 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['section-assignments', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['event-judge-assignments', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['event-judge-panel-map', eventId] });
       queryClient.invalidateQueries({ queryKey: ['judge-assignments'] });
       queryClient.invalidateQueries({ queryKey: ['judge-submissions'] });
       toast({ title: 'Assignments saved', description: 'Submissions have been added to the assigned judges\' scoring queues.' });

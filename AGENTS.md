@@ -16,3 +16,4 @@
 - Local capture records distinguish server-reserved attempts from offline/legacy footage; reconciliation removes only known server attempts. Why: missing server rows must not destroy unsynced recordings, while explicit resets still release known attempts.
 - Manual upload team eligibility depends on actual video presence, not pending placeholder existence. Why: failed uploads can retry using the existing placeholder.
 - Registered-team CSV export uses the table's filtered/sorted rows and shared status labels, with formula-safe CSV encoding. Why: downloaded status matches the visible table without duplicating status rules.
+- Admin scoring resolves assignments against the submission team's division and optional level, and names panels from that team's template sections/panels. Why: event-wide panel IDs are reused across divisions with different judges and responsibilities.

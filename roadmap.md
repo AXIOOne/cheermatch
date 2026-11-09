@@ -1,5 +1,9 @@
 # Roadmap
 
+## Admin scoring assignments
+- [x] Resolve judges and panel titles for the submission's division and level; refresh after assignment edits.
+- [x] Verify UCA Virtual's Elliott County pop-up and panel switching at desktop and 873px width; six assignment regression tests passed.
+
 ## Registered-team export
 - [x] Add CSV export with current video status, respecting table search and sorting.
 - [x] Verify status tests and signed-in download with real registrations: 13 tests passed; 102-team full export and 2-team searched export match table statuses and division order.
