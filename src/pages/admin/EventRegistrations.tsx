@@ -10,7 +10,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ArrowLeft, ArrowDown, ArrowUp, ArrowUpDown, Search, Loader2, Users, Plus, Pencil, Upload, Trash2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, ArrowDown, ArrowUp, ArrowUpDown, Search, Loader2, Users, Plus, Pencil, Upload, Download, Trash2, RotateCcw } from 'lucide-react';
+import { buildRegistrationsCsv, downloadRegistrationsCsv, registrationVideoStatusLabels as videoStatusLabel } from '@/lib/registration-export';
 import { sortRegistrations, type RegistrationSortDir, type RegistrationSortKey } from '@/lib/registration-sort';
 import { ResetCaptureAttemptsDialog, type ResetCaptureTarget } from '@/components/admin/ResetCaptureAttemptsDialog';
 import { AddTeamDialog } from '@/components/admin/AddTeamDialog';
@@ -19,22 +20,6 @@ import { EditRegistrationDialog } from '@/components/admin/EditRegistrationDialo
 import { BulkImportTeamsDialog } from '@/components/admin/BulkImportTeamsDialog';
 import { CoachAccountsPanel } from '@/components/admin/CoachAccountsPanel';
 import { registrationVideoProgress } from '@/lib/registration-video-progress';
-
-const videoStatusLabel: Record<string, string> = {
-  not_started: 'Not started',
-  capture_started: 'Capture started',
-  pending: 'Pending',
-  uploaded: 'Uploaded',
-  processing: 'Processing',
-  ready: 'Ready for Review',
-  imported: 'Imported',
-  approved: 'Approved',
-  denied: 'Denied',
-  assigned: 'Assigned to Judges',
-  complete: 'Scored',
-  revision_requested: 'Revision Requested',
-  failed: 'Failed',
-};
 
 export default function EventRegistrations() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -162,6 +147,12 @@ export default function EventRegistrations() {
   const isLoading = eventLoading || teamsLoading || submissionsLoading || attemptsLoading;
   const videoStatusUnavailable = submissionsError || attemptsError;
 
+  const exportTeams = () => {
+    if (!event || isLoading || videoStatusUnavailable || !filteredTeams.length) return;
+    const csv = buildRegistrationsCsv(event.name, filteredTeams, id => videoStatusByTeam.get(id)?.status ?? 'Unavailable');
+    downloadRegistrationsCsv(csv, event.name);
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 font-body">
       <div className="mb-6">
@@ -200,6 +191,11 @@ export default function EventRegistrations() {
             <Users className="w-5 h-5 text-primary" />
             Registered Teams ({teams?.length || 0})
           </h2>
+          <div className="flex w-full sm:w-auto flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={exportTeams} disabled={isLoading || videoStatusUnavailable || !event || !filteredTeams.length}>
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
           <div className="relative w-full sm:w-[300px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -209,6 +205,7 @@ export default function EventRegistrations() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
             />
+          </div>
           </div>
         </div>
         {videoStatusUnavailable && <p role="alert" className="mb-3 text-sm text-destructive">Video status could not be loaded. Please refresh to try again.</p>}

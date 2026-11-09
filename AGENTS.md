@@ -15,3 +15,4 @@
 - Coach performance details use the token-gated get_coach_performance RPC and respect template comment visibility. Why: review videos and submitted scores remain available after the request cutoff without public table access.
 - Local capture records distinguish server-reserved attempts from offline/legacy footage; reconciliation removes only known server attempts. Why: missing server rows must not destroy unsynced recordings, while explicit resets still release known attempts.
 - Manual upload team eligibility depends on actual video presence, not pending placeholder existence. Why: failed uploads can retry using the existing placeholder.
+- Registered-team CSV export uses the table's filtered/sorted rows and shared status labels, with formula-safe CSV encoding. Why: downloaded status matches the visible table without duplicating status rules.

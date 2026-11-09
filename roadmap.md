@@ -1,5 +1,9 @@
 # Roadmap
 
+## Registered-team export
+- [x] Add CSV export with current video status, respecting table search and sorting.
+- [x] Verify status tests and signed-in download with real registrations: 13 tests passed; 102-team full export and 2-team searched export match table statuses and division order.
+
 ## Monitoring review
 - [x] Verify all 12 findings: 8 confirmed, 3 stale, 1 intentional whole-panel admin override.
 - [x] Fix scoring input loops/validation and comment line breaks; browser regressions and tests passed.
