@@ -56,19 +56,23 @@ function drawRichText(
   let y = yTop;
   let lines = 0;
   for (const para of parseRich(text)) {
+    const bullet = para[0]?.text === '•' ? para[0] : undefined;
+    const indent = bullet ? pick(bullet).widthOfTextAtSize('• ', size) : 0;
     let cx = 0;
+    let atLineStart = true;
     lines++;
     for (const w of para) {
       const f = pick(w);
-      const spaceW = w.space && cx > 0 ? f.widthOfTextAtSize(' ', size) : 0;
+      const spaceW = w.space && !atLineStart ? f.widthOfTextAtSize(' ', size) : 0;
       const ww = f.widthOfTextAtSize(w.text, size);
-      if (cx > 0 && cx + spaceW + ww > maxW) { lines++; y -= lineH; cx = 0; }
-      const sx = cx > 0 ? spaceW : 0;
+      if (!atLineStart && cx + spaceW + ww > maxW) { lines++; y -= lineH; cx = indent; atLineStart = true; }
+      const sx = atLineStart ? 0 : spaceW;
       if (!measureOnly) {
         page.drawText(w.text, { x: x + cx + sx, y, size, font: f, color });
         if (w.u) page.drawLine({ start: { x: x + cx + sx, y: y - 1.5 }, end: { x: x + cx + sx + ww, y: y - 1.5 }, thickness: 0.5, color });
       }
       cx += sx + ww;
+      atLineStart = false;
     }
     y -= lineH;
   }

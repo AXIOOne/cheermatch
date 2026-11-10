@@ -1,5 +1,8 @@
 # Roadmap
 
+## Wrapped comment bullets
+- [x] Align wrapped bullet text in editors, previews, and both PDF renderers; seven tests passed, signed-in desktop/mobile editing verified without saving scores, email renderer deployed.
+
 ## Dropbox current status and UCA retry
 - [x] Correct partial status writes and deploy; seven tests passed and real UCA dialog now reads back 20 completed and 62 failed instead of 82 transferring.
 - [ ] Retry UCA exports: blocked pending confirmation because the requested Retry failed (33) is now Retry failed (62), including missing-job responses that do not establish whether files already exist; no new transfers started.

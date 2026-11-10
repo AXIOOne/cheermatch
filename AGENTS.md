@@ -22,3 +22,4 @@
 - Editable scoring forms hydrate once per user/submission/panel/template/field context, after assignments and saved scores load; background refreshes update locks but never rehydrate inputs. Why: unsaved judge and admin entries must survive tab focus, reconnect and draft-save refetches.
 - Dropbox export AI diagnosis runs only in the admin-only dropbox-diagnose function via the AI Gateway SDK with strict JSON output. Why: prompts and keys stay server-side and the UI renders structured causes/steps.
 - Dropbox status checks update existing export rows and reject persistence errors; only starts with event_id upsert. Why: partial upserts violate required columns and leave successful transfers displaying stale status.
+- Comment editors and previews render bullet paragraphs as native lists but serialize them as plain bullet markers; both PDF renderers apply hanging indents. Why: wrapped text aligns without changing saved comment formats.

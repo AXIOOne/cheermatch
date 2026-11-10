@@ -12,15 +12,29 @@ function escapeHtml(text: string) {
 }
 
 function markersToHtml(text: string) {
-  return escapeHtml(text)
+  const inline = (line: string) => escapeHtml(line)
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/__([^_]+)__/g, '<u>$1</u>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/\r?\n/g, '<br>');
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  if (!text) return '';
+  let html = '', inList = false;
+  for (const line of text.split(/\r?\n/)) {
+    const bullet = line.match(/^\s*•\s+(.*)$/);
+    if (bullet) {
+      if (!inList) html += '<ul>';
+      inList = true;
+      html += `<li>${inline(bullet[1]) || '<br>'}</li>`;
+    } else {
+      if (inList) html += '</ul>';
+      inList = false;
+      html += `<div>${inline(line) || '<br>'}</div>`;
+    }
+  }
+  return html + (inList ? '</ul>' : '');
 }
 
 export function FormattedCommentPreview({ value }: { value: string }) {
-  return <div className="text-sm text-muted-foreground whitespace-pre-wrap"
+  return <div className="text-sm text-muted-foreground whitespace-pre-wrap break-words [&_ul]:list-disc [&_ul]:pl-5 [&_li]:pl-0"
     dangerouslySetInnerHTML={{ __html: markersToHtml(value) }} />;
 }
 
@@ -32,6 +46,7 @@ function nodeToMarkers(node: Node): string {
   if (tag === 'br') return '\n';
 
   let content = childrenToMarkers(node);
+  if (tag === 'li') content = `• ${content === '\n' ? '' : content}`;
   if (tag === 'strong' || tag === 'b') content = `**${content}**`;
   if (tag === 'em' || tag === 'i') content = `*${content}*`;
   if (tag === 'u') content = `__${content}__`;
@@ -42,7 +57,7 @@ function childrenToMarkers(parent: Node): string {
   let content = '';
   let previousWasBlock = false;
   for (const node of Array.from(parent.childNodes)) {
-    const isBlock = node instanceof HTMLElement && /^(DIV|P)$/.test(node.tagName);
+    const isBlock = node instanceof HTMLElement && /^(DIV|P|UL|LI)$/.test(node.tagName);
     if ((isBlock || previousWasBlock) && content && !content.endsWith('\n')) content += '\n';
     content += nodeToMarkers(node);
     previousWasBlock = isBlock;
@@ -98,7 +113,7 @@ export const FormattedCommentField = forwardRef<HTMLDivElement, FormattedComment
       const editor = editorRef.current;
       if (!editor || disabled) return;
       editor.focus();
-      document.execCommand('insertText', false, '• ');
+      document.execCommand('insertUnorderedList', false);
       emitChange();
     };
 
@@ -143,7 +158,7 @@ export const FormattedCommentField = forwardRef<HTMLDivElement, FormattedComment
           onInput={emitChange}
           onBlur={emitChange}
           className={cn(
-            'min-h-20 w-full overflow-y-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background',
+            'min-h-20 w-full overflow-y-auto rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background break-words [&_ul]:list-disc [&_ul]:pl-5 [&_li]:pl-0',
             'empty:before:pointer-events-none empty:before:text-muted-foreground empty:before:content-[attr(data-placeholder)]',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
             disabled && 'cursor-not-allowed opacity-50',
