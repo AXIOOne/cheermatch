@@ -23,6 +23,7 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
   const [running, setRunning] = useState(false);
   const [diagOpen, setDiagOpen] = useState(false);
   const stop = useRef(false);
+  const runId = useRef(0);
 
   const { data: rows } = useQuery({
     queryKey: ['dropbox-exports', eventId],
@@ -44,12 +45,12 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
   const done = sorted.filter((s) => byId.get(s.id)?.status === 'completed').length;
 
   const exportAll = async (onlyIds?: string[]) => {
-    setRunning(true); stop.current = false;
+    setRunning(true); stop.current = false; const myRun = ++runId.current;
     const todo = sorted.filter((s) => (onlyIds ? onlyIds.includes(s.id) : byId.get(s.id)?.status !== 'completed'));
     // Transfer 10 files at a time: start a batch, wait until Dropbox finishes all of them, then start the next.
     // Keeps video links fresh (they expire if jobs sit queued) and avoids overloading Dropbox.
     const BATCH = 10;
-    for (let i = 0; i < todo.length && !stop.current; i += BATCH) {
+    for (let i = 0; i < todo.length && runId.current === myRun; i += BATCH) {
       const pending: string[] = [];
       await Promise.all(todo.slice(i, i + BATCH).map(async (s) => {
         try {
@@ -59,7 +60,7 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
       }));
       qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
       let left = pending;
-      while (left.length && !stop.current) {
+      while (left.length && runId.current === myRun) {
         await sleep(4000);
         const next: string[] = [];
         await Promise.all(left.map(async (id) => {
@@ -72,7 +73,7 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
         qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
       }
     }
-    setRunning(false);
+    if (runId.current === myRun) setRunning(false);
     qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
   };
 
@@ -85,9 +86,9 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
     const stuck = rows.filter((r) => r.status === 'transferring').map((r) => r.submission_id);
     if (!stuck.length) return;
     (async () => {
-      setRunning(true); stop.current = false;
+      setRunning(true); stop.current = false; const myRun = ++runId.current;
       let left = stuck;
-      while (left.length && !stop.current) {
+      while (left.length && runId.current === myRun) {
         const next: string[] = [];
         for (const id of left) {
           try {
@@ -99,7 +100,7 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
         qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
         if (left.length) await sleep(4000);
       }
-      setRunning(false);
+      if (runId.current === myRun) setRunning(false);
     })();
   }, [open, rows, running, st?.connected, eventId, qc]);
 
@@ -121,7 +122,7 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) stop.current = true; onOpenChange(o); }}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) { stop.current = true; runId.current++; setRunning(false); } onOpenChange(o); }}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Export Videos to Dropbox</DialogTitle>
@@ -161,7 +162,7 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
             </div>
             <div className="flex justify-end gap-2">
               {running && (
-                <Button variant="outline" onClick={() => { stop.current = true; }}>
+                <Button variant="outline" onClick={() => { stop.current = true; runId.current++; setRunning(false); qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] }); }}>
                   Stop
                 </Button>
               )}
