@@ -25,7 +25,7 @@ import {
 import {
   Play, Pause, Volume2, VolumeX, Maximize2,
   Save, Send, Loader2, CheckCircle, AlertCircle,
-  SkipBack, SkipForward, User, Ban, RotateCcw, Info, Pencil
+  SkipBack, SkipForward, User, Ban, RotateCcw, Info, Pencil, Layers
 } from 'lucide-react';
 import ScoreFieldOverrideDialog from '@/components/admin/ScoreFieldOverrideDialog';
 import VideoPlayer from '@/components/video/VideoPlayer';
@@ -769,6 +769,13 @@ export default function SubmissionScoringDialog({
             {submission && (
               <Badge variant="outline" className="font-normal">
                 {submission.team?.name} • {submission.team?.gym_name}
+              </Badge>
+            )}
+            {submission && (
+              <Badge variant="outline" className="font-normal gap-1 border-primary/30 text-primary">
+                <Layers className="w-3 h-3" />
+                {submission.team?.division?.name || 'No division'}
+                {submission.team?.level?.name ? ` • ${submission.team.level.name}` : ''}
               </Badge>
             )}
             {selectedPanelId && (
