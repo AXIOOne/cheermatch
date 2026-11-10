@@ -1,5 +1,9 @@
 # Roadmap
 
+## Dropbox tab-return continuity
+- [x] Keep protected pages mounted during same-account login refreshes while rechecking server roles.
+- [x] Five regressions passed (two reproduced the original unmount); real USA export window remained mounted during tab return and delayed session recheck with no runtime errors. Existing transfer completion was not asserted or new transfers started.
+
 ## AccuScore and audio security
 - [x] Restrict form configuration to administrators and direct audio access to administrators/recording judges; all three targeted findings cleared on rescan.
 - [x] Deploy token-validated coach audio signing and update the review page; four regression tests passed, administrator form access and anonymous denial verified against hosted data.

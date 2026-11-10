@@ -28,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
   const authRequestId = useRef(0);
+  const resolvedUserId = useRef<string | null>(null);
 
   const fetchUserRoles = useCallback(async (userId: string) => {
     try {
@@ -45,24 +46,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const applySession = useCallback(async (nextSession: Session | null) => {
     const requestId = ++authRequestId.current;
+    const sameAccount = !!nextSession?.user && resolvedUserId.current === nextSession.user.id;
 
-    setLoading(true);
+    // Routine focus/token refreshes must not unmount protected pages. Keep the
+    // resolved permissions visible while rechecking them with the server.
+    if (!sameAccount) setLoading(true);
     setSession(nextSession);
     setUser(nextSession?.user ?? null);
 
     if (!nextSession?.user) {
+      resolvedUserId.current = null;
       setRoles([]);
       setRolesLoaded(true);
       setLoading(false);
       return;
     }
 
-    setRoles([]);
-    setRolesLoaded(false);
+    if (!sameAccount) {
+      resolvedUserId.current = null;
+      setRoles([]);
+      setRolesLoaded(false);
+    }
     const nextRoles = await fetchUserRoles(nextSession.user.id);
 
     if (authRequestId.current !== requestId) return;
 
+    resolvedUserId.current = nextSession.user.id;
     setRoles(nextRoles);
     setRolesLoaded(true);
     setLoading(false);
@@ -138,6 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    authRequestId.current += 1;
+    resolvedUserId.current = null;
     setSession(null);
     setUser(null);
     setRoles([]);

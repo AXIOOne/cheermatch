@@ -18,3 +18,4 @@
 - Manual upload team eligibility depends on actual video presence, not pending placeholder existence. Why: failed uploads can retry using the existing placeholder.
 - Registered-team CSV export uses the table's filtered/sorted rows and shared status labels, with formula-safe CSV encoding. Why: downloaded status matches the visible table without duplicating status rules.
 - Admin scoring resolves assignments against the submission team's division and optional level, and names panels from that team's template sections/panels. Why: event-wide panel IDs are reused across divisions with different judges and responsibilities.
+- Same-account auth refreshes recheck server roles without clearing resolved loading/role state; account changes and sign-out clear it. Why: returning to a tab must not unmount active exports or scoring screens, while changed permissions still take effect.
