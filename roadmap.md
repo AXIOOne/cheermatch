@@ -1,5 +1,10 @@
 # Roadmap
 
+## AccuScore and audio security
+- [x] Restrict form configuration to administrators and direct audio access to administrators/recording judges; all three targeted findings cleared on rescan.
+- [x] Deploy token-validated coach audio signing and update the review page; four regression tests passed, administrator form access and anonymous denial verified against hosted data.
+- [ ] Verify real coach audio playback: blocked because there are currently no review tokens or critique recordings; no production scores or coach links were fabricated.
+
 ## Admin scoring assignments
 - [x] Resolve judges and panel titles for the submission's division and level; refresh after assignment edits.
 - [x] Verify UCA Virtual's Elliott County pop-up and panel switching at desktop and 873px width; six assignment regression tests passed.

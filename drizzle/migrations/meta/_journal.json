@@ -99,6 +99,13 @@
       "when": 1794181686174,
       "tag": "0013_monitoring_score_provenance_email_receipts_coach_performance",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794271652194,
+      "tag": "0014_restrict_accuscore_configuration_and_critique_reads",
+      "breakpoints": true
     }
   ]
 }

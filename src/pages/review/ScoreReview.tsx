@@ -58,13 +58,8 @@ export default function ScoreReview() {
   useEffect(() => {
     if (!token) return;
     (async () => {
-      const { data } = await (supabase as any).rpc('get_verbal_critiques', { review_token: token });
-      const list = (data || []) as { panel_name: string; storage_path: string; duration_seconds: number | null }[];
-      const out = await Promise.all(list.map(async (c) => {
-        const { data: s } = await supabase.storage.from('verbal-critiques').createSignedUrl(c.storage_path, 3600);
-        return s?.signedUrl ? { panel_name: c.panel_name, url: s.signedUrl, duration_seconds: c.duration_seconds } : null;
-      }));
-      setCritiques(out.filter(Boolean) as any);
+      const { data, error } = await supabase.functions.invoke('coach-critiques', { body: { review_token: token } });
+      if (!error) setCritiques(data?.critiques || []);
     })();
   }, [token]);
 
