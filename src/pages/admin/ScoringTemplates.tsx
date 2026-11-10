@@ -292,8 +292,12 @@ export default function ScoringTemplates() {
       }).eq('id', id);
       if (tErr) throw tErr;
       // wipe and recreate sections+fields (cascade handles fields/options/panels)
-      await sb.from('scoring_sections').delete().eq('template_id', id);
-      await sb.from('deduction_types').delete().eq('template_id', id);
+      // The database refuses these deletes once judges have scored with this
+      // template (they would cascade-erase field scores); stop before recreating.
+      const { error: secErr } = await sb.from('scoring_sections').delete().eq('template_id', id);
+      if (secErr) throw secErr;
+      const { error: dedErr } = await sb.from('deduction_types').delete().eq('template_id', id);
+      if (dedErr) throw dedErr;
       await persistSectionsAndFields(id);
       await persistDeductions(id);
       await sb.from('scoring_template_panels').delete().eq('template_id', id);

@@ -113,6 +113,13 @@
       "when": 1794327046287,
       "tag": "0015_accuscore_coach_fallback",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1794332058754,
+      "tag": "0016_protect_scored_templates",
+      "breakpoints": true
     }
   ]
 }
