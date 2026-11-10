@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildScoresheet } from './build-scoresheet';
+import { buildScoresheet as buildEmailScoresheet } from '../../supabase/functions/_shared/build-scoresheet';
 
 const baseInput = {
   team_name: 'Team',
@@ -25,7 +26,10 @@ const j2Score = {
   details: [],
 };
 
-describe('buildScoresheet safety/deduction comments', () => {
+describe.each([
+  ['downloaded PDF', buildScoresheet],
+  ['emailed PDF', buildEmailScoresheet],
+])('%s safety/deduction comments', (_name, buildScoresheet) => {
   it('leaves safety comments empty when no SD score is submitted (Notre Dame Prep case)', () => {
     const sheet = buildScoresheet({ ...baseInput, submitted_scores: [j2Score] as any });
     expect(sheet.safety_comments).toBe('');
@@ -53,5 +57,28 @@ describe('buildScoresheet safety/deduction comments', () => {
     expect(sheet.judge_comments).toEqual([
       { judge_label: 'J2', comments: 'Execution: work on arabesque flexibility' },
     ]);
+  });
+
+  it.each([
+    { panel_abbreviation: 'SD', panel_name: 'Safety & Deductions' },
+    { panel_abbreviation: null, panel_name: 'Safety' },
+    { panel_abbreviation: null, panel_name: 'Deductions' },
+  ])('keeps safety/deduction feedback out of other panel comments: %j', (panel) => {
+    const sheet = buildScoresheet({
+      ...baseInput,
+      submitted_scores: [j2Score, {
+        ...panel,
+        deductions: 2,
+        details: [],
+        judge_label: 'Safety judge',
+        comments: 'Two athlete falls in pyramid',
+        deduction_items: [{ deduction_type_id: 'd1', count: 2, warnings: 0 }],
+      }],
+    });
+    expect(sheet.judge_comments).toEqual([
+      { judge_label: 'J2', comments: 'Execution: work on arabesque flexibility' },
+    ]);
+    expect(sheet.safety_comments).toBe('Two athlete falls in pyramid');
+    expect(sheet.deduction_report.total).toBe(2);
   });
 });

@@ -194,10 +194,10 @@ export function buildScoresheet(input: ScoresheetInput): ScoresheetData {
 
   const show_comments = input.show_comments !== false;
   const judge_comments: JudgeComment[] = input.submitted_scores
-    .map((s, i) => ({
+    .flatMap((s, i) => isSdPanel(s) ? [] : [{
       judge_label: (s.judge_label ?? '').trim() || `Judge ${i + 1}`,
       comments: (s.comments ?? '').trim(),
-    }))
+    }])
     .sort((a, b) => a.judge_label.localeCompare(b.judge_label, undefined, { numeric: true, sensitivity: 'base' }));
 
 
