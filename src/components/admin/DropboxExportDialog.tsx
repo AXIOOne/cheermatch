@@ -46,29 +46,31 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
   const exportAll = async (onlyIds?: string[]) => {
     setRunning(true); stop.current = false;
     const todo = sorted.filter((s) => (onlyIds ? onlyIds.includes(s.id) : byId.get(s.id)?.status !== 'completed'));
-    // Start transfers a few at a time; Dropbox then copies each one in the background.
-    const pending: string[] = [];
-    for (let i = 0; i < todo.length && !stop.current; i += 3) {
-      await Promise.all(todo.slice(i, i + 3).map(async (s) => {
+    // Transfer 10 files at a time: start a batch, wait until Dropbox finishes all of them, then start the next.
+    // Keeps video links fresh (they expire if jobs sit queued) and avoids overloading Dropbox.
+    const BATCH = 10;
+    for (let i = 0; i < todo.length && !stop.current; i += BATCH) {
+      const pending: string[] = [];
+      await Promise.all(todo.slice(i, i + BATCH).map(async (s) => {
         try {
           const r = await dropboxCall({ action: 'start', submission_id: s.id });
           if (r?.status === 'transferring') pending.push(s.id);
         } catch { /* recorded on the row */ }
       }));
       qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
-    }
-    let left = [...pending];
-    while (left.length && !stop.current) {
-      await sleep(4000);
-      const next: string[] = [];
-      for (const id of left) {
-        try {
-          const r = await dropboxCall({ action: 'check', submission_id: id });
-          if (r?.status === 'transferring') next.push(id);
-        } catch { next.push(id); }
+      let left = pending;
+      while (left.length && !stop.current) {
+        await sleep(4000);
+        const next: string[] = [];
+        await Promise.all(left.map(async (id) => {
+          try {
+            const r = await dropboxCall({ action: 'check', submission_id: id });
+            if (r?.status === 'transferring') next.push(id);
+          } catch { next.push(id); }
+        }));
+        left = next;
+        qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
       }
-      left = next;
-      qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
     }
     setRunning(false);
     qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
