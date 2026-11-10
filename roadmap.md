@@ -1,5 +1,9 @@
 # Roadmap
 
+## Unsaved scoring refresh protection
+- [x] Initialize judge/admin editable scores only when their scoring context changes, after assignments and saved drafts load; keep validation stable through background refreshes.
+- [x] Sixteen targeted tests passed, including retained edits, context switches and live-lock behavior; real USA admin scoring retained an unsaved 7.5 through refresh without saving any score. Judge-account browser verification is unavailable for the requesting account because it has no judge assignments.
+
 ## Dropbox tab-return continuity
 - [x] Keep protected pages mounted during same-account login refreshes while rechecking server roles.
 - [x] Five regressions passed (two reproduced the original unmount); real USA export window remained mounted during tab return and delayed session recheck with no runtime errors. Existing transfer completion was not asserted or new transfers started.

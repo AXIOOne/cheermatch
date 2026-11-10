@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useScoreFormInitialization } from '@/hooks/useScoreFormInitialization';
 import VerbalCritiquePlayer from '@/components/admin/VerbalCritiquePlayer';
 import VerbalCritiqueRecorder, { type VerbalCritiqueHandle } from '@/components/judge/VerbalCritiqueRecorder';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -248,7 +249,9 @@ export default function SubmissionScoringDialog({
     }).filter(s => s.visibleFields.length > 0);
   }, [template, selectedPanelAbbrev, isSdPanel]);
 
-  useEffect(() => {
+  const scoringScope = open ? JSON.stringify([submissionId, selectedPanelId, template?.id,
+    visibleSections.flatMap((s: any) => s.visibleFields.map((f: any) => f.id))]) : null;
+  useScoreFormInitialization(scoringScope, !!template?.sections && allScores !== undefined, () => {
     if (!template?.sections) return;
     const panelScore = allScores?.find((s: any) => resolveScorePanelId(s) === selectedPanelId);
     const allVisibleFields = visibleSections.flatMap((s: any) => s.visibleFields);
@@ -293,12 +296,12 @@ export default function SubmissionScoringDialog({
       setNeedsReview(false);
       setDirty(false);
     }
-  }, [selectedPanelId, allScores, template, visibleSections]);
+  });
 
   // Clear field-level validation errors when the visible scoring form changes.
   useEffect(() => {
     setInvalidFields(new Set());
-  }, [visibleSections, submissionId]);
+  }, [scoringScope]);
 
   // Derive driver field points (difficulty_driver / execution_driver) from selected radio options
   const driverFieldsById = useMemo(() => {

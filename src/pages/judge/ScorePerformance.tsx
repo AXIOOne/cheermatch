@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useScoreFormInitialization } from '@/hooks/useScoreFormInitialization';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useSidebar } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
@@ -90,7 +91,7 @@ export default function ScorePerformance() {
   const eventOpenForScoring = OPEN_STATUSES.has(eventRow?.status) && withinWindow;
 
   // The judge's assignment for this submission determines which fields they see.
-  const { data: allJudgeAssignments } = useQuery({
+  const { data: allJudgeAssignments, isSuccess: assignmentsReady } = useQuery({
     queryKey: ['judge-assignments-for-submission', submission?.event_id, submission?.team_id, user?.id],
     enabled: !!submission?.event_id && !!user?.id,
     queryFn: async () => {
@@ -173,7 +174,7 @@ export default function ScorePerformance() {
     enabled: !!submission,
   });
 
-  const { data: existingScore } = useQuery({
+  const { data: existingScore, isSuccess: scoreReady } = useQuery({
     queryKey: ['existing-score', submissionId, user?.id, assignedPanelId],
     queryFn: async () => {
       let q = sb.from('scores').select(`*, details:score_details(*), deduction_items:score_deductions(*), skill_selections:score_skill_selections(*)`)
@@ -185,7 +186,7 @@ export default function ScorePerformance() {
       if (assignedPanelId) return rows[0] || null;
       return rows.find((r: any) => !r.panel_id) || rows[0] || null;
     },
-    enabled: !!submissionId && !!user,
+    enabled: !!submissionId && !!user && assignmentsReady,
   });
 
   const assignedPanelAbbrevs = useMemo(() => {
@@ -239,7 +240,11 @@ export default function ScorePerformance() {
       }).filter((s: any) => s.visibleFields.length > 0);
   }, [template, assignedPanelAbbrevs, assignedSectionIds, hasAllPanelsAssignment, isSdAssigned]);
 
-  useEffect(() => {
+  const scoringScope = JSON.stringify([user?.id, submissionId, panelParam, assignedPanelId, template?.id,
+    visibleSections.flatMap((s: any) => s.visibleFields.map((f: any) => f.id)),
+    (template?.deduction_types || []).map((d: any) => d.id)]);
+  const formReady = !!template && assignmentsReady && scoreReady;
+  useScoreFormInitialization(scoringScope, formReady, () => {
     if (!template) return;
     const allFields = visibleSections.flatMap((s: any) => s.visibleFields);
     if (existingScore) {
@@ -274,13 +279,14 @@ export default function ScorePerformance() {
       });
       setDeductionCounts(dc);
       setDeductionWarnings(dw);
+      setComments('');
     }
-  }, [template, existingScore, visibleSections]);
+  });
 
   // Clear field-level validation errors when the visible scoring form changes.
   useEffect(() => {
     setInvalidFields(new Set());
-  }, [visibleSections, submissionId]);
+  }, [scoringScope]);
 
   // Track the sticky header's bottom edge so the Score Tracking drawer starts
   // below it (layout top bar + scoring header).
@@ -551,7 +557,7 @@ export default function ScorePerformance() {
     },
   });
 
-  const isLoading = submissionLoading || templateLoading;
+  const isLoading = submissionLoading || templateLoading || !formReady;
   const isLocked = existingScore?.status === 'locked' || existingScore?.status === 'submitted' || !eventOpenForScoring || (existingScore?.status !== 'submitted' && !!scoredByOther);
 
   useEffect(() => {
