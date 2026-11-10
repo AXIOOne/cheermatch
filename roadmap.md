@@ -1,5 +1,9 @@
 # Roadmap
 
+## Dropbox current status and UCA retry
+- [ ] Restore current transfer status in the export window and verify against Dropbox.
+- [ ] Retry the failed UCA exports in groups of ten after current statuses resolve.
+
 ## Unsaved scoring refresh protection
 - [x] Initialize judge/admin editable scores only when their scoring context changes, after assignments and saved drafts load; keep validation stable through background refreshes.
 - [x] Sixteen targeted tests passed, including retained edits, context switches and live-lock behavior; real USA admin scoring retained an unsaved 7.5 through refresh without saving any score. Judge-account browser verification is unavailable for the requesting account because it has no judge assignments.

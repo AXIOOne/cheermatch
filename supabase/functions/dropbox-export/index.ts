@@ -4,6 +4,7 @@
 import { handleOptions, ok, fail, serviceClient } from "../_shared/legacy.ts";
 import { bcGetVideoSources, bcPickMp4Source, bcGetDigitalMaster } from "../_shared/brightcove.ts";
 import { dropboxFileName, dropboxFolder } from "../_shared/dropbox-naming.ts";
+import { exportWriteMode } from "../_shared/dropbox-export-save.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -133,7 +134,11 @@ Deno.serve(async (req) => {
     const member = (await teamAdmin(access_token))?.id ?? null;
 
     const save = async (row: Record<string, unknown>) => {
-      await sb.from("dropbox_exports").upsert({ submission_id: submissionId, updated_at: new Date().toISOString(), ...row });
+      const payload = { updated_at: new Date().toISOString(), ...row };
+      const result = exportWriteMode(row) === 'upsert'
+        ? await sb.from("dropbox_exports").upsert({ submission_id: submissionId, ...payload })
+        : await sb.from("dropbox_exports").update(payload).eq("submission_id", submissionId);
+      if (result.error) throw new Error(`Could not save Dropbox status: ${result.error.message}`);
     };
 
     if (action === "start") {

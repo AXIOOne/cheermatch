@@ -22,13 +22,14 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
   const qc = useQueryClient();
   const [running, setRunning] = useState(false);
   const [diagOpen, setDiagOpen] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
   const stop = useRef(false);
   const runId = useRef(0);
 
   const { data: rows } = useQuery({
     queryKey: ['dropbox-exports', eventId],
     enabled: open,
-    refetchInterval: running ? 3000 : false,
+    refetchInterval: open ? 3000 : false,
     queryFn: async () => {
       const { data, error } = await supabase.from('dropbox_exports').select('*').eq('event_id', eventId);
       if (error) throw error;
@@ -66,8 +67,9 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
         await Promise.all(left.map(async (id) => {
           try {
             const r = await dropboxCall({ action: 'check', submission_id: id });
+            qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
             if (r?.status === 'transferring') next.push(id);
-          } catch { next.push(id); }
+          } catch (e) { setCheckError((e as Error).message); next.push(id); }
         }));
         left = next;
         qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
@@ -93,8 +95,9 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
         for (const id of left) {
           try {
             const r = await dropboxCall({ action: 'check', submission_id: id });
+            qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
             if (r?.status === 'transferring') next.push(id);
-          } catch { next.push(id); }
+          } catch (e) { setCheckError((e as Error).message); next.push(id); }
         }
         left = next;
         qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
@@ -142,6 +145,7 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
               {st.account_email && <> · {st.account_email}</>}
             </div>
             <div className="space-y-1">
+              {checkError && <p role="alert" className="text-sm text-destructive">Status check failed: {checkError}</p>}
               <div className="flex justify-between text-sm"><span>{done} of {sorted.length} in Dropbox</span></div>
               <Progress value={sorted.length ? (done / sorted.length) * 100 : 0} />
             </div>
