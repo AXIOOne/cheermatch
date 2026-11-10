@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -71,6 +71,33 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
     setRunning(false);
     qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
   };
+
+  // Re-check transfers left "Transferring" (e.g. the window was closed before Dropbox finished).
+  const resumed = useRef(false);
+  useEffect(() => {
+    if (!open) { resumed.current = false; return; }
+    if (resumed.current || running || !rows || !st?.connected) return;
+    resumed.current = true;
+    const stuck = rows.filter((r) => r.status === 'transferring').map((r) => r.submission_id);
+    if (!stuck.length) return;
+    (async () => {
+      setRunning(true); stop.current = false;
+      let left = stuck;
+      while (left.length && !stop.current) {
+        const next: string[] = [];
+        for (const id of left) {
+          try {
+            const r = await dropboxCall({ action: 'check', submission_id: id });
+            if (r?.status === 'transferring') next.push(id);
+          } catch { next.push(id); }
+        }
+        left = next;
+        qc.invalidateQueries({ queryKey: ['dropbox-exports', eventId] });
+        if (left.length) await sleep(4000);
+      }
+      setRunning(false);
+    })();
+  }, [open, rows, running, st?.connected, eventId, qc]);
 
   const failedIds = sorted.filter((s) => byId.get(s.id)?.status === 'failed').map((s) => s.id);
 
