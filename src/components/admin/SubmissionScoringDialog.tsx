@@ -764,20 +764,29 @@ export default function SubmissionScoringDialog({
     }}>
       <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0 space-y-2">
-          <DialogTitle className="flex items-center gap-3 flex-wrap pr-8">
-            <span>Score Submission</span>
-            {submission && (
-              <Badge variant="outline" className="font-normal">
-                {submission.team?.name} • {submission.team?.gym_name}
-              </Badge>
-            )}
-            {submission && (
-              <Badge variant="outline" className="font-normal gap-1 border-primary/30 text-primary">
-                <Layers className="w-3 h-3" />
+          {/* Prominent team identity bar */}
+          {submission && (
+            <div className="rounded-lg border bg-muted/40 px-4 py-3 pr-10 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <div className="min-w-0">
+                <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  Score Submission
+                </div>
+                <DialogTitle className="font-heading text-xl leading-tight truncate">
+                  {submission.team?.name || submission.team?.gym_name || 'Team'}
+                  {submission.team?.name && submission.team?.gym_name && (
+                    <span className="text-muted-foreground font-normal"> — {submission.team.gym_name}</span>
+                  )}
+                </DialogTitle>
+              </div>
+              <Badge className="gap-1.5 text-sm px-3 py-1 font-semibold">
+                <Layers className="w-4 h-4" />
                 {submission.team?.division?.name || 'No division'}
                 {submission.team?.level?.name ? ` • ${submission.team.level.name}` : ''}
               </Badge>
-            )}
+            </div>
+          )}
+          <div className="flex items-center gap-3 flex-wrap pr-8">
+            {!submission && <DialogTitle>Score Submission</DialogTitle>}
             {selectedPanelId && (
               <Badge variant="secondary" className="font-normal gap-1">
                 <User className="w-3 h-3" />
@@ -851,7 +860,7 @@ export default function SubmissionScoringDialog({
                 </Button>
               )}
             </div>
-          </DialogTitle>
+          </div>
           {/* Panel assignments — toggle, status, and assigned judge, always at the top */}
           <div className="flex flex-wrap items-stretch gap-2 pr-8">
             {panelSummaries.map(({ panel, title, status, judge, score, panelRaw, panelMax }) => (
