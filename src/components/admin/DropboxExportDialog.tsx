@@ -160,6 +160,11 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
               {!sorted.length && <div className="p-4 text-sm text-muted-foreground">No videos in this event.</div>}
             </div>
             <div className="flex justify-end gap-2">
+              {running && (
+                <Button variant="outline" onClick={() => { stop.current = true; }}>
+                  Stop
+                </Button>
+              )}
               <Button variant="ghost" onClick={() => setDiagOpen(true)}>
                 <Sparkles className="w-4 h-4 mr-2" />Diagnose errors
               </Button>
