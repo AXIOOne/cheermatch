@@ -40,7 +40,8 @@ export function DropboxDiagnoseDialog({ open, onOpenChange, initialLogs = '', co
     setResult(data.diagnosis);
   };
 
-  const tone = (l: string) => (l === 'high' ? 'destructive' : l === 'medium' ? 'default' : 'secondary') as const;
+  const tone = (l: string): 'destructive' | 'default' | 'secondary' =>
+    l === 'high' ? 'destructive' : l === 'medium' ? 'default' : 'secondary';
 
   return (
     <Dialog open={open} onOpenChange={handleOpen}>
