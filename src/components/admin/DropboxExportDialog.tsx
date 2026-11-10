@@ -6,7 +6,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Sparkles } from 'lucide-react';
+import { DropboxDiagnoseDialog } from './DropboxDiagnoseDialog';
 import { dropboxCall, useDropboxStatus } from './DropboxSetting';
 import { dropboxFileName, dropboxFolder } from '../../../supabase/functions/_shared/dropbox-naming';
 
@@ -20,6 +21,7 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
   const { data: st } = useDropboxStatus();
   const qc = useQueryClient();
   const [running, setRunning] = useState(false);
+  const [diagOpen, setDiagOpen] = useState(false);
   const stop = useRef(false);
 
   const { data: rows } = useQuery({
@@ -100,6 +102,14 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
   }, [open, rows, running, st?.connected, eventId, qc]);
 
   const failedIds = sorted.filter((s) => byId.get(s.id)?.status === 'failed').map((s) => s.id);
+  const failureLog = sorted
+    .filter((s) => byId.get(s.id)?.status === 'failed')
+    .map((s) => `${nameFor(s)}: ${byId.get(s.id)?.error ?? 'failed (no message)'}`)
+    .join('\n');
+  const statusCounts = sorted.reduce<Record<string, number>>((a, s) => {
+    const k = byId.get(s.id)?.status ?? 'not sent'; a[k] = (a[k] ?? 0) + 1; return a;
+  }, {});
+  const diagContext = `Event: ${eventName}. Videos: ${sorted.length}. Statuses: ${Object.entries(statusCounts).map(([k, v]) => `${k}=${v}`).join(', ')}.`;
 
   const badge = (status?: string) => {
     if (status === 'completed') return <Badge className="bg-primary/15 text-primary hover:bg-primary/15">In Dropbox</Badge>;
@@ -148,6 +158,9 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
               {!sorted.length && <div className="p-4 text-sm text-muted-foreground">No videos in this event.</div>}
             </div>
             <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setDiagOpen(true)}>
+                <Sparkles className="w-4 h-4 mr-2" />Diagnose errors
+              </Button>
               {failedIds.length > 0 && (
                 <Button variant="outline" disabled={running} onClick={() => exportAll(failedIds)}>
                   Retry failed ({failedIds.length})
@@ -161,6 +174,7 @@ export function DropboxExportDialog({ open, onOpenChange, eventId, eventName, su
           </>
         )}
       </DialogContent>
+      <DropboxDiagnoseDialog open={diagOpen} onOpenChange={setDiagOpen} initialLogs={failureLog} context={diagContext} />
     </Dialog>
   );
 }
