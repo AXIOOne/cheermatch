@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Bold, Italic, Underline, SpellCheck2 } from 'lucide-react';
+import { Bold, Italic, Underline, List, SpellCheck2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -94,6 +94,14 @@ export const FormattedCommentField = forwardRef<HTMLDivElement, FormattedComment
       emitChange();
     };
 
+    const insertBullet = () => {
+      const editor = editorRef.current;
+      if (!editor || disabled) return;
+      editor.focus();
+      document.execCommand('insertText', false, '• ');
+      emitChange();
+    };
+
     return (
       <div className="space-y-1.5">
         <div className={cn('flex items-center gap-1 flex-wrap', toolbarClassName)}>
@@ -111,6 +119,11 @@ export const FormattedCommentField = forwardRef<HTMLDivElement, FormattedComment
             onMouseDown={(event) => event.preventDefault()} onClick={() => format('underline')}
             disabled={disabled} title="Underline (Ctrl+U)" aria-label="Underline">
             <Underline className="h-3.5 w-3.5" />
+          </Button>
+          <Button type="button" size="sm" variant="outline" className="h-7 w-7 p-0"
+            onMouseDown={(event) => event.preventDefault()} onClick={insertBullet}
+            disabled={disabled} title="Bullet point" aria-label="Bullet point">
+            <List className="h-3.5 w-3.5" />
           </Button>
           <Button type="button" size="sm" variant={spellCheck ? 'secondary' : 'outline'} className="h-7 w-7 p-0"
             onClick={() => setSpellCheck((current) => !current)} disabled={disabled}
