@@ -1,8 +1,8 @@
 # Roadmap
 
 ## Dropbox current status and UCA retry
-- [ ] Restore current transfer status in the export window and verify against Dropbox.
-- [ ] Retry the failed UCA exports in groups of ten after current statuses resolve.
+- [x] Correct partial status writes and deploy; seven tests passed and real UCA dialog now reads back 20 completed and 62 failed instead of 82 transferring.
+- [ ] Retry UCA exports: blocked pending confirmation because the requested Retry failed (33) is now Retry failed (62), including missing-job responses that do not establish whether files already exist; no new transfers started.
 
 ## Unsaved scoring refresh protection
 - [x] Initialize judge/admin editable scores only when their scoring context changes, after assignments and saved drafts load; keep validation stable through background refreshes.
