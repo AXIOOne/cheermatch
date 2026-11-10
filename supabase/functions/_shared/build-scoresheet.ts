@@ -162,7 +162,9 @@ export function buildScoresheet(input: ScoresheetInput): ScoresheetData {
     const nm = (s.panel_name ?? '').trim().toLowerCase();
     return ab === 'sd' || /safety|deduction/.test(nm);
   };
-  const sdScore = input.submitted_scores.find(isSdPanel) || input.submitted_scores[0];
+  // No fallback to another judge's score: without an SD submission, safety
+  // comments stay empty and deductions stay zero.
+  const sdScore = input.submitted_scores.find(isSdPanel);
 
   const catalog = (input.deduction_catalog ?? [])
     .slice()
