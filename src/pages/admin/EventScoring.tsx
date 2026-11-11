@@ -32,7 +32,6 @@ import SubmissionScoringDialog from '@/components/admin/SubmissionScoringDialog'
 import { downloadSubmissionScoresheet, generateSubmissionScoresheetBytes } from '@/lib/download-submission-scoresheet';
 import { downloadPdf } from '@/lib/scoresheet-pdf';
 import { panelsForTemplate, pickDivisionTemplateId } from '@/lib/scoring';
-import { getScoresheetSendWarning } from '@/lib/scoresheet-send-warning';
 
 
 interface JudgePanel {
@@ -80,7 +79,7 @@ export default function EventScoring() {
   const [scoringSubmissionId, setScoringSubmissionId] = useState<string | null>(null);
   const [scoringPanelId, setScoringPanelId] = useState<string | null>(null);
   const [linkFor, setLinkFor] = useState<{ id: string; teamName: string } | null>(null);
-  const [confirmSendFor, setConfirmSendFor] = useState<{ id: string; teamName: string; warning: string | null } | null>(null);
+  const [confirmSendFor, setConfirmSendFor] = useState<{ id: string; teamName: string } | null>(null);
   const [previewFor, setPreviewFor] = useState<{ id: string; teamName: string } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewBytes, setPreviewBytes] = useState<Uint8Array | null>(null);
@@ -678,13 +677,9 @@ export default function EventScoring() {
                             variant="default"
                             size="sm"
                             className="h-7 px-2.5 text-xs bg-success text-success-foreground hover:bg-success/90"
-                            disabled={sendingScoreFor === submission.id}
+                            disabled={sendingScoreFor === submission.id || !overallStatus.allReviewed}
                             onClick={() =>
-                              setConfirmSendFor({
-                                id: submission.id,
-                                teamName: submission.team?.name || submission.team?.gym_name || 'this team',
-                                warning: getScoresheetSendWarning(overallStatus),
-                              })
+                              setConfirmSendFor({ id: submission.id, teamName: submission.team?.name || submission.team?.gym_name || 'this team' })
                             }
                           >
                             {sendingScoreFor === submission.id ? (
@@ -813,27 +808,16 @@ export default function EventScoring() {
       <AlertDialog open={!!confirmSendFor} onOpenChange={(open) => !open && setConfirmSendFor(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmSendFor?.warning ? 'Send score sheet anyway?' : 'Send score sheet?'}
-            </AlertDialogTitle>
+            <AlertDialogTitle>Send score sheet?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will immediately email the {confirmSendFor?.warning ? 'current' : 'finalized'} score sheet to the coach for{' '}
+              This will immediately email the finalized score sheet to the coach for{' '}
               <strong>{confirmSendFor?.teamName}</strong>. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          {confirmSendFor?.warning && (
-            <div role="alert" className="flex gap-3 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-foreground">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
-              <p>{confirmSendFor.warning}</p>
-            </div>
-          )}
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmSend}
-              className={confirmSendFor?.warning ? 'bg-warning text-warning-foreground hover:bg-warning/90' : undefined}
-            >
-              <Send className="w-4 h-4 mr-2" /> {confirmSendFor?.warning ? 'Send anyway' : 'Send'}
+            <AlertDialogAction onClick={handleConfirmSend}>
+              <Send className="w-4 h-4 mr-2" /> Send
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,8 +1,5 @@
 # Roadmap
 
-## Scoresheet send warning
-- [ ] Warn and require explicit confirmation before emailing incomplete or unreviewed scoresheets; keep the normal confirmation for fully reviewed scoresheets.
-
 ## Wrapped comment bullets
 - [x] Align wrapped bullet text in editors, previews, and both PDF renderers; seven tests passed, signed-in desktop/mobile editing verified without saving scores, email renderer deployed.
 
