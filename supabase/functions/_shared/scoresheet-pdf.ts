@@ -84,7 +84,8 @@ function formatDateTime(iso?: string | null, timeZone?: string | null): string {
     return `${date} ${time}`.replace(/[\u00a0\u202f]/g, ' ');
   } catch { return iso; }
 }
-const formatGenerated = (d = new Date()) => formatDateTime(d.toISOString());
+const formatGenerated = (timeZone?: string | null, d = new Date()) =>
+  formatDateTime(d.toISOString(), timeZone || 'UTC').replace(/\b[a-z]{2,5}$/, (label) => label.toUpperCase());
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
   const paragraphs = text.split(/\r?\n/);
@@ -158,6 +159,7 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
   const titleFontSize = 22;
   const metaFontSize = 10;
   const smallSize = 8;
+  const generatedStamp = `Generated: ${formatGenerated(data.event_time_zone)}`;
 
   let page = doc.addPage([PAGE_W, PAGE_H]);
 
@@ -168,8 +170,7 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
     const mid = data.event_name || '';
     const mw = italic.widthOfTextAtSize(mid, smallSize);
     p.drawText(mid, { x: MARGIN + (CONTENT_W - mw) / 2, y, size: smallSize, font: italic, color: MUTED });
-    const gen = `Generated: ${formatGenerated()}`;
-    drawTextRight(p, gen, PAGE_W - MARGIN, y, italic, smallSize, MUTED);
+    drawTextRight(p, generatedStamp, PAGE_W - MARGIN, y, italic, smallSize, MUTED);
   };
 
   // Shared header drawn at the top of every page.
