@@ -1,5 +1,11 @@
 # Roadmap
 
+## Bulk unsent scoresheets
+- [x] Add reviewed-only event-wide bulk send, confirmation and per-team progress; skip accepted emails and continue after individual failures.
+- [x] Persist sending/failure outcomes and deploy real provider status checks; keep accepted and delivered distinct, and show check failures without mislabeling delivery as failed.
+- [x] Twenty-one targeted tests passed; signed-in UCA bulk control stays disabled for its incomplete sheet, status endpoint returns success, desktop/mobile checked. Intercepted-email browser flow verified confirmation, sequential sends, two SENT/one FAILED and retry-only selection without contacting coaches.
+- [ ] Confirm actual provider delivery/bounce readback after a real scoresheet send: no existing email receipts were available to check, and no production emails were sent during testing.
+
 ## Duplicate panel score save
 - [x] Applied panel-scoped uniqueness to the live database without modifying scores; four database regression tests passed, and signed-in Rockwall SD panel shows existing J1 90.00/J2 86.60 intact with no runtime errors. No production score was saved during verification.
 

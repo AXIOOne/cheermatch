@@ -1,13 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { Resend } from 'https://esm.sh/resend@4.0.0'
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
+import { assertScoresheetsReviewed } from '../_shared/scoresheet-readiness.ts'
+import { shouldSendUnsent } from '../_shared/scoresheet-delivery.ts'
 import { buildScoresheet, type RawField, type ScoreType } from '../_shared/build-scoresheet.ts'
 import { buildScoresheetPdf } from '../_shared/scoresheet-pdf.ts'
 import { scoresheetEmailHtml, scoresheetEmailSubject, resolveEmailSubject, EMAIL_SUBJECTS_SETTINGS_KEY } from '../_shared/email-layouts.ts'
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 interface ScoreSheetRequest {
   submissionId: string;
@@ -18,6 +16,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let claimedSubmissionId: string | null = null;
+  let attemptId: string | null = null;
+  let providerStarted = false;
+  let providerRejected = false;
+  let providerAccepted = false;
+  let db: any = null;
   try {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
@@ -28,6 +32,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    db = supabase;
 
     // Admin-only
     const authHeader = req.headers.get("Authorization") || "";
@@ -43,6 +48,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     const body = await req.json();
+    const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if ((body.submissionId && !uuid.test(body.submissionId)) || (body.accuscoreRequestId && !uuid.test(body.accuscoreRequestId))
+      || (body.bulkEventId && !uuid.test(body.bulkEventId))) {
+      return new Response(JSON.stringify({ error: 'Invalid scoresheet identifier' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     const accuscoreRequestId: string | null = typeof body?.accuscoreRequestId === "string" ? body.accuscoreRequestId : null;
     const appUrl: string = typeof body?.appUrl === "string" && /^https?:\/\//.test(body.appUrl)
       ? body.appUrl.replace(/\/$/, "") : "https://score.cheermatch.com";
@@ -60,6 +70,28 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!submissionId) {
       throw new Error("Missing submission ID");
     }
+
+    await assertScoresheetsReviewed(supabase, submissionId, body.bulkEventId);
+    const { data: previous, error: deliveryReadError } = await supabase.from('scoresheet_email_deliveries')
+      .select('*').eq('submission_id', submissionId).maybeSingle();
+    if (deliveryReadError) throw deliveryReadError;
+    if (body.onlyUnsent === true) {
+      const { data: receipt, error: receiptReadError } = await supabase.from('scoresheet_email_receipts')
+        .select('submission_id').eq('submission_id', submissionId).maybeSingle();
+      if (receiptReadError) throw receiptReadError;
+      if (!shouldSendUnsent(previous || undefined, !!receipt)) {
+        return new Response(JSON.stringify({ success: true, skipped: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
+    if (previous?.status === 'sending' || previous?.status === 'unknown') throw new Error('A send is already in progress or awaiting confirmation. Refresh email status before retrying.');
+    attemptId = crypto.randomUUID();
+    const claim = { submission_id: submissionId, attempt_id: attemptId, status: 'sending', email_id: null, error: null, checked_at: null, updated_at: new Date().toISOString() };
+    const claimQuery = previous
+      ? supabase.from('scoresheet_email_deliveries').update(claim).eq('submission_id', submissionId).eq('attempt_id', previous.attempt_id)
+      : supabase.from('scoresheet_email_deliveries').insert(claim);
+    const { data: claimed, error: claimError } = await claimQuery.select('submission_id').maybeSingle();
+    if (claimError || !claimed) throw new Error('Another administrator is sending this scoresheet. Refresh its status.');
+    claimedSubmissionId = submissionId;
 
     // Fetch submission with team, event, and scores
     const { data: submission, error: submissionError } = await supabase
@@ -364,6 +396,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       },
     );
 
+    providerStarted = true;
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "CheerMatch <noreply@cheermatch.com>",
       to: [coachProfile.email],
@@ -373,9 +406,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
         filename: `${safeName}.pdf`,
         content: pdfBase64,
       }],
-    });
+    }, { headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': `scoresheet/${submissionId}/${attemptId}`,
+    } });
 
     if (emailError) {
+      providerRejected = true;
       console.error("Resend error:", emailError);
       throw new Error(emailError.message || "Failed to send email");
     }
@@ -383,18 +421,30 @@ Deno.serve(async (req: Request): Promise<Response> => {
     console.log("Score sheet email sent:", emailData);
 
     if (!emailData?.id) throw new Error("Email service did not return a send receipt");
+    providerAccepted = true;
+    const { error: deliveryError } = await supabase.from('scoresheet_email_deliveries').update({
+      status: 'sent', email_id: emailData.id, error: null, updated_at: new Date().toISOString(),
+    }).eq('submission_id', submissionId).eq('attempt_id', attemptId);
+    if (deliveryError) throw new Error('Email accepted, but its status could not be saved. Do not resend until status is checked.');
     const { error: receiptError } = await supabase.from('scoresheet_email_receipts').upsert({
       submission_id: submissionId,
       email_id: emailData.id,
       sent_at: new Date().toISOString(),
     });
-    if (receiptError) console.error("Scoresheet sent but receipt could not be saved:", receiptError.message);
+    if (receiptError) throw new Error('Email accepted; receipt could not be saved. The email status still records the send.');
 
     return new Response(JSON.stringify({ success: true, emailId: emailData?.id }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: any) {
+    if (db && claimedSubmissionId && attemptId && !providerAccepted) {
+      const { error: saveError } = await db.from('scoresheet_email_deliveries').update({
+        status: providerStarted && !providerRejected ? 'unknown' : 'failed',
+        error: error.message, updated_at: new Date().toISOString(),
+      }).eq('submission_id', claimedSubmissionId).eq('attempt_id', attemptId);
+      if (saveError) console.error('Unable to save email failure:', saveError.message);
+    }
     console.error("Error sending score sheet:", error);
     return new Response(
       JSON.stringify({ error: error.message }),

@@ -32,6 +32,8 @@ import SubmissionScoringDialog from '@/components/admin/SubmissionScoringDialog'
 import { downloadSubmissionScoresheet, generateSubmissionScoresheetBytes } from '@/lib/download-submission-scoresheet';
 import { downloadPdf } from '@/lib/scoresheet-pdf';
 import { panelsForTemplate, pickDivisionTemplateId } from '@/lib/scoring';
+import { FunctionsHttpError } from '@supabase/supabase-js';
+import { canSendAll, scoresheetReviewed, shouldSendUnsent, sendUnsentSequentially, type Delivery } from '../../../supabase/functions/_shared/scoresheet-delivery';
 
 
 interface JudgePanel {
@@ -88,6 +90,10 @@ export default function EventScoring() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [dropboxOpen, setDropboxOpen] = useState(false);
+  const [confirmBulkSend, setConfirmBulkSend] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number } | null>(null);
+  const [bulkSending, setBulkSending] = useState(false);
+  const [emailStatusError, setEmailStatusError] = useState<string | null>(null);
 
   const { data: event, isLoading: eventLoading } = useQuery({
     queryKey: ['event', eventId],
@@ -241,18 +247,34 @@ export default function EventScoring() {
     return { sortedSubmissions: sorted, subNumberById: numbers };
   }, [submissions]);
 
+  const sendScoresheet = async (submissionId: string, onlyUnsent = false) => {
+    const { data, error } = await supabase.functions.invoke('send-scoresheet-email', {
+      body: { submissionId, appUrl: window.location.origin, ...(onlyUnsent ? { onlyUnsent: true, bulkEventId: eventId } : {}) },
+    });
+    if (error) {
+      let message = error.message;
+      if (error instanceof FunctionsHttpError) {
+        const details = await error.context.json().catch(() => null);
+        message = details?.error || message;
+      }
+      throw new Error(message);
+    }
+    if (!data?.success) throw new Error(data?.error || 'Email was not accepted');
+    return data;
+  };
+
   const sendScoreSheetMutation = useMutation({
     mutationFn: async (submissionId: string) => {
-      const { data, error } = await supabase.functions.invoke('send-scoresheet-email', {
-        body: { submissionId, appUrl: window.location.origin },
-      });
-      if (error) throw error;
-      return data;
+      return sendScoresheet(submissionId);
     },
     onSuccess: () => {
-      toast({ title: 'Score sheet sent successfully!' });
+      toast({ title: 'Scoresheet accepted for sending' });
       queryClient.invalidateQueries({ queryKey: ['scoresheet-sent'] });
       setSendingScoreFor(null);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['scoresheet-deliveries', eventId] });
+      queryClient.invalidateQueries({ queryKey: ['scoresheet-sent'] });
     },
     onError: (error: any) => {
       toast({ 
@@ -367,6 +389,33 @@ export default function EventScoring() {
     },
   });
 
+  const { data: deliveries, isSuccess: deliveryReady, error: deliveryLoadError } = useQuery({
+    queryKey: ['scoresheet-deliveries', eventId, (submissions || []).map(s => s.id).join(',')],
+    enabled: !!submissions?.length,
+    refetchInterval: 5000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('scoresheet_email_deliveries').select('*')
+        .in('submission_id', (submissions || []).map(s => s.id));
+      if (error) throw error;
+      return new Map((data || []).map(row => [row.submission_id, row as Delivery]));
+    },
+  });
+
+  useEffect(() => {
+    if (!eventId || !submissions?.length) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const refresh = async () => {
+      const { data, error } = await supabase.functions.invoke('scoresheet-email-status', { body: { eventId } });
+      if (cancelled) return;
+      setEmailStatusError(error ? 'Email delivery status could not be checked. Last confirmed statuses are shown.' : data?.checkError || null);
+      queryClient.invalidateQueries({ queryKey: ['scoresheet-deliveries', eventId] });
+      timer = setTimeout(refresh, 15000);
+    };
+    void refresh();
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [eventId, submissions?.length, queryClient]);
+
   // Get panel scoring status for a submission
   const getPanelStatus = (
     submission: Submission,
@@ -397,18 +446,36 @@ export default function EventScoring() {
       const sc = findScoreForPanel(submission, p.id);
       return sc?.status === 'submitted';
     }).length;
-    const reviewedPanels = subPanels.filter(p => {
-      const sc = findScoreForPanel(submission, p.id);
-      return sc?.status === 'submitted' && sc?.reviewed_at;
-    }).length;
-
     const allComplete = completedPanels === subPanels.length;
-    const allReviewed = allComplete && reviewedPanels === subPanels.length;
+    const allReviewed = scoresheetReviewed(submission.scores, subPanels.map(p => p.id), score => resolveScorePanelId(score as Score));
     if (needsReview) return { text: 'NEEDS REVIEW', allComplete, allReviewed, needsReview, hasDraft };
     if (allReviewed) return { text: 'REVIEWED', allComplete, allReviewed, needsReview, hasDraft };
     if (allComplete) return { text: 'COMPLETE', allComplete, allReviewed, needsReview, hasDraft };
     if (hasDraft) return { text: 'DRAFT SAVED', allComplete, allReviewed, needsReview, hasDraft };
     return { text: 'PENDING', allComplete, allReviewed, needsReview, hasDraft };
+  };
+
+  const unsentSubmissions = sortedSubmissions.filter(s => shouldSendUnsent(deliveries?.get(s.id), !!sentSubmissionIds?.has(s.id)));
+  const allReviewed = sortedSubmissions.map(s => getOverallStatus(s).allReviewed && !getOverallStatus(s).needsReview);
+  const bulkEnabled = canSendAll(allReviewed, !isLoading && !!templates && deliveryReady && !!sentSubmissionIds, unsentSubmissions.length);
+  const handleBulkSend = async () => {
+    if (!bulkEnabled || bulkSending) return;
+    setConfirmBulkSend(false);
+    setBulkSending(true);
+    const pending = [...unsentSubmissions];
+    setBulkProgress({ done: 0, total: pending.length, failed: 0 });
+    try {
+      const result = await sendUnsentSequentially(pending, async submission => {
+        setSendingScoreFor(submission.id);
+        try { await sendScoresheet(submission.id, true); }
+        finally {
+          await queryClient.invalidateQueries({ queryKey: ['scoresheet-deliveries', eventId] });
+          await queryClient.invalidateQueries({ queryKey: ['scoresheet-sent'] });
+        }
+      }, (done, failed) => setBulkProgress({ done, total: pending.length, failed }));
+      toast({ title: `${result.sent} scoresheets processed${result.failed ? `; ${result.failed} need attention` : ''}`,
+        variant: result.failed ? 'destructive' : 'default' });
+    } finally { setSendingScoreFor(null); setBulkSending(false); }
   };
 
 
@@ -455,14 +522,18 @@ export default function EventScoring() {
           <ArrowLeft className="w-4 h-4" />
           Back to Events
         </Link>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-3xl font-bold text-foreground">
               {eventLoading ? 'Loading...' : `Match: ${event?.name || 'Event'}`}
             </h1>
             <p className="text-muted-foreground mt-1">Scoring Control Panel</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+          <Button disabled={!bulkEnabled || bulkSending || !!sendingScoreFor} onClick={() => setConfirmBulkSend(true)}>
+            {bulkSending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+            Send all unsent ({unsentSubmissions.length})
+          </Button>
           <Button variant="outline" onClick={() => setDropboxOpen(true)}>
             <CloudUpload className="w-4 h-4 mr-2" />
             Export to Dropbox
@@ -497,6 +568,14 @@ export default function EventScoring() {
           </div>
         </div>
       </div>
+
+      {bulkProgress && <p role="status" className="text-sm text-muted-foreground mb-3">
+        {bulkSending ? 'Sending' : 'Finished'}: {bulkProgress.done} of {bulkProgress.total} processed
+        {bulkProgress.failed > 0 && ` · ${bulkProgress.failed} need attention`}
+      </p>}
+      {(emailStatusError || deliveryLoadError) && <p role="alert" className="text-sm text-destructive mb-3">
+        {emailStatusError || 'Email statuses could not be loaded.'}
+      </p>}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -661,15 +740,17 @@ export default function EventScoring() {
                           >
                             {overallStatus.text}
                           </Badge>
-                          {sentSubmissionIds?.has(submission.id) && (
+                          {(deliveries?.get(submission.id) || sentSubmissionIds?.has(submission.id)) && (
                             <Badge
                               variant="outline"
-                              className="text-[11px] px-2 py-0 bg-primary/10 text-primary border-primary/20"
+                              title={deliveries?.get(submission.id)?.error || (deliveries?.get(submission.id)?.status === 'delivered' ? 'Confirmed delivered by the email service' : 'Sent means accepted by the email service, not yet confirmed delivered')}
+                              className={'text-[11px] px-2 py-0 ' + (['failed', 'bounced', 'complained'].includes(deliveries?.get(submission.id)?.status || '') ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-primary/10 text-primary border-primary/20')}
                             >
-                              SENT
+                              {{ sending: 'SENDING', sent: 'SENT', delivered: 'DELIVERED', delayed: 'DELAYED', failed: 'FAILED', bounced: 'FAILED · BOUNCED', complained: 'COMPLAINT', unknown: 'UNCONFIRMED' }[deliveries?.get(submission.id)?.status || 'sent']}
                             </Badge>
                           )}
                         </div>
+                        {deliveries?.get(submission.id)?.error && <p className="text-xs text-destructive mt-1 max-w-56 break-words">{deliveries.get(submission.id)?.error}</p>}
                       </TableCell>
                       <TableCell className="py-1.5 px-3">
                         <div className="flex items-center gap-1">
@@ -677,7 +758,7 @@ export default function EventScoring() {
                             variant="default"
                             size="sm"
                             className="h-7 px-2.5 text-xs bg-success text-success-foreground hover:bg-success/90"
-                            disabled={sendingScoreFor === submission.id || !overallStatus.allReviewed}
+                            disabled={!!sendingScoreFor || bulkSending || !overallStatus.allReviewed || overallStatus.needsReview || ['sending', 'unknown'].includes(deliveries?.get(submission.id)?.status || '')}
                             onClick={() =>
                               setConfirmSendFor({ id: submission.id, teamName: submission.team?.name || submission.team?.gym_name || 'this team' })
                             }
@@ -818,6 +899,24 @@ export default function EventScoring() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmSend}>
               <Send className="w-4 h-4 mr-2" /> Send
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmBulkSend} onOpenChange={setConfirmBulkSend}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send all unsent scoresheets?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Email {unsentSubmissions.length} reviewed scoresheets to their coaches for {event?.name}.
+              Previously sent emails are skipped; failed emails are retried. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={!bulkEnabled} onClick={() => void handleBulkSend()}>
+              <Send className="w-4 h-4 mr-2" /> Send all unsent
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

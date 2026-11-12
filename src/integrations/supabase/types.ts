@@ -1428,6 +1428,44 @@ export type Database = {
           },
         ]
       }
+      scoresheet_email_deliveries: {
+        Row: {
+          attempt_id: string
+          checked_at: string | null
+          email_id: string | null
+          error: string | null
+          status: string
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_id?: string
+          checked_at?: string | null
+          email_id?: string | null
+          error?: string | null
+          status?: string
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_id?: string
+          checked_at?: string | null
+          email_id?: string | null
+          error?: string | null
+          status?: string
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scoresheet_email_deliveries_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: true
+            referencedRelation: "video_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scoresheet_email_receipts: {
         Row: {
           email_id: string
