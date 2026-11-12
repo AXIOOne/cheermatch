@@ -3,7 +3,8 @@ import { Resend } from 'https://esm.sh/resend@4.0.0'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { assertScoresheetsReviewed } from '../_shared/scoresheet-readiness.ts'
 import { shouldSendUnsent } from '../_shared/scoresheet-delivery.ts'
-import { ensureScoresheetReviewLink, formatAccuscoreCutoff } from '../_shared/scoresheet-email-links.ts'
+import { ensureScoresheetReviewLink, formatAccuscoreCutoff, SCORESHEET_PORTAL_URL } from '../_shared/scoresheet-email-links.ts'
+import { scoresheetSampleRecipient } from '../_shared/scoresheet-sample.ts'
 import { buildScoresheet, type RawField, type ScoreType } from '../_shared/build-scoresheet.ts'
 import { buildScoresheetPdf } from '../_shared/scoresheet-pdf.ts'
 import { scoresheetEmailHtml, scoresheetEmailSubject, resolveEmailSubject, EMAIL_SUBJECTS_SETTINGS_KEY } from '../_shared/email-layouts.ts'
@@ -49,6 +50,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     const body = await req.json();
+    const sampleRecipient = scoresheetSampleRecipient(body.sampleRecipient, authData.user.email);
+    if (sampleRecipient && (body.bulkEventId || body.accuscoreRequestId || body.onlyUnsent)) throw new Error('Sample sends cannot be combined with bulk or AccuScore response sends.');
     const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if ((body.submissionId && !uuid.test(body.submissionId)) || (body.accuscoreRequestId && !uuid.test(body.accuscoreRequestId))
       || (body.bulkEventId && !uuid.test(body.bulkEventId))) {
@@ -71,6 +74,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     await assertScoresheetsReviewed(supabase, submissionId, body.bulkEventId);
+    if (!sampleRecipient) {
     const { data: previous, error: deliveryReadError } = await supabase.from('scoresheet_email_deliveries')
       .select('*').eq('submission_id', submissionId).maybeSingle();
     if (deliveryReadError) throw deliveryReadError;
@@ -91,6 +95,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const { data: claimed, error: claimError } = await claimQuery.select('submission_id').maybeSingle();
     if (claimError || !claimed) throw new Error('Another administrator is sending this scoresheet. Refresh its status.');
     claimedSubmissionId = submissionId;
+    }
 
     // Fetch submission with team, event, and scores
     const { data: submission, error: submissionError } = await supabase
@@ -187,10 +192,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
       : { count: 0 };
     if (accuscoreOn || accuscoreReq || (critiqueCount || 0) > 0) {
       const expiresAt = cutoff || new Date(Date.now() + 30 * 86400000).toISOString();
+      if (sampleRecipient) {
+        const { data: link, error: linkError } = await supabase.from('scoring_review_tokens')
+          .select('token').eq('submission_id', submissionId).eq('coach_email', coachProfile.email)
+          .order('created_at', { ascending: false }).limit(1).maybeSingle();
+        if (linkError || !link?.token) throw new Error('Choose a reviewed scoresheet with an existing coach link for the sample.');
+        accuscoreUrl = `${SCORESHEET_PORTAL_URL}/review/${link.token}`;
+      } else {
       accuscoreUrl = await ensureScoresheetReviewLink(supabase, {
         submissionId, coachEmail: coachProfile.email, coachName: coachProfile.full_name,
         expiresAt, callerId,
       });
+      }
     }
     const tz = (event as any)?.time_zone || "America/Chicago";
     const cutoffText = formatAccuscoreCutoff(cutoff, tz);
@@ -389,8 +402,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     providerStarted = true;
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "CheerMatch <noreply@cheermatch.com>",
-      to: [coachProfile.email],
-      subject: emailSubject,
+      to: [sampleRecipient || coachProfile.email],
+      subject: sampleRecipient ? `[SAMPLE] ${emailSubject}` : emailSubject,
       html: emailHtml,
       attachments: [{
         filename: `${safeName}.pdf`,
@@ -399,7 +412,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }, { headers: {
       Authorization: `Bearer ${resendApiKey}`,
       'Content-Type': 'application/json',
-      'Idempotency-Key': `scoresheet/${submissionId}/${attemptId}`,
+      'Idempotency-Key': sampleRecipient ? `scoresheet-sample/${callerId}/${submissionId}/${crypto.randomUUID()}` : `scoresheet/${submissionId}/${attemptId}`,
     } });
 
     if (emailError) {
@@ -412,6 +425,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
     if (!emailData?.id) throw new Error("Email service did not return a send receipt");
     providerAccepted = true;
+    if (sampleRecipient) {
+      return new Response(JSON.stringify({ success: true, sample: true, emailId: emailData.id }), {
+        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
     const { error: deliveryError } = await supabase.from('scoresheet_email_deliveries').update({
       status: 'sent', email_id: emailData.id, error: null, updated_at: new Date().toISOString(),
     }).eq('submission_id', submissionId).eq('attempt_id', attemptId);

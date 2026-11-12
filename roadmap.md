@@ -1,5 +1,8 @@
 # Roadmap
 
+## Requested sample scoresheet email
+- [x] Sent one reviewed South Fulton UCA sample with PDF and existing AccuScore link to jrowzee@cheerathletics.com; email service accepted it. Team delivery records and receipts remain absent; inbox delivery awaits recipient confirmation. Fixed the PDF date's unsupported narrow space exposed by the real send; nineteen targeted tests passed.
+
 ## UCA and USA pre-send audit
 - [x] Checked all 134 registered teams: linked coach emails present, valid syntax and matching registration contacts; enabled forms UCA five/USA three. All three existing coach links open signed out on the published domain, mobile fits, no runtime errors.
 - [x] Fixed and deployed cutoff-format crash, canonical public email links and checked token persistence; corrected both PDF renderers to show the event timezone. Twenty-eight tests passed; generated real UCA and USA PDFs without sending mail.

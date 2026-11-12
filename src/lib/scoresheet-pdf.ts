@@ -91,7 +91,7 @@ function formatDateTime(iso?: string | null, timeZone?: string | null): string {
       ...(timeZone ? { timeZone, timeZoneName: 'short' as const } : {}),
       hour: 'numeric', minute: '2-digit', hour12: true,
     }).format(d).toLowerCase();
-    return `${date} ${time}`;
+    return `${date} ${time}`.replace(/[\u00a0\u202f]/g, ' ');
   } catch {
     return iso;
   }
