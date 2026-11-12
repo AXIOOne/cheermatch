@@ -3,6 +3,7 @@ import { Resend } from 'https://esm.sh/resend@4.0.0'
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { assertScoresheetsReviewed } from '../_shared/scoresheet-readiness.ts'
 import { shouldSendUnsent } from '../_shared/scoresheet-delivery.ts'
+import { ensureScoresheetReviewLink, formatAccuscoreCutoff } from '../_shared/scoresheet-email-links.ts'
 import { buildScoresheet, type RawField, type ScoreType } from '../_shared/build-scoresheet.ts'
 import { buildScoresheetPdf } from '../_shared/scoresheet-pdf.ts'
 import { scoresheetEmailHtml, scoresheetEmailSubject, resolveEmailSubject, EMAIL_SUBJECTS_SETTINGS_KEY } from '../_shared/email-layouts.ts'
@@ -54,8 +55,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
       return new Response(JSON.stringify({ error: 'Invalid scoresheet identifier' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     const accuscoreRequestId: string | null = typeof body?.accuscoreRequestId === "string" ? body.accuscoreRequestId : null;
-    const appUrl: string = typeof body?.appUrl === "string" && /^https?:\/\//.test(body.appUrl)
-      ? body.appUrl.replace(/\/$/, "") : "https://score.cheermatch.com";
     let submissionId: string | null = typeof body?.submissionId === "string" ? body.submissionId : null;
 
     let accuscoreReq: any = null;
@@ -175,36 +174,26 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
 
     // AccuScore link: reuse or create this team's review token
-    const esc = (s: string) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
     let accuscoreUrl: string | null = null;
     const cutoff = (event as any)?.accuscore_end_at as string | null;
-    const { count: enabledFormCount } = await supabase.from("event_accuscore_forms")
+    const { count: enabledFormCount, error: formsError } = await supabase.from("event_accuscore_forms")
       .select("id, form:accuscore_forms!inner(is_active)", { count: "exact", head: true })
       .eq("event_id", (event as any)?.id).eq("form.is_active", true);
+    if (formsError) throw new Error('Could not verify AccuScore forms. No email was sent.');
     const accuscoreOn = (event as any)?.accuscore_enabled !== false && (enabledFormCount || 0) > 0;
     const { count: critiqueCount } = (event as any)?.verbal_critiques_enabled
       ? await supabase.from("verbal_critiques").select("id", { count: "exact", head: true })
           .eq("submission_id", submissionId).in("score_id", submittedScores.map((s: any) => s.id))
       : { count: 0 };
     if (accuscoreOn || accuscoreReq || (critiqueCount || 0) > 0) {
-      const { data: existing } = await supabase.from("scoring_review_tokens")
-        .select("id, token").eq("submission_id", submissionId).eq("coach_email", coachProfile.email)
-        .order("created_at", { ascending: false }).limit(1).maybeSingle();
-      let token = existing?.token as string | undefined;
       const expiresAt = cutoff || new Date(Date.now() + 30 * 86400000).toISOString();
-      if (!token) {
-        token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
-        await supabase.from("scoring_review_tokens").insert({
-          submission_id: submissionId, token, coach_email: coachProfile.email,
-          coach_name: coachProfile.full_name, expires_at: expiresAt, created_by: callerId, status: "pending",
-        });
-      } else {
-        await supabase.from("scoring_review_tokens").update({ expires_at: expiresAt }).eq("id", existing!.id);
-      }
-      accuscoreUrl = `${appUrl}/review/${token}`;
+      accuscoreUrl = await ensureScoresheetReviewLink(supabase, {
+        submissionId, coachEmail: coachProfile.email, coachName: coachProfile.full_name,
+        expiresAt, callerId,
+      });
     }
     const tz = (event as any)?.time_zone || "America/Chicago";
-    const cutoffText = cutoff ? new Date(cutoff).toLocaleString("en-US", { timeZone: tz, dateStyle: "full", timeStyle: "short", timeZoneName: "short" } as any) : null;
+    const cutoffText = formatAccuscoreCutoff(cutoff, tz);
     const decisionLabel: Record<string, string> = { honored: "Honored", denied: "Denied", duplicate: "Duplicate" };
     // Calculate overall average
     const avgScore = submittedScores.reduce((sum: number, s: any) => sum + (s.total_score || 0), 0) / submittedScores.length;
@@ -371,6 +360,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       sheetData.difficulty_label = (lbl as any)?.difficulty_label;
       sheetData.execution_label = (lbl as any)?.execution_label;
     }
+    sheetData.event_time_zone = tz;
     const pdfBytes = await buildScoresheetPdf(sheetData);
     let binary = '';
     const CHUNK = 0x8000;

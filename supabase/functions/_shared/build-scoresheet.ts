@@ -83,6 +83,7 @@ export interface DeductionReport {
 }
 
 export interface ScoresheetData {
+  event_time_zone?: string | null;
   difficulty_label?: string | null;
   execution_label?: string | null;
   team_name: string;

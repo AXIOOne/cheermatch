@@ -16,7 +16,7 @@ export async function generateSubmissionScoresheetBytes(
       team:teams!inner(id, name, gym_name,
         division:divisions!inner(id, name, scoring_template_id, discipline_links:division_disciplines(discipline, scoring_template_id)),
         level:levels(id, name)),
-      event:events!inner(id, name, discipline, accuscore_end_at)
+      event:events!inner(id, name, discipline, accuscore_end_at, time_zone)
     `)
     .eq('id', submissionId)
     .maybeSingle();
@@ -188,6 +188,7 @@ export async function generateSubmissionScoresheetBytes(
     }),
   });
 
+  data.event_time_zone = submission.event?.time_zone;
   data.difficulty_label = colLabels.d; data.execution_label = colLabels.e;
   const bytes = await buildScoresheetPdf(data);
   const safeName = `${data.team_name} - ${data.event_name}`.replace(/[^\w\s-]/g, '').trim();

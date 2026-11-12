@@ -1,5 +1,11 @@
 # Roadmap
 
+## UCA and USA pre-send audit
+- [x] Checked all 134 registered teams: linked coach emails present, valid syntax and matching registration contacts; enabled forms UCA five/USA three. All three existing coach links open signed out on the published domain, mobile fits, no runtime errors.
+- [x] Fixed and deployed cutoff-format crash, canonical public email links and checked token persistence; corrected both PDF renderers to show the event timezone. Twenty-eight tests passed; generated real UCA and USA PDFs without sending mail.
+- [ ] Administrator readiness: complete/review remaining sheets (latest UCA one pending, USA twelve pending); confirm November 12 2026 3 pm Eastern AccuScore cutoff permits the planned send. No event dates or reviews were changed.
+- [ ] Actual sender-domain verification, quota and inbox/delivery/bounce confirmation require a controlled real email/provider check; no coach emails were sent and no delivery records yet exist. Existing external email service retained unchanged.
+
 ## Bulk unsent scoresheets
 - [x] Add reviewed-only event-wide bulk send, confirmation and per-team progress; skip accepted emails and continue after individual failures.
 - [x] Persist sending/failure outcomes and deploy real provider status checks; keep accepted and delivered distinct, and show check failures without mislabeling delivery as failed.

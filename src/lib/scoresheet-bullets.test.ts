@@ -6,6 +6,14 @@ import { buildScoresheetPdf } from './scoresheet-pdf';
 afterEach(() => vi.restoreAllMocks());
 
 describe('PDF bullet wrapping', () => {
+  it('prints the event cutoff as 3 pm Eastern regardless of the rendering machine timezone', async () => {
+    const draw = vi.spyOn(PDFPage.prototype, 'drawText');
+    const data = buildScoresheet({ team_name: 'Team', event_name: 'UCA', fields: [], submitted_scores: [], accuscore_end_at: '2026-11-12T20:00:00Z' });
+    data.event_time_zone = 'America/New_York';
+    const bytes = await buildScoresheetPdf(data);
+    expect(bytes.length).toBeGreaterThan(1000);
+    expect(draw.mock.calls.some(([text]) => text === '11/12/2026 3:00 pm est')).toBe(true);
+  });
   it('aligns every continuation with bullet text and resets for plain paragraphs', async () => {
     const draw = vi.spyOn(PDFPage.prototype, 'drawText');
     const comment = `• First ${'continuation '.repeat(35)}\nPlain paragraph`;

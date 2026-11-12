@@ -79,14 +79,16 @@ function drawRichText(
   return lines;
 }
 
-function formatDateTime(iso?: string | null): string {
+function formatDateTime(iso?: string | null, timeZone?: string | null): string {
   if (!iso) return '—';
   try {
     const d = new Date(iso);
     const date = new Intl.DateTimeFormat('en-US', {
+      ...(timeZone ? { timeZone } : {}),
       month: '2-digit', day: '2-digit', year: 'numeric',
     }).format(d);
     const time = new Intl.DateTimeFormat('en-US', {
+      ...(timeZone ? { timeZone, timeZoneName: 'short' as const } : {}),
       hour: 'numeric', minute: '2-digit', hour12: true,
     }).format(d).toLowerCase();
     return `${date} ${time}`;
@@ -260,7 +262,7 @@ export async function buildScoresheetPdf(data: ScoresheetData): Promise<Uint8Arr
 
     {
       const label = 'AccuScore End Time:';
-      const value = formatDateTime(data.accuscore_end_at);
+      const value = formatDateTime(data.accuscore_end_at, data.event_time_zone);
       drawTextRight(p, label, PAGE_W - MARGIN, subStartY, bold, metaFontSize, TEXT);
       drawTextRight(p, value, PAGE_W - MARGIN, subStartY - (metaFontSize + 3), font, metaFontSize, TEXT);
     }
