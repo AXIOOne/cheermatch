@@ -1,5 +1,8 @@
 # Roadmap
 
+## Duplicate panel score save
+- [x] Applied panel-scoped uniqueness to the live database without modifying scores; four database regression tests passed, and signed-in Rockwall SD panel shows existing J1 90.00/J2 86.60 intact with no runtime errors. No production score was saved during verification.
+
 ## Wrapped comment bullets
 - [x] Align wrapped bullet text in editors, previews, and both PDF renderers; seven tests passed, signed-in desktop/mobile editing verified without saving scores, email renderer deployed.
 

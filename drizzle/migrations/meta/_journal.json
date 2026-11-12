@@ -120,6 +120,13 @@
       "when": 1794332058754,
       "tag": "0016_protect_scored_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794463658912,
+      "tag": "0017_scope_score_uniqueness_to_panel",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@
 - AccuScore form configuration is administrator-only at the table level; coach forms remain accessible through the token-scoped RPCs. Why: signed-in users must not enumerate unrelated event configuration.
 - Event window/cutoff datetime inputs are read and saved in the event's time_zone via src/lib/datetime-local.ts. Why: times stay correct regardless of the admin's computer time zone.
 - Whole-panel admin overrides are identified by the database-stamped scores.admin_saved_by, not by another judge's submission. Why: section co-judges must not lock each other out while admin saves remain authoritative.
+- Score uniqueness is per submission, author and panel, with a separate unique index for legacy null-panel scores. Why: one administrator or judge can save multiple panels without collisions while duplicate same-panel scores remain blocked.
 - Scoresheet SENT badges use service-written scoresheet_email_receipts, never review-token existence. Why: generating a link does not prove an email was accepted.
 - Coach performance details use the token-gated get_coach_performance RPC and respect template comment visibility. Why: review videos and submitted scores remain available after the request cutoff without public table access.
 - Local capture records distinguish server-reserved attempts from offline/legacy footage; reconciliation removes only known server attempts. Why: missing server rows must not destroy unsynced recordings, while explicit resets still release known attempts.
