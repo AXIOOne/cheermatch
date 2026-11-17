@@ -11,6 +11,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { Check, CheckCircle2, ChevronDown, ChevronsUpDown, Loader2 } from 'lucide-react';
 import { isFieldForPanel, pickDivisionTemplateId } from '@/lib/scoring';
+import { divisionShouldBeOpen } from '@/lib/panel-assignment-visibility';
 import { cn } from '@/lib/utils';
 import JudgePanelsManager from './JudgePanelsManager';
 
@@ -265,9 +266,16 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
   // Pending (staged) edits keyed by `${divisionId}:sec|pnl:${id}` → judge_user_id | null
   const [pending, setPending] = useState<Record<string, string | null>>({});
 
+  // Divisions the admin manually expanded/collapsed in this dialog session.
+  // Anything not listed follows the saved-assignment rule below.
+  const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
+
   // Reset pending whenever the underlying assignments change (e.g. after Save)
   useEffect(() => {
     setPending({});
+    // Saved assignments changed, so re-derive which divisions are done:
+    // fully assigned divisions collapse, incomplete ones expand again.
+    setOpenOverrides({});
   }, [assignments]);
 
   const getCurrentValue = (key: string): string => {
@@ -374,8 +382,27 @@ export default function AssignPanelsDialog({ eventId, onClose }: AssignPanelsDia
                 const fullyAssigned = rowKeys.length > 0 &&
                   rowKeys.every(key => getCurrentValue(key) !== '');
 
+                // Collapse decision uses saved assignments only: a division
+                // closes once every row has a judge on the server, not while
+                // the last one is still an unsaved edit.
+                const savedJudges: Record<string, string> = {};
+                rowKeys.forEach(key => {
+                  savedJudges[key] = assignmentMap.get(key)?.judge_user_id ?? '';
+                });
+                const isOpen = divisionShouldBeOpen({
+                  rowKeys,
+                  savedJudges,
+                  userOverride: openOverrides[div.id],
+                });
+
                 return (
-                  <Collapsible key={div.id} defaultOpen>
+                  <Collapsible
+                    key={div.id}
+                    open={isOpen}
+                    onOpenChange={(next) =>
+                      setOpenOverrides(prev => ({ ...prev, [div.id]: next }))
+                    }
+                  >
                     <CollapsibleTrigger asChild>
                       <button
                         type="button"
