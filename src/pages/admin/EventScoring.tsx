@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { buildDivisionReports } from '@/lib/division-reports';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -93,6 +94,8 @@ export default function EventScoring() {
   const [confirmBulkSend, setConfirmBulkSend] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number; failed: number } | null>(null);
   const [bulkSending, setBulkSending] = useState(false);
+  const [confirmReports, setConfirmReports] = useState<false | 'send' | 'sample'>(false);
+  const [reportsProgress, setReportsProgress] = useState<string | null>(null);
   const [emailStatusError, setEmailStatusError] = useState<string | null>(null);
 
   const { data: event, isLoading: eventLoading } = useQuery({
@@ -479,6 +482,33 @@ export default function EventScoring() {
   };
 
 
+  const reportsEnabled = !isLoading && !!templates && allReviewed.length > 0 && allReviewed.every(Boolean);
+  const handleSendReports = async (sample: boolean) => {
+    setConfirmReports(false);
+    if (!reportsEnabled || !event || !eventId) return;
+    setReportsProgress('Building reports…');
+    let sent = 0; const failed: string[] = [];
+    try {
+      const divisions = await buildDivisionReports(eventId, event as any);
+      const list = sample ? divisions.slice(0, 1) : divisions;
+      for (let i = 0; i < list.length; i++) {
+        const d = list[i];
+        setReportsProgress(`Sending ${i + 1} of ${list.length}: ${d.divisionName}`);
+        const { data, error } = await supabase.functions.invoke('send-division-reports', { body: { eventId, ...d, sample } });
+        if (error || data?.error) { failed.push(d.divisionName); continue; }
+        sent += data.sent || 0;
+        if (data.failed) failed.push(`${d.divisionName} (${data.failed} coach${data.failed > 1 ? 'es' : ''})`);
+      }
+      toast({
+        title: sample ? `Sample sent to your email (${list[0]?.divisionName ?? 'no divisions'})` : `Division reports sent to ${sent} coach emails`,
+        description: failed.length ? `Needs attention: ${failed.join(', ')}` : undefined,
+        variant: failed.length ? 'destructive' : 'default',
+      });
+    } catch (e: any) {
+      toast({ title: 'Could not send division reports', description: e?.message, variant: 'destructive' });
+    } finally { setReportsProgress(null); }
+  };
+
   const StatusIndicator = ({
     status,
     onClick,
@@ -533,6 +563,10 @@ export default function EventScoring() {
           <Button disabled={!bulkEnabled || bulkSending || !!sendingScoreFor} onClick={() => setConfirmBulkSend(true)}>
             {bulkSending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
             Send all unsent ({unsentSubmissions.length})
+          </Button>
+          <Button variant="outline" disabled={!reportsEnabled || !!reportsProgress} title={reportsEnabled ? undefined : 'Available once every scoresheet is reviewed'} onClick={() => setConfirmReports('send')}>
+            {reportsProgress ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <BarChart3 className="w-4 h-4 mr-2" />}
+            {reportsProgress ?? 'Send division reports'}
           </Button>
           <Button variant="outline" onClick={() => setDropboxOpen(true)}>
             <CloudUpload className="w-4 h-4 mr-2" />
@@ -917,6 +951,25 @@ export default function EventScoring() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction disabled={!bulkEnabled} onClick={() => void handleBulkSend()}>
               <Send className="w-4 h-4 mr-2" /> Send all unsent
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!confirmReports} onOpenChange={(o) => !o && setConfirmReports(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send division reports to coaches?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Each coach gets a separate email for each division they have teams in, with that division's rankings and averages reports attached.
+              Coaches only receive reports for their own divisions. Sending again will send the emails again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button variant="outline" onClick={() => void handleSendReports(true)}>Send me a sample</Button>
+            <AlertDialogAction disabled={!reportsEnabled} onClick={() => void handleSendReports(false)}>
+              <Send className="w-4 h-4 mr-2" /> Send to coaches
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

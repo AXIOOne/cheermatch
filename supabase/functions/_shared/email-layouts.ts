@@ -179,3 +179,16 @@ ${!p.response && p.critiquesUrl ? `<p style="margin:16px 0;"><a href="${p.critiq
 }
 export const scoresheetEmailSubject = (teamName: string, eventName: string, isAccuscore: boolean) =>
   `${isAccuscore ? 'AccuScore Response' : 'Score Sheet'} - ${teamName} | ${eventName}`;
+
+export function divisionReportsEmailHtml(p: { coachName?: string | null; eventName: string; divisionName: string }) {
+  return shell({
+    body: `${heading(`Hello${p.coachName ? ` ${esc(p.coachName)}` : ''},`)}
+<p style="margin:0 0 16px;">Final results for <strong>${esc(p.eventName)}</strong> are in.</p>
+<p style="margin:0 0 16px;">Attached are the reports for division <strong>${esc(p.divisionName)}</strong>:</p>
+<ul style="margin:0 0 16px;padding-left:20px;"><li>Division Rankings Report</li><li>Division Averages Report</li></ul>
+<p style="margin:0;">These reports cover only the ${esc(p.divisionName)} division.</p>`,
+    footer: `Division reports for ${esc(p.divisionName)}.`,
+  });
+}
+export const divisionReportsEmailSubject = (divisionName: string, eventName: string) =>
+  `Division Rankings & Averages - ${divisionName} | ${eventName}`;
